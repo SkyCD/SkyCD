@@ -1203,59 +1203,56 @@
                                     VerticalAlignment="Center" />
                         </Grid>
 
-                        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                            <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}">
-                                <TextBox Width="200"
-                                         Text="{Binding CollectionsPage.NewCollectionName}"
-                                         PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.NewCollection}}"
-                                         AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.NewCollection}}" />
-                                <Button Content="+"
-                                        FontSize="{DynamicResource SkyFontSubtitle}"
-                                        Width="34"
-                                        Height="28"
-                                        Command="{Binding CollectionsPage.CreateCollectionCommand}"
-                                        ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.NewCollection}}" />
-                                <TextBox Width="200"
-                                         Text="{Binding CollectionsPage.RenameTo}"
-                                         PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.CollectionName}}"
-                                         AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.RenameCollection}}" />
-                                <Button Content="✎"
-                                        FontSize="{DynamicResource SkyFontSubtitle}"
-                                        Width="34"
-                                        Height="28"
-                                        Command="{Binding CollectionsPage.RenameCollectionCommand}"
-                                        ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.RenameCollection}}" />
-                            </StackPanel>
-                            <StackPanel Grid.Column="1"
-                                        Orientation="Horizontal"
-                                        HorizontalAlignment="Right"
-                                        Spacing="{DynamicResource SkySpaceSm}">
-                                <Button Content="-"
-                                        FontSize="{DynamicResource SkyFontSubtitle}"
-                                        Width="34"
-                                        Height="28"
-                                        Command="{Binding CollectionsPage.DeleteCollectionCommand}"
-                                        ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.DeleteCollection}}" />
-                                <Button Content="⌫"
-                                        FontSize="{DynamicResource SkyFontSubtitle}"
-                                        Width="34"
-                                        Height="28"
-                                        Command="{Binding CollectionsPage.RemoveMissingEntriesCommand}"
-                                        ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.RemoveMissing}}" />
-                                <Button Content="↗"
-                                        FontSize="{DynamicResource SkyFontSubtitle}"
-                                        Width="34"
-                                        Height="28"
-                                        Command="{Binding CollectionsPage.NavigateToSelectedCommand}"
-                                        ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.GoToEntry}}" />
-                                <Button Content="↺"
-                                        FontSize="{DynamicResource SkyFontSubtitle}"
-                                        Width="34"
-                                        Height="28"
-                                        Command="{Binding CollectionsPage.RefreshResultsCommand}"
-                                        ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.RefreshResults}}" />
-                            </StackPanel>
-                        </Grid>
+                        <StackPanel Grid.Row="1" Spacing="{DynamicResource SkySpaceXs}">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                                <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}">
+                                    <TextBox x:Name="NewCollectionNameBox"
+                                             Width="200"
+                                             Text="{Binding CollectionsPage.NewCollectionName}"
+                                             PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.NewCollection}}"
+                                             AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.NewCollection}}" />
+                                    <Button Content="{i18n:Translate {x:Static i18n:UiKeys.NewCollection}}"
+                                            Command="{Binding CollectionsPage.CreateCollectionCommand}"
+                                            ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.NewCollection}}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1"
+                                            Orientation="Horizontal"
+                                            HorizontalAlignment="Right"
+                                            Spacing="{DynamicResource SkySpaceSm}">
+                                    <Button Content="{i18n:Translate {x:Static i18n:UiKeys.DeleteCollection}}"
+                                            Command="{Binding CollectionsPage.DeleteCollectionCommand}"
+                                            ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.DeleteCollection}}" />
+                                    <Button Content="{i18n:Translate {x:Static i18n:UiKeys.RemoveMissing}}"
+                                            Command="{Binding CollectionsPage.RemoveMissingEntriesCommand}"
+                                            ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.RemoveMissing}}" />
+                                    <Button Content="{i18n:Translate {x:Static i18n:UiKeys.GoToEntry}}"
+                                            Command="{Binding CollectionsPage.NavigateToSelectedCommand}"
+                                            ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.GoToEntry}}" />
+                                    <Button Content="{i18n:Translate {x:Static i18n:UiKeys.OpenFolder}}"
+                                            Command="{Binding CollectionsPage.OpenMemberFolderCommand}"
+                                            ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.OpenFolder}}" />
+                                </StackPanel>
+                            </Grid>
+                            <Border IsVisible="{Binding CollectionsPage.IsDeleteCollectionConfirmationVisible}"
+                                    BorderBrush="{DynamicResource ThemeBorderLowBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="{DynamicResource SkyCornerRadius}"
+                                    Padding="{DynamicResource SkyRowPadding}">
+                                <StackPanel Orientation="Horizontal"
+                                            Spacing="{DynamicResource SkySpaceSm}"
+                                            VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding CollectionsPage.DeleteCollectionConfirmationPrompt}"
+                                               VerticalAlignment="Center"
+                                               TextWrapping="Wrap" />
+                                    <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Ok}}"
+                                            Command="{Binding CollectionsPage.ConfirmDeleteCollectionCommand}"
+                                            ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.Ok}}" />
+                                    <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Cancel}}"
+                                            Command="{Binding CollectionsPage.CancelDeleteCollectionCommand}"
+                                            ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.Cancel}}" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
 
                         <Grid Grid.Row="2" ColumnDefinitions="3*,2*" ColumnSpacing="{DynamicResource SkySpaceSm}">
                             <Border BorderBrush="{DynamicResource ThemeBorderLowBrush}" BorderThickness="1">
@@ -1263,7 +1260,7 @@
                                     <Border BorderBrush="{DynamicResource ThemeBorderLowBrush}"
                                             BorderThickness="0,0,0,1"
                                             Padding="{DynamicResource SkyRowPadding}">
-                                        <Grid ColumnDefinitions="*,160,80" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                                        <Grid ColumnDefinitions="*,160,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
                                             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.CollectionName}}"
                                                        FontWeight="SemiBold" />
                                             <TextBlock Grid.Column="1"
@@ -1285,10 +1282,27 @@
                                                 <Border BorderBrush="{DynamicResource ThemeBorderLowBrush}"
                                                         BorderThickness="0,0,0,1"
                                                         Padding="{DynamicResource SkyRowPadding}">
-                                                    <Grid ColumnDefinitions="*,160,80" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                                                    <Grid ColumnDefinitions="*,160,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
                                                         <TextBlock Text="{Binding Name}"
+                                                                   IsVisible="{Binding !IsRenaming}"
                                                                    VerticalAlignment="Center"
                                                                    TextTrimming="CharacterEllipsis" />
+                                                        <StackPanel Orientation="Horizontal"
+                                                                    IsVisible="{Binding IsRenaming}"
+                                                                    Spacing="{DynamicResource SkySpaceXs}"
+                                                                    VerticalAlignment="Center">
+                                                            <TextBox Text="{Binding RenameDraft}"
+                                                                     Width="200"
+                                                                     AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.CollectionName}}" />
+                                                            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Save}}"
+                                                                    Command="{Binding $parent[Window].((vm:OptionsDialogViewModel)DataContext).CollectionsPage.CommitRenameCollectionCommand}"
+                                                                    CommandParameter="{Binding}"
+                                                                    ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.Save}}" />
+                                                            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Cancel}}"
+                                                                    Command="{Binding $parent[Window].((vm:OptionsDialogViewModel)DataContext).CollectionsPage.CancelRenameCollectionCommand}"
+                                                                    CommandParameter="{Binding}"
+                                                                    ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.Cancel}}" />
+                                                        </StackPanel>
                                                         <Border Grid.Column="1"
                                                                 IsVisible="{Binding IsDynamic}"
                                                                 Background="{DynamicResource ThemeControlLowBrush}"
@@ -1299,38 +1313,97 @@
                                                             <TextBlock Classes="caption"
                                                                        Text="{i18n:Translate {x:Static i18n:UiKeys.SavedSearch}}" />
                                                         </Border>
-                                                        <TextBlock Grid.Column="2"
-                                                                   Text="{Binding EntryCount}"
-                                                                   HorizontalAlignment="Right"
-                                                                   VerticalAlignment="Center" />
+                                                        <StackPanel Grid.Column="2"
+                                                                    Orientation="Horizontal"
+                                                                    Spacing="{DynamicResource SkySpaceXs}"
+                                                                    HorizontalAlignment="Right"
+                                                                    VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding EntrySummary}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                            <Button Content="✎"
+                                                                    Command="{Binding $parent[Window].((vm:OptionsDialogViewModel)DataContext).CollectionsPage.BeginRenameCollectionCommand}"
+                                                                    CommandParameter="{Binding}"
+                                                                    ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.RenameCollection}}" />
+                                                        </StackPanel>
                                                     </Grid>
                                                 </Border>
                                             </DataTemplate>
                                         </ListBox.ItemTemplate>
                                     </ListBox>
-                                    <TextBlock Grid.Row="1"
-                                               IsHitTestVisible="False"
-                                               IsVisible="{Binding CollectionsPage.ShowEmptyCollectionsState}"
-                                               Text="{i18n:Translate {x:Static i18n:UiKeys.NoCollections}}"
-                                               HorizontalAlignment="Center"
-                                               VerticalAlignment="Center"
-                                               Opacity="0.75"
-                                               TextWrapping="Wrap" />
+                                    <StackPanel Grid.Row="1"
+                                                IsVisible="{Binding CollectionsPage.ShowEmptyCollectionsState}"
+                                                Spacing="{DynamicResource SkySpaceXs}"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center">
+                                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.NoCollections}}"
+                                                   HorizontalAlignment="Center"
+                                                   Opacity="0.75"
+                                                   TextWrapping="Wrap" />
+                                        <Button Content="{i18n:Translate {x:Static i18n:UiKeys.CreateFirstCollection}}"
+                                                HorizontalAlignment="Center"
+                                                Click="OnCreateFirstCollectionClicked"
+                                                ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.CreateFirstCollection}}" />
+                                    </StackPanel>
                                 </Grid>
                             </Border>
 
                             <Border Grid.Column="1"
                                     BorderBrush="{DynamicResource ThemeBorderLowBrush}"
                                     BorderThickness="1">
-                                <Grid RowDefinitions="Auto,*">
+                                <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
                                     <Border BorderBrush="{DynamicResource ThemeBorderLowBrush}"
                                             BorderThickness="0,0,0,1"
                                             Padding="{DynamicResource SkyRowPadding}">
-                                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.CollectionMembers}}"
-                                                   FontWeight="SemiBold" />
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.CollectionMembers}}"
+                                                       FontWeight="SemiBold"
+                                                       VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1"
+                                                       Classes="caption"
+                                                       IsVisible="{Binding CollectionsPage.HasMissingMembers}"
+                                                       Text="{Binding CollectionsPage.MissingMembersNotice}"
+                                                       VerticalAlignment="Center" />
+                                        </Grid>
                                     </Border>
-                                    <ListBox Grid.Row="1"
-                                             ItemsSource="{Binding CollectionsPage.Members}"
+                                    <Border Grid.Row="1"
+                                            IsVisible="{Binding CollectionsPage.HasSavedQueryDescription}"
+                                            BorderBrush="{DynamicResource ThemeBorderLowBrush}"
+                                            BorderThickness="0,0,0,1"
+                                            Padding="{DynamicResource SkyRowPadding}">
+                                        <TextBlock Classes="caption"
+                                                   Text="{Binding CollectionsPage.SavedQueryDescription}"
+                                                   TextWrapping="Wrap" />
+                                    </Border>
+                                    <Border Grid.Row="1"
+                                            IsVisible="{Binding CollectionsPage.IsMissingSavedQuery}"
+                                            BorderBrush="{DynamicResource ThemeBorderLowBrush}"
+                                            BorderThickness="0,0,0,1"
+                                            Padding="{DynamicResource SkyRowPadding}">
+                                        <TextBlock Classes="caption"
+                                                   Text="{Binding CollectionsPage.NoSavedSearchNotice}"
+                                                   TextWrapping="Wrap" />
+                                    </Border>
+                                    <Grid Grid.Row="2"
+                                          ColumnDefinitions="*,Auto"
+                                          ColumnSpacing="{DynamicResource SkySpaceSm}"
+                                          Margin="{DynamicResource SkyRowPadding}">
+                                        <TextBox Text="{Binding CollectionsPage.MemberFilterText}"
+                                                 PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.FilterMembers}}"
+                                                 AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.FilterMembers}}" />
+                                        <StackPanel Grid.Column="1"
+                                                    Orientation="Horizontal"
+                                                    Spacing="{DynamicResource SkySpaceXs}">
+                                            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.AddSelected}}"
+                                                    Command="{Binding CollectionsPage.AddSelectedEntriesCommand}"
+                                                    ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.AddSelected}}" />
+                                            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Remove}}"
+                                                    Command="{Binding CollectionsPage.RequestRemoveSelectedMemberCommand}"
+                                                    ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.Remove}}" />
+                                        </StackPanel>
+                                    </Grid>
+                                    <ListBox Grid.Row="3"
+                                             ItemsSource="{Binding CollectionsPage.FilteredMembers}"
                                              SelectedItem="{Binding CollectionsPage.SelectedMember}"
                                              ScrollViewer.VerticalScrollBarVisibility="Auto"
                                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -1353,6 +1426,49 @@
                                             </DataTemplate>
                                         </ListBox.ItemTemplate>
                                     </ListBox>
+                                    <TextBlock Grid.Row="3"
+                                               IsHitTestVisible="False"
+                                               IsVisible="{Binding CollectionsPage.ShowSelectCollectionHint}"
+                                               Text="{i18n:Translate {x:Static i18n:UiKeys.SelectCollection}}"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               Opacity="0.75"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock Grid.Row="3"
+                                               IsHitTestVisible="False"
+                                               IsVisible="{Binding CollectionsPage.ShowNoMembersHint}"
+                                               Text="{i18n:Translate {x:Static i18n:UiKeys.NoMembers}}"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               Opacity="0.75"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock Grid.Row="3"
+                                               IsHitTestVisible="False"
+                                               IsVisible="{Binding CollectionsPage.ShowNoFilterMatchHint}"
+                                               Text="{i18n:Translate {x:Static i18n:UiKeys.NoFilterMatch}}"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               Opacity="0.75"
+                                               TextWrapping="Wrap" />
+                                    <Border Grid.Row="4"
+                                            IsVisible="{Binding CollectionsPage.IsRemoveMemberConfirmationVisible}"
+                                            BorderBrush="{DynamicResource ThemeBorderLowBrush}"
+                                            BorderThickness="0,1,0,0"
+                                            Padding="{DynamicResource SkyRowPadding}">
+                                        <StackPanel Orientation="Horizontal"
+                                                    Spacing="{DynamicResource SkySpaceSm}"
+                                                    VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding CollectionsPage.RemoveMemberConfirmationPrompt}"
+                                                       VerticalAlignment="Center"
+                                                       TextWrapping="Wrap" />
+                                            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Ok}}"
+                                                    Command="{Binding CollectionsPage.ConfirmRemoveSelectedMemberCommand}"
+                                                    ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.Ok}}" />
+                                            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Cancel}}"
+                                                    Command="{Binding CollectionsPage.CancelRemoveMemberCommand}"
+                                                    ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.Cancel}}" />
+                                        </StackPanel>
+                                    </Border>
                                 </Grid>
                             </Border>
                         </Grid>

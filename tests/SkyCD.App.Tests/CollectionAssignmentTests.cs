@@ -12,6 +12,7 @@ using SkyCD.Documents.Repository;
 using SkyCD.Presentation.Collections;
 using SkyCD.Presentation.Search;
 using SkyCD.Presentation.UndoRedo;
+using SkyCD.Presentation.ViewModels;
 using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.Staging;
 using SkyCD.Presentation.MediaCache;
@@ -510,6 +511,49 @@ public sealed class CollectionAssignmentTests : IDisposable
             Scope = new CatalogQueryScope { RootId = "missing" }
         });
         Assert.Empty(stack.Service.ResolveEntries(collection.Id, out _));
+    }
+
+    [Fact]
+    public void SaveCurrentSearchAsCollection_SnapshotsQuickFindIntoDynamicCollection()
+    {
+        using var stack = CreateStack();
+        stack.Catalog.Save("file", Entry("file"));
+        using var viewModel = MainWindowViewModel.CreateForRepository(stack.Catalog);
+        viewModel.QuickFindQuery = "file";
+
+        Assert.True(viewModel.SaveCurrentSearchAsCollectionCommand.CanExecute(null));
+
+        OptionsDialogRequestedEventArgs? request = null;
+        viewModel.OptionsRequested += (_, e) => request = e;
+        viewModel.SaveCurrentSearchAsCollectionCommand.Execute(null);
+
+        Assert.NotNull(request);
+        Assert.Equal(OptionsDialogViewModel.CollectionsCategoryId, request!.PreselectCategoryId);
+        var page = request.Dialog.CollectionsPage;
+        Assert.NotNull(page);
+        var created = Assert.Single(page!.Collections, static item => item.IsDynamic);
+        Assert.Equal(created.Id, page.SelectedCollection?.Id);
+        var saved = stack.Service.GetRequired(created.Id);
+        Assert.Equal(VirtualCollectionKind.Dynamic, saved.Kind);
+        Assert.Equal("file", stack.Service.ResolveEntries(created.Id, out _).Single().Id);
+        var query = VirtualCollectionService.DeserializeQuery(saved.SavedQueryJson!);
+        var predicate = Assert.Single(query.Root.Predicates);
+        Assert.Equal(AdvancedCatalogField.Name, predicate.Field);
+        Assert.Equal(AdvancedCatalogOperator.Contains, predicate.Operator);
+        Assert.Equal("file", predicate.Value);
+    }
+
+    [Fact]
+    public void SaveCurrentSearchAsCollection_RequiresSearchText()
+    {
+        using var stack = CreateStack();
+        using var viewModel = MainWindowViewModel.CreateForRepository(stack.Catalog);
+
+        Assert.False(viewModel.SaveCurrentSearchAsCollectionCommand.CanExecute(null));
+
+        viewModel.QuickFindQuery = "   ";
+
+        Assert.False(viewModel.SaveCurrentSearchAsCollectionCommand.CanExecute(null));
     }
 
     [Fact]

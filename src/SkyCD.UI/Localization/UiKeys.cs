@@ -354,6 +354,14 @@ public static class UiKeys
     public const string Collections = "core.ui.Collections";
     public const string ManageCollections = "core.ui.ManageCollections";
     public const string NewCollection = "core.ui.NewCollection";
+    public const string OpenFolder = "core.ui.OpenFolder";
+    public const string Remove = "core.ui.Remove";
+    public const string FilterMembers = "core.ui.FilterMembers";
+    public const string AddSelected = "core.ui.AddSelected";
+    public const string SelectCollection = "core.ui.SelectCollection";
+    public const string NoMembers = "core.ui.NoMembers";
+    public const string NoFilterMatch = "core.ui.NoFilterMatch";
+    public const string CreateFirstCollection = "core.ui.CreateFirstCollection";
     public const string CollectionName = "core.ui.CollectionName";
     public const string RenameCollection = "core.ui.RenameCollection";
     public const string DeleteCollection = "core.ui.DeleteCollection";

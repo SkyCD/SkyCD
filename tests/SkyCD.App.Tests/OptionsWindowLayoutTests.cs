@@ -297,7 +297,7 @@ public class OptionsWindowLayoutTests
         var lists = section.Descendants(Avalonia + "ListBox").ToArray();
         Assert.Equal(2, lists.Length);
         Assert.Contains(lists, list => ((string?)list.Attribute("ItemsSource"))?.Contains("CollectionsPage.Collections", StringComparison.Ordinal) == true);
-        Assert.Contains(lists, list => ((string?)list.Attribute("ItemsSource"))?.Contains("CollectionsPage.Members", StringComparison.Ordinal) == true);
+        Assert.Contains(lists, list => ((string?)list.Attribute("ItemsSource"))?.Contains("CollectionsPage.FilteredMembers", StringComparison.Ordinal) == true);
         Assert.Contains(lists, list => (string?)list.Attribute("DoubleTapped") == "OnCollectionMemberDoubleTapped");
 
         var commands = section.Descendants(Avalonia + "Button")
@@ -306,13 +306,22 @@ public class OptionsWindowLayoutTests
         Assert.Equal(
         [
             "{Binding CollectionsPage.CreateCollectionCommand}",
-            "{Binding CollectionsPage.RenameCollectionCommand}",
             "{Binding CollectionsPage.DeleteCollectionCommand}",
             "{Binding CollectionsPage.RemoveMissingEntriesCommand}",
             "{Binding CollectionsPage.NavigateToSelectedCommand}",
-            "{Binding CollectionsPage.RefreshResultsCommand}"
+            "{Binding CollectionsPage.OpenMemberFolderCommand}",
+            "{Binding CollectionsPage.ConfirmDeleteCollectionCommand}",
+            "{Binding CollectionsPage.CancelDeleteCollectionCommand}",
+            "{Binding CollectionsPage.CommitRenameCollectionCommand}",
+            "{Binding CollectionsPage.CancelRenameCollectionCommand}",
+            "{Binding CollectionsPage.BeginRenameCollectionCommand}",
+            "",
+            "{Binding CollectionsPage.AddSelectedEntriesCommand}",
+            "{Binding CollectionsPage.RequestRemoveSelectedMemberCommand}",
+            "{Binding CollectionsPage.ConfirmRemoveSelectedMemberCommand}",
+            "{Binding CollectionsPage.CancelRemoveMemberCommand}"
         ], commands);
-        Assert.Equal(2, section.Descendants(Avalonia + "TextBox").Count());
+        Assert.Equal(3, section.Descendants(Avalonia + "TextBox").Count());
         Assert.Contains(section.Descendants(Avalonia + "TextBlock"),
             block => (string?)block.Attribute("Text") == "{i18n:Translate {x:Static i18n:UiKeys.NoCollections}}");
     }

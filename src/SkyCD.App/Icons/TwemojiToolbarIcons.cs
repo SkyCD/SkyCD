@@ -44,7 +44,8 @@ internal static class TwemojiToolbarIcons
             [ToolbarIconKeys.Find] = ("magnifying-glass-tilted-left", () => Twemoji.MagnifyingGlassTiltedLeft),
             [ToolbarIconKeys.AdvancedFind] = ("telescope", () => Twemoji.Telescope),
             [ToolbarIconKeys.Tags] = ("label", () => Twemoji.Label),
-            [ToolbarIconKeys.Collections] = ("books", () => Twemoji.Books)
+            [ToolbarIconKeys.Collections] = ("books", () => Twemoji.Books),
+            [ToolbarIconKeys.SaveSearchAsCollection] = ("bookmark-tabs", () => Twemoji.BookmarkTabs)
         };
 
     private static readonly ConcurrentDictionary<string, DrawingImage> Images = new(StringComparer.Ordinal);

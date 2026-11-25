@@ -233,6 +233,15 @@ public static class TextKeys
     public const string CollectionCleaned = "core.text.CollectionCleaned";
     public const string CollectionAddedTo = "core.text.CollectionAddedTo";
     public const string CollectionRemovedFrom = "core.text.CollectionRemovedFrom";
+    public const string CollectionRemoveMemberConfirm = "core.text.CollectionRemoveMemberConfirm";
+    public const string CollectionMemberRemoved = "core.text.CollectionMemberRemoved";
+    public const string CollectionSavedSearchDescription = "core.text.CollectionSavedSearchDescription";
+    public const string CollectionNoSavedSearch = "core.text.CollectionNoSavedSearch";
+    public const string CollectionSelectEntriesFirst = "core.text.CollectionSelectEntriesFirst";
+    public const string CollectionDeleteConfirm = "core.text.CollectionDeleteConfirm";
+    public const string SaveCurrentSearchAsCollection = "core.text.SaveCurrentSearchAsCollection";
+    public const string SavedSearchCollectionName = "core.text.SavedSearchCollectionName";
+    public const string CollectionSavedSearchCreated = "core.text.CollectionSavedSearchCreated";
     public const string AiDescriptionBatchNoTargets = "core.text.AiDescriptionBatchNoTargets";
     public const string AiDescriptionProvider = "core.text.AiDescriptionProvider";
     public const string AiDescriptionDisabled = "core.text.AiDescriptionDisabled";

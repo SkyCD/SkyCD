@@ -56,6 +56,7 @@ public sealed class TwemojiToolbarIconTests : IDisposable
             ToolbarIconKeys.AdvancedFind,
             ToolbarIconKeys.Tags,
             ToolbarIconKeys.Collections,
+            ToolbarIconKeys.SaveSearchAsCollection,
         };
 
         Assert.Equal(expected.Order(StringComparer.Ordinal), TwemojiToolbarIcons.Keys.Order(StringComparer.Ordinal));

@@ -2919,7 +2919,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         ShowOptions(OptionsDialogViewModel.DetailsColumnsCategoryId);
     }
 
-    private void ShowOptions(string? preselectCategoryId)
+    private void ShowOptions(string? preselectCategoryId, string? selectCollectionId = null)
     {
         if (OptionsRequested is null)
         {
@@ -2931,6 +2931,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         if (CreateCollectionsViewModel() is { } collections)
         {
             dialog.SetCollections(collections);
+            if (!string.IsNullOrWhiteSpace(selectCollectionId))
+            {
+                collections.SelectCollectionById(selectCollectionId);
+            }
         }
 
         OptionsRequested.Invoke(this, new OptionsDialogRequestedEventArgs
@@ -4323,6 +4327,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 Command = ToggleBackgroundMediaSyncCommand,
                 ToggleType = MenuItemToggleType.CheckBox,
                 IsChecked = IsBackgroundMediaSyncEnabled
+            },
+            new MainMenuItemViewModel
+            {
+                Header = LocalizationService.Current.Get(TextKeys.SaveCurrentSearchAsCollection),
+                Command = SaveCurrentSearchAsCollectionCommand
             }
         };
 
@@ -5405,6 +5414,54 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         ShowOptions(OptionsDialogViewModel.CollectionsCategoryId);
     }
 
+    private bool CanSaveCurrentSearchAsCollection() =>
+        collectionService is not null
+        && collectionRepository is not null
+        && catalogRepository is not null
+        && !string.IsNullOrWhiteSpace(QuickFindQuery);
+
+    /// <summary>
+    /// Saves the current quick-find text as a dynamic collection whose name-contains query mirrors
+    /// the quick filter, then opens Options with the Collections page preselected on it.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanSaveCurrentSearchAsCollection))]
+    private void SaveCurrentSearchAsCollection()
+    {
+        var text = QuickFindQuery.Trim();
+        if (collectionService is null || collectionRepository is null || text.Length == 0)
+        {
+            return;
+        }
+
+        var created = collectionService.CreateDynamicCollection(
+            LocalizationService.Current.Format(TextKeys.SavedSearchCollectionName, text),
+            BuildNameContainsQuery(text));
+        undoManager?.RecordCollectionCreated(collectionRepository, created.Id, created.Name);
+        IsDirtyDocument = true;
+        UpdateUndoRedoState();
+        RefreshCollectionsMenuItems();
+        StatusText = LocalizationService.Current.Format(TextKeys.CollectionSavedSearchCreated, created.Name);
+        ShowOptions(OptionsDialogViewModel.CollectionsCategoryId, created.Id);
+    }
+
+    internal static AdvancedCatalogQuery BuildNameContainsQuery(string text) => new()
+    {
+        SortKey = AdvancedFindSortKey.Name,
+        Root = new CatalogQueryGroup
+        {
+            Combination = CatalogQueryCombination.All,
+            Predicates =
+            [
+                new AdvancedCatalogPredicate
+                {
+                    Field = AdvancedCatalogField.Name,
+                    Operator = AdvancedCatalogOperator.Contains,
+                    Value = text
+                }
+            ]
+        }
+    };
+
     private CollectionsDialogViewModel? CreateCollectionsViewModel()
     {
         if (collectionService is null || collectionRepository is null || catalogRepository is null)
@@ -5417,6 +5474,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             undoManager,
             catalogRepository,
             collectionRepository,
+            selectedEntryIdsProvider: () => GetSelectedBrowserItems()
+                .Select(static item => item.Id)
+                .Where(static id => !string.IsNullOrWhiteSpace(id))
+                .ToList(),
             onChanged: () =>
             {
                 IsDirtyDocument = true;

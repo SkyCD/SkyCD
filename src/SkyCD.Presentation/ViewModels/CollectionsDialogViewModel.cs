@@ -22,6 +22,7 @@ public sealed partial class CollectionsDialogViewModel : ObservableObject
     private readonly VirtualCollectionDocumentRepository? collectionRepository;
     private readonly Action? onChanged;
     private readonly Action<CatalogDocument>? navigate;
+    private readonly Func<IReadOnlyList<string>>? selectedEntryIdsProvider;
     private global::Couchbase.Lite.ListenerToken? catalogListener;
 
     public void WatchCatalogChanges(Action<Action> dispatch)
@@ -54,7 +55,8 @@ public sealed partial class CollectionsDialogViewModel : ObservableObject
         CatalogDocumentRepository? catalogRepository = null,
         VirtualCollectionDocumentRepository? collectionRepository = null,
         Action? onChanged = null,
-        Action<CatalogDocument>? navigate = null)
+        Action<CatalogDocument>? navigate = null,
+        Func<IReadOnlyList<string>>? selectedEntryIdsProvider = null)
     {
         this.service = service;
         this.undoManager = undoManager;
@@ -62,12 +64,58 @@ public sealed partial class CollectionsDialogViewModel : ObservableObject
         this.collectionRepository = collectionRepository;
         this.onChanged = onChanged;
         this.navigate = navigate;
+        this.selectedEntryIdsProvider = selectedEntryIdsProvider;
         RefreshCollections();
     }
 
     public ObservableCollection<CollectionListItemViewModel> Collections { get; } = [];
 
     public ObservableCollection<CollectionMemberViewModel> Members { get; } = [];
+
+    public ObservableCollection<CollectionMemberViewModel> FilteredMembers { get; } = [];
+
+    /// <summary>Description of the saved search for a dynamic collection; null when not dynamic.</summary>
+    public string? SavedQueryDescription => savedQueryDescription;
+
+    /// <summary>True when a saved search description is available.</summary>
+    public bool HasSavedQueryDescription => SavedQueryDescription is not null;
+
+    /// <summary>True when a dynamic collection has no usable saved search.</summary>
+    public bool IsMissingSavedQuery => missingSavedQuery;
+
+    /// <summary>True when the selected collection evaluates a saved search instead of stored members.</summary>
+    public bool IsDynamicSelected => SelectedCollection?.IsDynamic == true;
+
+    /// <summary>True when no collection is selected and the members pane can only invite one.</summary>
+    public bool ShowSelectCollectionHint => CollectionsAvailable && SelectedCollection is null;
+
+    /// <summary>True when the selected manual collection holds no members to show.</summary>
+    public bool ShowNoMembersHint =>
+        SelectedCollection is { IsDynamic: false } && Members.Count == 0 && MemberFilterText.Trim().Length == 0;
+
+    /// <summary>True when the member filter hides every member of a non-empty list.</summary>
+    public bool ShowNoFilterMatchHint =>
+        SelectedCollection is not null && Members.Count > 0 && FilteredMembers.Count == 0 && !IsMissingSavedQuery;
+
+    /// <summary>Missing-reference notice bound in the members header; empty when nothing is missing.</summary>
+    public string MissingMembersNotice => HasMissingMembers
+        ? $"{UnavailableCount} {LocalizationService.Current.Get(UiKeys.MissingEntries)}"
+        : string.Empty;
+
+    /// <summary>Notice shown when a dynamic collection has no usable saved search.</summary>
+    public string? NoSavedSearchNotice => IsMissingSavedQuery
+        ? LocalizationService.Current.Get(TextKeys.CollectionNoSavedSearch)
+        : null;
+
+    /// <summary>Prompt naming the member pending removal; shown inside the confirmation bar.</summary>
+    public string RemoveMemberConfirmationPrompt => LocalizationService.Current.Format(
+        TextKeys.CollectionRemoveMemberConfirm,
+        SelectedMember?.Name ?? string.Empty);
+
+    /// <summary>Prompt naming the collection pending deletion; shown inside the confirmation bar.</summary>
+    public string DeleteCollectionConfirmationPrompt => LocalizationService.Current.Format(
+        TextKeys.CollectionDeleteConfirm,
+        SelectedCollection?.Name ?? string.Empty);
 
     [ObservableProperty]
     private CollectionListItemViewModel? selectedCollection;
@@ -80,6 +128,19 @@ public sealed partial class CollectionsDialogViewModel : ObservableObject
 
     [ObservableProperty]
     private CollectionMemberViewModel? selectedMember;
+
+    [ObservableProperty]
+    private string memberFilterText = string.Empty;
+
+    [ObservableProperty]
+    private bool isRemoveMemberConfirmationVisible;
+
+    [ObservableProperty]
+    private bool isDeleteCollectionConfirmationVisible;
+
+    private string? savedQueryDescription;
+
+    private bool missingSavedQuery;
 
     [ObservableProperty]
     private string statusText = string.Empty;
@@ -106,14 +167,32 @@ public sealed partial class CollectionsDialogViewModel : ObservableObject
             RenameTo = value.Name;
         }
 
+        IsRemoveMemberConfirmationVisible = false;
+        IsDeleteCollectionConfirmationVisible = false;
         RefreshMembers();
+        OnPropertyChanged(nameof(IsDynamicSelected));
+        OnPropertyChanged(nameof(ShowSelectCollectionHint));
+        OnPropertyChanged(nameof(ShowNoMembersHint));
+        OnPropertyChanged(nameof(ShowNoFilterMatchHint));
+        OnPropertyChanged(nameof(DeleteCollectionConfirmationPrompt));
         NavigateToSelectedCommand.NotifyCanExecuteChanged();
         RenameCollectionCommand.NotifyCanExecuteChanged();
         DeleteCollectionCommand.NotifyCanExecuteChanged();
+        RequestRemoveSelectedMemberCommand.NotifyCanExecuteChanged();
+        OpenMemberFolderCommand.NotifyCanExecuteChanged();
+        AddSelectedEntriesCommand.NotifyCanExecuteChanged();
     }
 
-    partial void OnSelectedMemberChanged(CollectionMemberViewModel? value) =>
+    partial void OnSelectedMemberChanged(CollectionMemberViewModel? value)
+    {
+        IsRemoveMemberConfirmationVisible = false;
+        OnPropertyChanged(nameof(RemoveMemberConfirmationPrompt));
         NavigateToSelectedCommand.NotifyCanExecuteChanged();
+        RequestRemoveSelectedMemberCommand.NotifyCanExecuteChanged();
+        OpenMemberFolderCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnMemberFilterTextChanged(string value) => RefreshFilteredMembers();
 
     public void RefreshCollections()
     {
@@ -123,9 +202,13 @@ public sealed partial class CollectionsDialogViewModel : ObservableObject
         {
             foreach (var collection in service.GetCollections())
             {
-                var (count, _, _) = CountMembers(collection);
+                var (count, missing, _) = CountMembers(collection);
                 Collections.Add(new CollectionListItemViewModel(
-                    collection.Id, collection.Name, collection.Kind, count));
+                    collection.Id, collection.Name, collection.Kind, count)
+                {
+                    MissingEntryCount = missing,
+                    EntrySummary = FormatEntrySummary(collection.Kind, count, missing)
+                });
             }
         }
 
@@ -133,6 +216,22 @@ public sealed partial class CollectionsDialogViewModel : ObservableObject
             ?? Collections.FirstOrDefault();
         OnPropertyChanged(nameof(HasCollections));
         OnPropertyChanged(nameof(ShowEmptyCollectionsState));
+        OnPropertyChanged(nameof(ShowSelectCollectionHint));
+    }
+
+    /// <summary>Selects the collection with the given id when it is listed.</summary>
+    public void SelectCollectionById(string collectionId)
+    {
+        if (string.IsNullOrWhiteSpace(collectionId))
+        {
+            return;
+        }
+
+        var match = Collections.FirstOrDefault(item => string.Equals(item.Id, collectionId, StringComparison.Ordinal));
+        if (match is not null)
+        {
+            SelectedCollection = match;
+        }
     }
 
     private (int Total, int Missing, int Available) CountMembers(VirtualCollectionDocument collection)
@@ -173,10 +272,18 @@ public sealed partial class CollectionsDialogViewModel : ObservableObject
         Members.Clear();
         HasMissingMembers = false;
         UnavailableCount = 0;
+        savedQueryDescription = null;
+        missingSavedQuery = false;
         var current = SelectedCollection;
         if (service is null || catalogRepository is null || current is null)
         {
+            RefreshFilteredMembers();
             return;
+        }
+
+        if (current.IsDynamic)
+        {
+            RefreshSavedQueryState(current.Id);
         }
 
         IReadOnlyList<CatalogDocument> resolved;
@@ -188,6 +295,11 @@ public sealed partial class CollectionsDialogViewModel : ObservableObject
         catch (InvalidOperationException exception)
         {
             StatusText = exception.Message;
+            missingSavedQuery = current.IsDynamic;
+            OnPropertyChanged(nameof(IsMissingSavedQuery));
+            OnPropertyChanged(nameof(MissingMembersNotice));
+            OnPropertyChanged(nameof(NoSavedSearchNotice));
+            RefreshFilteredMembers();
             return;
         }
         UnavailableCount = missing;
@@ -201,7 +313,65 @@ public sealed partial class CollectionsDialogViewModel : ObservableObject
         if (item is not null)
         {
             item.EntryCount = resolved.Count + missing;
+            item.MissingEntryCount = missing;
+            item.EntrySummary = FormatEntrySummary(current.Kind, item.EntryCount, missing);
         }
+
+        OnPropertyChanged(nameof(SavedQueryDescription));
+        OnPropertyChanged(nameof(HasSavedQueryDescription));
+        OnPropertyChanged(nameof(IsMissingSavedQuery));
+        OnPropertyChanged(nameof(MissingMembersNotice));
+        OnPropertyChanged(nameof(NoSavedSearchNotice));
+        RefreshFilteredMembers();
+    }
+
+    private void RefreshSavedQueryState(string collectionId)
+    {
+        try
+        {
+            var query = service!.GetDynamicQuery(collectionId);
+            savedQueryDescription = LocalizationService.Current.Format(
+                TextKeys.CollectionSavedSearchDescription,
+                CountPredicates(query.Root));
+        }
+        catch (InvalidOperationException)
+        {
+            savedQueryDescription = null;
+            missingSavedQuery = true;
+        }
+    }
+
+    private static int CountPredicates(CatalogQueryGroup group) =>
+        group.Predicates.Count + group.Groups.Sum(CountPredicates);
+
+    private static string FormatEntrySummary(VirtualCollectionKind kind, int total, int missing)
+    {
+        var entries = LocalizationService.Current.Get(UiKeys.CollectionEntries);
+        if (kind == VirtualCollectionKind.Dynamic || missing <= 0)
+        {
+            return $"{total} {entries}";
+        }
+
+        var unavailable = LocalizationService.Current.Get(UiKeys.MissingEntries);
+        return $"{total} {entries} · {missing} {unavailable}";
+    }
+
+    private void RefreshFilteredMembers()
+    {
+        FilteredMembers.Clear();
+        var filter = MemberFilterText.Trim();
+        foreach (var member in Members)
+        {
+            if (filter.Length == 0
+                || member.Name.Contains(filter, StringComparison.OrdinalIgnoreCase)
+                || member.FullPath.Contains(filter, StringComparison.OrdinalIgnoreCase))
+            {
+                FilteredMembers.Add(member);
+            }
+        }
+
+        OnPropertyChanged(nameof(ShowNoMembersHint));
+        OnPropertyChanged(nameof(ShowNoFilterMatchHint));
     }
 
     private string FullPathOf(CatalogDocument entry)
@@ -269,44 +439,27 @@ public sealed partial class CollectionsDialogViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanManageSelectedCollection))]
     private void RenameCollection()
     {
-        if (service is null || collectionRepository is null || SelectedCollection is null)
+        if (SelectedCollection is null)
         {
             return;
         }
 
-        var name = RenameTo?.Trim() ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(name))
+        if (RenameCollectionCore(SelectedCollection, RenameTo))
         {
-            StatusText = LocalizationService.Current.Get(TextKeys.CollectionNameRequired);
-            return;
-        }
-
-        var current = SelectedCollection;
-        if (string.Equals(current.Name, name, StringComparison.Ordinal))
-        {
-            return;
-        }
-
-        try
-        {
-            service.RenameCollection(current.Id, name);
-            undoManager?.RecordCollectionRenamed(collectionRepository, current.Id, current.Name, name);
-            current.Name = name;
-            StatusText = LocalizationService.Current.Format(TextKeys.CollectionRenamed, name);
-            RefreshCollections();
-            SelectCollection(current.Id);
-            Changed();
-        }
-        catch (Exception exception) when (exception is CollectionNameRequiredException
-            || exception is CollectionDuplicateNameException
-            || exception is CollectionNotFoundException)
-        {
-            StatusText = exception.Message;
+            SelectCollection(SelectedCollection.Id);
         }
     }
 
+    /// <summary>Shows the inline delete confirmation bar for the selected collection.</summary>
     [RelayCommand(CanExecute = nameof(CanManageSelectedCollection))]
     private void DeleteCollection()
+    {
+        OnPropertyChanged(nameof(DeleteCollectionConfirmationPrompt));
+        IsDeleteCollectionConfirmationVisible = true;
+    }
+
+    [RelayCommand(CanExecute = nameof(CanManageSelectedCollection))]
+    private void ConfirmDeleteCollection()
     {
         if (service is null || collectionRepository is null || SelectedCollection is null)
         {
@@ -328,12 +481,98 @@ public sealed partial class CollectionsDialogViewModel : ObservableObject
             service.DeleteCollection(current.Id);
             undoManager?.RecordCollectionDeleted(collectionRepository, snapshot);
             StatusText = LocalizationService.Current.Format(TextKeys.CollectionDeleted, current.Name);
+            IsDeleteCollectionConfirmationVisible = false;
             RefreshCollections();
             Changed();
         }
         catch (CollectionNotFoundException exception)
         {
             StatusText = exception.Message;
+        }
+    }
+
+    [RelayCommand]
+    private void CancelDeleteCollection() => IsDeleteCollectionConfirmationVisible = false;
+
+    /// <summary>Starts inline renaming for the given row.</summary>
+    [RelayCommand(CanExecute = nameof(CanManageCollections))]
+    private void BeginRenameCollection(CollectionListItemViewModel? item)
+    {
+        if (item is null)
+        {
+            return;
+        }
+
+        foreach (var other in Collections)
+        {
+            other.IsRenaming = false;
+        }
+
+        item.RenameDraft = item.Name;
+        item.IsRenaming = true;
+    }
+
+    /// <summary>Commits the inline rename draft for the given row.</summary>
+    [RelayCommand(CanExecute = nameof(CanManageCollections))]
+    private void CommitRenameCollection(CollectionListItemViewModel? item)
+    {
+        if (item is null || !item.IsRenaming)
+        {
+            return;
+        }
+
+        if (RenameCollectionCore(item, item.RenameDraft))
+        {
+            item.IsRenaming = false;
+            SelectCollection(item.Id);
+        }
+    }
+
+    /// <summary>Discards the inline rename draft for the given row.</summary>
+    [RelayCommand]
+    private void CancelRenameCollection(CollectionListItemViewModel? item)
+    {
+        if (item is not null)
+        {
+            item.IsRenaming = false;
+        }
+    }
+
+    private bool RenameCollectionCore(CollectionListItemViewModel current, string? name)
+    {
+        if (service is null || collectionRepository is null)
+        {
+            return false;
+        }
+
+        var trimmed = name?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(trimmed))
+        {
+            StatusText = LocalizationService.Current.Get(TextKeys.CollectionNameRequired);
+            return false;
+        }
+
+        if (string.Equals(current.Name, trimmed, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        try
+        {
+            service.RenameCollection(current.Id, trimmed);
+            undoManager?.RecordCollectionRenamed(collectionRepository, current.Id, current.Name, trimmed);
+            current.Name = trimmed;
+            StatusText = LocalizationService.Current.Format(TextKeys.CollectionRenamed, trimmed);
+            RefreshCollections();
+            Changed();
+            return true;
+        }
+        catch (Exception exception) when (exception is CollectionNameRequiredException
+            || exception is CollectionDuplicateNameException
+            || exception is CollectionNotFoundException)
+        {
+            StatusText = exception.Message;
+            return false;
         }
     }
 
@@ -354,9 +593,6 @@ public sealed partial class CollectionsDialogViewModel : ObservableObject
         Changed();
     }
 
-    [RelayCommand]
-    private void RefreshResults() => RefreshCollections();
-
     private bool CanNavigate() => navigate is not null && SelectedMember is not null;
 
     [RelayCommand(CanExecute = nameof(CanNavigate))]
@@ -372,7 +608,112 @@ public sealed partial class CollectionsDialogViewModel : ObservableObject
         }
     }
 
-    partial void OnHasMissingMembersChanged(bool value) => RemoveMissingEntriesCommand.NotifyCanExecuteChanged();
+    private bool CanOpenMemberFolder() => CanNavigate();
+
+    [RelayCommand(CanExecute = nameof(CanOpenMemberFolder))]
+    private void OpenMemberFolder()
+    {
+        if (navigate is null || catalogRepository is null || SelectedMember is null)
+        {
+            return;
+        }
+
+        var document = catalogRepository.Get(SelectedMember.Id);
+        if (document is null)
+        {
+            return;
+        }
+
+        var folder = document.ParentId is { } parentId ? catalogRepository.Get(parentId) : null;
+        navigate(folder ?? document);
+    }
+
+    private bool CanRemoveSelectedMember() =>
+        service is not null
+        && collectionRepository is not null
+        && SelectedCollection is { IsDynamic: false }
+        && SelectedMember is not null;
+
+    [RelayCommand(CanExecute = nameof(CanRemoveSelectedMember))]
+    private void RequestRemoveSelectedMember() => IsRemoveMemberConfirmationVisible = true;
+
+    [RelayCommand]
+    private void ConfirmRemoveSelectedMember()
+    {
+        if (service is null || collectionRepository is null || SelectedCollection is null || SelectedMember is null)
+        {
+            return;
+        }
+
+        var current = SelectedCollection;
+        var member = SelectedMember;
+        if (current.IsDynamic)
+        {
+            return;
+        }
+
+        var oldIds = service.GetEntryIds(current.Id);
+        service.RemoveEntries(current.Id, [member.Id]);
+        undoManager?.RecordCollectionEntriesChanged(
+            collectionRepository,
+            current.Id,
+            oldIds,
+            service.GetEntryIds(current.Id));
+        StatusText = LocalizationService.Current.Format(TextKeys.CollectionMemberRemoved, member.Name, current.Name);
+        IsRemoveMemberConfirmationVisible = false;
+        RefreshCollections();
+        SelectCollection(current.Id);
+        Changed();
+    }
+
+    [RelayCommand]
+    private void CancelRemoveMember() => IsRemoveMemberConfirmationVisible = false;
+
+    private bool CanAddSelectedEntries() =>
+        service is not null
+        && collectionRepository is not null
+        && SelectedCollection is { IsDynamic: false };
+
+    /// <summary>Adds the catalog entries currently selected in the main browser to the manual collection.</summary>
+    [RelayCommand(CanExecute = nameof(CanAddSelectedEntries))]
+    private void AddSelectedEntries()
+    {
+        if (service is null || collectionRepository is null || SelectedCollection is null)
+        {
+            return;
+        }
+
+        var current = SelectedCollection;
+        if (current.IsDynamic)
+        {
+            return;
+        }
+
+        var ids = selectedEntryIdsProvider?.Invoke() ?? [];
+        if (ids.Count == 0)
+        {
+            StatusText = LocalizationService.Current.Get(TextKeys.CollectionSelectEntriesFirst);
+            return;
+        }
+
+        var oldIds = service.GetEntryIds(current.Id);
+        service.AddEntries(current.Id, ids);
+        undoManager?.RecordCollectionEntriesChanged(
+            collectionRepository,
+            current.Id,
+            oldIds,
+            service.GetEntryIds(current.Id));
+        StatusText = LocalizationService.Current.Format(TextKeys.CollectionAddedTo, current.Name, ids.Count);
+        RefreshCollections();
+        SelectCollection(current.Id);
+        Changed();
+    }
+
+    partial void OnHasMissingMembersChanged(bool value)
+    {
+        RemoveMissingEntriesCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(MissingMembersNotice));
+    }
 
     private void SelectCollection(string id)
     {
