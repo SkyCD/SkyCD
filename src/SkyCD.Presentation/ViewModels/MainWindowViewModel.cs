@@ -460,6 +460,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             return;
         }
 
+        if (IsCatalogLoading)
+        {
+            // The open handler replaces this catalog and view model when the load completes, so rebuilding
+            // the outgoing tree here would only block the dispatcher while the window loads (#1109).
+            return;
+        }
+
         RefreshTreeNodes();
         RefreshBrowserItemsForSelection();
     }
