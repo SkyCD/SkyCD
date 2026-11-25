@@ -48,12 +48,6 @@
                                        TextWrapping="Wrap"
                                        Text="{i18n:Translate {x:Static i18n:UiKeys.AboutStoryRewrite}}" />
 
-                            <TextBlock Classes="caption">
-                                <Run Text="{i18n:Translate {x:Static i18n:UiKeys.AboutStoryVersion}}" />
-                                <Run Text=" " />
-                                <Run Text="{Binding Version}" />
-                            </TextBlock>
-
                             <StackPanel Spacing="{DynamicResource SkySpaceSm}">
                                 <TextBlock Classes="h2"
                                            Text="{i18n:Translate {x:Static i18n:UiKeys.AboutStoryReferences}}" />
@@ -88,26 +82,6 @@
                                                PointerPressed="OnOpenRepositoryUrl" />
                                 </StackPanel>
 
-                                <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
-                                    <TextBlock Classes="caption"
-                                               Text="{i18n:Translate {x:Static i18n:UiKeys.AboutStoryOriginalSite}}" />
-                                    <TextBlock Classes="caption RepositoryLink"
-                                               Text="http://www.skyftp.skynet.lt"
-                                               Cursor="Hand"
-                                               TextDecorations="Underline"
-                                               PointerPressed="OnOpenRepositoryUrl" />
-                                </StackPanel>
-
-                                <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
-                                    <TextBlock Classes="caption"
-                                               Text="{i18n:Translate {x:Static i18n:UiKeys.AboutStoryLicense}}" />
-                                    <TextBlock Classes="caption RepositoryLink"
-                                               Text="BSD-2-Clause"
-                                               Tag="https://github.com/SkyCD/SkyCD/blob/main/LICENSE"
-                                               Cursor="Hand"
-                                               TextDecorations="Underline"
-                                               PointerPressed="OnOpenRepositoryUrl" />
-                                </StackPanel>
                             </StackPanel>
                         </StackPanel>
                     </ScrollViewer>

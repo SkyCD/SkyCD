@@ -28,17 +28,13 @@ public sealed class AboutStoryLayoutTests
     }
 
     [Fact]
-    public void OverviewTab_ShowsTheRunningVersionInsteadOfAHardCodedOne()
+    public void OverviewTab_DoesNotRepeatTheRunningVersion()
     {
         var story = OverviewTab();
-        var versionLine = story.Descendants(Avalonia + "TextBlock")
-            .Single(text => text.Descendants(Avalonia + "Run").Any());
 
-        Assert.Contains(versionLine.Descendants(Avalonia + "Run"), run =>
-            ((string?)run.Attribute("Text"))?.Contains("UiKeys.AboutStoryVersion", StringComparison.Ordinal) == true);
-        Assert.Contains(versionLine.Descendants(Avalonia + "Run"), run =>
-            string.Equals((string?)run.Attribute("Text"), "{Binding Version}", StringComparison.Ordinal));
-        Assert.DoesNotContain("Version 30", story.ToString(), StringComparison.Ordinal);
+        Assert.Empty(story.Descendants(Avalonia + "Run"));
+        Assert.DoesNotContain("AboutStoryVersion", story.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain("Running version", story.ToString(), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -49,13 +45,10 @@ public sealed class AboutStoryLayoutTests
             .Where(text => (string?)text.Attribute("PointerPressed") == "OnOpenRepositoryUrl")
             .ToArray();
 
-        Assert.Equal(5, links.Length);
+        Assert.Equal(3, links.Length);
         Assert.Contains(links, link => (string?)link.Attribute("Text") == "https://github.com/SkyCD/SkyCD");
         Assert.Contains(links, link => (string?)link.Attribute("Text") == "https://sourceforge.net/projects/skycd/");
         Assert.Contains(links, link => (string?)link.Attribute("Text") == "http://skycd.sf.net");
-        Assert.Contains(links, link => (string?)link.Attribute("Text") == "http://www.skyftp.skynet.lt");
-        Assert.Contains(links, link =>
-            (string?)link.Attribute("Tag") == "https://github.com/SkyCD/SkyCD/blob/main/LICENSE");
     }
 
     private static void AssertTranslatedText(XElement story, string key)
