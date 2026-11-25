@@ -44,15 +44,15 @@
         <!--
             The blocks above the footer scroll only once the window is too short for them (the
             thumbnail is visible at MinHeight), so the footer keeps the SkyInsetMd inset instead
-            of being pushed past the window edge. MinHeight tracks the viewport so the error log
-            still grows with the window when everything fits.
+            of being pushed past the window edge. The scroller already stretches its content to
+            the viewport, so the error log grows with the window when everything fits; a MinHeight
+            bound back to the viewport would sustain the Auto scrollbar it triggers.
         -->
         <ScrollViewer x:Name="ProgressContentScroller"
                       Grid.Row="0"
                       VerticalScrollBarVisibility="Auto">
             <Grid RowDefinitions="Auto,Auto,Auto,Auto,*"
-                  RowSpacing="{DynamicResource SkySpaceSm}"
-                  MinHeight="{Binding #ProgressContentScroller.Viewport.Height}">
+                  RowSpacing="{DynamicResource SkySpaceSm}">
                 <!-- Filtering line: what is currently being examined, with the active source shown inline -->
                 <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="{DynamicResource SkySpaceXs}">
                     <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Filtering}}" FontWeight="SemiBold" />
