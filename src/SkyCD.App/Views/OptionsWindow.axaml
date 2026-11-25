@@ -1359,6 +1359,28 @@
                                    Text="{Binding CollectionsPage.StatusText}"
                                    TextWrapping="Wrap" />
                     </Grid>
+                    <Grid Grid.Row="2"
+                          IsVisible="{Binding ShowContributedOptionsPageSection}"
+                          RowDefinitions="Auto,Auto,*"
+                          RowSpacing="{DynamicResource SkySpaceSm}">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                            <TextBlock Text="{Binding SelectedContributedPage.Title}"
+                                       FontSize="{DynamicResource SkyFontBody}" />
+                            <Border Grid.Column="1"
+                                    Height="1"
+                                    Background="{DynamicResource ThemeBorderLowBrush}"
+                                    VerticalAlignment="Center" />
+                        </Grid>
+                        <TextBlock Grid.Row="1"
+                                   Text="{Binding SelectedContributedPage.Error}"
+                                   IsVisible="{Binding SelectedContributedPage.HasError}"
+                                   TextWrapping="Wrap" />
+                        <ContentControl Grid.Row="2"
+                                        Content="{Binding SelectedContributedPage.Content}"
+                                        IsVisible="{Binding SelectedContributedPage.HasContent}"
+                                        HorizontalContentAlignment="Stretch"
+                                        VerticalContentAlignment="Stretch" />
+                    </Grid>
                     <Grid Grid.Row="2" IsVisible="{Binding ShowAcpSection}"
                           RowDefinitions="Auto,*,Auto">
                         <TextBox Margin="{DynamicResource SkyGapBottomMd}"

@@ -37,6 +37,9 @@ public sealed class LocationApiAdapter : ILocationApi, IDisposable
     public event EventHandler? Changed;
 
     /// <inheritdoc />
+    public bool IsCatalogOpen => Service() is not null;
+
+    /// <inheritdoc />
     public IReadOnlyList<CatalogLocationInfo> GetLocations()
     {
         if (Service() is not { } locations)

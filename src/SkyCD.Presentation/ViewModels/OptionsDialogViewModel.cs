@@ -192,6 +192,15 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
                     CollectionsCategoryIndex));
             }
 
+            // Plugin-contributed pages sit next to Collections so location-style management surfaces live
+            // with the other catalog data pages rather than after the settings/plugin groups.
+            categories.AddRange(contributedPages.Values
+                .Where(page => Plugins.Any(plugin =>
+                    plugin.IsEnabled && plugin.Id.Equals(page.PluginId, StringComparison.OrdinalIgnoreCase)))
+                .OrderBy(static page => page.Order)
+                .ThenBy(static page => page.Title, StringComparer.OrdinalIgnoreCase)
+                .Select(page => new OptionsSettingCategory(page.Id, page.Title, ContributedPage: page)));
+
             categories.AddRange(
             [
                 new("scan", LocalizationService.Current.Get(TextKeys.Scan), 6),
@@ -305,7 +314,7 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         ShowDetailsColumnsSection || ShowToolbarSection ||
         ShowAiDescriptionSection || ShowAiProviderSection || ShowMcpToolsSection ||
         ShowPluginSettingsSection || ShowPluginsSettingsSection ||
-        ShowCollectionsSection;
+        ShowCollectionsSection || ShowContributedOptionsPageSection;
 
     public string McpBaseUrl => $"http://127.0.0.1:{McpPort}/mcp";
 
@@ -829,6 +838,8 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(ShowCustomPropertiesSection));
         OnPropertyChanged(nameof(IsCollectionsCategorySelected));
         OnPropertyChanged(nameof(ShowCollectionsSection));
+        OnPropertyChanged(nameof(SelectedContributedPage));
+        OnPropertyChanged(nameof(ShowContributedOptionsPageSection));
         OnPropertyChanged(nameof(IsDetailsColumnsCategorySelected));
         OnPropertyChanged(nameof(ShowDetailsColumnsSection));
         OnPropertyChanged(nameof(IsToolbarCategorySelected));

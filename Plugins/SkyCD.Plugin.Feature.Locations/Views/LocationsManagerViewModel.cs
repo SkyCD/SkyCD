@@ -36,6 +36,11 @@ public sealed partial class LocationsManagerViewModel : ObservableObject
     [ObservableProperty] private string statusText = string.Empty;
     [ObservableProperty] private string errorText = string.Empty;
     [ObservableProperty] private bool hasLocations;
+    [ObservableProperty] private bool isCatalogOpen;
+
+    public bool ShowCatalogUnavailable => !IsCatalogOpen;
+
+    partial void OnIsCatalogOpenChanged(bool value) => OnPropertyChanged(nameof(ShowCatalogUnavailable));
 
     partial void OnSelectedLocationChanged(LocationRow? value)
     {
@@ -141,11 +146,15 @@ public sealed partial class LocationsManagerViewModel : ObservableObject
 
     private void Reload(string? selectId = null)
     {
+        IsCatalogOpen = api.IsCatalogOpen;
         selectId ??= SelectedLocation?.Id;
         Locations.Clear();
-        foreach (var location in api.GetLocations())
+        if (IsCatalogOpen)
         {
-            Locations.Add(new LocationRow(location.Id, location.Name, location.UsageCount));
+            foreach (var location in api.GetLocations())
+            {
+                Locations.Add(new LocationRow(location.Id, location.Name, location.UsageCount));
+            }
         }
 
         HasLocations = Locations.Count > 0;

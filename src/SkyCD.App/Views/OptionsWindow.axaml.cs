@@ -60,6 +60,7 @@ public partial class OptionsWindow : Window
         {
             vm.PropertyChanged -= OnViewModelPropertyChanged;
             vm.PropertyChanged += OnViewModelPropertyChanged;
+            vm.SelectedContributedPage?.EnsureContent();
             vm.CollectionsPage?.WatchCatalogChanges(action => Dispatcher.UIThread.Post(action));
         }
     }
@@ -75,6 +76,11 @@ public partial class OptionsWindow : Window
         else if (e.PropertyName == nameof(OptionsDialogViewModel.ShowPluginSettingsSection))
         {
             await LoadPluginPageIfVisibleAsync();
+        }
+        else if (e.PropertyName == nameof(OptionsDialogViewModel.ShowContributedOptionsPageSection) &&
+                 DataContext is OptionsDialogViewModel optionsViewModel)
+        {
+            optionsViewModel.SelectedContributedPage?.EnsureContent();
         }
         else if (e.PropertyName == nameof(OptionsDialogViewModel.ShowAcpSection))
         {
