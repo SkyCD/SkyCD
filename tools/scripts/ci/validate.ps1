@@ -5,6 +5,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 & (Join-Path $PSScriptRoot "check-naming.ps1")
+& (Join-Path $PSScriptRoot "check-plugin-icons.ps1")
 & (Join-Path $PSScriptRoot "check-design-tokens.ps1")
 
 dotnet restore SkyCD.slnx

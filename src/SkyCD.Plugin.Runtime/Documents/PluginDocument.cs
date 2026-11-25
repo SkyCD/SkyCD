@@ -23,6 +23,9 @@ public sealed class PluginDocument
 
     public string? PrimaryExtension { get; set; }
 
+    /// <summary>Base64 PNG frame last extracted from the plugin's ICO, so stale descriptors keep their icon.</summary>
+    public string? IconPng { get; set; }
+
     public string AssemblyPath { get; set; } = string.Empty;
 
     public bool IsEnabled { get; set; } = true;

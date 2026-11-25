@@ -6,11 +6,13 @@
 1. Enumerate configured plugin directories and scan DLLs recursively.
 2. Skip SDK contract assemblies, intermediate (`obj`), and reference outputs.
 3. Load each assembly once, reusing an already loaded assembly when available.
-4. Resolve identity and version constraints from assembly metadata, including
-   `PluginIdAttribute`, `MinHostVersionAttribute`, and `MaxHostVersionAttribute`.
-5. Instantiate concrete `IPluginCapability` implementations with public parameterless constructors.
-6. Check host compatibility against minimum and optional maximum host versions.
-7. Persist discovered descriptors and expose capabilities from enabled, available plugins.
+4. Resolve identity and version constraints from assembly metadata, including `PluginIdAttribute`,
+   `MinHostVersionAttribute`, and `MaxHostVersionAttribute`.
+5. Read a PNG-encoded frame from the `SkyCD.Plugin.Icon.ico` resource embedded in the plugin assembly
+   (`Assets/icon.ico` in the plugin project); an assembly without that resource gets the neutral glyph.
+6. Instantiate concrete `IPluginCapability` implementations with public parameterless constructors.
+7. Check host compatibility against minimum and optional maximum host versions.
+8. Persist discovered descriptors and expose capabilities from enabled, available plugins.
 
 No `plugin.json` is used. File format, menu, modal, CLI, localization, ownership,
 account, and action capabilities all follow this same assembly discovery path.

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using SkyCD.Documents;
+using SkyCD.Presentation.Plugins;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.UI.Localization;
 using Xunit;
@@ -48,23 +49,44 @@ public class OptionsDialogViewModelTests
     }
 
     [Fact]
-    public void OptionsPluginItem_BuildsIconKeyFromPrimaryExtension()
+    public void OptionsPluginItem_ExposesTheIconEmbeddedInTheLibrary()
     {
-        var plugin = new OptionsPluginItem("JSON", "SkyCD", "json v2.0.0", primaryExtension: "json");
+        var icon = new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
+
+        var plugin = new OptionsPluginItem("JSON", "SkyCD", "json v2.0.0", primaryExtension: "json",
+            icon: icon);
 
         Assert.Equal("json", plugin.PrimaryExtension);
-        Assert.Equal("ext:json", plugin.IconKey);
-        Assert.True(plugin.HasIcon);
+        Assert.Same(icon, plugin.Icon);
+        Assert.True(plugin.HasBitmapIcon);
     }
 
     [Fact]
-    public void OptionsPluginItem_UsesNoIconKeyWithoutPrimaryExtension()
+    public void OptionsPluginItem_WithoutAnEmbeddedIconUsesTheNeutralGlyph()
     {
         var plugin = new OptionsPluginItem("Accounts", "SkyCD", "accounts v2.0.0");
 
-        Assert.Null(plugin.PrimaryExtension);
-        Assert.Null(plugin.IconKey);
-        Assert.False(plugin.HasIcon);
+        Assert.Null(plugin.Icon);
+        Assert.False(plugin.HasBitmapIcon);
+    }
+
+    [Fact]
+    public void OptionsPluginItem_TreatsAnEmptyIconAsMissing()
+    {
+        var plugin = new OptionsPluginItem("Accounts", "SkyCD", "accounts v2.0.0", icon: []);
+
+        Assert.Null(plugin.Icon);
+        Assert.False(plugin.HasBitmapIcon);
+    }
+
+    [Fact]
+    public void PluginIconKey_DecodesPersistedIconsAndIgnoresGarbage()
+    {
+        var icon = new byte[] { 0x89, 0x50, 0x4E, 0x47 };
+
+        Assert.Equal(icon, PluginIconKey.TryDecodePersisted(Convert.ToBase64String(icon)));
+        Assert.Null(PluginIconKey.TryDecodePersisted(null));
+        Assert.Null(PluginIconKey.TryDecodePersisted("not base64!"));
     }
 
     [Fact]
