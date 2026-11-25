@@ -28,6 +28,39 @@ public sealed class AboutStoryLayoutTests
     }
 
     [Fact]
+    public void OverviewTab_ShowsAuthorsAndThanksAfterReferences()
+    {
+        // Issue #1134: the Overview tab ends with the legacy authors and thanks credits,
+        // in story -> references -> authors -> thanks order.
+        var story = OverviewTab();
+        var markup = story.ToString();
+
+        var references = markup.IndexOf("UiKeys.AboutStoryReferences", StringComparison.Ordinal);
+        var authors = markup.IndexOf("UiKeys.AboutStoryAuthors}", StringComparison.Ordinal);
+        var thanks = markup.IndexOf("UiKeys.AboutStoryThanks}", StringComparison.Ordinal);
+        Assert.True(0 <= references && references < authors && authors < thanks,
+            "the Overview tab must read story, references, authors, thanks.");
+
+        foreach (var key in new[]
+                 {
+                     "UiKeys.AboutStoryAuthorName",
+                     "UiKeys.AboutStoryAuthorContact",
+                     "UiKeys.AboutStoryThanksFreewareBase",
+                     "UiKeys.AboutStoryThanksSourceForge",
+                     "UiKeys.AboutStoryThanksGbit",
+                     "UiKeys.AboutStoryThanksSlivickas",
+                     "UiKeys.AboutStoryThanksAndYou"
+                 })
+        {
+            Assert.Contains(key, markup, StringComparison.Ordinal);
+        }
+
+        var email = Assert.Single(story.Descendants(Avalonia + "TextBlock"),
+            text => ((string?)text.Attribute("Tag"))?.StartsWith("mailto:", StringComparison.Ordinal) == true);
+        Assert.Equal("OnOpenRepositoryUrl", (string?)email.Attribute("PointerPressed"));
+    }
+
+    [Fact]
     public void OverviewTab_DropsTheRetiredVersionAndLicenseRows()
     {
         // Issue #1098: the version is already shown under the dialog title, and the original SkyFTP
@@ -62,10 +95,11 @@ public sealed class AboutStoryLayoutTests
             .Where(text => (string?)text.Attribute("PointerPressed") == "OnOpenRepositoryUrl")
             .ToArray();
 
-        Assert.Equal(3, links.Length);
+        Assert.Equal(4, links.Length);
         Assert.Contains(links, link => (string?)link.Attribute("Text") == "https://github.com/SkyCD/SkyCD");
         Assert.Contains(links, link => (string?)link.Attribute("Text") == "https://sourceforge.net/projects/skycd/");
         Assert.Contains(links, link => (string?)link.Attribute("Text") == "http://skycd.sf.net");
+        Assert.Contains(links, link => (string?)link.Attribute("Tag") == "mailto:skycd@mekdrop.name");
     }
 
     private static void AssertTranslatedText(XElement story, string key)

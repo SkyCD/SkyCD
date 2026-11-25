@@ -84,6 +84,45 @@
                                                PointerPressed="OnOpenRepositoryUrl" />
                                 </StackPanel>
                             </StackPanel>
+
+                            <StackPanel Spacing="{DynamicResource SkySpaceSm}">
+                                <TextBlock Classes="h2"
+                                           Text="{i18n:Translate {x:Static i18n:UiKeys.AboutStoryAuthors}}" />
+
+                                <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
+                                    <TextBlock Classes="body"
+                                               Text="{i18n:Translate {x:Static i18n:UiKeys.AboutStoryAuthorName}}" />
+                                    <TextBlock Classes="caption RepositoryLink"
+                                               Text="{i18n:Translate {x:Static i18n:UiKeys.AboutStoryAuthorContact}}"
+                                               Tag="mailto:skycd@mekdrop.name"
+                                               Cursor="Hand"
+                                               TextDecorations="Underline"
+                                               PointerPressed="OnOpenRepositoryUrl" />
+                                </StackPanel>
+                            </StackPanel>
+
+                            <StackPanel Spacing="{DynamicResource SkySpaceSm}">
+                                <TextBlock Classes="h2"
+                                           Text="{i18n:Translate {x:Static i18n:UiKeys.AboutStoryThanks}}" />
+
+                                <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
+                                    <TextBlock Classes="caption"
+                                               Text="{i18n:Translate {x:Static i18n:UiKeys.AboutStoryThanksFreewareBase}}"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock Classes="caption"
+                                               Text="{i18n:Translate {x:Static i18n:UiKeys.AboutStoryThanksSourceForge}}"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock Classes="caption"
+                                               Text="{i18n:Translate {x:Static i18n:UiKeys.AboutStoryThanksGbit}}"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock Classes="caption"
+                                               Text="{i18n:Translate {x:Static i18n:UiKeys.AboutStoryThanksSlivickas}}"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock Classes="caption"
+                                               Text="{i18n:Translate {x:Static i18n:UiKeys.AboutStoryThanksAndYou}}"
+                                               TextWrapping="Wrap" />
+                                </StackPanel>
+                            </StackPanel>
                         </StackPanel>
                     </ScrollViewer>
                 </TabItem>

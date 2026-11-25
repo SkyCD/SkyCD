@@ -10,6 +10,8 @@ namespace SkyCD.App.Tests;
 /// Issue #942: the Add To List dialog must give every section its own sizing row. The source panel
 /// previously lived in a fixed 6 px row and drew over the name/Location block, and the overflowing
 /// content pushed the validation line out of the fixed 445x480 window.
+/// Issue #1150: the source panel owns the content column's star row, so the Internet form uses the
+/// full remaining height instead of stopping at a fixed cap.
 /// </summary>
 public class AddToListWindowLayoutTests
 {
@@ -18,26 +20,22 @@ public class AddToListWindowLayoutTests
     private static readonly XNamespace Xaml2006 = "http://schemas.microsoft.com/winfx/2006/xaml";
 
     [Fact]
-    public void FormFields_HaveNoFixedPixelSpacerRow()
+    public void ContentColumn_HasNoFixedPixelSpacerRow()
     {
-        var form = GetFormFieldsGrid();
+        var column = GetContentColumn();
 
-        Assert.DoesNotContain(((string?)form.Attribute("RowDefinitions") ?? string.Empty).Split(','),
+        Assert.DoesNotContain(((string?)column.Attribute("RowDefinitions") ?? string.Empty).Split(','),
             definition => double.TryParse(definition, out _));
-        Assert.Equal("{DynamicResource SkySpaceXs}", (string?)form.Attribute("RowSpacing"));
+        Assert.Equal("Auto,*,Auto", (string?)column.Attribute("RowDefinitions"));
     }
 
     [Fact]
-    public void EachSection_OwnsASizingRowInsideTheFormGrid()
+    public void EachSection_OwnsASizingRowInsideTheContentColumn()
     {
-        var form = GetFormFieldsGrid();
-
-        // Auto rows only: no fixed pixel row can clip a section again.
-        Assert.Equal("Auto,Auto", (string?)form.Attribute("RowDefinitions"));
-
-        var nameBlock = GetNameBlock(form);
-        var sourceRegion = GetSourceRegion(form);
         var column = GetContentColumn();
+
+        var nameBlock = GetNameBlock(column);
+        var sourceRegion = GetSourceRegion(column);
         var destinationSection = GetDestinationSection(column);
 
         // The name/Location block, the source panel and the destination choices each own a row.
@@ -45,7 +43,7 @@ public class AddToListWindowLayoutTests
         Assert.Equal("1", GridRowOf(sourceRegion));
         Assert.Equal("2", (string?)destinationSection.Attribute("Grid.Row"));
         Assert.Contains("UiKeys.SelectMediaName", nameBlock.ToString(), StringComparison.Ordinal);
-        Assert.Contains("UiKeys.Location", nameBlock.ToString(), StringComparison.Ordinal);
+        Assert.Contains("UiKeys.PhysicalLocation", nameBlock.ToString(), StringComparison.Ordinal);
         Assert.Contains(destinationSection.Descendants(Avalonia + "Button"),
             button => (string?)button.Attribute("Command") == "{Binding ConfirmCommand}");
     }
@@ -59,8 +57,8 @@ public class AddToListWindowLayoutTests
         // actions stay pinned to the bottom exactly as #823/#826 established.
         Assert.Equal("Auto,*,Auto", (string?)column.Attribute("RowDefinitions"));
         Assert.Equal("2", (string?)GetDestinationSection(column).Attribute("Grid.Row"));
-        Assert.Single(column.Elements(Avalonia + "Grid"),
-            grid => (string?)grid.Attribute(Xaml2006 + "Name") == "FormFieldsGrid");
+        Assert.Single(column.Elements(Avalonia + "StackPanel"),
+            panel => (string?)panel.Attribute(Xaml2006 + "Name") == "NameLocationBlock");
     }
 
     [Fact]
@@ -81,14 +79,14 @@ public class AddToListWindowLayoutTests
     }
 
     [Fact]
-    public void SourcePanel_ScrollsInsteadOfOverflowingTheNameBlock()
+    public void SourcePanel_FillsTheStarRowAndScrollsInsideItsBorder()
     {
-        var form = GetFormFieldsGrid();
-        var viewer = GetSourceRegion(form);
+        var column = GetContentColumn();
+        var viewer = GetSourceRegion(column);
 
         Assert.Equal("ScrollViewer", viewer.Name.LocalName);
         Assert.Equal("1", (string?)viewer.Attribute("Grid.Row"));
-        Assert.Equal("{DynamicResource SkyFormFieldsMaxHeight}", (string?)viewer.Attribute("MaxHeight"));
+        Assert.Null(viewer.Attribute("MaxHeight"));
         Assert.Equal("Auto", (string?)viewer.Attribute("VerticalScrollBarVisibility"));
         Assert.Equal("Disabled", (string?)viewer.Attribute("HorizontalScrollBarVisibility"));
 
@@ -185,9 +183,6 @@ public class AddToListWindowLayoutTests
         }
     }
 
-    private static XElement GetFormFieldsGrid() => Assert.Single(GetRootGrid().Descendants(Avalonia + "Grid"),
-        grid => (string?)grid.Attribute(Xaml2006 + "Name") == "FormFieldsGrid");
-
     private static XElement GetContentColumn() => Assert.Single(GetRootGrid().Elements(Avalonia + "Grid"),
         grid => (string?)grid.Attribute(Xaml2006 + "Name") == "ContentColumn");
 
@@ -195,11 +190,12 @@ public class AddToListWindowLayoutTests
         Assert.Single(column.Elements(Avalonia + "Grid"),
             grid => (string?)grid.Attribute(Xaml2006 + "Name") == "DestinationSection");
 
-    private static XElement GetNameBlock(XElement form) =>
-        Assert.Single(form.Elements(Avalonia + "StackPanel"));
+    private static XElement GetNameBlock(XElement column) =>
+        Assert.Single(column.Elements(Avalonia + "StackPanel"),
+            panel => (string?)panel.Attribute(Xaml2006 + "Name") == "NameLocationBlock");
 
-    private static XElement GetSourceRegion(XElement form) =>
-        Assert.Single(form.Elements(Avalonia + "ScrollViewer"));
+    private static XElement GetSourceRegion(XElement column) =>
+        Assert.Single(column.Elements(Avalonia + "ScrollViewer"));
 
     private static XElement GetValidationMessage(XElement root) =>
         Assert.Single(root.Elements(Avalonia + "TextBlock"),

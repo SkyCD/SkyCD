@@ -30,14 +30,48 @@ public sealed class TwemojiToolbarIconTests : IDisposable
         ToolbarIconResolver.AssetLoaderOverride = null;
     }
 
+    /// <summary>
+    /// Issue #1140: only commands with a fitting emoji keep colored artwork; the view modes, the list,
+    /// the status bar, the options page and the add command fall back to their project-owned monochrome
+    /// glyphs, which read without a label on both themes.
+    /// </summary>
     [Fact]
-    public void EveryShippedToolbarKey_HasColoredArtwork()
+    public void ColoredArtwork_CoversExactlyTheCommandsWithAFittingEmoji()
     {
-        var mapped = new HashSet<string>(TwemojiToolbarIcons.Keys, StringComparer.Ordinal);
+        var expected = new[]
+        {
+            ToolbarIconKeys.NewCatalog,
+            ToolbarIconKeys.OpenCatalog,
+            ToolbarIconKeys.SaveCatalog,
+            ToolbarIconKeys.SaveCatalogAs,
+            ToolbarIconKeys.Undo,
+            ToolbarIconKeys.Redo,
+            ToolbarIconKeys.DeleteItem,
+            ToolbarIconKeys.Properties,
+            ToolbarIconKeys.ViewTiles,
+            ToolbarIconKeys.ViewDetails,
+            ToolbarIconKeys.PreviewPane,
+            ToolbarIconKeys.Refresh,
+            ToolbarIconKeys.Find,
+            ToolbarIconKeys.AdvancedFind,
+            ToolbarIconKeys.Tags,
+            ToolbarIconKeys.Collections,
+        };
 
-        var unmapped = ShippedToolbarKeys().Where(key => !mapped.Contains(key)).ToArray();
+        Assert.Equal(expected.Order(StringComparer.Ordinal), TwemojiToolbarIcons.Keys.Order(StringComparer.Ordinal));
 
-        Assert.Empty(unmapped);
+        foreach (var key in new[]
+                 {
+                     ToolbarIconKeys.AddItem,
+                     ToolbarIconKeys.ViewSmallIcons,
+                     ToolbarIconKeys.ViewLargeIcons,
+                     ToolbarIconKeys.ViewList,
+                     ToolbarIconKeys.StatusBar,
+                     ToolbarIconKeys.Options,
+                 })
+        {
+            Assert.DoesNotContain(key, TwemojiToolbarIcons.Keys);
+        }
     }
 
     [Fact]
@@ -48,6 +82,19 @@ public sealed class TwemojiToolbarIconTests : IDisposable
         var extra = TwemojiToolbarIcons.Keys.Where(key => !shipped.Contains(key)).ToArray();
 
         Assert.Empty(extra);
+    }
+
+    /// <summary>
+    /// Issue #1140: the hook arrowheads were verified against the shipped SVG geometry —
+    /// RightArrowCurvingLeft draws ↩ (undo) and LeftArrowCurvingRight draws ↪ (redo) — and the
+    /// properties page gets the gear instead of the badge.
+    /// </summary>
+    [Fact]
+    public void CorrectedCommands_PaintSemanticallyFittingArtwork()
+    {
+        Assert.Equal("right-arrow-curving-left", TwemojiToolbarIcons.IconNameFor(ToolbarIconKeys.Undo));
+        Assert.Equal("left-arrow-curving-right", TwemojiToolbarIcons.IconNameFor(ToolbarIconKeys.Redo));
+        Assert.Equal("gear", TwemojiToolbarIcons.IconNameFor(ToolbarIconKeys.Properties));
     }
 
     /// <summary>

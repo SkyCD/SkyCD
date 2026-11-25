@@ -41,12 +41,22 @@ public sealed class PluginRuntimeSynchronizer(
     {
         pluginManager.Discover(ResolveDiscoveryPath(configuredPluginPath), hostVersionProvider.Current);
 
+        ReinjectHostApis();
+        return ServiceProvider.Resolve<FileFormatManager>();
+    }
+
+    /// <summary>
+    /// Re-registers the plugin runtime and hands the fresh capability instances their host APIs again.
+    /// Re-discovery builds new instances, so every path that calls <c>Discover</c> — synchronisation and
+    /// the Options plugin list alike — must follow it with this before the capabilities are used.
+    /// </summary>
+    public void ReinjectHostApis()
+    {
         ServiceProvider.ReregisterPluginsService();
-        // Re-discovery builds fresh capability instances; without re-injection they would resolve from the
-        // new container without the host APIs (catalog repository, dialogs, storage) they depend on.
+        // Without re-injection the fresh instances would resolve from the new container without the host
+        // APIs (catalog repository, dialogs, storage) they depend on.
         (Application.Current as App)?.InitializePluginConsumers(pluginManager);
         ServiceProvider.Resolve<PluginConfigurationManager>().RefreshConsumers();
-        return ServiceProvider.Resolve<FileFormatManager>();
     }
 
     /// <summary>Pushes readable and writable format availability of <paramref name="manager"/> to the menus.</summary>
