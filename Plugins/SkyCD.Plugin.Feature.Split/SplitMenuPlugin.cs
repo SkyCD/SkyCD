@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.SDK.Capabilities.Catalog;
 using SkyCD.SDK.Capabilities.Menu;
 using SkyCD.SDK.Capabilities.Ui;
+using SkyCD.Plugin.Feature.Split.Exceptions;
 using SkyCD.Plugin.Feature.Split.Models;
 using SkyCD.Plugin.Feature.Split.Parsing;
 using SkyCD.Plugin.Feature.Split.Views;
@@ -22,6 +24,7 @@ public sealed class SplitMenuPlugin : IMenuPluginCapability, ICatalogApiConsumer
 
     private const string MenuTitle = "Split Catalog...";
     private const string DialogTitle = "Split Catalog";
+    private const string Requirement = "Split Catalog needs a legacy SkyCD text (.scd) catalog.";
     private const int MenuOrder = 140;
     private ICatalogApi? catalogApi;
     private IHostDialogApi? dialogApi;
@@ -47,7 +50,16 @@ public sealed class SplitMenuPlugin : IMenuPluginCapability, ICatalogApiConsumer
 
         if (catalogApi?.OpenedCatalogPath is not { Length: > 0 } sourcePath)
         {
-            await NotifyAsync(context, "Open a legacy SkyCD text (.scd) catalog to split it.", cancellationToken)
+            await NotifyAsync(context, $"{Requirement} Open one to split it.", cancellationToken)
+                .ConfigureAwait(false);
+            return;
+        }
+
+        if (!string.Equals(Path.GetExtension(sourcePath), ".scd", StringComparison.OrdinalIgnoreCase))
+        {
+            await NotifyAsync(context,
+                    $"{Requirement} The open catalog '{Path.GetFileName(sourcePath)}' is not one.",
+                    cancellationToken)
                 .ConfigureAwait(false);
             return;
         }
@@ -84,6 +96,14 @@ public sealed class SplitMenuPlugin : IMenuPluginCapability, ICatalogApiConsumer
         catch (OperationCanceledException)
         {
             throw;
+        }
+        catch (NotLegacyTextCatalogException exception)
+        {
+            await NotifyAsync(context,
+                    $"{Requirement} '{Path.GetFileName(sourcePath)}' cannot be split: {exception.Reason}.",
+                    cancellationToken)
+                .ConfigureAwait(false);
+            return null;
         }
         catch (Exception exception)
         {

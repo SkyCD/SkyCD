@@ -4250,7 +4250,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 toolsMenuItems.Add(new MainMenuItemViewModel
                 {
                     Header = contribution.Title,
-                    Command = new RelayCommand(() => ExecutePluginMenuCommand(contribution.CommandId))
+                    Command = new RelayCommand(() => _ = ExecutePluginMenuCommandAsync(contribution.CommandId))
                 });
             }
         }
@@ -4266,7 +4266,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         "skycd.split"
     };
 
-    private async void ExecutePluginMenuCommand(string commandId)
+    internal async Task ExecutePluginMenuCommandAsync(string commandId)
     {
         if (pluginCommandCancellation is not null) { pluginCommandCancellation.Cancel(); return; }
         using var cancellation = new CancellationTokenSource();
@@ -4275,6 +4275,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         {
             StatusText = LocalizationService.Current.Format(TextKeys.ExecutingPluginCommand, commandId);
 
+            var hostApi = new ViewModelHostCommandApi(this);
             var context = new MenuCommandContext
             {
                 ActiveCatalogId = null,
@@ -4284,7 +4285,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                         : SelectedBrowserItem?.Id ?? SelectedTreeNode?.Key) is { Length: > 0 } entryId
                     ? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["EntryId"] = entryId }
                     : null,
-                HostApi = new ViewModelHostCommandApi(this)
+                HostApi = hostApi
             };
 
             var result = await menuExtensionManager.ExecuteAsync(commandId, context,
@@ -4302,8 +4303,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                     ? LocalizationService.Current.Format(TextKeys.PluginCommandFailed, commandId)
                     : LocalizationService.Current.Format(TextKeys.PluginCommandFailed2, result.Error);
             }
-            else
+            else if (!hostApi.Notified)
             {
+                // A notification the command issued explains its outcome better than the generic status, so it
+                // stays in the status bar instead of being replaced a frame later.
                 StatusText = LocalizationService.Current.Get(TextKeys.Done);
             }
         }
@@ -4319,6 +4322,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         private readonly string? rootId = viewModel.TreeNodes.FirstOrDefault()?.Key;
         private readonly string? catalogPath = viewModel.CurrentCatalogPath;
         private readonly string? descriptionEntryId = viewModel.GetSelectedBrowserItems() is { Count: 1 } selected ? selected[0].Id : null;
+
+        /// <summary>Gets whether the command issued a notification that must outlive its completion status.</summary>
+        public bool Notified { get; private set; }
 
         public Task<DescriptionContext> GetDescriptionContextAsync(DescriptionContextOptions options, CancellationToken cancellationToken)
         {
@@ -4387,6 +4393,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         public Task NotifyAsync(string message, CancellationToken cancellationToken = default)
         {
             viewModel.StatusText = message;
+            Notified = true;
             return Task.CompletedTask;
         }
     }
@@ -4695,7 +4702,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                     .. group.Select(contribution => new MainMenuItemViewModel
                     {
                         Header = contribution.Title,
-                        Command = new RelayCommand(() => ExecutePluginMenuCommand(contribution.CommandId))
+                        Command = new RelayCommand(() => _ = ExecutePluginMenuCommandAsync(contribution.CommandId))
                     })
                 ]
             });
