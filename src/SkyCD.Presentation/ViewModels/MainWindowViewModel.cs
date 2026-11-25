@@ -148,7 +148,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public event EventHandler? SaveCatalogRequested;
     public event EventHandler? AboutRequested;
     public event EventHandler? FindCatalogRequested;
-    public event EventHandler<CollectionsDialogRequestedEventArgs>? CollectionsRequested;
     public event EventHandler<AdvancedFindDialogRequestedEventArgs>? AdvancedFindRequested;
     public event EventHandler<OptionsDialogRequestedEventArgs>? OptionsRequested;
     public event EventHandler? DetailsColumnsChanged;
@@ -2846,16 +2845,16 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void OpenOptions()
     {
-        ShowOptions(preselectSettingCategory: null);
+        ShowOptions(preselectCategoryId: null);
     }
 
     [RelayCommand]
     private void OpenDetailsColumnsOptions()
     {
-        ShowOptions(LocalizationService.Current.Get(UiKeys.DetailsColumns));
+        ShowOptions(OptionsDialogViewModel.DetailsColumnsCategoryId);
     }
 
-    private void ShowOptions(string? preselectSettingCategory)
+    private void ShowOptions(string? preselectCategoryId)
     {
         if (OptionsRequested is null)
         {
@@ -2864,10 +2863,15 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
 
         var dialog = new OptionsDialogViewModel();
+        if (CreateCollectionsViewModel() is { } collections)
+        {
+            dialog.SetCollections(collections);
+        }
+
         OptionsRequested.Invoke(this, new OptionsDialogRequestedEventArgs
         {
             Dialog = dialog,
-            PreselectSettingCategory = preselectSettingCategory,
+            PreselectCategoryId = preselectCategoryId,
             Complete = (accepted, pluginPath, language) =>
             {
                 if (!accepted)
@@ -5232,7 +5236,17 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             return;
         }
 
-        var dialog = new CollectionsDialogViewModel(
+        ShowOptions(OptionsDialogViewModel.CollectionsCategoryId);
+    }
+
+    private CollectionsDialogViewModel? CreateCollectionsViewModel()
+    {
+        if (collectionService is null || collectionRepository is null || catalogRepository is null)
+        {
+            return null;
+        }
+
+        return new CollectionsDialogViewModel(
             collectionService,
             undoManager,
             catalogRepository,
@@ -5245,7 +5259,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 RefreshBrowserItemsForSelection();
             },
             navigate: NavigateToDocument);
-        CollectionsRequested?.Invoke(this, new CollectionsDialogRequestedEventArgs { Dialog = dialog });
     }
 
     private IReadOnlyList<CatalogDocument> GetSelectedBrowserItems()

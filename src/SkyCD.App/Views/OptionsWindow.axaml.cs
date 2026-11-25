@@ -60,6 +60,7 @@ public partial class OptionsWindow : Window
         {
             vm.PropertyChanged -= OnViewModelPropertyChanged;
             vm.PropertyChanged += OnViewModelPropertyChanged;
+            vm.CollectionsPage?.WatchCatalogChanges(action => Dispatcher.UIThread.Post(action));
         }
     }
 
@@ -104,6 +105,15 @@ public partial class OptionsWindow : Window
         if (DataContext is OptionsDialogViewModel { SelectedMarketplacePlugin: not null } vm)
         {
             vm.ShowMarketplacePluginsCommand.Execute(null);
+        }
+    }
+
+    private void OnCollectionMemberDoubleTapped(object? sender, TappedEventArgs e)
+    {
+        if (DataContext is OptionsDialogViewModel { CollectionsPage: { } collections } &&
+            collections.NavigateToSelectedCommand.CanExecute(null))
+        {
+            collections.NavigateToSelectedCommand.Execute(null);
         }
     }
 
