@@ -817,6 +817,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 }
             }
         });
+        repository.InvalidateSnapshot();
     }
 
     public static MainWindowViewModel CreateForInMemoryCatalog(
@@ -826,6 +827,17 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         IMediaCacheStore? mediaCacheStore = null)
     {
         return new MainWindowViewModel(catalogEntries, propertyValueLocalizer, menuExtensionManager, mediaCacheStore);
+    }
+
+    /// <summary>
+    /// Test seam: builds the view model over an initialized catalog repository without the app-start side
+    /// effects (seeding, start counter) the production constructor implies.
+    /// </summary>
+    internal static MainWindowViewModel CreateForRepository(IRepository<CatalogDocument> catalogRepository)
+    {
+        ArgumentNullException.ThrowIfNull(catalogRepository);
+        return new MainWindowViewModel(catalogRepository, new PropertyValueLocalizer(),
+            CreateEmptyMenuExtensionManager(), shouldSeedDefaultCatalog: false);
     }
 
     /// <summary>
@@ -987,7 +999,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public IReadOnlyList<MainMenuItemViewModel> TreeContextMenuItems => treeContextMenuItems;
 
-    [ObservableProperty] private ObservableCollection<CatalogDocument> browserItems = [];
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(VisibleBrowserItems))]
+    private ObservableCollection<CatalogDocument> browserItems = [];
 
     [ObservableProperty] private string? selectedContentsNotice;
 
@@ -2845,16 +2859,16 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void OpenOptions()
     {
-        ShowOptions(preselectSettingCategory: null);
+        ShowOptions(preselectCategoryId: null);
     }
 
     [RelayCommand]
     private void OpenDetailsColumnsOptions()
     {
-        ShowOptions(LocalizationService.Current.Get(UiKeys.DetailsColumns));
+        ShowOptions(OptionsDialogViewModel.DetailsColumnsCategoryId);
     }
 
-    private void ShowOptions(string? preselectSettingCategory)
+    private void ShowOptions(string? preselectCategoryId)
     {
         if (OptionsRequested is null)
         {
@@ -2862,11 +2876,16 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             return;
         }
 
-        var dialog = new OptionsDialogViewModel(CreateCollectionsDialogViewModel());
+        var dialog = new OptionsDialogViewModel();
+        if (CreateCollectionsViewModel() is { } collections)
+        {
+            dialog.SetCollections(collections);
+        }
+
         OptionsRequested.Invoke(this, new OptionsDialogRequestedEventArgs
         {
             Dialog = dialog,
-            PreselectSettingCategory = preselectSettingCategory,
+            PreselectCategoryId = preselectCategoryId,
             Complete = (accepted, pluginPath, language) =>
             {
                 if (!accepted)
@@ -3700,8 +3719,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
         var refreshedItems = BrowserItemSorting.Sort(items, CurrentSortMode, IsSortDescending);
 
-        BrowserItems.Clear();
-        foreach (var item in refreshedItems) BrowserItems.Add(item);
+        // Replace the collection in one notification; per-item Add raises one collection change and one
+        // layout pass per file, which is what made a large folder stall the window.
+        BrowserItems = new ObservableCollection<CatalogDocument>(refreshedItems);
         SelectedBrowserItem = BrowserItems.FirstOrDefault(item =>
                               item.Name.Equals(previouslySelectedName, StringComparison.OrdinalIgnoreCase))
                               ?? refreshedItems.FirstOrDefault();
@@ -4811,6 +4831,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 }
             }
         });
+        catalogRepository.InvalidateSnapshot();
 
         foreach (var descendantId in allIdsToDelete)
         {
@@ -5226,10 +5247,15 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void OpenCollectionsDialog()
     {
+        if (collectionService is null || collectionRepository is null || catalogRepository is null)
+        {
+            return;
+        }
+
         ShowOptions(OptionsDialogViewModel.CollectionsCategoryId);
     }
 
-    private CollectionsDialogViewModel? CreateCollectionsDialogViewModel()
+    private CollectionsDialogViewModel? CreateCollectionsViewModel()
     {
         if (collectionService is null || collectionRepository is null || catalogRepository is null)
         {

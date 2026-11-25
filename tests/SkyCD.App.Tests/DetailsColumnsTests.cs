@@ -124,7 +124,7 @@ public class DetailsColumnsTests
         vm.OpenDetailsColumnsOptionsCommand.Execute(null);
 
         Assert.NotNull(request);
-        Assert.Equal(LocalizationService.Current.Get(UiKeys.DetailsColumns), request!.PreselectSettingCategory);
+        Assert.Equal(OptionsDialogViewModel.DetailsColumnsCategoryId, request!.PreselectCategoryId);
     }
 
     [Fact]

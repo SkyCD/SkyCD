@@ -85,10 +85,19 @@ public sealed partial class CollectionsDialogViewModel : ObservableObject
     private string statusText = string.Empty;
 
     [ObservableProperty]
+    private bool dialogAccepted;
+
+    [ObservableProperty]
     private int unavailableCount;
 
     [ObservableProperty]
     private bool hasMissingMembers;
+
+    public bool CollectionsAvailable => service is not null;
+
+    public bool HasCollections => Collections.Count > 0;
+
+    public bool ShowEmptyCollectionsState => CollectionsAvailable && !HasCollections;
 
     partial void OnSelectedCollectionChanged(CollectionListItemViewModel? value)
     {
@@ -99,6 +108,8 @@ public sealed partial class CollectionsDialogViewModel : ObservableObject
 
         RefreshMembers();
         NavigateToSelectedCommand.NotifyCanExecuteChanged();
+        RenameCollectionCommand.NotifyCanExecuteChanged();
+        DeleteCollectionCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnSelectedMemberChanged(CollectionMemberViewModel? value) =>
@@ -108,20 +119,20 @@ public sealed partial class CollectionsDialogViewModel : ObservableObject
     {
         var selectedId = SelectedCollection?.Id;
         Collections.Clear();
-        if (service is null)
+        if (service is not null)
         {
-            return;
-        }
-
-        foreach (var collection in service.GetCollections())
-        {
-            var (count, _, _) = CountMembers(collection);
-            Collections.Add(new CollectionListItemViewModel(
-                collection.Id, collection.Name, collection.Kind, count));
+            foreach (var collection in service.GetCollections())
+            {
+                var (count, _, _) = CountMembers(collection);
+                Collections.Add(new CollectionListItemViewModel(
+                    collection.Id, collection.Name, collection.Kind, count));
+            }
         }
 
         SelectedCollection = Collections.FirstOrDefault(item => string.Equals(item.Id, selectedId, StringComparison.Ordinal))
             ?? Collections.FirstOrDefault();
+        OnPropertyChanged(nameof(HasCollections));
+        OnPropertyChanged(nameof(ShowEmptyCollectionsState));
     }
 
     private (int Total, int Missing, int Available) CountMembers(VirtualCollectionDocument collection)
@@ -221,6 +232,8 @@ public sealed partial class CollectionsDialogViewModel : ObservableObject
 
     private bool CanManageCollections() => service is not null && collectionRepository is not null;
 
+    private bool CanManageSelectedCollection() => CanManageCollections() && SelectedCollection is not null;
+
     [RelayCommand(CanExecute = nameof(CanManageCollections))]
     private void CreateCollection()
     {
@@ -253,7 +266,7 @@ public sealed partial class CollectionsDialogViewModel : ObservableObject
         }
     }
 
-    [RelayCommand(CanExecute = nameof(CanManageCollections))]
+    [RelayCommand(CanExecute = nameof(CanManageSelectedCollection))]
     private void RenameCollection()
     {
         if (service is null || collectionRepository is null || SelectedCollection is null)
@@ -292,7 +305,7 @@ public sealed partial class CollectionsDialogViewModel : ObservableObject
         }
     }
 
-    [RelayCommand(CanExecute = nameof(CanManageCollections))]
+    [RelayCommand(CanExecute = nameof(CanManageSelectedCollection))]
     private void DeleteCollection()
     {
         if (service is null || collectionRepository is null || SelectedCollection is null)
@@ -370,5 +383,11 @@ public sealed partial class CollectionsDialogViewModel : ObservableObject
     {
         RefreshMembers();
         onChanged?.Invoke();
+    }
+
+    [RelayCommand]
+    private void Confirm()
+    {
+        DialogAccepted = true;
     }
 }

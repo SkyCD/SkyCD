@@ -72,7 +72,7 @@ public abstract class RepositoryBase<TDocument> : IRepository<TDocument>
         return created;
     }
 
-    public void Save(string id, TDocument value)
+    public virtual void Save(string id, TDocument value)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         ArgumentNullException.ThrowIfNull(value);
@@ -88,6 +88,17 @@ public abstract class RepositoryBase<TDocument> : IRepository<TDocument>
             .From(DataSource.Collection(Collection));
 
         using var results = query.Execute();
+        return ReadResults(results);
+    }
+
+    /// <summary>
+    /// Materializes the rows of a <c>SelectResult.All()</c> query into documents. Rows are keyed by the
+    /// collection name, so the same projection serves whole-collection and filtered queries.
+    /// </summary>
+    protected IReadOnlyList<TDocument> ReadResults(IResultSet results)
+    {
+        ArgumentNullException.ThrowIfNull(results);
+
         var items = new List<TDocument>();
 
         foreach (var row in results)

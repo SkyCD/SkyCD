@@ -111,10 +111,10 @@ public partial class OptionsDialogViewModel
     {
         if (disposed) return;
         disposed = true;
-        Collections?.StopWatchingCatalogChanges();
         foreach (var plugin in Plugins) plugin.PropertyChanged -= OnPluginEnabledChanged;
         foreach (var page in pluginPages.Values) page.Dispose();
         pluginPages.Clear();
+        CollectionsPage?.StopWatchingCatalogChanges();
         DisposeMarketplace();
     }
 }

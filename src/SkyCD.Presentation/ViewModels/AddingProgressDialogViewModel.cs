@@ -49,6 +49,8 @@ public partial class AddingProgressDialogViewModel : ObservableObject, IOperatio
     {
         CanCancel = false;
         cancellationFinished = true;
+        isCompleted = true;
+        FlushPending();
         StopAnalysis();
         CancelThumbnailDecode();
         cancellationSource.Dispose();
@@ -56,6 +58,26 @@ public partial class AddingProgressDialogViewModel : ObservableObject, IOperatio
 
     private readonly object gate = new();
     private string? currentStage;
+
+    // Scan reports arrive from a worker thread faster than the UI can lay them out (#1063).
+    // They are merged into this pending state and published on the UI thread at a bounded rate.
+    private static readonly TimeSpan FlushInterval = TimeSpan.FromMilliseconds(100);
+    private const int MaxEntriesPerFlush = 250;
+
+    private OperationProgressReport? pendingReport;
+    private readonly Queue<OperationLogEntry> pendingEntries = new();
+    private bool flushScheduled;
+    private bool isCompleted;
+    private DateTimeOffset lastFlushAt = DateTimeOffset.MinValue;
+    private int loggedTotal;
+    private int processedTotal;
+    private int skippedTotal;
+    private int failedTotal;
+    private int errorTotal;
+    private int warningTotal;
+    private bool skippedSeen;
+    private bool failedSeen;
+    private bool errorsSeen;
 
     [ObservableProperty]
     private AddingProgressSourceKind sourceKind;
@@ -209,7 +231,7 @@ public partial class AddingProgressDialogViewModel : ObservableObject, IOperatio
     /// <summary>Starts the analysis clock once; later calls while running are ignored.</summary>
     public void StartAnalysis()
     {
-        if (analysisStartedAt.HasValue)
+        if (isCompleted || analysisStartedAt.HasValue)
         {
             return;
         }
@@ -406,11 +428,23 @@ public partial class AddingProgressDialogViewModel : ObservableObject, IOperatio
     [RelayCommand]
     public void ClearLog()
     {
-        RunOnUi(() => LogEntries.Clear());
+        RunOnUi(() =>
+        {
+            lock (gate)
+            {
+                pendingEntries.Clear();
+                LogEntries.Clear();
+            }
+        });
     }
 
     public string GetFullLogText()
     {
+        if (Application.Current is null || Dispatcher.UIThread.CheckAccess())
+        {
+            FlushPending();
+        }
+
         lock (gate)
         {
             var sb = new StringBuilder();
@@ -429,25 +463,40 @@ public partial class AddingProgressDialogViewModel : ObservableObject, IOperatio
             return;
         }
 
-        RunOnUi(() => ApplyReport(report));
+        lock (gate)
+        {
+            pendingReport = MergePendingReport(pendingReport, report);
+            if (report.LogEntry is { } entry)
+            {
+                EnqueueEntryLocked(entry);
+            }
+
+            if (report.LogEntries is { } entries)
+            {
+                foreach (var item in entries)
+                {
+                    EnqueueEntryLocked(item);
+                }
+            }
+        }
+
+        ScheduleFlush();
     }
 
-    public void Report((string Status, int Percentage) value)
-    {
-        RunOnUi(() =>
+    public void Report((string Status, int Percentage) value) =>
+        Report(new OperationProgressReport
         {
-            StartAnalysis();
-            OperationText = value.Status;
-            ProgressValue = value.Percentage;
-            CurrentStageText = value.Status;
-            CurrentStageProgressValue = value.Percentage;
-            IsStageIndeterminate = false;
-            AddLogEntryInternal(new OperationLogEntry(
+            OperationTitle = value.Status,
+            StageName = value.Status,
+            OverallProgressPercentage = value.Percentage,
+            IsOverallIndeterminate = false,
+            StageProgressPercentage = value.Percentage,
+            IsStageIndeterminate = false,
+            LogEntry = new OperationLogEntry(
                 OperationLogLevel.Information,
                 value.Status,
-                details: $"{value.Percentage}%"));
+                details: $"{value.Percentage}%")
         });
-    }
 
     public void ReportStage(
         string stageName,
@@ -605,61 +654,206 @@ public partial class AddingProgressDialogViewModel : ObservableObject, IOperatio
                 CurrentStageProgressText = string.Empty;
             }
         }
+    }
 
-        if (report.LogEntry is not null)
+    internal static OperationProgressReport MergePendingReport(
+        OperationProgressReport? pending,
+        OperationProgressReport incoming) => new()
         {
-            AddLogEntryInternal(report.LogEntry);
+            OperationTitle = incoming.OperationTitle ?? pending?.OperationTitle,
+            StageName = incoming.StageName ?? pending?.StageName,
+            CurrentItem = incoming.CurrentItem ?? pending?.CurrentItem,
+            OverallProgressPercentage = incoming.OverallProgressPercentage ?? pending?.OverallProgressPercentage,
+            IsOverallIndeterminate = incoming.IsOverallIndeterminate ?? pending?.IsOverallIndeterminate,
+            OverallWorkCurrent = incoming.OverallWorkCurrent ?? pending?.OverallWorkCurrent,
+            OverallWorkTotal = incoming.OverallWorkTotal ?? pending?.OverallWorkTotal,
+            StageProgressPercentage = incoming.StageProgressPercentage ?? pending?.StageProgressPercentage,
+            IsStageIndeterminate = incoming.IsStageIndeterminate ?? pending?.IsStageIndeterminate,
+            StageWorkCurrent = incoming.StageWorkCurrent ?? pending?.StageWorkCurrent,
+            StageWorkTotal = incoming.StageWorkTotal ?? pending?.StageWorkTotal
+        };
+
+    private void EnqueueEntryLocked(OperationLogEntry entry)
+    {
+        loggedTotal++;
+
+        switch (entry.Level)
+        {
+            case OperationLogLevel.ItemProcessed:
+                processedTotal++;
+                break;
+            case OperationLogLevel.ItemSkipped:
+                skippedTotal++;
+                skippedSeen = true;
+                break;
+            case OperationLogLevel.ItemFailed:
+                failedTotal++;
+                failedSeen = true;
+                errorTotal++;
+                errorsSeen = true;
+                break;
+            case OperationLogLevel.Error:
+                errorTotal++;
+                errorsSeen = true;
+                break;
+            case OperationLogLevel.Warning:
+                warningTotal++;
+                break;
         }
 
-        if (report.LogEntries is not null)
+        if (TryCreateScanIssue(entry) is { } issue)
         {
-            foreach (var entry in report.LogEntries)
-            {
-                AddLogEntryInternal(entry);
-            }
+            scanIssues.Add(issue);
+        }
+
+        if (MaxLogEntries <= 0)
+        {
+            return;
+        }
+
+        pendingEntries.Enqueue(entry);
+        while (pendingEntries.Count > MaxLogEntries)
+        {
+            pendingEntries.Dequeue();
         }
     }
 
-    private void AddLogEntryInternal(OperationLogEntry entry)
+    private void ScheduleFlush()
     {
+        if (Application.Current is null || Dispatcher.UIThread.CheckAccess())
+        {
+            FlushPending();
+            return;
+        }
+
         lock (gate)
         {
-            TotalLoggedCount++;
-
-            switch (entry.Level)
+            if (flushScheduled)
             {
-                case OperationLogLevel.ItemProcessed:
-                    ProcessedCount++;
-                    break;
-                case OperationLogLevel.ItemSkipped:
-                    SkippedCount++;
-                    HasSkipped = true;
-                    break;
-                case OperationLogLevel.ItemFailed:
-                    FailedCount++;
-                    HasFailed = true;
-                    ErrorCount++;
-                    HasErrors = true;
-                    break;
-                case OperationLogLevel.Error:
-                    ErrorCount++;
-                    HasErrors = true;
-                    break;
-                case OperationLogLevel.Warning:
-                    WarningCount++;
-                    break;
+                return;
             }
 
-            if (TryCreateScanIssue(entry) is { } issue)
+            flushScheduled = true;
+        }
+
+        Dispatcher.UIThread.Post(
+            () =>
             {
-                scanIssues.Add(issue);
+                var remaining = lastFlushAt + FlushInterval - timeProvider.GetUtcNow();
+                if (remaining <= TimeSpan.Zero)
+                {
+                    FlushPending();
+                }
+                else
+                {
+                    DispatcherTimer.RunOnce(FlushPending, remaining, DispatcherPriority.Background);
+                }
+            },
+            DispatcherPriority.Background);
+    }
+
+    /// <summary>Publishes the merged report and one bounded batch of log entries; must run on the UI thread.</summary>
+    private void FlushPending()
+    {
+        OperationProgressReport? report;
+        List<OperationLogEntry> batch;
+        int logged;
+        int processed;
+        int skipped;
+        int failed;
+        int errors;
+        int warnings;
+        bool hasSkipped;
+        bool hasFailed;
+        bool hasErrors;
+        bool hasMoreEntries;
+
+        lock (gate)
+        {
+            flushScheduled = false;
+            lastFlushAt = timeProvider.GetUtcNow();
+
+            report = pendingReport;
+            pendingReport = null;
+
+            batch = new List<OperationLogEntry>(Math.Min(pendingEntries.Count, MaxEntriesPerFlush));
+            while (batch.Count < MaxEntriesPerFlush && pendingEntries.Count > 0)
+            {
+                batch.Add(pendingEntries.Dequeue());
             }
 
-            while (LogEntries.Count >= MaxLogEntries && LogEntries.Count > 0)
+            hasMoreEntries = pendingEntries.Count > 0;
+
+            logged = loggedTotal;
+            processed = processedTotal;
+            skipped = skippedTotal;
+            failed = failedTotal;
+            errors = errorTotal;
+            warnings = warningTotal;
+            hasSkipped = skippedSeen;
+            hasFailed = failedSeen;
+            hasErrors = errorsSeen;
+        }
+
+        if (report is not null)
+        {
+            ApplyReport(report);
+        }
+
+        AppendLogEntries(batch);
+
+        if (TotalLoggedCount != logged) TotalLoggedCount = logged;
+        if (ProcessedCount != processed) ProcessedCount = processed;
+        if (SkippedCount != skipped) SkippedCount = skipped;
+        if (FailedCount != failed) FailedCount = failed;
+        if (ErrorCount != errors) ErrorCount = errors;
+        if (WarningCount != warnings) WarningCount = warnings;
+        if (HasSkipped != hasSkipped) HasSkipped = hasSkipped;
+        if (HasFailed != hasFailed) HasFailed = hasFailed;
+        if (HasErrors != hasErrors) HasErrors = hasErrors;
+
+        if (hasMoreEntries)
+        {
+            ScheduleContinuationFlush();
+        }
+    }
+
+    private void ScheduleContinuationFlush()
+    {
+        if (Application.Current is null)
+        {
+            FlushPending();
+            return;
+        }
+
+        lock (gate)
+        {
+            if (flushScheduled)
             {
-                LogEntries.RemoveAt(0);
+                return;
             }
 
+            flushScheduled = true;
+        }
+
+        DispatcherTimer.RunOnce(FlushPending, FlushInterval, DispatcherPriority.Background);
+    }
+
+    private void AppendLogEntries(IReadOnlyList<OperationLogEntry> entries)
+    {
+        if (entries.Count == 0 || MaxLogEntries <= 0)
+        {
+            return;
+        }
+
+        var overflow = Math.Max(0, LogEntries.Count + entries.Count - MaxLogEntries);
+        while (overflow-- > 0 && LogEntries.Count > 0)
+        {
+            LogEntries.RemoveAt(0);
+        }
+
+        foreach (var entry in entries)
+        {
             LogEntries.Add(entry);
         }
     }

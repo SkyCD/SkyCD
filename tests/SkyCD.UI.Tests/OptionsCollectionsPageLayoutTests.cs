@@ -15,7 +15,8 @@ public sealed class OptionsCollectionsPageLayoutTests
     public void CollectionsPage_RendersBothListsAndEveryManagerAction()
     {
         var collections = new CollectionsDialogViewModel();
-        var viewModel = new OptionsDialogViewModel(collections);
+        var viewModel = new OptionsDialogViewModel(["English"]);
+        viewModel.SetCollections(collections);
         viewModel.SelectedSettingCategory = viewModel.SettingCategories
             .Single(category => category.Id == OptionsDialogViewModel.CollectionsCategoryId);
         Dispatcher.UIThread.RunJobs();

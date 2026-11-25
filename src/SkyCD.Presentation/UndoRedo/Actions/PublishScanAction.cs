@@ -93,6 +93,7 @@ public sealed class PublishScanAction : UndoableActionBase
                 repository.Save(previous.Id, previous);
             }
         });
+        repository.InvalidateSnapshot();
 
         CatalogSizeMaintenance.RecalculateAncestors(repository, externalParentIds);
 
