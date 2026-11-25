@@ -20,20 +20,18 @@ For `main`, branch protection currently requires only:
 The `Build & Test (...)` checks report the remaining gates but are not individually required.
 
 ## Test Results and Artifacts
-- CI publishes per-OS TRX results under `artifacts/test-results/<os>/` and the test log under
-  `artifacts/test-logs/`.
-- The per-OS artifacts are named `test-results-<os>` and contain both.
+- CI publishes per-OS TRX results under `artifacts/test-results/<os>/`.
+- The per-OS artifacts are named `test-results-<os>`.
 - License compliance reports are published as `license-artifacts`.
 
 ## Timeouts and Hang Diagnostics
 Every job declares `timeout-minutes` (style 10, build-test 30, license 10, sbom 20), and the test step
 is capped at 20 minutes, so a stuck test host can no longer hold a run open until GitHub's 6-hour limit.
 - A failing test, crashed test host, or failed build fails the job immediately; there is no automatic retry.
-- The test step redirects output to a log file instead of piping into `tee`: an orphaned test host that
-  inherited the pipe's write end cannot keep the step alive after `dotnet test` exits.
+- Test output streams straight to the job log: no `tee` and no redirect, so a test host that outlives
+  `dotnet test` cannot hold a pipe open and stall the step after the last result.
 - `dotnet test` runs with `--blame-hang --blame-hang-timeout 5m --blame-hang-dump-type none`, so a test
   that never completes fails its project after five minutes and writes a sequence file naming it.
-- On failure the captured log is printed in the job output and uploaded with the OS artifact.
 
 ## Runtime and Flaky-Risk Notes
 - Matrix execution increases runtime during SDK/dependency update waves.

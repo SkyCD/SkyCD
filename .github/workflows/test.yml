@@ -83,35 +83,22 @@ jobs:
         shell: bash
         timeout-minutes: 20
         run: |
-          mkdir -p artifacts/test-logs
-          log="artifacts/test-logs/dotnet-test.log"
-          status=0
-          # Redirect to a file instead of piping through tee: a test host still running after
-          # dotnet test exits would inherit the pipe and keep the step alive indefinitely.
+          # No `tee` and no redirect: streaming straight to the job log keeps the output live, and
+          # a test host left running after dotnet test exits cannot hold a pipe open and stall the step.
           dotnet test SkyCD.slnx --configuration Release --no-build --verbosity normal \
             --test-adapter-path "${{ github.workspace }}/tools/SkyCD.TestLogger/bin/Release/net10.0" \
             --logger "console;verbosity=quiet" \
             --logger "ansi" \
             --logger "trx;LogFilePrefix=test-results-${{ matrix.os }}" \
             --results-directory "artifacts/test-results/${{ matrix.os }}" \
-            --blame-hang --blame-hang-timeout 5m --blame-hang-dump-type none \
-            > "$log" 2>&1 || status=$?
-
-          if [ "$status" -ne 0 ]; then
-            echo "::error::dotnet test failed with exit code ${status}."
-            cat "$log"
-          fi
-
-          exit "$status"
+            --blame-hang --blame-hang-timeout 5m --blame-hang-dump-type none
 
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: test-results-${{ matrix.os }}
-          path: |
-            artifacts/test-results/${{ matrix.os }}/
-            artifacts/test-logs/
+          path: artifacts/test-results/${{ matrix.os }}/
 
   license-compliance:
     name: License Compliance
