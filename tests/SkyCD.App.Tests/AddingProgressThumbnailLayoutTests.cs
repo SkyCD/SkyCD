@@ -13,6 +13,7 @@ namespace SkyCD.App.Tests;
 public sealed class AddingProgressThumbnailLayoutTests
 {
     private static readonly XNamespace Avalonia = "https://github.com/avaloniaui";
+    private static readonly XNamespace Xaml = "http://schemas.microsoft.com/winfx/2006/xaml";
 
     [Fact]
     public void ThumbnailSection_SitsAboveTheErrorLogAndCollapsesUntilAThumbnailArrives()
@@ -59,15 +60,19 @@ public sealed class AddingProgressThumbnailLayoutTests
     }
 
     [Fact]
-    public void ErrorLogAndFooterKeepTheirRowsAfterTheThumbnailSection()
+    public void ErrorLogKeepsItsRowAndTheFooterIsPinnedBelowTheScrollingContent()
     {
         var grid = RootGrid();
 
-        Assert.Equal("Auto,Auto,Auto,Auto,*,Auto", (string?)grid.Attribute("RowDefinitions"));
+        Assert.Equal("Auto,Auto,Auto,Auto,*", (string?)grid.Attribute("RowDefinitions"));
 
-        var footer = Assert.Single(grid.Elements(Avalonia + "Grid"),
+        var scroller = grid.Parent!;
+        Assert.Equal("ScrollViewer", scroller.Name.LocalName);
+        Assert.Equal("ProgressContentScroller", (string?)scroller.Attribute(Xaml + "Name"));
+
+        var footer = Assert.Single(scroller.Parent!.Elements(Avalonia + "Grid"),
             element => ContainsText(element, "UiKeys.Cancel}"));
-        Assert.Equal("5", (string?)footer.Attribute("Grid.Row"));
+        Assert.Equal("1", (string?)footer.Attribute("Grid.Row"));
     }
 
     private static XElement RootGrid()
@@ -76,7 +81,7 @@ public sealed class AddingProgressThumbnailLayoutTests
             "AddingProgressWindow.axaml"));
         var window = XDocument.Parse(xaml).Root!;
         return window.Descendants(Avalonia + "Grid")
-            .Single(grid => ((string?)grid.Attribute("RowDefinitions")) == "Auto,Auto,Auto,Auto,*,Auto");
+            .Single(grid => ((string?)grid.Attribute("RowDefinitions")) == "Auto,Auto,Auto,Auto,*");
     }
 
     private static bool ContainsText(XElement element, string text) =>
