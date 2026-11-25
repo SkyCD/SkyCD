@@ -53,23 +53,39 @@ public class GenDescPluginTests : IDisposable
         "entry-1", "source-fp", "context-fp", new DescriptionContextOptions(),
         [new DescriptionContextPart("metadata", "text/plain", "a bare note with no link")]);
 
-    private static string WikipediaBody => Fixtures.Read("wikipedia-action.json");
+    private static DescriptionContext ContextWithSourceUrl(string filename, string url) => new(
+        "entry-1", "source-fp", "context-fp", new DescriptionContextOptions(),
+        [
+            new DescriptionContextPart("filename", "text/plain", filename),
+            new DescriptionContextPart("metadata", "text/plain", "Source link: " + url)
+        ]);
 
     [Fact]
     public async Task GenerateThrowsWhenDisabled()
     {
         // No configuration file on disk => the safe default (disabled) is loaded.
-        var plugin = new GenDescPlugin(configurationPath, new StubFetcher(_ => WikipediaBody), () => FixedTime);
+        var plugin = new GenDescPlugin(configurationPath, StubOnlineMetadataService.Wikipedia(), () => FixedTime);
 
         await Assert.ThrowsAsync<GenDescGenerationException>(() =>
             plugin.GenerateAsync(ContextWithFilename("Example Film.mkv"), CancellationToken.None));
     }
 
     [Fact]
+    public async Task GenerateThrowsWhenNoSourcePluginsAreInstalled()
+    {
+        WriteSettings(Enabled(templateDirectory));
+        var plugin = new GenDescPlugin(configurationPath, null, () => FixedTime);
+
+        var exception = await Assert.ThrowsAsync<GenDescGenerationException>(() =>
+            plugin.GenerateAsync(ContextWithFilename("Example Film.mkv"), CancellationToken.None));
+        Assert.Contains("no online metadata source plugins", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task GenerateThrowsWhenEntryHasNoLookup()
     {
         WriteSettings(Enabled(templateDirectory));
-        var plugin = new GenDescPlugin(configurationPath, new StubFetcher(_ => WikipediaBody), () => FixedTime);
+        var plugin = new GenDescPlugin(configurationPath, StubOnlineMetadataService.Wikipedia(), () => FixedTime);
 
         var exception = await Assert.ThrowsAsync<GenDescGenerationException>(() =>
             plugin.GenerateAsync(ContextWithNoLookup(), CancellationToken.None));
@@ -77,11 +93,42 @@ public class GenDescPluginTests : IDisposable
     }
 
     [Fact]
+    public async Task GenerateAsksTheHostForTheConfiguredSources()
+    {
+        WriteSettings(Enabled(templateDirectory));
+        var service = StubOnlineMetadataService.Wikipedia();
+        var plugin = new GenDescPlugin(configurationPath, service, () => FixedTime);
+
+        await plugin.GenerateAsync(ContextWithFilename("Example Film.mkv"), CancellationToken.None);
+
+        var call = Assert.Single(service.Calls);
+        Assert.Equal(["wikipedia"], call.Sources);
+        Assert.Equal("Example Film", call.Request.Query);
+        Assert.Null(call.Request.Url);
+        Assert.Equal("en", call.Request.Language);
+        Assert.Equal(TimeSpan.FromSeconds(15), call.Timeout);
+    }
+
+    [Fact]
+    public async Task GenerateRecognizesAPastedSourceUrlFromTheInstalledSources()
+    {
+        WriteSettings(Enabled(templateDirectory));
+        var service = StubOnlineMetadataService.Wikipedia();
+        var plugin = new GenDescPlugin(configurationPath, service, () => FixedTime);
+
+        await plugin.GenerateAsync(
+            ContextWithSourceUrl("Example Film.mkv", "https://en.wikipedia.org/wiki/Example_Film"),
+            CancellationToken.None);
+
+        var call = Assert.Single(service.Calls);
+        Assert.Equal("https://en.wikipedia.org/wiki/Example_Film", call.Request.Url);
+    }
+
+    [Fact]
     public async Task GenerateRendersTemplateAndStampsProvenance()
     {
         WriteSettings(Enabled(templateDirectory));
-        var fetcher = new StubFetcher(_ => WikipediaBody);
-        var plugin = new GenDescPlugin(configurationPath, fetcher, () => FixedTime);
+        var plugin = new GenDescPlugin(configurationPath, StubOnlineMetadataService.Wikipedia(), () => FixedTime);
 
         var result = await plugin.GenerateAsync(ContextWithFilename("Example Film.mkv"), CancellationToken.None);
 
@@ -100,7 +147,7 @@ public class GenDescPluginTests : IDisposable
     public async Task OriginRecordsFetchedSourceUrls()
     {
         WriteSettings(Enabled(templateDirectory));
-        var plugin = new GenDescPlugin(configurationPath, new StubFetcher(_ => WikipediaBody), () => FixedTime);
+        var plugin = new GenDescPlugin(configurationPath, StubOnlineMetadataService.Wikipedia(), () => FixedTime);
 
         var result = await plugin.GenerateAsync(ContextWithFilename("Example Film.mkv"), CancellationToken.None);
 
@@ -112,8 +159,7 @@ public class GenDescPluginTests : IDisposable
     public async Task OriginIsTemplateOnlyWhenEverySourceFails()
     {
         WriteSettings(Enabled(templateDirectory));
-        // StubFetcher with a null body throws per source, so no source urls are recorded.
-        var plugin = new GenDescPlugin(configurationPath, new StubFetcher(_ => null!), () => FixedTime);
+        var plugin = new GenDescPlugin(configurationPath, StubOnlineMetadataService.AlwaysFailing(), () => FixedTime);
 
         var result = await plugin.GenerateAsync(ContextWithFilename("Example Film.mkv"), CancellationToken.None);
 
@@ -132,7 +178,7 @@ public class GenDescPluginTests : IDisposable
             TemplateDirectory = templateDirectory,
             TemplateId = "default-lithuanian"
         });
-        var plugin = new GenDescPlugin(configurationPath, new StubFetcher(_ => WikipediaBody), () => FixedTime);
+        var plugin = new GenDescPlugin(configurationPath, StubOnlineMetadataService.Wikipedia(), () => FixedTime);
 
         var result = await plugin.GenerateAsync(ContextWithFilename("Example Film.mkv"), CancellationToken.None);
 
@@ -144,7 +190,7 @@ public class GenDescPluginTests : IDisposable
     public async Task LanguageSelectsMatchingBuiltInTemplate()
     {
         WriteSettings(Enabled(templateDirectory, language: "lt"));
-        var plugin = new GenDescPlugin(configurationPath, new StubFetcher(_ => WikipediaBody), () => FixedTime);
+        var plugin = new GenDescPlugin(configurationPath, StubOnlineMetadataService.Wikipedia(), () => FixedTime);
 
         var result = await plugin.GenerateAsync(ContextWithFilename("Example Film.mkv"), CancellationToken.None);
 
@@ -162,7 +208,7 @@ public class GenDescPluginTests : IDisposable
             TemplateDirectory = templateDirectory,
             MaxOutputCharacters = 25
         });
-        var plugin = new GenDescPlugin(configurationPath, new StubFetcher(_ => WikipediaBody), () => FixedTime);
+        var plugin = new GenDescPlugin(configurationPath, StubOnlineMetadataService.Wikipedia(), () => FixedTime);
 
         var result = await plugin.GenerateAsync(ContextWithFilename("Example Film.mkv"), CancellationToken.None);
 
@@ -173,7 +219,7 @@ public class GenDescPluginTests : IDisposable
     [Fact]
     public void GetPlanReportsDisabledWithReason()
     {
-        var plugin = new GenDescPlugin(configurationPath, new StubFetcher(_ => WikipediaBody), () => FixedTime);
+        var plugin = new GenDescPlugin(configurationPath, StubOnlineMetadataService.Wikipedia(), () => FixedTime);
 
         var plan = plugin.GetPlan();
 
@@ -184,10 +230,22 @@ public class GenDescPluginTests : IDisposable
     }
 
     [Fact]
+    public void GetPlanReportsNoSourcesInstalled()
+    {
+        WriteSettings(Enabled(templateDirectory));
+        var plugin = new GenDescPlugin(configurationPath, null, () => FixedTime);
+
+        var plan = plugin.GetPlan();
+
+        Assert.False(plan.IsEnabled);
+        Assert.Contains("no online metadata source plugins", plan.UnavailableReason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void GetPlanReportsEnabled()
     {
         WriteSettings(Enabled(templateDirectory));
-        var plugin = new GenDescPlugin(configurationPath, new StubFetcher(_ => WikipediaBody), () => FixedTime);
+        var plugin = new GenDescPlugin(configurationPath, StubOnlineMetadataService.Wikipedia(), () => FixedTime);
 
         var plan = plugin.GetPlan();
 
@@ -200,7 +258,7 @@ public class GenDescPluginTests : IDisposable
     {
         // MaxOutputCharacters out of range makes Validate throw during Load.
         File.WriteAllText(configurationPath, "{ \"enabled\": true, \"maxOutputCharacters\": 99999 }");
-        var plugin = new GenDescPlugin(configurationPath, new StubFetcher(_ => WikipediaBody), () => FixedTime);
+        var plugin = new GenDescPlugin(configurationPath, StubOnlineMetadataService.Wikipedia(), () => FixedTime);
 
         var plan = plugin.GetPlan();
 
@@ -211,7 +269,7 @@ public class GenDescPluginTests : IDisposable
     [Fact]
     public void ExposesAStableImplementationId()
     {
-        var plugin = new GenDescPlugin(configurationPath, new StubFetcher(_ => WikipediaBody));
+        var plugin = new GenDescPlugin(configurationPath, StubOnlineMetadataService.Wikipedia());
         Assert.Equal("gendesc", plugin.ImplementationId);
         Assert.Equal("GenDesc templates", plugin.ImplementationName);
     }

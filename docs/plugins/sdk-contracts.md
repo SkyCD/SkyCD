@@ -65,6 +65,13 @@ host service contracts implemented by the host, not by copied helper source.
   - Receives a plugin-scoped `IOAuthService` through `InitializeOAuth` before host service registration.
   - Provides browser login, secure local sessions, multiple account slots and automatic token refresh.
   - See [OAuth foundation](oauth.md) for provider configuration, storage support and lifecycle details.
+- `IOnlineMetadataSourceCapability` (`Capabilities.Media`)
+  - Declares a stable `SourceId`, display name and owned hosts; `FetchAsync` returns named
+    facts or a failure result for one lookup and never throws for ordinary site failures.
+  - Sources are aggregated host-side and handed to generators through
+    `IOnlineMetadataConsumer.InitializeOnlineMetadata` and `IOnlineMetadataService`, so a
+    generator owns templates and rendering, never site parsing or fetching.
+  - See [online metadata sources](online-metadata.md) for the shipped source plugins.
 - `IActionProvider` (`Capabilities.Actions`)
   - Returns item-specific `SkyAction` instances through `GetActions(Item)`.
   - `Item` is an SDK context containing a stable identifier and provider metadata;

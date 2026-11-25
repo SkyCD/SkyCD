@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using SkyCD.Plugin.Ai.GenDesc.Exceptions;
-using SkyCD.Plugin.Ai.GenDesc.Models;
+using SkyCD.Plugin.OnlineMetadata.Models;
 using SkyCD.Plugin.Ai.GenDesc.Parsing;
 using Xunit;
 

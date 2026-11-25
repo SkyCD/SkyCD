@@ -27,7 +27,7 @@ public sealed record PluginFailure(string PluginIdentity, string PluginVersion, 
             is "menu" or "modal" or "read" or "write" or "configure" or "media" or "media-settings"
             or "volume" or "catalog" or "import" or "index" or "assess"
             or "options" or "install" or "uninstall"
-            or "audio-cd" or "audio-cd-settings"
+            or "audio-cd" or "audio-cd-settings" or "online-metadata"
             ? operation
             : "plugin";
         return new PluginFailure(identity, pluginType.Assembly.GetName().Version?.ToString() ?? "0.0",

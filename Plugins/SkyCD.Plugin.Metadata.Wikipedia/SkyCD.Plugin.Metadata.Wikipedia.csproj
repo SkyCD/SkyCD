@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\SkyCD.SDK\SkyCD.SDK.csproj"/>
+    </ItemGroup>
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>disable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <Company>SkyCD</Company>
+        <Authors>SkyCD</Authors>
+        <AssemblyTitle>Wikipedia Metadata</AssemblyTitle>
+        <Description>Looks media entries up on Wikipedia through its public JSON APIs and returns title, summary and image facts to description generators.</Description>
+    </PropertyGroup>
+    <ItemGroup>
+        <Compile Include="..\Shared\OnlineMetadata\Models\DescriptionFacts.cs" Link="Shared\OnlineMetadata\Models\DescriptionFacts.cs"/>
+        <Compile Include="..\Shared\OnlineMetadata\Sources\UrlHelpers.cs" Link="Shared\OnlineMetadata\Sources\UrlHelpers.cs"/>
+        <Compile Include="..\Shared\OnlineMetadata\Sources\IWebFetcher.cs" Link="Shared\OnlineMetadata\Sources\IWebFetcher.cs"/>
+        <Compile Include="..\Shared\OnlineMetadata\Sources\HttpWebFetcher.cs" Link="Shared\OnlineMetadata\Sources\HttpWebFetcher.cs"/>
+    </ItemGroup>
+    <ItemGroup>
+        <InternalsVisibleTo Include="SkyCD.Plugin.Metadata.Wikipedia.Tests"/>
+    </ItemGroup>
+</Project>

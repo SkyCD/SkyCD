@@ -14,7 +14,7 @@ public class GenDescSelectionTests
     [Fact]
     public void GenDescIsASelectableImplementation()
     {
-        var plugin = new GenDescPlugin("unused-path", new StubFetcher(_ => "{}"));
+        var plugin = new GenDescPlugin("unused-path", StubOnlineMetadataService.Wikipedia());
         var manager = new DescriptionExtensionManager([plugin]);
 
         var choice = Assert.Single(manager.Implementations);

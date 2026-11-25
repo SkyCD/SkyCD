@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.Text;
-using SkyCD.Plugin.Ai.GenDesc.Models;
+using SkyCD.Plugin.OnlineMetadata.Models;
 
 namespace SkyCD.Plugin.Ai.GenDesc.Parsing;
 
