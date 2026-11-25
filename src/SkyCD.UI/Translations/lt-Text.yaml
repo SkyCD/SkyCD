@@ -115,6 +115,7 @@ text.FailedToOpenCatalogPluginReadError: "Nepavyko atverti katalogo: papildinio 
 text.FailedToOpenCatalog: "Nepavyko atverti katalogo: {0}"
 text.SaveCatalog: "Įrašyti katalogą"
 text.FailedToSaveCatalog: "Nepavyko įrašyti katalogo: {0}"
+text.FailedToSaveCatalogAccessDenied: "„SkyCD“ negali įrašyti į {0}. Jei įjungta kontroliuojama prieiga prie aplankų sistemoje „Windows“, leiskite „SkyCD“ arba įrašykite į kitą aplanką."
 text.FailedToSaveCatalogNoWritableFileFormatCheckPluginSettings: "Nepavyko įrašyti katalogo: nėra įrašymui tinkamo failo formato. Patikrinkite papildinių nuostatas."
 text.SaveCatalogAs: "Įrašyti katalogą kaip"
 text.ReadingDirectoryFromRemoteServer: "Skaitomas aplankas iš nuotolinio serverio..."

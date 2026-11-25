@@ -1633,6 +1633,17 @@ public partial class MainWindow : Window
             else vm.CompleteSaveCatalog(targetPath);
             return true;
         }
+        catch (CatalogSaveIOException ex)
+        {
+            // Name the folder and the way forward instead of the internal temp file the save never created.
+            vm.StatusText = LocalizationService.Current.Format(TextKeys.FailedToSaveCatalogAccessDenied, ex.DirectoryPath);
+            if (!saveAs)
+            {
+                return await SaveCatalogAsync(vm, saveAs: true);
+            }
+
+            return false;
+        }
         catch (Exception ex)
         {
             vm.StatusText = LocalizationService.Current.Format(TextKeys.FailedToSaveCatalog, ex.Message);
