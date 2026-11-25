@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using SkyCD.Couchbase;
 using SkyCD.Documents;
 using SkyCD.Documents.Repository;
 
@@ -11,9 +12,8 @@ namespace SkyCD.Presentation.Catalog;
 /// </summary>
 public static class CatalogSizeMaintenance
 {
-    // Repository reads and writes from the UI and from background maintenance are serialized so a background
-    // recount cannot save totals computed from a snapshot that an add already superseded.
-    private static readonly object RepositoryGate = new();
+    // The read-and-write pass runs as one gated section: a recount that read a snapshot an add already
+    // superseded would otherwise persist stale totals over it.
 
     /// <summary>
     /// Lists the parent ids of <paramref name="documents"/> that point outside the given set, which is what a
@@ -64,7 +64,7 @@ public static class CatalogSizeMaintenance
             return [];
         }
 
-        lock (RepositoryGate)
+        return DatabaseGate.Run(repository.Collection.Database, () =>
         {
             var documents = repository.GetAll();
             var updated = CatalogSizeRecalculator.Recalculate(documents,
@@ -74,7 +74,7 @@ public static class CatalogSizeMaintenance
                 return updated;
             }
 
-            repository.Collection.Database.InBatch(() =>
+            DatabaseGate.InBatch(repository.Collection.Database, () =>
             {
                 foreach (var document in updated)
                 {
@@ -83,7 +83,7 @@ public static class CatalogSizeMaintenance
             });
 
             return updated;
-        }
+        });
     }
 
     /// <summary>

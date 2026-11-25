@@ -37,8 +37,11 @@ public abstract class RepositoryBase<TDocument> : IRepository<TDocument>
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
 
-        using var document = Collection.GetDocument(id);
-        return document.FromDocument<TDocument>();
+        return DatabaseGate.Run(Collection.Database, () =>
+        {
+            using var document = Collection.GetDocument(id);
+            return document.FromDocument<TDocument>();
+        });
     }
 
     public TDocument GetOrCreate(string id)
@@ -77,18 +80,24 @@ public abstract class RepositoryBase<TDocument> : IRepository<TDocument>
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         ArgumentNullException.ThrowIfNull(value);
 
-        using var document = value.ToMutableDocument(id);
-        Collection.Save(document);
+        DatabaseGate.Run(Collection.Database, () =>
+        {
+            using var document = value.ToMutableDocument(id);
+            Collection.Save(document);
+        });
     }
 
     public virtual IReadOnlyList<TDocument> GetAll()
     {
-        using var query = QueryBuilder
-            .Select(SelectResult.All())
-            .From(DataSource.Collection(Collection));
+        return DatabaseGate.Run(Collection.Database, () =>
+        {
+            using var query = QueryBuilder
+                .Select(SelectResult.All())
+                .From(DataSource.Collection(Collection));
 
-        using var results = query.Execute();
-        return ReadResults(results);
+            using var results = query.Execute();
+            return ReadResults(results);
+        });
     }
 
     /// <summary>
