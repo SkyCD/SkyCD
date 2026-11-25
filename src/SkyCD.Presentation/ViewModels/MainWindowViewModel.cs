@@ -4396,6 +4396,27 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         return new MainMenuItemViewModel { Header = "-" };
     }
 
+    private static IReadOnlyList<MainMenuItemViewModel> NormalizeMenuSeparators(IEnumerable<MainMenuItemViewModel> items)
+    {
+        var result = new List<MainMenuItemViewModel>();
+        foreach (var item in items)
+        {
+            if (item.Header == "-" && (result.Count == 0 || result[^1].Header == "-"))
+            {
+                continue;
+            }
+
+            result.Add(item);
+        }
+
+        if (result.Count > 0 && result[^1].Header == "-")
+        {
+            result.RemoveAt(result.Count - 1);
+        }
+
+        return result;
+    }
+
     private void RefreshTopMenuState()
     {
         lock (viewRefreshLock)
@@ -4517,7 +4538,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private IReadOnlyList<MainMenuItemViewModel> BuildBrowserContextMenuItems()
     {
-        return
+        return NormalizeMenuSeparators(
         [
             new MainMenuItemViewModel
                 { Header = LocalizationService.Current.Get(TextKeys.Expand), Command = ExpandSelectionCommand, CommandParameter = "list" },
@@ -4572,9 +4593,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Delete), HotKey = "Delete", InputGesture = "Delete", Command = DeleteItemCommand, CommandParameter = "list" },
             Separator(),
             ..BuildFeatureMenuGroups(),
+            Separator(),
             ..BuildFeatureEntryCommandItems(),
+            Separator(),
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Properties), Command = OpenPropertiesCommand }
-        ];
+        ]);
     }
 
     private CatalogEntry? GetSelectedCatalogEntry()
@@ -4604,7 +4627,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             return [];
         }
 
-        var items = new List<MainMenuItemViewModel> { Separator() };
+        var items = new List<MainMenuItemViewModel>();
         foreach (var command in commands)
         {
             var commandId = command.CommandId;
@@ -4660,7 +4683,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             return [];
         }
 
-        var items = new List<MainMenuItemViewModel> { Separator() };
+        var items = new List<MainMenuItemViewModel>();
         foreach (var group in groups)
         {
             items.Add(new MainMenuItemViewModel
@@ -4683,7 +4706,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private IReadOnlyList<MainMenuItemViewModel> BuildTreeContextMenuItems()
     {
-        return
+        return NormalizeMenuSeparators(
         [
             new MainMenuItemViewModel
                 { Header = LocalizationService.Current.Get(TextKeys.Expand), Command = ExpandSelectionCommand, CommandParameter = "tree" },
@@ -4723,9 +4746,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.CutMenu), HotKey = "Ctrl+X", InputGesture = "Ctrl+X", Command = CutCommand },
             Separator(),
             ..BuildFeatureMenuGroups(),
+            Separator(),
             ..BuildFeatureEntryCommandItems(),
+            Separator(),
             new MainMenuItemViewModel { Header = LocalizationService.Current.Get(TextKeys.Properties), Command = OpenPropertiesCommand }
-        ];
+        ]);
     }
 
     private void EnsureSeedData()
