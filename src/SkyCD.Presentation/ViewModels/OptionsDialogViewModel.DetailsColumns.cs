@@ -9,6 +9,7 @@ namespace SkyCD.Presentation.ViewModels;
 
 public partial class OptionsDialogViewModel
 {
+    public const string DetailsColumnsCategoryId = "details-columns";
     private const int DetailsColumnsCategoryIndex = 7;
 
     public ObservableCollection<DetailsColumnOptionItemViewModel> DetailsColumns { get; } = [];

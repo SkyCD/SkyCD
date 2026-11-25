@@ -332,6 +332,8 @@ public static class UiKeys
     public const string MissingEntries = "core.ui.MissingEntries";
     public const string GoToEntry = "core.ui.GoToEntry";
     public const string CollectionMembers = "core.ui.CollectionMembers";
+    public const string CollectionEntries = "core.ui.CollectionEntries";
+    public const string NoCollections = "core.ui.NoCollections";
     public const string AdvancedFind = "core.ui.AdvancedFind";
     public const string AddFilter = "core.ui.AddFilter";
     public const string RemoveFilter = "core.ui.RemoveFilter";
