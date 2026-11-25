@@ -53,7 +53,9 @@ public sealed partial class OptionsContributedPage : ObservableObject, IDisposab
             }
             catch (Exception exception)
             {
-                PluginFailure.Publish(GetType(), "options", exception);
+                // No inline surface shows a title failure, so it stays a diagnosable report — attributed
+                // to the contributing capability, not to this host page.
+                PluginFailure.Publish(provider.Capability.GetType(), "options", exception);
                 return fallbackTitle;
             }
         }
@@ -106,9 +108,10 @@ public sealed partial class OptionsContributedPage : ObservableObject, IDisposab
 
             Content = created;
         }
-        catch (Exception exception)
+        catch
         {
-            PluginFailure.Publish(GetType(), "options", exception);
+            // The inline error below is already the user-visible report; publishing here as well would
+            // raise the global failure dialog on top of a recovered page.
             Error = LocalizationService.Current.Format(TextKeys.PluginOptionsPageUnavailable, provider.PluginName);
         }
     }
