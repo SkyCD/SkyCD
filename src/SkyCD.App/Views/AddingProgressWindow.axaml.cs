@@ -48,6 +48,9 @@ public partial class AddingProgressWindow : Window
         if (observedLogEntries is not null)
         {
             observedLogEntries.CollectionChanged += OnLogEntriesChanged;
+            // The window opens after the run has started, so the log can already hold entries by the time
+            // the context attaches; jump to the newest line once the view has been laid out.
+            RequestScrollToEnd();
         }
 
         if (subscribedProgressVm is not null)
@@ -83,6 +86,24 @@ public partial class AddingProgressWindow : Window
         }
 
         base.OnClosed(e);
+    }
+
+    private void OnLogEntriesChanged(object? sender, NotifyCollectionChangedEventArgs e) => RequestScrollToEnd();
+
+    private void RequestScrollToEnd()
+    {
+        // A whole flush arrives as many Add events; scroll once after the batch is realized.
+        if (scrollPending)
+        {
+            return;
+        }
+
+        scrollPending = true;
+        Dispatcher.UIThread.Post(() =>
+        {
+            scrollPending = false;
+            LogScrollViewer.ScrollToEnd();
+        }, DispatcherPriority.Background);
     }
 
     private void OnProgressViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -130,22 +151,6 @@ public partial class AddingProgressWindow : Window
             var owner = Owner as TopLevel ?? this;
             return owner.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
         }
-    }
-
-    private void OnLogEntriesChanged(object? sender, NotifyCollectionChangedEventArgs e)
-    {
-        // A whole flush arrives as many Add events; scroll once after the batch is realized.
-        if (scrollPending)
-        {
-            return;
-        }
-
-        scrollPending = true;
-        Dispatcher.UIThread.Post(() =>
-        {
-            scrollPending = false;
-            LogScrollViewer.ScrollToEnd();
-        }, DispatcherPriority.Background);
     }
 
     private void OnDismissClicked(object? sender, RoutedEventArgs e)

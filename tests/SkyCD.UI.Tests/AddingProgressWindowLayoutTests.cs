@@ -131,10 +131,10 @@ public sealed class AddingProgressWindowLayoutTests
     }
 
     [AvaloniaFact]
-    public void MinimumHeight_KeepsLogAndFooterInsideTheWindow()
+    public void FixedSize_KeepsLogAndFooterInsideTheWindow()
     {
         var viewModel = new AddingProgressDialogViewModel { CanCancel = true };
-        var window = new AddingProgressWindow { DataContext = viewModel, Height = 460 };
+        var window = new AddingProgressWindow { DataContext = viewModel };
         window.Show();
         Dispatcher.UIThread.RunJobs();
 
@@ -202,7 +202,7 @@ public sealed class AddingProgressWindowLayoutTests
     }
 
     [AvaloniaFact]
-    public void MinimumHeight_WithThumbnail_KeepsTheFooterInsideTheWindow()
+    public void FixedSize_WithThumbnail_KeepsTheFooterInsideTheWindow()
     {
         var viewModel = new AddingProgressDialogViewModel
         {
@@ -210,58 +210,24 @@ public sealed class AddingProgressWindowLayoutTests
             LatestThumbnail = new WriteableBitmap(new PixelSize(2, 2), new Vector(96, 96),
                 PixelFormat.Bgra8888, AlphaFormat.Premul)
         };
-        var window = new AddingProgressWindow { DataContext = viewModel, Height = 460 };
+        var window = new AddingProgressWindow { DataContext = viewModel };
         window.Show();
         Dispatcher.UIThread.RunJobs();
 
         try
         {
             var root = (Control)window.Content!;
-            var scroller = window.FindControl<ScrollViewer>("ProgressContentScroller")!;
             var logViewer = window.FindControl<ScrollViewer>("LogScrollViewer")!;
             var cancel = FindCancelButton(window);
 
             Assert.True(logViewer.Bounds.Height >= 90,
-                $"log pane collapsed to {logViewer.Bounds.Height} px at the minimum height.");
-            Assert.True(BottomRelativeTo(scroller, root) <= TopRelativeTo(cancel, root),
-                "the scrolling content overlaps the footer.");
+                $"log pane collapsed to {logViewer.Bounds.Height} px with the thumbnail visible.");
+            Assert.True(BottomRelativeTo(logViewer, root) <= TopRelativeTo(cancel, root),
+                "the error log overlaps the footer.");
             Assert.True(root.Margin.Bottom >= 11,
-                "the content grid lost the window inset at the minimum height.");
+                "the content grid lost the window inset with the thumbnail visible.");
             Assert.True(BottomRelativeTo(cancel, root) <= root.Bounds.Height,
-                "the footer is pushed past the window edge at the minimum height.");
-        }
-        finally
-        {
-            viewModel.FinishCancellation();
-            window.Close();
-        }
-    }
-
-    [AvaloniaFact]
-    public void ShortWindow_ScrollsTheContentAndKeepsTheFooterPinned()
-    {
-        var viewModel = new AddingProgressDialogViewModel
-        {
-            CanCancel = true,
-            LatestThumbnail = new WriteableBitmap(new PixelSize(2, 2), new Vector(96, 96),
-                PixelFormat.Bgra8888, AlphaFormat.Premul)
-        };
-        var window = new AddingProgressWindow { DataContext = viewModel, MinHeight = 200, Height = 300 };
-        window.Show();
-        Dispatcher.UIThread.RunJobs();
-
-        try
-        {
-            var root = (Control)window.Content!;
-            var scroller = window.FindControl<ScrollViewer>("ProgressContentScroller")!;
-            var cancel = FindCancelButton(window);
-
-            Assert.True(scroller.Extent.Height > scroller.Viewport.Height,
-                "the thumbnail and log should overflow a short window.");
-            Assert.True(BottomRelativeTo(scroller, root) <= TopRelativeTo(cancel, root),
-                "the scrolling content overlaps the footer.");
-            Assert.True(BottomRelativeTo(cancel, root) <= root.Bounds.Height,
-                "the footer is pushed past the window edge in a short window.");
+                "the footer is pushed past the window edge with the thumbnail visible.");
         }
         finally
         {
@@ -271,8 +237,54 @@ public sealed class AddingProgressWindowLayoutTests
     }
 
     /// <summary>
-    /// Issue #1107: the outer scroller must not show a full-height scrollbar next to the log's own
-    /// one when everything fits; the log takes the remaining height instead.
+    /// Issue #1153: a long log must not move the dialog content; only the error log scrolls,
+    /// inside its own border, and it keeps auto-scrolling to the newest line.
+    /// </summary>
+    [AvaloniaFact]
+    public void LongLog_ScrollsOnlyTheLogAndKeepsTheFooterPinned()
+    {
+        var viewModel = new AddingProgressDialogViewModel
+        {
+            CanCancel = true,
+            LatestThumbnail = new WriteableBitmap(new PixelSize(2, 2), new Vector(96, 96),
+                PixelFormat.Bgra8888, AlphaFormat.Premul)
+        };
+        for (var index = 0; index < 300; index++)
+        {
+            viewModel.ReportLog(OperationLogLevel.ItemProcessed, $"Processed item {index}",
+                itemPath: $"/source/item-{index}");
+        }
+
+        var window = new AddingProgressWindow { DataContext = viewModel };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        try
+        {
+            var root = (Control)window.Content!;
+            var logViewer = window.FindControl<ScrollViewer>("LogScrollViewer")!;
+            var cancel = FindCancelButton(window);
+
+            Assert.True(logViewer.Extent.Height > logViewer.Viewport.Height,
+                "the log should scroll inside its border with hundreds of entries.");
+            AssertOnlyTheLogScrolls(window, logViewer);
+            Assert.True(BottomRelativeTo(cancel, root) <= root.Bounds.Height + 1,
+                "the footer is pushed past the window edge by a long log.");
+
+            var maxOffset = logViewer.Extent.Height - logViewer.Viewport.Height;
+            Assert.True(logViewer.Offset.Y >= maxOffset - 1,
+                "the log did not auto-scroll to the newest line.");
+        }
+        finally
+        {
+            viewModel.FinishCancellation();
+            window.Close();
+        }
+    }
+
+    /// <summary>
+    /// Issue #1107: the log takes the remaining height when everything fits.
+    /// Issue #1153: the outer scroller is gone, so this now pins that absence.
     /// </summary>
     [AvaloniaFact]
     public void DefaultSize_HasNoOuterScrollbarAndTheLogFillsTheRemainingHeight()
@@ -285,16 +297,14 @@ public sealed class AddingProgressWindowLayoutTests
         try
         {
             var root = (Control)window.Content!;
-            var scroller = window.FindControl<ScrollViewer>("ProgressContentScroller")!;
             var logViewer = window.FindControl<ScrollViewer>("LogScrollViewer")!;
             var cancel = FindCancelButton(window);
 
-            AssertNoOuterVerticalScroll(scroller);
+            AssertOnlyTheLogScrolls(window, logViewer);
             Assert.True(logViewer.Bounds.Height > 90,
                 $"the error log did not fill the remaining height ({logViewer.Bounds.Height} px).");
             Assert.True(BottomRelativeTo(logViewer, root) <= TopRelativeTo(cancel, root),
                 "the error log overlaps the footer.");
-            Assert.Equal(ScrollBarVisibility.Disabled, scroller.HorizontalScrollBarVisibility);
             Assert.Equal(ScrollBarVisibility.Auto, logViewer.HorizontalScrollBarVisibility);
         }
         finally
@@ -304,56 +314,15 @@ public sealed class AddingProgressWindowLayoutTests
         }
     }
 
-    /// <summary>
-    /// Issue #1107: shrinking to MinHeight and showing the thumbnail may scroll the blocks, but
-    /// growing the window back must not leave the outer scrollbar behind.
-    /// </summary>
-    [AvaloniaFact]
-    public void ResizingAndShowingThumbnail_DoesNotLeaveAStaleOuterScrollbar()
+    private static void AssertOnlyTheLogScrolls(Window window, ScrollViewer logViewer)
     {
-        var viewModel = new AddingProgressDialogViewModel { CanCancel = true };
-        var window = new AddingProgressWindow { DataContext = viewModel };
-        window.Show();
-        Dispatcher.UIThread.RunJobs();
+        Assert.Null(window.FindControl<ScrollViewer>("ProgressContentScroller"));
 
-        try
-        {
-            var root = (Control)window.Content!;
-            var scroller = window.FindControl<ScrollViewer>("ProgressContentScroller")!;
-            var logViewer = window.FindControl<ScrollViewer>("LogScrollViewer")!;
-            var cancel = FindCancelButton(window);
-
-            viewModel.LatestThumbnail = new WriteableBitmap(new PixelSize(2, 2), new Vector(96, 96),
-                PixelFormat.Bgra8888, AlphaFormat.Premul);
-            window.Height = 460;
-            Dispatcher.UIThread.RunJobs();
-            window.Height = 540;
-            Dispatcher.UIThread.RunJobs();
-
-            AssertNoOuterVerticalScroll(scroller);
-            Assert.True(logViewer.Bounds.Height >= 90,
-                $"the error log collapsed to {logViewer.Bounds.Height} px after resizing.");
-            Assert.True(BottomRelativeTo(cancel, root) <= root.Bounds.Height + 1,
-                "the footer is clipped after resizing.");
-        }
-        finally
-        {
-            viewModel.FinishCancellation();
-            window.Close();
-        }
-    }
-
-    private static void AssertNoOuterVerticalScroll(ScrollViewer scroller)
-    {
-        Assert.Equal(ScrollBarVisibility.Auto, scroller.VerticalScrollBarVisibility);
-        Assert.True(scroller.Extent.Height <= scroller.Viewport.Height + 0.5,
-            $"the outer scroller overflows its viewport ({scroller.Extent.Height} > {scroller.Viewport.Height}).");
-        Assert.DoesNotContain(scroller.GetVisualDescendants().OfType<ScrollBar>(),
-            bar => bar.Name == "PART_VerticalScrollBar" && bar.IsVisible);
-
-        var content = Assert.IsType<Grid>(scroller.Content);
-        Assert.True(Math.Abs(content.Bounds.Width - scroller.Bounds.Width) <= 1,
-            "the outer scroller reserves a vertical scrollbar gutter.");
+        var logBars = logViewer.GetVisualDescendants().OfType<ScrollBar>().ToHashSet();
+        var visibleBars = window.GetVisualDescendants().OfType<ScrollBar>()
+            .Where(bar => bar.IsVisible)
+            .ToList();
+        Assert.All(visibleBars, bar => Assert.Contains(bar, logBars));
     }
 
     private static AddingProgressDialogViewModel CreateViewModel()
