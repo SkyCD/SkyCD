@@ -66,4 +66,12 @@
         <Setter Property="Foreground" Value="{DynamicResource TreeViewActiveSelectionForegroundBrush}" />
     </Style>
 
+    <!-- OS drop destination: uses the same treatment as selection so the parent is unambiguous (#1060) -->
+    <Style Selector="TreeViewItem.drop-target /template/ Border#SelectionBorder">
+        <Setter Property="Background" Value="{DynamicResource TreeViewActiveSelectionBackgroundBrush}" />
+    </Style>
+    <Style Selector="TreeViewItem.drop-target">
+        <Setter Property="Foreground" Value="{DynamicResource TreeViewActiveSelectionForegroundBrush}" />
+    </Style>
+
 </Styles>

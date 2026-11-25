@@ -33,6 +33,10 @@
             <Setter Property="Background" Value="{DynamicResource ThemeControlHighlightMidBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource ThemeControlHighlightHighBrush}" />
         </Style>
+        <Style Selector="ListBoxItem.drop-target">
+            <Setter Property="Background" Value="{DynamicResource ThemeControlHighlightMidBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}" />
+        </Style>
     </UserControl.Styles>
 
     <Grid>
