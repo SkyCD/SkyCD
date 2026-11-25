@@ -67,6 +67,25 @@ public class SplitMenuPluginTests
     }
 
     [Fact]
+    public async Task ANonLegacyCatalogIsRejectedWithTheRequirement()
+    {
+        using var workspace = new TestWorkspace();
+        var source = workspace.CreateFile("catalog.csv", "path,size\r\na,1");
+        var plugin = new SplitMenuPlugin();
+        plugin.InitializeCatalogApi(new FakeCatalogApi(source));
+        var dialogs = new RecordingDialogApi();
+        plugin.InitializeDialogApi(dialogs);
+        var host = new RecordingHostApi();
+
+        await plugin.ExecuteMenuCommandAsync(SplitMenuPlugin.CommandId, new MenuCommandContext { HostApi = host });
+
+        Assert.Empty(dialogs.Requests);
+        var message = Assert.Single(host.Messages);
+        Assert.Contains("legacy SkyCD text (.scd)", message);
+        Assert.Contains("catalog.csv", message);
+    }
+
+    [Fact]
     public async Task ABinaryLegacyCatalogIsRejectedBeforeTheDialogOpens()
     {
         using var workspace = new TestWorkspace();
@@ -80,7 +99,7 @@ public class SplitMenuPluginTests
         await plugin.ExecuteMenuCommandAsync(SplitMenuPlugin.CommandId, new MenuCommandContext { HostApi = host });
 
         Assert.Empty(dialogs.Requests);
-        Assert.Contains("not a legacy SkyCD text catalog", Assert.Single(host.Messages));
+        Assert.Contains("legacy SkyCD text (.scd)", Assert.Single(host.Messages));
     }
 
     [Fact]
