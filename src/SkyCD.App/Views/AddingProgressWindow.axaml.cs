@@ -11,6 +11,7 @@ namespace SkyCD.App.Views;
 public partial class AddingProgressWindow : Window
 {
     private INotifyCollectionChanged? observedLogEntries;
+    private bool scrollPending;
 
     public AddingProgressWindow()
     {
@@ -60,8 +61,18 @@ public partial class AddingProgressWindow : Window
 
     private void OnLogEntriesChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        // Wait for the ItemsControl to realize the new entries before scrolling.
-        Dispatcher.UIThread.Post(() => LogScrollViewer.ScrollToEnd(), DispatcherPriority.Background);
+        // A whole flush arrives as many Add events; scroll once after the batch is realized.
+        if (scrollPending)
+        {
+            return;
+        }
+
+        scrollPending = true;
+        Dispatcher.UIThread.Post(() =>
+        {
+            scrollPending = false;
+            LogScrollViewer.ScrollToEnd();
+        }, DispatcherPriority.Background);
     }
 
     private async void OnCopyLogClicked(object? sender, RoutedEventArgs e)
