@@ -2,6 +2,8 @@ using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using SkyCD.Couchbase.Attributes;
 using SkyCD.Couchbase.Exceptions;
 using SkyCD.Couchbase.Repository;
@@ -9,7 +11,8 @@ using CblCollection = Couchbase.Lite.Collection;
 
 namespace SkyCD.Couchbase.Collections;
 
-internal sealed class RepositoryCollection(DatabaseCollection Databases) : IDictionary<Type, object>
+internal sealed class RepositoryCollection(DatabaseCollection Databases, ILoggerFactory? LoggerFactory = null)
+    : IDictionary<Type, object>
 {
     private readonly ConcurrentDictionary<Type, object> inner = new();
 
@@ -42,6 +45,12 @@ internal sealed class RepositoryCollection(DatabaseCollection Databases) : IDict
         if (!repositoryInterfaceType.IsInstanceOfType(instance))
         {
             throw new RepositoryConstructorInvalidException(concreteRepositoryType);
+        }
+
+        if (instance is RepositoryBase repositoryBase)
+        {
+            repositoryBase.Logger = LoggerFactory?.CreateLogger(concreteRepositoryType.FullName ?? concreteRepositoryType.Name)
+                                    ?? NullLogger.Instance;
         }
 
         return instance;
