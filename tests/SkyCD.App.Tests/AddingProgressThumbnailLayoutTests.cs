@@ -60,41 +60,56 @@ public sealed class AddingProgressThumbnailLayoutTests
     }
 
     [Fact]
-    public void ErrorLogKeepsItsRowAndTheFooterIsPinnedBelowTheScrollingContent()
+    public void ErrorLogKeepsItsRowAndTheFooterIsPinnedBelowTheFixedContent()
     {
         var grid = RootGrid();
 
         Assert.Equal("Auto,Auto,Auto,Auto,*", (string?)grid.Attribute("RowDefinitions"));
 
-        var scroller = grid.Parent!;
-        Assert.Equal("ScrollViewer", scroller.Name.LocalName);
-        Assert.Equal("ProgressContentScroller", (string?)scroller.Attribute(Xaml + "Name"));
+        var parent = grid.Parent!;
+        Assert.Equal("Grid", parent.Name.LocalName);
+        Assert.Equal("*,Auto", (string?)parent.Attribute("RowDefinitions"));
 
-        var footer = Assert.Single(scroller.Parent!.Elements(Avalonia + "Grid"),
+        var footer = Assert.Single(parent.Elements(Avalonia + "Grid"),
             element => ContainsText(element, "UiKeys.Cancel}"));
         Assert.Equal("1", (string?)footer.Attribute("Grid.Row"));
     }
 
     /// <summary>
-    /// Issue #1107: binding the content height back to the scroller viewport sustains the Auto
-    /// scrollbar; the scroller stretches its content to the viewport on its own.
+    /// Issue #1153: fixed-size dialog — the whole content no longer sits in an outer scroller;
+    /// only the error log scrolls, inside its own border.
     /// </summary>
     [Fact]
-    public void ProgressContent_DoesNotBindItsHeightToTheScrollerViewport()
+    public void FixedDialog_HasNoOuterScroller()
     {
-        var grid = RootGrid();
-        var scroller = grid.Parent!;
+        var viewerNames = WindowDocument().Descendants(Avalonia + "ScrollViewer")
+            .Select(viewer => (string?)viewer.Attribute(Xaml + "Name"))
+            .ToList();
 
-        Assert.Null(grid.Attribute("MinHeight"));
-        Assert.DoesNotContain("#ProgressContentScroller.Viewport", grid.ToString(), StringComparison.Ordinal);
-        Assert.Equal("Auto", (string?)scroller.Attribute("VerticalScrollBarVisibility"));
+        Assert.DoesNotContain("ProgressContentScroller", viewerNames);
+        Assert.Contains("LogScrollViewer", viewerNames);
+    }
+
+    [Fact]
+    public void FixedDialog_CannotResize()
+    {
+        var window = WindowDocument();
+
+        Assert.Equal("False", (string?)window.Attribute("CanResize"));
+        Assert.Null(window.Attribute("MinWidth"));
+        Assert.Null(window.Attribute("MinHeight"));
+    }
+
+    private static XElement WindowDocument()
+    {
+        var xaml = File.ReadAllText(Path.Combine(FindRepoRoot(), "src", "SkyCD.App", "Views",
+            "AddingProgressWindow.axaml"));
+        return XDocument.Parse(xaml).Root!;
     }
 
     private static XElement RootGrid()
     {
-        var xaml = File.ReadAllText(Path.Combine(FindRepoRoot(), "src", "SkyCD.App", "Views",
-            "AddingProgressWindow.axaml"));
-        var window = XDocument.Parse(xaml).Root!;
+        var window = WindowDocument();
         return window.Descendants(Avalonia + "Grid")
             .Single(grid => ((string?)grid.Attribute("RowDefinitions")) == "Auto,Auto,Auto,Auto,*");
     }
