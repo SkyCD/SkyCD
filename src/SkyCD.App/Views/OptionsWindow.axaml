@@ -907,14 +907,23 @@
                         </Grid>
                         <StackPanel Grid.Row="1" Spacing="{DynamicResource SkySpaceXs}">
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceXs}">
-                                <TextBox Text="{Binding PluginPath}"
-                                         AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.PluginPath}}" />
+                                <TextBox Text="{Binding PluginPath, UpdateSourceTrigger=PropertyChanged}"
+                                         LostFocus="OnPluginPathFieldLostFocus"
+                                         AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.PluginPath}}">
+                                    <TextBox.KeyBindings>
+                                        <KeyBinding Gesture="Enter" Command="{Binding RescanPluginPathCommand}" />
+                                    </TextBox.KeyBindings>
+                                </TextBox>
                                 <Button Grid.Column="1"
                                         Content="{i18n:Translate {x:Static i18n:UiKeys.Browse}}"
                                         Command="{Binding BrowsePluginPathCommand}" />
                             </Grid>
                             <TextBlock Classes="caption"
                                        Text="{Binding InfoMessage}"
+                                       TextWrapping="Wrap" />
+                            <TextBlock Foreground="#DC2626"
+                                       IsVisible="{Binding HasPluginPathHint}"
+                                       Text="{Binding PluginPathHint}"
                                        TextWrapping="Wrap" />
                         </StackPanel>
                         <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled">

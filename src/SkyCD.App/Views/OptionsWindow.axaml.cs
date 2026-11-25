@@ -92,6 +92,15 @@ public partial class OptionsWindow : Window
         Close(false);
     }
 
+    private void OnPluginPathFieldLostFocus(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is OptionsDialogViewModel vm)
+        {
+            // Leaving the field ends the typing pause and rescans right away.
+            vm.RescanPluginPathCommand.Execute(null);
+        }
+    }
+
     private void OnInstalledPluginsSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (DataContext is OptionsDialogViewModel { SelectedPlugin: not null } vm)

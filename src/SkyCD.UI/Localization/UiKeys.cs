@@ -148,6 +148,7 @@ public static class UiKeys
     public const string Tools = "core.ui.Tools";
     public const string ProjectSettings = "core.ui.ProjectSettings";
     public const string PluginPath = "core.ui.PluginPath";
+    public const string PluginPathDirectoryMissing = "core.ui.PluginPathDirectoryMissing";
     public const string Browse = "core.ui.Browse";
     public const string BrowseCatalog = "core.ui.BrowseCatalog";
     public const string Plugins = "core.ui.Plugins";
