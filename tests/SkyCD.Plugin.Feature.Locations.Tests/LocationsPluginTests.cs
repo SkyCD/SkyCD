@@ -49,6 +49,15 @@ public sealed class LocationsPluginTests
     }
 
     [Fact]
+    public void CreateOptionsPage_WithoutLocationApi_ThrowsInvalidOperation()
+    {
+        var plugin = new LocationsPlugin();
+
+        var exception = Assert.Throws<InvalidOperationException>(() => plugin.CreateOptionsPage());
+        Assert.Contains("host location API", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void OptionsPageUsesTheTranslatedTitleAndEmbedsTheManagerView()
     {
         const string translationNamespace = "plugins.skycd.locations";

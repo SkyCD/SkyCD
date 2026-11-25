@@ -2246,6 +2246,10 @@ public partial class MainWindow : Window
     {
         dialogVm.CapturePluginStates();
         pluginManager.Discover(dialogVm.PluginPath, hostVersionProvider.Current);
+        // Discovery builds fresh capability instances, so the host APIs are re-injected before the
+        // contributed Options pages use them — otherwise a page like Locations fails with a plugin
+        // error every time the list refreshes.
+        pluginRuntimeSynchronizer.ReinjectHostApis();
         // The runtime now reflects this folder: it is the path Cancel has to restore.
         dialogVm.MarkPluginPathScanned(dialogVm.PluginPath);
         var descriptors = pluginManager.GetPluginDescriptors();

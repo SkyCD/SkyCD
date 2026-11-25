@@ -49,4 +49,27 @@ public sealed class PluginErrorReportTests
         Assert.NotEqual(first.Fingerprint, PluginFailure.Create(GetType(), "menu", new IOException()).Fingerprint);
         Assert.Equal("plugin", PluginFailure.Create(GetType(), "secret path", new IOException()).Operation);
     }
+
+    [Theory]
+    [InlineData("menu")]
+    [InlineData("modal")]
+    [InlineData("read")]
+    [InlineData("write")]
+    [InlineData("configure")]
+    [InlineData("media")]
+    [InlineData("media-settings")]
+    [InlineData("volume")]
+    [InlineData("catalog")]
+    [InlineData("import")]
+    [InlineData("index")]
+    [InlineData("assess")]
+    [InlineData("options")]
+    [InlineData("install")]
+    [InlineData("uninstall")]
+    [InlineData("audio-cd")]
+    [InlineData("audio-cd-settings")]
+    public void HostControlledOperations_ArePreservedInReports(string operation)
+    {
+        Assert.Equal(operation, PluginFailure.Create(GetType(), operation, new InvalidOperationException()).Operation);
+    }
 }
