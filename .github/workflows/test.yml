@@ -78,15 +78,54 @@ jobs:
       - name: Build solution
         run: dotnet build SkyCD.slnx --configuration Release --no-restore -warnaserror
 
-  test:
-    name: Test (${{ matrix.os }}, shard ${{ matrix.shard }})
+  test-shards:
+    name: Plan test shards
     needs: style
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Plan shards
+        id: plan
+        shell: bash
+        run: |
+          mapfile -t projects < <(find tests -mindepth 2 -maxdepth 2 -name '*.Tests.csproj' | sort)
+
+          matrix=$(printf '%s\n' "${projects[@]}" | jq -R -s -c --argjson shards 8 '
+            split("\n") | map(select(length > 0))
+            | . as $all
+            | [range(0; $shards) as $shard
+                | [$all | to_entries[] | select(.key % $shards == $shard) | .value] as $assigned
+                | {
+                    id: $shard,
+                    paths: ($assigned | join(" ")),
+                    label: ($assigned | map(split("/")[-1] | sub("\\.csproj$"; "")) | join(", "))
+                  }]
+          ')
+
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Test shards"
+            echo ""
+            echo "| Shard | Projects |"
+            echo "| :--- | :--- |"
+            jq -r '.[] | "| \(.id) | \(.label) |"' <<< "$matrix"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  test:
+    name: Test (${{ matrix.os }}, shard ${{ matrix.shard.id }})
+    needs: [style, test-shards]
     strategy:
       fail-fast: false
       max-parallel: 5
       matrix:
-        shard: [0, 1, 2, 3, 4, 5, 6, 7]
         os: [ubuntu-latest, windows-latest, macos-latest]
+        shard: ${{ fromJSON(needs.test-shards.outputs.matrix) }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
 
@@ -106,15 +145,17 @@ jobs:
       - name: Build test logger
         run: dotnet build tools/SkyCD.TestLogger/SkyCD.TestLogger.csproj --configuration Release
 
-      - name: Test shard
+      - name: Test ${{ matrix.shard.label }}
         shell: bash
         timeout-minutes: 15
+        env:
+          SHARD_PATHS: ${{ matrix.shard.paths }}
         run: |
-          # Round-robin the sorted test projects across shards, so a failure or hang only takes down
-          # the shard job for its own project and the job name identifies the OS/shard combination.
-          mapfile -t projects < <(find tests -mindepth 2 -maxdepth 2 -name '*.Tests.csproj' | sort | awk -v shard="${{ matrix.shard }}" -v shards=8 '((NR - 1) % shards) == shard')
+          # The shard assignment is computed by the Plan test shards job, so every OS runs the same
+          # projects and the step name lists exactly what this job covers.
+          read -r -a projects <<< "$SHARD_PATHS"
 
-          results="artifacts/test-results/${{ matrix.os }}/shard-${{ matrix.shard }}"
+          results="artifacts/test-results/${{ matrix.os }}/shard-${{ matrix.shard.id }}"
           mkdir -p artifacts/test-logs "$results"
 
           status=0
@@ -148,9 +189,9 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: test-results-${{ matrix.os }}-shard-${{ matrix.shard }}
+          name: test-results-${{ matrix.os }}-shard-${{ matrix.shard.id }}
           path: |
-            artifacts/test-results/${{ matrix.os }}/shard-${{ matrix.shard }}/
+            artifacts/test-results/${{ matrix.os }}/shard-${{ matrix.shard.id }}/
             artifacts/test-logs/
 
   license-compliance:

@@ -7,9 +7,11 @@ Default CI validates only the v3 solution path (`SkyCD.slnx`) and does not build
 - `ci`:
 - `style` job runs `dotnet format --verify-no-changes`.
 - `build` job restores and builds `SkyCD.slnx` with warnings as errors on `ubuntu-latest`, `windows-latest`, and `macos-latest`.
-- `test` job splits the test projects into eight shards per OS and runs at most five shard jobs at a
-  time. Each shard runs its projects one after another with `--blame-hang`; a failing project is
-  reported by name and does not rerun.
+- `test-shards` job runs before the test matrix, splits the sorted test projects into eight round-robin
+  shards, and publishes the shard-to-project mapping in the job summary.
+- `test` job runs one job per OS and shard, at most five at a time. Each shard's test step is named
+  after the projects it covers and runs them one after another with `--blame-hang`; a failing project
+  is reported by name and does not rerun.
 - `license-compliance` job scans dependency licenses with Trivy and fails on CRITICAL/HIGH licenses.
 - `sbom` job (push to `main` only) generates the CycloneDX SBOM release artifact.
 - `dependabot-automerge`:
@@ -28,9 +30,9 @@ The `Build (...)` and `Test (...)` checks report the remaining gates but are not
 - License compliance reports are published as `license-artifacts`.
 
 ## Timeouts and Hang Diagnostics
-Every job declares `timeout-minutes` (style 10, build 20, test 20, license 10, sbom 20), and each
-`Test shard` step is capped at 15 minutes, so a stuck test host can no longer hold a run open until
-GitHub's 6-hour limit.
+Every job declares `timeout-minutes` (style 10, build 20, test-shards 5, test 20, license 10, sbom 20),
+and each shard test step is capped at 15 minutes, so a stuck test host can no longer hold a run open
+until GitHub's 6-hour limit.
 - Sharding limits the blast radius: a hung or failing project only fails its own shard job, and the job
   name identifies the OS and shard.
 - The test step redirects each project's output to a log file instead of piping into `tee`: an orphaned
