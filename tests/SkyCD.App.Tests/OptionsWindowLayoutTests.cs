@@ -328,6 +328,15 @@ public class OptionsWindowLayoutTests
             element => (string?)element.Attribute("IsVisible") == "{Binding ShowScanSection}");
     }
 
+    [Fact]
+    public void CollectionsWindow_IsNoLongerASeparateDialog()
+    {
+        var root = FindRepoRoot();
+
+        Assert.False(File.Exists(Path.Combine(root, "src", "SkyCD.App", "Views", "CollectionsWindow.axaml")));
+        Assert.False(File.Exists(Path.Combine(root, "src", "SkyCD.App", "Views", "CollectionsWindow.axaml.cs")));
+    }
+
     private static string ReadRepoFile(params string[] parts)
     {
         var root = FindRepoRoot();
