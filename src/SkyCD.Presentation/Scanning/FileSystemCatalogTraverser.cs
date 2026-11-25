@@ -76,11 +76,15 @@ internal sealed class FileSystemCatalogTraverser
         session = concurrency;
         queue = new BlockingCollection<DirectoryWorkItem>();
         rootWorkItem = new DirectoryWorkItem(rootEntry, currentDocId, isRoot: true, parent: null);
+
+        // Enqueue the root before any worker starts. A worker that observes cancellation finalizes
+        // the queue, and a later Add would then throw a collection-completed error instead of
+        // letting the OperationCanceledException reach the caller.
+        queue.Add(rootWorkItem);
         var workers = StartWorkers(plan.CeilingWorkers);
 
         try
         {
-            queue.Add(rootWorkItem);
             WaitForRoot();
             foreach (var document in store.OrderedDocuments())
             {

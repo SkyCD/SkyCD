@@ -2307,6 +2307,12 @@ public partial class MainWindow : Window
     /// Combines the persisted descriptor (enabled state, stale plugins) with the freshly discovered
     /// assembly metadata so the Additional Info tab can show links, version, size and update source.
     /// </summary>
+    /// <summary>Render size of the plugin bitmaps in the installed list rows.</summary>
+    private const int PluginListIconSize = 32;
+
+    /// <summary>Render size of the plugin bitmap in the details header.</summary>
+    private const int PluginDetailsIconSize = 48;
+
     private static OptionsPluginItem CreateOptionsPluginItem(
         PluginDocument descriptor,
         IReadOnlyDictionary<string, DiscoveredPlugin> discoveredById,
@@ -2316,6 +2322,7 @@ public partial class MainWindow : Window
 
         var authorName = discovered?.Author?.Name ?? descriptor.Author?.Name;
         var version = discovered is null ? descriptor.Version : discovered.Version.ToString();
+        var persistedIcon = PluginIconKey.TryDecodePersisted(descriptor.IconPng);
         return new OptionsPluginItem(
             discovered?.Name ?? descriptor.Name,
             string.IsNullOrWhiteSpace(authorName) ? LocalizationService.Current.Get(TextKeys.UnknownAuthor) : authorName,
@@ -2330,7 +2337,8 @@ public partial class MainWindow : Window
             capabilityType: ResolveCapabilityType(discovered),
             sizeBytes: PluginFolderSize.TryComputeBytes(discovered?.AssemblyLocation),
             updateSource: ResolveUpdateSource(descriptor.Id, discovered, installStates),
-            icon: discovered?.Icon ?? PluginIconKey.TryDecodePersisted(descriptor.IconPng));
+            icon: discovered?.GetIconNearest(PluginDetailsIconSize) ?? persistedIcon,
+            listIcon: discovered?.GetIconNearest(PluginListIconSize) ?? persistedIcon);
     }
 
     private static string? ResolveCapabilityType(DiscoveredPlugin? plugin)

@@ -275,18 +275,19 @@
                                                             Padding="{DynamicResource SkyInsetSm}">
                                                         <Grid ColumnDefinitions="Auto,*,Auto"
                                                               ColumnSpacing="{DynamicResource SkySpaceSm}">
-                                                            <Panel Width="24" Height="24" VerticalAlignment="Center">
-                                                                <Image Source="{Binding Icon, Converter={StaticResource PluginBitmapConverter}}"
+                                                            <Panel Width="32" Height="32" VerticalAlignment="Center">
+                                                                <Image Source="{Binding ListIcon, Converter={StaticResource PluginBitmapConverter}}"
                                                                        Stretch="Uniform"
-                                                                       IsVisible="{Binding HasBitmapIcon}" />
+                                                                       RenderOptions.BitmapInterpolationMode="HighQuality"
+                                                                       IsVisible="{Binding HasListBitmapIcon}" />
                                                                 <iconPacks:PackIconControl
                                                                     Kind="{x:Static lucide:PackIconLucideKind.Puzzle}"
-                                                                    Width="20"
-                                                                    Height="20"
+                                                                    Width="28"
+                                                                    Height="28"
                                                                     HorizontalAlignment="Center"
                                                                     VerticalAlignment="Center"
                                                                     Foreground="{DynamicResource ThemeForegroundLowBrush}"
-                                                                    IsVisible="{Binding !HasBitmapIcon}" />
+                                                                    IsVisible="{Binding !HasListBitmapIcon}" />
                                                             </Panel>
                                                             <StackPanel Grid.Column="1"
                                                                         VerticalAlignment="Center"
@@ -429,16 +430,17 @@
                                                Classes="h2"
                                                TextWrapping="Wrap" />
                                     <Panel Grid.Column="1"
-                                           Width="24"
-                                           Height="24"
+                                           Width="48"
+                                           Height="48"
                                            VerticalAlignment="Top">
                                         <Image Source="{Binding SelectedPlugin.Icon, Converter={StaticResource PluginBitmapConverter}}"
                                                Stretch="Uniform"
+                                               RenderOptions.BitmapInterpolationMode="HighQuality"
                                                IsVisible="{Binding SelectedPlugin.HasBitmapIcon}" />
                                         <iconPacks:PackIconControl
                                             Kind="{x:Static lucide:PackIconLucideKind.Puzzle}"
-                                            Width="20"
-                                            Height="20"
+                                            Width="40"
+                                            Height="40"
                                             HorizontalAlignment="Center"
                                             VerticalAlignment="Center"
                                             Foreground="{DynamicResource ThemeForegroundLowBrush}"
