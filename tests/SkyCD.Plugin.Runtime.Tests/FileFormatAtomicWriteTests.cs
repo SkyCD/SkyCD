@@ -179,8 +179,14 @@ public sealed class FileFormatAtomicWriteTests
 
     private sealed class WritingFileFormatCapability : IFileFormatPluginCapability
     {
-        public FileFormatDescriptor SupportedFormat { get; } =
-            new("test", "Test", [".ascd"], ["application/test"], true, true);
+        // Assembly-level discovery instantiates every IPluginCapability that has a public parameterless
+        // constructor; the descriptor parameter keeps this fixture out of the discovered capability set so
+        // its ".ascd" extension cannot become the fixture plugin's primary extension.
+        public WritingFileFormatCapability(FileFormatDescriptor? descriptor = null) =>
+            SupportedFormat = descriptor
+                ?? new FileFormatDescriptor("test", "Test", [".ascd"], ["application/test"], true, true);
+
+        public FileFormatDescriptor SupportedFormat { get; }
 
         public Task<FileFormatReadResult> ReadAsync(FileFormatReadRequest request,
             CancellationToken cancellationToken = default) =>
