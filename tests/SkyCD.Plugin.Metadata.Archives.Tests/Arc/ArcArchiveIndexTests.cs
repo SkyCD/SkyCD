@@ -2,43 +2,44 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Metadata.Archives;
-using SkyCD.Plugin.Metadata.Archives.Arc;
 using SkyCD.Plugin.Metadata.Archives.Arc.Tests;
 using SkyCD.Plugin.Host.Indexing;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Runtime.Factories;
 using Xunit;
-using SkyCD.Plugin.Metadata.Archives.Arc.Models;
 using SkyCD.Plugin.Metadata.Archives.Models;
 
 namespace SkyCD.Plugin.Host.Tests;
 
 public sealed class ArcArchiveIndexTests
 {
+    private const string TextFixtureHash = "4D581D93D369F6E1C9B295FF38D82DABD577F927DFAF0C35818C015C85E322D9";
+
     [Fact]
     public async Task GetWorkItemsAsync_ExtractsSafeStoredEntries_AndSkipsUnsafePartially()
     {
         using var archive = ArcTestArchiveBuilder.Create()
             .AddStored("safe.txt", "ok")
-            .AddStored("../escape.txt", "evil")
-            .AddStored("/absolute.txt", "evil")
-            .AddStored("C:/drive.txt", "evil")
-            .AddStored("folder/../../escape2.txt", "evil")
-            .AddStored("folder/nested.txt", "nested")
+            .AddStored("../e.txt", "evil")
+            .AddStored("/abs.txt", "evil")
+            .AddStored("C:/d.txt", "evil")
+            .AddStored("../esc2.txt", "evil")
+            .AddStored("sub/nest.txt", "nested")
             .Build();
 
         var set = await new ArchivesIndexPlugin().GetWorkItemsAsync(RequestFor(archive, "sample.arc"));
 
-        Assert.Equal(["folder/nested.txt", "safe.txt"], set.Items.Select(item => item.Name).Order(StringComparer.Ordinal));
+        Assert.Equal(["safe.txt", "sub/nest.txt"], set.Items.Select(item => item.Name).Order(StringComparer.Ordinal));
         var safe = set.Items.Single(item => item.Name == "safe.txt");
         Assert.Equal(2, safe.SizeBytes);
-        Assert.Equal(new DateTimeOffset(2024, 1, 2, 3, 4, 6, TimeSpan.Zero), safe.ModifiedUtc);
+        Assert.Null(safe.ModifiedUtc);
 
         var extracted = Assert.IsType<FileStream>(await safe.OpenSource(CancellationToken.None));
         var fullPath = extracted.Name;
@@ -53,7 +54,7 @@ public sealed class ArcArchiveIndexTests
         }
 
         await DisposeAndAssertCleanupAsync(set, tempRoot, fullPath);
-        Assert.False(File.Exists(Path.Combine(Path.GetTempPath(), "escape.txt")));
+        Assert.False(File.Exists(Path.Combine(Path.GetTempPath(), "e.txt")));
     }
 
     [Fact]
@@ -79,25 +80,51 @@ public sealed class ArcArchiveIndexTests
     }
 
     [Fact]
-    public async Task GetWorkItemsAsync_UnsupportedMethod_IsSkippedWithoutFailingArchive()
+    public async Task GetWorkItemsAsync_PackedEntries_AreDecodedFromRle90()
+    {
+        var content = new string('a', 40) + "middle" + "\u0090" + new string('b', 7);
+        using var archive = ArcTestArchiveBuilder.Create()
+            .AddPacked("packed.txt", content)
+            .Build();
+        var plugin = new ArchivesIndexPlugin();
+
+        var set = await plugin.GetWorkItemsAsync(RequestFor(archive, "sample.arc"));
+
+        Assert.Empty(plugin.LastDiagnostics);
+        var item = Assert.Single(set.Items);
+        Assert.Equal("packed.txt", item.Name);
+        Assert.Equal(Encoding.UTF8.GetByteCount(content), item.SizeBytes);
+        await using (var source = await item.OpenSource(CancellationToken.None))
+        {
+            using var reader = new StreamReader(source);
+            Assert.Equal(content, await reader.ReadToEndAsync());
+        }
+
+        await set.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task GetWorkItemsAsync_UnsupportedMethod_IsListedWithoutWritingRawBytes()
     {
         using var archive = ArcTestArchiveBuilder.Create()
-            .AddWithMethod(1, "packed.txt", "compressed")
-            .AddWithMethod(6, "crunched.txt", "compressed")
+            .AddWithMethod(9, "squashed.txt", "raw")
             .AddStored("stored.txt", "ok")
             .Build();
+        var plugin = new ArchivesIndexPlugin();
 
-        var set = await new ArchivesIndexPlugin().GetWorkItemsAsync(RequestFor(archive, "sample.arc"));
+        var set = await plugin.GetWorkItemsAsync(RequestFor(archive, "sample.arc"));
 
-        try
-        {
-            var item = Assert.Single(set.Items);
-            Assert.Equal("stored.txt", item.Name);
-        }
-        finally
-        {
-            await set.DisposeAsync();
-        }
+        var item = Assert.Single(set.Items);
+        Assert.Equal("stored.txt", item.Name);
+        var diagnostic = Assert.Single(plugin.LastDiagnostics);
+        Assert.StartsWith("ARC_UNSUPPORTED", diagnostic);
+        Assert.Contains("squashed.txt", diagnostic);
+
+        var stream = await item.OpenSource(CancellationToken.None);
+        var tempRoot = Path.GetDirectoryName(Assert.IsType<FileStream>(stream).Name)!;
+        await stream.DisposeAsync();
+        Assert.False(File.Exists(Path.Combine(tempRoot, "squashed.txt")));
+        await DisposeAndAssertCleanupAsync(set, tempRoot, null);
     }
 
     [Fact]
@@ -146,12 +173,12 @@ public sealed class ArcArchiveIndexTests
     [Fact]
     public async Task GetWorkItemsAsync_CancelledMidway_RemovesExtractedFiles()
     {
-        // A source that cancels its own token while the entry payload is copied proves mid-copy cleanup:
-        // the cancellation surfaces as an OperationCanceledException and the temp directory disappears.
+        // A seekable source that cancels once a byte threshold is passed proves mid-copy cleanup: the copy
+        // observes the cancelled token during extraction and the workspace directory disappears.
         var large = new string('z', 900_000);
         using var archive = ArcTestArchiveBuilder.Create()
-            .AddStored("first.txt", large)
-            .AddStored("second.txt", "small")
+            .AddStored("big.txt", large)
+            .AddStored("small.txt", "small")
             .Build();
         using var cancellation = new CancellationTokenSource();
         var before = FindTempDirectories("skycd-arc-index-").Count;
@@ -161,19 +188,19 @@ public sealed class ArcArchiveIndexTests
             {
                 FileName = "sample.arc",
                 SizeBytes = archive.Length,
-                OpenSource = token => Task.FromResult<Stream>(new NonDisposingStream(
-                    new CancellingReadStream(archive, cancellation, token, bytesBeforeCancel: 200_000)))
+                OpenSource = token => Task.FromResult<Stream>(new CancellingSeekableStream(
+                    archive, cancellation, token, bytesBeforeCancel: 200_000))
             }, cancellation.Token));
 
         var leftovers = FindTempDirectories("skycd-arc-index-");
         Assert.Equal(before, leftovers.Count);
-        Assert.DoesNotContain(leftovers, ContainsEntryNamed("first.txt"));
+        Assert.DoesNotContain(leftovers, ContainsEntryNamed("big.txt"));
     }
 
     [Fact]
     public async Task GetWorkItemsAsync_NonSeekableSource_IsBufferedAndCleanedUp()
     {
-        using var archive = ArcTestArchiveBuilder.Create().AddStored("dir/file.txt", "data").Build();
+        using var archive = ArcTestArchiveBuilder.Create().AddStored("f.txt", "data").Build();
 
         var set = await new ArchivesIndexPlugin().GetWorkItemsAsync(
             new IndexWorkItemRequest
@@ -184,22 +211,54 @@ public sealed class ArcArchiveIndexTests
             });
 
         var item = Assert.Single(set.Items);
-        Assert.Equal("dir/file.txt", item.Name);
+        Assert.Equal("f.txt", item.Name);
         var tempRoot = TempRootOf(set);
-        Assert.False(File.Exists(Path.Combine(tempRoot, ".skycd-arc-source")));
+        Assert.True(File.Exists(Path.Combine(tempRoot, ".skycd-arc-source")));
         await DisposeAndAssertCleanupAsync(set, tempRoot, null);
     }
 
     [Fact]
-    public async Task GetWorkItemsAsync_NotArcSource_ReturnsEmptySetAndLeavesNoTempDirectory()
+    public async Task GetWorkItemsAsync_EndMarkerMissing_StillExtractsEntries()
     {
-        using var stream = new MemoryStream(Encoding.UTF8.GetBytes("plain text"));
+        using var archive = ArcTestArchiveBuilder.Create()
+            .AddStored("tail.txt", "tail")
+            .Build(withEndMarker: false);
+
+        var set = await new ArchivesIndexPlugin().GetWorkItemsAsync(RequestFor(archive, "sample.arc"));
+
+        Assert.Equal("tail.txt", Assert.Single(set.Items).Name);
+        await set.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task GetWorkItemsAsync_TruncatedStoredEntry_ReportsDamaged()
+    {
+        using var archive = ArcTestArchiveBuilder.Create()
+            .AddTruncatedStored("cut.txt", "0123456789")
+            .Build();
+        var plugin = new ArchivesIndexPlugin();
         var before = FindTempDirectories("skycd-arc-index-").Count;
 
-        var set = await new ArchivesIndexPlugin().GetWorkItemsAsync(RequestFor(stream, "notes.arc"));
+        var set = await plugin.GetWorkItemsAsync(RequestFor(archive, "sample.arc"));
 
         Assert.Empty(set.Items);
         await set.DisposeAsync();
+        Assert.StartsWith("ARC_DAMAGED", Assert.Single(plugin.LastDiagnostics));
+        Assert.Equal(before, FindTempDirectories("skycd-arc-index-").Count);
+    }
+
+    [Fact]
+    public async Task GetWorkItemsAsync_NotArcSource_ReportsDamagedAndLeavesNoTempDirectory()
+    {
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes("plain text"));
+        var plugin = new ArchivesIndexPlugin();
+        var before = FindTempDirectories("skycd-arc-index-").Count;
+
+        var set = await plugin.GetWorkItemsAsync(RequestFor(stream, "notes.arc"));
+
+        Assert.Empty(set.Items);
+        await set.DisposeAsync();
+        Assert.StartsWith("ARC_DAMAGED", Assert.Single(plugin.LastDiagnostics));
         Assert.Equal(before, FindTempDirectories("skycd-arc-index-").Count);
     }
 
@@ -214,17 +273,42 @@ public sealed class ArcArchiveIndexTests
         await set.DisposeAsync();
     }
 
+    [Theory]
+    [InlineData("stored.arc")]
+    [InlineData("squeezed.arc")]
+    [InlineData("crunched.arc")]
+    public async Task GetWorkItemsAsync_RealArchive_ExtractsTextEntry(string fixtureName)
+    {
+        var bytes = await File.ReadAllBytesAsync(Path.Combine(AppContext.BaseDirectory, "Fixtures", "Arc", fixtureName));
+        var plugin = new ArchivesIndexPlugin();
+
+        var set = await plugin.GetWorkItemsAsync(RequestFor(new MemoryStream(bytes), fixtureName));
+
+        Assert.Empty(plugin.LastDiagnostics);
+        var item = Assert.Single(set.Items);
+        Assert.Equal("TECT.TXT", item.Name);
+        Assert.Equal(15_498, item.SizeBytes);
+        await using (var source = await item.OpenSource(CancellationToken.None))
+        {
+            using var content = new MemoryStream();
+            await source.CopyToAsync(content);
+            Assert.Equal(TextFixtureHash, Convert.ToHexString(SHA256.HashData(content.ToArray())));
+        }
+
+        await set.DisposeAsync();
+    }
+
     [Fact]
     public async Task Sequence_RunsEnabledMetadataProviders_ForContributedItems()
     {
-        using var archive = ArcTestArchiveBuilder.Create().AddStored("images/photo.txt", "metadata-source").Build();
+        using var archive = ArcTestArchiveBuilder.Create().AddStored("images/p.txt", "metadata-source").Build();
         var manager = new MediaExtensionManager([new MediaProvider("test", "1.0", new TestMetadataCapability())]);
         var sequence = new IndexWorkItemSequence(manager, [new ArchivesIndexPlugin()]);
 
         var indexed = await sequence.ProcessAsync(RequestFor(archive, "sample.arc"));
 
         var entry = Assert.Single(indexed);
-        Assert.Equal("images/photo.txt", entry.Name);
+        Assert.Equal("images/p.txt", entry.Name);
         var providerResult = Assert.Single(entry.Results);
         Assert.False(providerResult.Failed);
         Assert.Contains(providerResult.Metadata!.Values, value =>
@@ -355,45 +439,49 @@ public sealed class ArcArchiveIndexTests
     }
 
     /// <summary>
-    /// Cancels the supplied token once enough bytes were read, simulating a cancel that races the entry copy.
-    /// Only sequential reads are supported so the plugin must buffer the source into the temp directory.
+    /// A seekable source that cancels the supplied token once a byte threshold was read, so cancellation
+    /// races the entry copy rather than any seek or buffering step.
     /// </summary>
-    private sealed class CancellingReadStream(Stream inner, CancellationTokenSource source,
-        CancellationToken cancellationToken, int bytesBeforeCancel) : Stream
+    private sealed class CancellingSeekableStream(Stream inner, CancellationTokenSource source,
+        CancellationToken cancellationToken, long bytesBeforeCancel) : Stream
     {
         private long bytesRead;
 
         public override bool CanRead => true;
-        public override bool CanSeek => false;
+        public override bool CanSeek => true;
         public override bool CanWrite => false;
-        public override long Length => throw new NotSupportedException();
+        public override long Length => inner.Length;
 
         public override long Position
         {
-            get => throw new NotSupportedException();
-            set => throw new NotSupportedException();
+            get => inner.Position;
+            set => inner.Position = value;
         }
 
         public override void Flush()
         {
         }
 
-        public override int Read(byte[] buffer, int offset, int count) => inner.Read(buffer, offset, count);
+        public override int Read(byte[] buffer, int offset, int count) => Track(inner.Read(buffer, offset, count));
 
-        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken token = default)
+        public override int Read(Span<byte> buffer) => Track(inner.Read(buffer));
+
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken token = default) =>
+            ValueTask.FromResult(Read(buffer.Span));
+
+        private int Track(int read)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var read = inner.Read(buffer.Span);
             bytesRead += read;
             if (bytesRead >= bytesBeforeCancel)
             {
                 source.Cancel();
             }
 
-            return ValueTask.FromResult(read);
+            return read;
         }
 
-        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override long Seek(long offset, SeekOrigin origin) => inner.Seek(offset, origin);
         public override void SetLength(long value) => throw new NotSupportedException();
         public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
 

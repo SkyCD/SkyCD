@@ -7,8 +7,9 @@ using Xunit;
 namespace SkyCD.App.Tests;
 
 /// <summary>
-/// Issue #1034: the main window owns OS file drops. The handlers are declared in XAML on the window
-/// itself so drops over the catalog tree or browser are not swallowed by the nested lists.
+/// Issue #1034: the main window owns OS file drops. Issue #1060: the destination is the container
+/// under the pointer (highlighted), not the tree selection, and the window-wide overlay must not
+/// hide the tree/list or the OS drag image.
 /// </summary>
 public class MainWindowDropTests
 {
@@ -28,33 +29,48 @@ public class MainWindowDropTests
     }
 
     [Fact]
-    public void DropOverlay_StartsHiddenAndDoesNotBlockHitTesting()
+    public void DropHint_IsATopChipThatDoesNotBlockHitTesting()
     {
-        var overlay = GetDropOverlay();
+        var hint = GetDropHint();
 
-        Assert.Equal("False", (string?)overlay.Attribute("IsVisible"));
-        Assert.Equal("False", (string?)overlay.Attribute("IsHitTestVisible"));
-        Assert.Equal("3", (string?)overlay.Attribute("Grid.ColumnSpan"));
-        Assert.Contains("UiKeys.DropToAdd", overlay.ToString(), StringComparison.Ordinal);
+        Assert.Equal("False", (string?)hint.Attribute("IsVisible"));
+        Assert.Equal("False", (string?)hint.Attribute("IsHitTestVisible"));
+        Assert.Equal("Center", (string?)hint.Attribute("HorizontalAlignment"));
+        Assert.Equal("Top", (string?)hint.Attribute("VerticalAlignment"));
+        // Root is the only implicit parent, so the chip says where an empty-space drop lands.
+        Assert.Contains("UiKeys.DropToAddToLibrary", hint.ToString(), StringComparison.Ordinal);
     }
 
     [Fact]
-    public void DropOverlay_LivesInTheMainLayoutGrid()
+    public void DropHint_LivesInTheMainLayoutGrid()
     {
         var window = GetWindow();
         var layout = Assert.Single(window.Descendants(Avalonia + "Grid"),
             grid => (string?)grid.Attribute(Xaml2006 + "Name") == "MainLayoutGrid");
 
         Assert.Contains(layout.Elements(Avalonia + "Border"),
-            border => (string?)border.Attribute(Xaml2006 + "Name") == "DropOverlay");
+            border => (string?)border.Attribute(Xaml2006 + "Name") == "DropHint");
+    }
+
+    [Fact]
+    public void DropTargetHighlight_ReusesTheSelectionTreatment()
+    {
+        var treeStyles = ReadRepoFile("src", "SkyCD.App", "Styles", "TreeViewStyles.axaml");
+        var details = ReadRepoFile("src", "SkyCD.UI", "Controls", "Lists", "DetailsListView.axaml");
+        var browser = ReadRepoFile("src", "SkyCD.UI", "Controls", "Lists", "BrowserItemsView.axaml");
+
+        Assert.Contains("TreeViewItem.drop-target", treeStyles, StringComparison.Ordinal);
+        Assert.Contains("Border#SelectionBorder", treeStyles, StringComparison.Ordinal);
+        Assert.Contains("ListBoxItem.drop-target", details, StringComparison.Ordinal);
+        Assert.Contains("ListBoxItem.drop-target", browser, StringComparison.Ordinal);
     }
 
     private static XElement GetWindow() =>
         XDocument.Parse(ReadRepoFile("src", "SkyCD.App", "Views", "MainWindow.axaml")).Root!;
 
-    private static XElement GetDropOverlay() =>
+    private static XElement GetDropHint() =>
         Assert.Single(GetWindow().Descendants(Avalonia + "Border"),
-            border => (string?)border.Attribute(Xaml2006 + "Name") == "DropOverlay");
+            border => (string?)border.Attribute(Xaml2006 + "Name") == "DropHint");
 
     private static string ReadRepoFile(params string[] parts) =>
         File.ReadAllText(Path.Combine([FindRepoRoot(), .. parts]));

@@ -297,6 +297,12 @@
                                  IsChecked="{Binding IsTargetSelectedFolder, Mode=OneWay}"
                                  Command="{Binding SelectTargetCommand}"
                                  CommandParameter="SelectedFolder" />
+                    <TextBlock x:Name="TargetParentDescriptionText"
+                               Margin="{DynamicResource SkyGapTopXs}"
+                               Opacity="0.8"
+                               TextWrapping="Wrap"
+                               IsVisible="{Binding HasTargetParentDescription}"
+                               Text="{Binding TargetParentDescription}" />
                 </StackPanel>
 
                 <StackPanel x:Name="DialogActions"

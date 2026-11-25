@@ -251,6 +251,19 @@
           "Microsoft.TestPlatform.ObjectModel": "18.11.0"
         }
       },
+      "RecursiveAI.OneArchive": {
+        "type": "Transitive",
+        "resolved": "1.2.0",
+        "contentHash": "XqhfMf58jY5Yd9VO7V6zDmnTxmdvr0iZbBI1UizriuK4SxWqSBNEYN3+9A/2Zehj1kQkVeJ+XHy8R6Fns/1DBQ==",
+        "dependencies": {
+          "RecursiveAI.OneCompress": "1.2.0"
+        }
+      },
+      "RecursiveAI.OneCompress": {
+        "type": "Transitive",
+        "resolved": "1.2.0",
+        "contentHash": "FjF0m6mI8qSvyytDkynJxWSZ6kNU6lE+sHqs6qa6N05gUCSzOkK1gCCvpRtpO9FGG8IJlo2JdH/9gRPBoQG9sg=="
+      },
       "SerialQueue": {
         "type": "Transitive",
         "resolved": "2.1.0",
@@ -390,6 +403,7 @@
         "type": "Project",
         "dependencies": {
           "Hst.Compression": "[1.0.104, )",
+          "RecursiveAI.OneArchive": "[1.2.0, )",
           "SharpCompress": "[0.50.8, )",
           "SkyCD.SDK": "[3.0.0, )"
         }

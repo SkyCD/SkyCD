@@ -87,6 +87,8 @@ public partial class MainWindow : Window
     private bool isWindowPlacementDeferred;
     private Task? catalogLoadTask;
     private IReadOnlyList<MediaDriveInfo>? dragDrives;
+    private Control? dropTargetContainer;
+    private DropDestination dropDestination = DropDestination.LibraryRoot;
     private readonly SemaphoreSlim pluginErrorDialogGate = new(1, 1);
     private readonly Dictionary<string, IImage> toolbarIcons = new(StringComparer.Ordinal);
     private ColumnDefinition TreePaneColumn => MainLayoutGrid.ColumnDefinitions[0];
@@ -930,54 +932,145 @@ public partial class MainWindow : Window
 
     private void OnWindowDragOver(object? sender, DragEventArgs e)
     {
-        var supported = TryResolveDrop(e, out _);
-        e.DragEffects = supported ? DragDropEffects.Copy : DragDropEffects.None;
-        DropOverlay.IsVisible = supported;
+        var canAccept = DataContext is MainWindowViewModel { IsCatalogInteractionEnabled: true } && HasDropPayload(e);
+        e.DragEffects = canAccept ? DragDropEffects.Copy : DragDropEffects.None;
+        if (canAccept)
+        {
+            UpdateDropFeedback(e);
+        }
+        else
+        {
+            ClearDropFeedback(clearDragDrives: false);
+        }
+
         e.Handled = true;
     }
 
     private void OnWindowDragLeave(object? sender, DragEventArgs e)
     {
-        DropOverlay.IsVisible = false;
-        dragDrives = null;
+        ClearDropFeedback(clearDragDrives: true);
         e.Handled = true;
     }
 
     private async void OnWindowDrop(object? sender, DragEventArgs e)
     {
-        DropOverlay.IsVisible = false;
         e.Handled = true;
-        if (!TryResolveDrop(e, out var sources) || DataContext is not MainWindowViewModel vm)
+
+        // The destination must follow the pointer, not whatever the tree selection happens to be
+        // when the dialog is confirmed.
+        UpdateDropFeedback(e);
+        var destination = dropDestination;
+        var (paths, text) = ReadDropPayload(e);
+        ClearDropFeedback(clearDragDrives: false);
+
+        if (DataContext is not MainWindowViewModel { IsCatalogInteractionEnabled: true } vm)
         {
             dragDrives = null;
             return;
         }
 
+        // Drive enumeration can stall on network volumes; never run it on the UI thread (#1060).
+        var drives = dragDrives ??= await Task.Run(() => mediaDriveProvider.GetSupportedDrives());
         dragDrives = null;
-        await ShowAddToListDialogAsync(vm, sources);
-    }
-
-    private bool TryResolveDrop(DragEventArgs e, out IReadOnlyList<DroppedSource> sources)
-    {
-        sources = [];
-        if (DataContext is not MainWindowViewModel { IsCatalogInteractionEnabled: true })
+        var sources = DropSourceResolver.Resolve(paths, text, drives);
+        if (sources.Count == 0)
         {
-            return false;
+            return;
         }
 
-        var droppedPaths = (e.DataTransfer.TryGetFiles() ?? [])
+        await ShowAddToListDialogAsync(vm, sources, destination);
+    }
+
+    private static bool HasDropPayload(DragEventArgs e) =>
+        (e.DataTransfer.TryGetFiles()?.Any(item => item is IStorageFolder) ?? false) ||
+        DropSourceResolver.TryResolveUrl(e.DataTransfer.TryGetText()) is not null;
+
+    private static (IReadOnlyList<DroppedPath> Paths, string? Text) ReadDropPayload(DragEventArgs e)
+    {
+        var paths = (e.DataTransfer.TryGetFiles() ?? [])
             .Select(item => new DroppedPath(item.TryGetLocalPath() ?? string.Empty, item is IStorageFolder))
-            .Where(item => !string.IsNullOrWhiteSpace(item.Path));
-        dragDrives ??= mediaDriveProvider.GetSupportedDrives();
-        sources = DropSourceResolver.Resolve(droppedPaths, e.DataTransfer.TryGetText(), dragDrives);
-        return sources.Count > 0;
+            .Where(item => !string.IsNullOrWhiteSpace(item.Path))
+            .ToList();
+        return (paths, e.DataTransfer.TryGetText());
+    }
+
+    /// <summary>
+    /// Highlights the container under the pointer and records it as the drop parent. Containers are
+    /// tree nodes and folder-like browser items; over anything else the drop lands on the library root.
+    /// </summary>
+    private void UpdateDropFeedback(DragEventArgs e)
+    {
+        Control? container = null;
+        var destination = DropDestination.LibraryRoot;
+
+        var hit = this.InputHitTest(e.GetPosition(this)) as Visual;
+        if (hit is not null)
+        {
+            if (IsWithin(hit, MainTreeView) &&
+                FindAncestor<TreeViewItem>(hit) is { DataContext: BrowserTreeNode node } treeItem)
+            {
+                container = treeItem;
+                destination = DropDestination.FromTreeNode(node.Key, node.Title);
+            }
+            else if (IsWithin(hit, MainBrowserItemsView) &&
+                     FindAncestor<ListBoxItem>(hit) is { DataContext: CatalogDocument document } listItem &&
+                     DropDestination.FromCatalogItem(document.Id, document.DisplayName, document.Type) is { } itemDestination)
+            {
+                container = listItem;
+                destination = itemDestination;
+            }
+        }
+
+        if (!ReferenceEquals(dropTargetContainer, container))
+        {
+            dropTargetContainer?.Classes.Remove("drop-target");
+            dropTargetContainer = container;
+            container?.Classes.Add("drop-target");
+        }
+
+        dropDestination = destination;
+        // The chip names the implicit parent only when no visible container is highlighted.
+        DropHint.IsVisible = container is null;
+    }
+
+    private void ClearDropFeedback(bool clearDragDrives)
+    {
+        dropTargetContainer?.Classes.Remove("drop-target");
+        dropTargetContainer = null;
+        dropDestination = DropDestination.LibraryRoot;
+        DropHint.IsVisible = false;
+        if (clearDragDrives)
+        {
+            dragDrives = null;
+        }
+    }
+
+    private static bool IsWithin(Visual? visual, Visual? ancestor)
+    {
+        var current = visual;
+        while (current is not null)
+        {
+            if (ReferenceEquals(current, ancestor))
+            {
+                return true;
+            }
+
+            current = current.GetVisualParent();
+        }
+
+        return false;
     }
 
     private async Task ShowAddToListDialogAsync(
         MainWindowViewModel vm,
-        IReadOnlyList<DroppedSource>? droppedSources = null)
+        IReadOnlyList<DroppedSource>? droppedSources = null,
+        DropDestination? dropDestination = null)
     {
+        var targetParent = dropDestination ?? (vm.SelectedTreeNode is { } node
+            ? DropDestination.FromTreeNode(node.Key, node.Title)
+            : DropDestination.LibraryRoot);
         var dialogVm = new AddToListDialogViewModel(mediaDriveProvider, locationOptions: vm.GetLocationChoices());
+        dialogVm.SetTargetParent(targetParent.ParentId, targetParent.DisplayName);
         if (droppedSources is { Count: > 0 })
         {
             dialogVm.ApplyDroppedSources(droppedSources);
@@ -995,11 +1088,12 @@ public partial class MainWindow : Window
             return;
         }
 
+        var targetParentId = dialogVm.TargetPlacement == AddToListTargetPlacement.NewMedia
+            ? null
+            : dialogVm.TargetParentId ?? DropDestination.LibraryRootId;
+
         if (dialogVm.SourceMode == AddToListSourceMode.Internet)
         {
-            var targetParentId = dialogVm.TargetPlacement == AddToListTargetPlacement.NewMedia
-                ? null
-                : vm.SelectedTreeNode?.Key ?? "library";
             var scanErrorOptions = LoadAppOptions();
             var scanTraversal = BuildScanTraversalOptions(ScanSourceProfile.Network);
             var scanOptions = dialogVm.CreateInternetScanOptions(
@@ -1091,9 +1185,6 @@ public partial class MainWindow : Window
 
         if (dialogVm.SourceMode == AddToListSourceMode.TitleOnly)
         {
-            var targetParentId = dialogVm.TargetPlacement == AddToListTargetPlacement.NewMedia
-                ? null
-                : vm.SelectedTreeNode?.Key ?? "library";
             try
             {
                 vm.AddTitleOnlyMedia(dialogVm.MediaName, targetParentId, dialogVm.SelectedLocationId);
@@ -1108,10 +1199,6 @@ public partial class MainWindow : Window
 
         if (dialogVm.SourceMode == AddToListSourceMode.Media)
         {
-            var targetParentId = dialogVm.TargetPlacement == AddToListTargetPlacement.NewMedia
-                ? null
-                : vm.SelectedTreeNode?.Key ?? "library";
-
             var rootType = CatalogDocumentType.Media;
 
             var selectedDrivePath = dialogVm.SelectedDrive?.RootDirectory ?? dialogVm.SelectedDrive?.Name ?? string.Empty;
@@ -1212,10 +1299,6 @@ public partial class MainWindow : Window
 
         if (dialogVm.SourceMode == AddToListSourceMode.Folder)
         {
-            var targetParentId = dialogVm.TargetPlacement == AddToListTargetPlacement.NewMedia
-                ? null
-                : vm.SelectedTreeNode?.Key ?? "library";
-
             var rootType = dialogVm.TargetPlacement == AddToListTargetPlacement.NewMedia
                 ? CatalogDocumentType.Media
                 : CatalogDocumentType.Folder;
@@ -1466,21 +1549,23 @@ public partial class MainWindow : Window
         var targetPath = saveAs ? null : vm.CurrentCatalogPath;
         if (string.IsNullOrWhiteSpace(targetPath))
         {
-            var fileTypeChoices = fileFormatManager.GetSaveFilters()
-                .ToFilePickerTypes(
-                    allSupportedFilesLabel: null,
-                    allFilesLabel: saveAs ? PickerLocalizer["AllFiles"].Value : null);
-            var defaultExtension = fileFormatManager.GetSaveFormats().Any(format => format.FormatId == "skycd-json")
-                ? "json"
-                : fileFormatManager.GetPreferredSaveExtension();
-            var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            var options = CatalogSavePicker.Create(
+                ensureFileFormatManager: () =>
+                {
+                    EnsureFileFormatProvidersLoaded();
+                    return fileFormatManager;
+                },
+                saveAs,
+                LocalizationService.Current.Get(saveAs ? TextKeys.SaveCatalogAs : TextKeys.SaveCatalog),
+                saveAs ? PickerLocalizer["AllFiles"].Value : null);
+            if (options is null)
             {
-                Title = LocalizationService.Current.Get(saveAs ? TextKeys.SaveCatalogAs : TextKeys.SaveCatalog),
-                SuggestedFileName = $"catalog.{defaultExtension}",
-                DefaultExtension = defaultExtension,
-                FileTypeChoices = fileTypeChoices
-            });
+                vm.StatusText = LocalizationService.Current.Get(
+                    TextKeys.FailedToSaveCatalogNoWritableFileFormatCheckPluginSettings);
+                return false;
+            }
 
+            var file = await StorageProvider.SaveFilePickerAsync(options);
             targetPath = file?.TryGetLocalPath();
         }
 

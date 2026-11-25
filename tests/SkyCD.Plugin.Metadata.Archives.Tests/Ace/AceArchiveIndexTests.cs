@@ -2,13 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
 using SkyCD.Plugin.Abstractions.Capabilities.Media;
 using SkyCD.Plugin.Metadata.Archives;
-using SkyCD.Plugin.Metadata.Archives.Ace;
 using SkyCD.Plugin.Metadata.Archives.Ace.Tests;
 using SkyCD.Plugin.Host.Indexing;
 using SkyCD.Plugin.Host.Media;
@@ -32,7 +32,7 @@ public sealed class AceArchiveIndexTests
         var item = Assert.Single(set.Items);
         Assert.Equal("docs/readme.txt", item.Name);
         Assert.Equal(9, item.SizeBytes);
-        Assert.NotNull(item.ModifiedUtc);
+        Assert.Equal(AceTestArchiveBuilder.ModifiedUtc, item.ModifiedUtc?.UtcDateTime);
 
         var extracted = Assert.IsType<FileStream>(await item.OpenSource(CancellationToken.None));
         var fullPath = extracted.Name;
@@ -57,13 +57,16 @@ public sealed class AceArchiveIndexTests
             ("/absolute.txt", "evil"),
             ("folder/../../escape2.txt", "evil"),
             ("folder/nested.txt", "nested"));
+        var plugin = new ArchivesIndexPlugin();
 
-        var set = await new ArchivesIndexPlugin().GetWorkItemsAsync(RequestFor(archive.ToArray(), "sample.ace"));
+        var set = await plugin.GetWorkItemsAsync(RequestFor(archive.ToArray(), "sample.ace"));
 
         try
         {
             Assert.Equal(["folder/nested.txt", "safe.txt"], set.Items.Select(item => item.Name).Order());
             Assert.DoesNotContain(set.Items, item => item.Name.Contains("..", StringComparison.Ordinal));
+            Assert.Equal(3, plugin.LastDiagnostics.Count);
+            Assert.All(plugin.LastDiagnostics, diagnostic => Assert.StartsWith("ACE_UNSAFE", diagnostic));
         }
         finally
         {
@@ -79,13 +82,16 @@ public sealed class AceArchiveIndexTests
         await using var archive = AceTestArchiveBuilder.CreateStoredAndCompressed(
             ("stored.txt", "plain"),
             ("packed.bin", new string('x', 4096)));
-
         var plugin = new ArchivesIndexPlugin();
+
         var set = await plugin.GetWorkItemsAsync(RequestFor(archive.ToArray(), "sample.ace"));
 
         try
         {
             Assert.Equal("stored.txt", Assert.Single(set.Items).Name);
+            var diagnostic = Assert.Single(plugin.LastDiagnostics);
+            Assert.StartsWith("ACE_UNSUPPORTED", diagnostic);
+            Assert.Contains("packed.bin", diagnostic);
         }
         finally
         {
@@ -96,9 +102,9 @@ public sealed class AceArchiveIndexTests
     [Fact]
     public async Task GetWorkItemsAsync_AllCompressed_ContributesNothing_AndReportsUnsupported()
     {
-        await using var archive = AceTestArchiveBuilder.CreateCompressed(method: 11, ("packed.bin", "abc"));
-
+        await using var archive = AceTestArchiveBuilder.CreateCompressed(compressionMethod: 2, ("packed.bin", "abc"));
         var plugin = new ArchivesIndexPlugin();
+
         var set = await plugin.GetWorkItemsAsync(RequestFor(archive.ToArray(), "sample.ace"));
 
         Assert.Empty(set.Items);
@@ -138,6 +144,19 @@ public sealed class AceArchiveIndexTests
     public async Task GetWorkItemsAsync_BadEntryCrc_IsSkippedAsDamaged_WhileOtherEntriesExtract()
     {
         await using var bad = AceTestArchiveBuilder.CreateStoredWithBadEntryCrc(("broken.bin", "payload"));
+        var plugin = new ArchivesIndexPlugin();
+
+        var set = await plugin.GetWorkItemsAsync(RequestFor(bad.ToArray(), "sample.ace"));
+
+        Assert.Empty(set.Items);
+        await set.DisposeAsync();
+        Assert.StartsWith("ACE_DAMAGED", Assert.Single(plugin.LastDiagnostics));
+    }
+
+    [Fact]
+    public async Task GetWorkItemsAsync_BadHeaderChecksum_ReportsDamagedArchive()
+    {
+        await using var bad = AceTestArchiveBuilder.CreateStoredWithBadHeaderChecksum(("broken.bin", "payload"));
         var plugin = new ArchivesIndexPlugin();
 
         var set = await plugin.GetWorkItemsAsync(RequestFor(bad.ToArray(), "sample.ace"));
@@ -225,13 +244,51 @@ public sealed class AceArchiveIndexTests
     }
 
     [Fact]
-    public async Task GetWorkItemsAsync_NonAceSource_ReturnsEmptySet()
+    public async Task GetWorkItemsAsync_NonAceSource_ReportsDamaged()
     {
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes("plain text"));
+        var plugin = new ArchivesIndexPlugin();
 
-        var set = await new ArchivesIndexPlugin().GetWorkItemsAsync(RequestFor(stream.ToArray(), "notes.txt"));
+        var set = await plugin.GetWorkItemsAsync(RequestFor(stream.ToArray(), "broken.ace"));
 
         Assert.Empty(set.Items);
+        await set.DisposeAsync();
+        Assert.StartsWith("ACE_DAMAGED", Assert.Single(plugin.LastDiagnostics));
+    }
+
+    [Fact]
+    public async Task GetWorkItemsAsync_NonAceFileName_ReturnsEmptySet()
+    {
+        await using var archive = AceTestArchiveBuilder.CreateStored(("a.txt", "a"));
+
+        var set = await new ArchivesIndexPlugin().GetWorkItemsAsync(RequestFor(archive.ToArray(), "notes.txt"));
+
+        Assert.Empty(set.Items);
+        await set.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task GetWorkItemsAsync_RealArchive_ExtractsStoredEntries()
+    {
+        var bytes = await File.ReadAllBytesAsync(
+            Path.Combine(AppContext.BaseDirectory, "Fixtures", "Ace", "store.ace"));
+        var plugin = new ArchivesIndexPlugin();
+
+        var set = await plugin.GetWorkItemsAsync(RequestFor(bytes, "store.ace"));
+
+        Assert.Empty(plugin.LastDiagnostics);
+        var item = Assert.Single(set.Items);
+        Assert.Equal("exe/test.exe", item.Name);
+        Assert.Equal(45_056, item.SizeBytes);
+        await using (var source = await item.OpenSource(CancellationToken.None))
+        {
+            using var content = new MemoryStream();
+            await source.CopyToAsync(content);
+            Assert.Equal(
+                "8557928804F57ECC340B3BB38B095A3607474EC8DEB0076F316FCFE02B562106",
+                Convert.ToHexString(SHA256.HashData(content.ToArray())));
+        }
+
         await set.DisposeAsync();
     }
 

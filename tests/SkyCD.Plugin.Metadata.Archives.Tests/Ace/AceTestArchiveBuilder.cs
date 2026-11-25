@@ -31,15 +31,16 @@ internal static class AceTestArchiveBuilder
 
     private const uint AttributeDirectory = 0x10;
     private const byte CompressionStored = 0;
-    private const byte CompressionBlocked = 2;
+    private const byte CompressionLz77 = 1;
 
     /// <summary>Creates an archive whose entries use the stored method and carry their plain-text data.</summary>
     public static MemoryStream CreateStored(params (string Path, string Content)[] entries) =>
         Create(entries, fileFlags: 0, mainFlags: FlagV20Format, CompressionStored, writeData: true);
 
-    /// <summary>Creates an archive whose entries use a compressed method and carry no data after the header.</summary>
-    public static MemoryStream CreateCompressed(byte method = 4, params (string Path, string Content)[] entries) =>
-        Create(entries, fileFlags: 0, mainFlags: FlagV20Format, CompressionBlocked, writeData: false, method);
+    /// <summary>Creates an archive whose entries use a compressed method and carry their opaque payload.</summary>
+    public static MemoryStream CreateCompressed(byte compressionMethod = 1,
+        params (string Path, string Content)[] entries) =>
+        Create(entries, fileFlags: 0, mainFlags: FlagV20Format, compressionMethod, writeData: true);
 
     /// <summary>Creates an archive with one stored entry followed by one compressed entry.</summary>
     public static MemoryStream CreateStoredAndCompressed((string Path, string Content) stored,
@@ -48,7 +49,7 @@ internal static class AceTestArchiveBuilder
         var stream = new MemoryStream();
         WriteBlock(stream, TypeMain, FlagV20Format, BuildMainBody());
         WriteEntry(stream, stored, fileFlags: 0, CompressionStored, writeData: true);
-        WriteEntry(stream, compressed, fileFlags: 0, CompressionBlocked, writeData: false, compressionQuality: 4);
+        WriteEntry(stream, compressed, fileFlags: 0, CompressionLz77, writeData: true, compressionQuality: 4);
         stream.Position = 0;
         return stream;
     }
@@ -64,15 +65,6 @@ internal static class AceTestArchiveBuilder
     /// <summary>Creates an archive whose main header declares a recovery record.</summary>
     public static MemoryStream CreateWithRecoveryRecord(params (string Path, string Content)[] entries) =>
         Create(entries, fileFlags: 0, mainFlags: FlagV20Format | FlagRecovery, CompressionStored, writeData: true);
-
-    /// <summary>Creates the byte image of a minimal catalog used by committed fixtures.</summary>
-    public static byte[] CreateCatalogFixture()
-    {
-        using var archive = CreateStored(
-            ("catalog/readme.txt", "hello ace"),
-            ("catalog/data/track.bin", "track-data-0123456789"));
-        return archive.ToArray();
-    }
 
     public static MemoryStream CreateDamaged() =>
         new(Encoding.ASCII.GetBytes("not an ace archive"));
@@ -111,9 +103,6 @@ internal static class AceTestArchiveBuilder
         var mainLength = BinaryPrimitives.ReadUInt16LittleEndian(archive[2..]);
         return 4 + mainLength;
     }
-
-    /// <summary>Returns the complete byte image of an archive created by this builder.</summary>
-    public static byte[] ToBytes(MemoryStream archive) => archive.ToArray();
 
     /// <summary>The ACE CRC-32: the standard reflected CRC-32 register without the final inversion.</summary>
     public static uint Crc32(ReadOnlySpan<byte> data)
