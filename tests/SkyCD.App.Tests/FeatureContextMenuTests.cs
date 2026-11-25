@@ -56,6 +56,56 @@ public class FeatureContextMenuTests
         Assert.DoesNotContain(vm.BrowserContextMenuItems, entry => entry.Key != null && entry.Key.StartsWith("feature_"));
     }
 
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public void ContextMenus_NeverShowConsecutiveOrEdgeSeparators(bool hasMenuGroup, bool hasEntryCommand)
+    {
+        using var vm = MainWindowViewModel.CreateForInMemoryCatalog(TestCatalogEntries.Default());
+        var plugin = new FakeFeaturePlugin(
+            commands: hasEntryCommand ? [new EntryCommandContribution("demo.action", "Action", 10)] : [],
+            menus: hasMenuGroup ? [new MenuContribution("demo.contacts", "Contacts", "Demo", 10)] : []);
+        vm.RefreshPluginMenuServices(new MenuExtensionManager([plugin]));
+        vm.RefreshCatalogFeatureServices(new CatalogFeatureExtensionManager([plugin]));
+        SelectFirstBrowserItem(vm);
+
+        AssertSeparatorPlacement(vm.BrowserContextMenuItems);
+        AssertSeparatorPlacement(vm.TreeContextMenuItems);
+    }
+
+    [Fact]
+    public void MenuGroup_IsPrecededByExactlyOneSeparator()
+    {
+        using var vm = MainWindowViewModel.CreateForInMemoryCatalog(TestCatalogEntries.Default());
+        var plugin = new FakeFeaturePlugin(
+            commands: [],
+            menus: [new MenuContribution("demo.contacts", "Contacts", "Demo", 10)]);
+        vm.RefreshPluginMenuServices(new MenuExtensionManager([plugin]));
+        SelectFirstBrowserItem(vm);
+
+        foreach (var items in new[] { vm.BrowserContextMenuItems, vm.TreeContextMenuItems })
+        {
+            var index = items.ToList().FindIndex(item => item.Key == "feature_Demo");
+            Assert.True(index > 1);
+            Assert.Equal("-", items[index - 1].Header);
+            Assert.NotEqual("-", items[index - 2].Header);
+        }
+    }
+
+    private static void AssertSeparatorPlacement(IReadOnlyList<MainMenuItemViewModel> items)
+    {
+        Assert.NotEmpty(items);
+        Assert.NotEqual("-", items[0].Header);
+        Assert.NotEqual("-", items[^1].Header);
+        for (var i = 1; i < items.Count; i++)
+        {
+            Assert.False(items[i - 1].Header == "-" && items[i].Header == "-",
+                $"Two consecutive separators at index {i - 1}.");
+        }
+    }
+
     private static void SelectFirstBrowserItem(MainWindowViewModel vm)
     {
         vm.SelectedTreeNode = vm.TreeNodes[0].Children.Single(node => node.Key == "movies");
