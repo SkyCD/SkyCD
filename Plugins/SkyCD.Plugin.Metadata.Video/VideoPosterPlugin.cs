@@ -44,7 +44,7 @@ public sealed class VideoPosterPlugin : IMediaPreviewCapability
     }
 
     public MediaDescriptor Descriptor =>
-        new(VideoSchema.Extensions, VideoSchema.ContentTypes, VideoSchema.Preview);
+        new(VideoSchema.Extensions, VideoSchema.ContentTypes, VideoSchema.Preview, IndexTimePreview: true);
 
     public async Task<MediaPreviewResult> GeneratePreviewAsync(
         MediaItem item,
