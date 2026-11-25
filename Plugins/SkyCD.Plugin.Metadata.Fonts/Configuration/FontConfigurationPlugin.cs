@@ -1,7 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions.Capabilities.Configuration;
+using SkyCD.SDK.Capabilities.Configuration;
 
 namespace SkyCD.Plugin.Metadata.Fonts.Configuration;
 

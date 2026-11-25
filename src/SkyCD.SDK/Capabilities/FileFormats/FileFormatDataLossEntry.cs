@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+namespace SkyCD.SDK.Capabilities.FileFormats;
 
 /// <summary>
 /// Domain-neutral snapshot of one catalog entry handed to a plugin for loss assessment.

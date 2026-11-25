@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 using DryIoc;
 using SkyCD.Core.DependencyInjection.Registrators;
 using SkyCD.Core.OAuth;
-using SkyCD.Plugin.Abstractions.OAuth;
+using SkyCD.SDK.OAuth;
 using Xunit;
 
 namespace SkyCD.Plugin.Runtime.Tests;

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions.Capabilities.Configuration;
+using SkyCD.SDK.Capabilities.Configuration;
 using Xunit;
 using SkyCD.Plugin.Metadata.EComic.Configuration;
 using SkyCD.Plugin.Metadata.EComic.Models;

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions.Capabilities.Menu;
+using SkyCD.SDK.Capabilities.Menu;
 using SkyCD.Plugin.Feature.WebBrowser.Views;
 
 namespace SkyCD.Plugin.Feature.WebBrowser;

@@ -71,7 +71,7 @@ public sealed class BxdDetectionTests
     [Fact]
     public async Task WriteAsync_WithUnsupportedPayload_ReturnsError()
     {
-        var result = await plugin.WriteAsync(new SkyCD.Plugin.Abstractions.Capabilities.FileFormats.FileFormatWriteRequest
+        var result = await plugin.WriteAsync(new SkyCD.SDK.Capabilities.FileFormats.FileFormatWriteRequest
         {
             FormatId = "brokenx-bxd",
             Target = new MemoryStream(),

@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using CommandDotNet;
-using SkyCD.Plugin.Abstractions.Capabilities.Accounts;
-using SkyCD.Plugin.Abstractions.Capabilities.Cli;
+using SkyCD.SDK.Capabilities.Accounts;
+using SkyCD.SDK.Capabilities.Cli;
 using Xunit;
 
 namespace SkyCD.Cli.Tests;

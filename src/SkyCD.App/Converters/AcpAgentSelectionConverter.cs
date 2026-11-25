@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using Avalonia.Data.Converters;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Media;
 
 namespace SkyCD.App.Converters;
 

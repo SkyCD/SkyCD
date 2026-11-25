@@ -2,7 +2,7 @@
 
 using System.Collections.Generic;
 
-namespace SkyCD.Plugin.Abstractions.Capabilities.Accounts;
+namespace SkyCD.SDK.Capabilities.Accounts;
 
 public interface IAccountSyncProviderConsumer
 {

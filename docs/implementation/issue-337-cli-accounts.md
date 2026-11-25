@@ -5,7 +5,7 @@ The shared `SkyCD.Plugin.Accounts` plugin provides `sync <provider-id>`,
 JSON store. Human output and global `--json` use the existing CLI dispatch system.
 
 Account providers implement `IAccountSyncProvider : IPluginCapability` from
-the `SkyCD.SDK` package (namespace `SkyCD.Plugin.Abstractions`). Shared license, subscription, and import contracts
+the `SkyCD.SDK` package (namespace `SkyCD.SDK`). Shared license, subscription, and import contracts
 also live in the SDK package. JetBrains and Microsoft 365 are separate
 plugin assemblies depending only on that package. The CLI host passes enabled,
 discovered providers to account command consumers; provider IDs are resolved at

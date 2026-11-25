@@ -1,4 +1,4 @@
-namespace SkyCD.Plugin.Abstractions.Capabilities.Catalog;
+namespace SkyCD.SDK.Capabilities.Catalog;
 
 /// <summary>The referenced location does not exist.</summary>
 public sealed class LocationApiNotFoundException(string locationId)

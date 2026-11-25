@@ -1,6 +1,6 @@
-using SkyCD.Plugin.Abstractions.Capabilities;
+using SkyCD.SDK.Capabilities;
 
-namespace SkyCD.Plugin.Abstractions.Localization;
+namespace SkyCD.SDK.Localization;
 
 /// <summary>Assembly-discovered plugin translations, scoped by the host to the plugin ID.</summary>
 public interface ILocalizationPluginCapability : IPluginCapability, ITranslationProvider;

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using SkyCD.Documents;
 using SkyCD.Documents.Enum;
-using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.SDK.Capabilities.FileFormats;
 using SkyCD.Plugin.FileFormat.CDCollect.Exceptions;
 using Xunit;
 using SkyCD.Plugin.FileFormat.CDCollect.Models;

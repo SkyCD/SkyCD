@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions.Capabilities;
+using SkyCD.SDK.Capabilities;
 
-namespace SkyCD.Plugin.Abstractions.Capabilities.Media;
+namespace SkyCD.SDK.Capabilities.Media;
 
 /// <summary>One provider preset offered by a non-ACP AI description plugin.</summary>
 /// <param name="Id">Stable provider identifier.</param>

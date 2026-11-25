@@ -6,7 +6,7 @@ using SkyCD.Documents;
 using SkyCD.Documents.Enum;
 using SkyCD.Presentation.MediaCache;
 using SkyCD.Presentation.ViewModels;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.UI.Controls.Preview;
 using SkyCD.UI.Localization;
 using Xunit;

@@ -13,7 +13,7 @@ the plugin services. Discovery continues to use assembly metadata and capability
 types; no manifest file is needed.
 
 ```csharp
-using SkyCD.Plugin.Abstractions.OAuth;
+using SkyCD.SDK.OAuth;
 
 public sealed class AccountCapability : IOAuthClient
 {

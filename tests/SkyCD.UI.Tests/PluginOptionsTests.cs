@@ -15,7 +15,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using SkyCD.App.Views;
 using SkyCD.Couchbase;
 using SkyCD.Couchbase.Repository;
-using SkyCD.Plugin.Abstractions.Capabilities.Configuration;
+using SkyCD.SDK.Capabilities.Configuration;
 using SkyCD.Plugin.Metadata.AudioCD;
 using SkyCD.Plugin.Metadata.EBook;
 using SkyCD.Plugin.Metadata.EComic;

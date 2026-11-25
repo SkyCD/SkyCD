@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.SDK.Capabilities.FileFormats;
 using UCanAccess.File;
 using SkyCD.Plugin.FileFormat.Access.Exceptions;
 using SkyCD.Plugin.FileFormat.Access.Models;

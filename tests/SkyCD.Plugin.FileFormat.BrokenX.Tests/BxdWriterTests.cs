@@ -99,7 +99,7 @@ public sealed class BxdWriterTests
         Assert.True(read.Success);
 
         using var target = new MemoryStream();
-        var write = await plugin.WriteAsync(new SkyCD.Plugin.Abstractions.Capabilities.FileFormats.FileFormatWriteRequest
+        var write = await plugin.WriteAsync(new SkyCD.SDK.Capabilities.FileFormats.FileFormatWriteRequest
         {
             FormatId = "brokenx-bxd",
             Target = target,
@@ -144,7 +144,7 @@ public sealed class BxdWriterTests
         };
 
         using var target = new MemoryStream();
-        var write = await plugin.WriteAsync(new SkyCD.Plugin.Abstractions.Capabilities.FileFormats.FileFormatWriteRequest
+        var write = await plugin.WriteAsync(new SkyCD.SDK.Capabilities.FileFormats.FileFormatWriteRequest
         {
             FormatId = "brokenx-bxd",
             Target = target,

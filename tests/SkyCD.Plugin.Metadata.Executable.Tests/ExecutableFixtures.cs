@@ -5,7 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using SkiaSharp;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Media;
 
 namespace SkyCD.Plugin.Metadata.Executable.Tests;
 

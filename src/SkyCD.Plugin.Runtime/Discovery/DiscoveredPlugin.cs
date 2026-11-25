@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using DryIoc;
-using SkyCD.Plugin.Abstractions.Capabilities;
+using SkyCD.SDK.Capabilities;
 using SkyCD.Plugin.Runtime.Documents;
 
 namespace SkyCD.Plugin.Runtime.Discovery;

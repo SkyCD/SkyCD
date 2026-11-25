@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace SkyCD.Plugin.Abstractions.Capabilities.Catalog;
+namespace SkyCD.SDK.Capabilities.Catalog;
 
 /// <summary>Neutral classification of a catalog entry, mapped from the host document type.</summary>
 public enum CatalogEntryKind

@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Media;
 
-namespace SkyCD.Plugin.Abstractions.Capabilities.Volume;
+namespace SkyCD.SDK.Capabilities.Volume;
 
 /// <summary>
 /// Facts about one mounted volume for capture. Unlike <see cref="MediaItem"/> and <see cref="IMediaSource"/>,

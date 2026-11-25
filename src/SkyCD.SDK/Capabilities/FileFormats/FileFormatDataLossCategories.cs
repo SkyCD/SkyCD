@@ -1,4 +1,4 @@
-namespace SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+namespace SkyCD.SDK.Capabilities.FileFormats;
 
 /// <summary>
 /// Stable category identifiers used by <see cref="FileFormatDataLossItem.Category"/>.

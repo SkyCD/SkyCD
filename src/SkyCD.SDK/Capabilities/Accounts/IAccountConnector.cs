@@ -1,7 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace SkyCD.Plugin.Abstractions.Capabilities.Accounts;
+namespace SkyCD.SDK.Capabilities.Accounts;
 
 /// <summary>Connects an account through the existing plugin runtime.</summary>
 public interface IAccountConnector : IPluginCapability

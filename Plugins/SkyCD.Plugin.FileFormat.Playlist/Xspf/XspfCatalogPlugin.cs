@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
-using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.SDK.Capabilities.FileFormats;
 using SkyCD.Plugin.FileFormat.Playlist.Export;
 using SkyCD.Plugin.FileFormat.Playlist.Parsing;
 using SkyCD.Plugin.FileFormat.Playlist.Xspf.Models;

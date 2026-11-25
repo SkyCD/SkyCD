@@ -3,7 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.SDK.Capabilities.FileFormats;
 using SkyCD.Plugin.FileFormat.WinCatalog.Csv;
 using SkyCD.Plugin.FileFormat.WinCatalog.Csv.Models;
 using Xunit;

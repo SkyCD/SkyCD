@@ -2,7 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using SkiaSharp;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Media;
 using Xunit;
 
 namespace SkyCD.Plugin.Metadata.EBook.Tests;

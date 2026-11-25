@@ -1,7 +1,7 @@
 using CommandDotNet;
 using SkyCD.Cli.Console.FileFormats;
 using SkyCD.Cli.Console.Plugins;
-using SkyCD.Plugin.Abstractions.Capabilities.Cli;
+using SkyCD.SDK.Capabilities.Cli;
 
 namespace SkyCD.Cli.Console;
 

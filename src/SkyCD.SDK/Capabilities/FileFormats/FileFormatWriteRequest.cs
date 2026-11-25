@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 
-namespace SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+namespace SkyCD.SDK.Capabilities.FileFormats;
 
 /// <summary>
 /// Input payload for file format write operations.

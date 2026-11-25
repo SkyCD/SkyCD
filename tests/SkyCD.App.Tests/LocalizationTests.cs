@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using Avalonia.Data;
-using SkyCD.Plugin.Abstractions.Localization;
+using SkyCD.SDK.Localization;
 using SkyCD.UI.Localization;
 using Xunit;
 using YamlDotNet.Core;

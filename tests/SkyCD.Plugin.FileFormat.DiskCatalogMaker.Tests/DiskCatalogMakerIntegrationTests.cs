@@ -11,7 +11,7 @@ using SkyCD.Couchbase.Mapping;
 using SkyCD.Documents;
 using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
-using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.SDK.Capabilities.FileFormats;
 using SkyCD.Plugin.FileFormat.Csv;
 using SkyCD.Plugin.FileFormat.DiskExplorer.Delimited;
 using SkyCD.Plugin.Host.Menu;

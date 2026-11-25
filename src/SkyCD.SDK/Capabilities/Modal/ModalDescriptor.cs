@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace SkyCD.Plugin.Abstractions.Capabilities.Modal;
+namespace SkyCD.SDK.Capabilities.Modal;
 
 /// <summary>
 /// Describes a modal dialog contributed by a plugin.

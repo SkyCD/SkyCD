@@ -6,7 +6,7 @@ using SkyCD.Documents;
 using SkyCD.Documents.Collections;
 using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
-using SkyCD.Plugin.Abstractions.Capabilities.Catalog;
+using SkyCD.SDK.Capabilities.Catalog;
 using SkyCD.Plugin.Feature.Locations.Models;
 using SkyCD.Plugin.Feature.Locations.Views;
 using SkyCD.Plugin.Host.Catalog;

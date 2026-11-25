@@ -4,9 +4,9 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions;
-using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK;
+using SkyCD.SDK.Capabilities.Indexing;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Host.Media;
 
 namespace SkyCD.Plugin.Host.Indexing;

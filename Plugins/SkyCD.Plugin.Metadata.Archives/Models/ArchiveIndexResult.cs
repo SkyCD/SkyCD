@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
+using SkyCD.SDK.Capabilities.Indexing;
 
 namespace SkyCD.Plugin.Metadata.Archives.Models;
 

@@ -9,7 +9,7 @@ using SkyCD.Documents;
 using SkyCD.Documents.Collections;
 using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Presentation.MediaCache;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.TestSupport;

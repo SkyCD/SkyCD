@@ -1,4 +1,4 @@
-namespace SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+namespace SkyCD.SDK.Capabilities.FileFormats;
 
 /// <summary>
 /// Optional capability for file formats that can report which catalog data a write would drop.

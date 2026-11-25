@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using SkyCD.Documents;
 using SkyCD.Documents.Collections;
 using SkyCD.Documents.Enum;
-using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.SDK.Capabilities.FileFormats;
 using SkyCD.Plugin.FileFormat.Csv;
 using SkyCD.Plugin.FileFormat.Html;
 using SkyCD.Plugin.FileFormat.Json;

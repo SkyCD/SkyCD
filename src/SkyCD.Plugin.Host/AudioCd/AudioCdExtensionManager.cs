@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK;
+using SkyCD.SDK.Capabilities.Media;
 
 namespace SkyCD.Plugin.Host.AudioCd;
 

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace SkyCD.Plugin.Abstractions.Capabilities.Catalog;
+namespace SkyCD.SDK.Capabilities.Catalog;
 
 /// <summary>
 /// Host surface for reading and editing the open catalog's storage locations. Location assignments are

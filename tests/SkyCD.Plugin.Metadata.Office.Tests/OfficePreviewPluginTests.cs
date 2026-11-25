@@ -3,7 +3,7 @@ using System.Buffers.Binary;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Metadata.Office.Exceptions;
 using SkyCD.Plugin.Metadata.Office.Models;
 using Xunit;

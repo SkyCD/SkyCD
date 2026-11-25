@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace SkyCD.Plugin.Abstractions.OAuth;
+namespace SkyCD.SDK.OAuth;
 
 /// <summary>Vendor-neutral configuration for a public native OAuth client (no client secret).</summary>
 public sealed class OAuthProvider

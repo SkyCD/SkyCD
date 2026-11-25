@@ -1,4 +1,4 @@
-namespace SkyCD.Plugin.Abstractions.Capabilities.Storage;
+namespace SkyCD.SDK.Capabilities.Storage;
 
 /// <summary>
 /// Optional capability hook the host calls, mirroring <c>IOAuthClient.InitializeOAuth</c>, to give a plugin a

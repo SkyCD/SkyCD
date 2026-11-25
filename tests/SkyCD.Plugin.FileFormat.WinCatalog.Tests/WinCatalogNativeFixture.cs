@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Text;
 using Microsoft.Data.Sqlite;
-using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.SDK.Capabilities.FileFormats;
 using SkyCD.Plugin.FileFormat.WinCatalog.Native;
 
 namespace SkyCD.Plugin.FileFormat.WinCatalog.Tests;

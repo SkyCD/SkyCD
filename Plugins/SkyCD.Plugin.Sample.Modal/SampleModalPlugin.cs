@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions.Capabilities.Modal;
+using SkyCD.SDK.Capabilities.Modal;
 
 namespace SkyCD.Plugin.Sample.Modal;
 

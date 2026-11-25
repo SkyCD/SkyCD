@@ -1,4 +1,4 @@
-namespace SkyCD.Plugin.Abstractions.Capabilities.Catalog;
+namespace SkyCD.SDK.Capabilities.Catalog;
 
 /// <summary>Location data is unavailable because no catalog is open.</summary>
 public sealed class LocationApiCatalogUnavailableException()

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Runtime.Collections;
 using SkyCD.Plugin.Runtime.Factories;
@@ -244,7 +244,7 @@ public sealed class MediaCapabilityTests
         }
     }
 
-    private static MediaExtensionManager Create(SkyCD.Plugin.Abstractions.Capabilities.IPluginCapability capability,
+    private static MediaExtensionManager Create(SkyCD.SDK.Capabilities.IPluginCapability capability,
         MediaExecutionLimits? limits = null) => new([new MediaProvider("test", "1", capability)], limits);
 
     private static Task<Stream> Open(CancellationToken token) => Task.FromResult<Stream>(new MemoryStream([1, 2, 3]));

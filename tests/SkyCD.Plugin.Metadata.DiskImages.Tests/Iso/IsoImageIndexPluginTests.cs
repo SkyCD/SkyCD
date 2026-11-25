@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
-using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
+using SkyCD.SDK.Capabilities.Indexing;
 using SkyCD.Plugin.Metadata.DiskImages;
 using Xunit;
 

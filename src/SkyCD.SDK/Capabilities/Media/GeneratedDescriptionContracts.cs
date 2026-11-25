@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions.Capabilities.Menu;
+using SkyCD.SDK.Capabilities.Menu;
 
-namespace SkyCD.Plugin.Abstractions.Capabilities.Media;
+namespace SkyCD.SDK.Capabilities.Media;
 
 /// <summary>User-permitted input sources and aggregate context budgets.</summary>
 public sealed record DescriptionContextOptions(bool Filename = true, bool Metadata = false, bool Text = false,

@@ -2,7 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Markdig;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Metadata.Markdown.Exceptions;
 using SkyCD.Plugin.Metadata.Markdown.Export;
 using SkyCD.Plugin.Metadata.Markdown.Models;

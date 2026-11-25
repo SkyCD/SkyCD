@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using Microsoft.Extensions.Logging.Abstractions;
-using SkyCD.Plugin.Abstractions.Localization;
+using SkyCD.SDK.Localization;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.UI.Localization;
 using Xunit;

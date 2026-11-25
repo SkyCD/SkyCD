@@ -1,4 +1,4 @@
-namespace SkyCD.Plugin.Abstractions.OAuth;
+namespace SkyCD.SDK.OAuth;
 
 /// <summary>Stable failure reasons safe to display without leaking provider responses.</summary>
 public enum OAuthFailure

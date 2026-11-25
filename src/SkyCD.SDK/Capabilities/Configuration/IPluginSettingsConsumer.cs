@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace SkyCD.Plugin.Abstractions.Capabilities.Configuration;
+namespace SkyCD.SDK.Capabilities.Configuration;
 
 /// <summary>
 /// Capability that runs from host-persisted settings rather than only when its configuration surface is

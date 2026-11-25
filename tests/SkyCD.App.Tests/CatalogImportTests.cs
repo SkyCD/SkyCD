@@ -10,13 +10,13 @@ using SkyCD.App.Views;
 using SkyCD.Couchbase.Mapping;
 using SkyCD.Documents;
 using SkyCD.Documents.Enum;
-using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+using SkyCD.SDK.Capabilities.FileFormats;
 using SkyCD.Plugin.FileFormat.LegacySkyCD;
 using SkyCD.Documents.Repository;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.UI.Localization;
 using SkyCD.Plugin.Host.Menu;
-using SkyCD.Plugin.Abstractions.Capabilities.Menu;
+using SkyCD.SDK.Capabilities.Menu;
 using Xunit;
 using SkyCD.Plugin.FileFormat.LegacySkyCD.Models;
 

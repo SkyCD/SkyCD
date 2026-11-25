@@ -1,4 +1,4 @@
-namespace SkyCD.Plugin.Abstractions.Capabilities.Modal;
+namespace SkyCD.SDK.Capabilities.Modal;
 
 /// <summary>
 /// Typed payload envelope for modal input/output values.

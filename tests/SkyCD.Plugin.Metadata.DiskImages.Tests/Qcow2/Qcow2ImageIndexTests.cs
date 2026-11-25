@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
+using SkyCD.SDK.Capabilities.Indexing;
 using Xunit;
 using SkyCD.Plugin.Metadata.DiskImages.Qcow2.Models;
 using SkyCD.Plugin.Metadata.DiskImages;

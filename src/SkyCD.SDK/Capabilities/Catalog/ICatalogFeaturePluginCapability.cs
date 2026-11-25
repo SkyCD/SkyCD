@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace SkyCD.Plugin.Abstractions.Capabilities.Catalog;
+namespace SkyCD.SDK.Capabilities.Catalog;
 
 /// <summary>
 /// Domain-neutral surface through which a catalog feature plugin decorates entries and contributes details

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+namespace SkyCD.SDK.Capabilities.FileFormats;
 
 /// <summary>
 /// Builds loss items describing which snapshot entries carry data a format cannot represent.

@@ -1,4 +1,4 @@
-namespace SkyCD.Plugin.Abstractions.Capabilities.Modal;
+namespace SkyCD.SDK.Capabilities.Modal;
 
 /// <summary>
 /// Describes allowed payload type for modal input/output.

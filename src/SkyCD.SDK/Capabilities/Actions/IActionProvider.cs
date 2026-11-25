@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace SkyCD.Plugin.Abstractions.Capabilities.Actions;
+namespace SkyCD.SDK.Capabilities.Actions;
 
 /// <summary>Provides item-specific actions, including installation and launch.</summary>
 public interface IActionProvider : IPluginCapability

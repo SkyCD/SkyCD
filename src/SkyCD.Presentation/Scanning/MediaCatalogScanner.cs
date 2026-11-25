@@ -6,8 +6,8 @@ using System.Threading;
 using SkyCD.Documents;
 using SkyCD.Documents.Collections;
 using SkyCD.Documents.Enum;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
-using SkyCD.Plugin.Abstractions.Capabilities.Volume;
+using SkyCD.SDK.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Volume;
 using SkyCD.Presentation.Operations;
 using SkyCD.Presentation.Locations;
 

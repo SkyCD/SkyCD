@@ -16,7 +16,7 @@ provider assemblies in the configured plugin directory. Disabled or unavailable
 plugins do not participate in sync.
 
 A provider implements `IAccountSyncProvider : IPluginCapability` from
-`SkyCD.Plugin.Abstractions.Capabilities.Accounts`. Its public implementation must
+`SkyCD.SDK.Capabilities.Accounts`. Its public implementation must
 have a parameterless constructor for assembly discovery. The provider declares
 `ProviderId` and `DisplayName` and normalizes imported rows into shared
 `LicenseRecord` and `SubscriptionRecord` contracts. Provider IDs must be unique

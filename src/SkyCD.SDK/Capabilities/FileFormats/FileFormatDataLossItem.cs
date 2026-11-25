@@ -1,4 +1,4 @@
-namespace SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
+namespace SkyCD.SDK.Capabilities.FileFormats;
 
 /// <summary>
 /// One group of catalog data a target format cannot represent.

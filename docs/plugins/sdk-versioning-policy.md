@@ -2,7 +2,7 @@
 
 ## Scope
 Applies to the `SkyCD.SDK` package (assembly `SkyCD.SDK`, source project `src/SkyCD.SDK`, namespaces
-`SkyCD.Plugin.Abstractions.*`) and runtime discovery behavior.
+`SkyCD.SDK.*`) and runtime discovery behavior.
 
 ## Semantic Versioning Rules
 - SDK uses SemVer: `MAJOR.MINOR.PATCH`.
@@ -22,6 +22,24 @@ Applies to the `SkyCD.SDK` package (assembly `SkyCD.SDK`, source project `src/Sk
 2. Bump SDK major version.
 3. Provide migration notes and sample updates.
 4. Keep previous major branch support window documented.
+
+## SDK 3.0 namespace migration (#1114)
+
+The contract namespaces were renamed from `SkyCD.Plugin.Abstractions.*` to `SkyCD.SDK.*`, so the SDK now
+has a single identity: assembly `SkyCD.SDK`, package id `SkyCD.SDK` and namespace root `SkyCD.SDK`. This
+is a binary- and source-breaking change for plugins compiled against the old namespace. It lands inside the
+unreleased `3.0.0` major, so no additional major bump is required and no transition shim is shipped.
+
+| Previous contract | SDK 3.0 replacement |
+|---|---|
+| `namespace SkyCD.Plugin.Abstractions.*` | `namespace SkyCD.SDK.*` |
+| `using SkyCD.Plugin.Abstractions.Capabilities;` | `using SkyCD.SDK.Capabilities;` |
+| `[assembly: SkyCD.Plugin.Abstractions.Lifecycle.PluginId("...")]` | `[assembly: SkyCD.SDK.Lifecycle.PluginId("...")]` |
+| `clr-namespace:SkyCD.Plugin.Abstractions.Capabilities.Media;assembly=SkyCD.SDK` | `clr-namespace:SkyCD.SDK.Capabilities.Media;assembly=SkyCD.SDK` |
+
+Only type and namespace names changed. `PluginId`, `FormatId`, attribute values, existing
+`[assembly: PluginId(...)]` strings and persisted plugin state keep their exact values. External authors
+update the `using` directives, rebuild against `SkyCD.SDK` 3.0 and reinstall the plugin.
 
 ## SDK 2.0 / SkyCD v3 configuration migration (#828)
 

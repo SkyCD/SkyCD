@@ -2,7 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace SkyCD.Plugin.Abstractions.Capabilities.Media;
+namespace SkyCD.SDK.Capabilities.Media;
 
 /// <summary>
 /// Facts about one source whose metadata is read through the operating system instead of its bytes.

@@ -3,7 +3,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace SkyCD.Plugin.Abstractions.Capabilities.Indexing;
+namespace SkyCD.SDK.Capabilities.Indexing;
 
 /// <summary>Source facts offered to <see cref="IIndexWorkItemProvider"/> implementations.</summary>
 public sealed class IndexWorkItemRequest

@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 using SkyCD.Couchbase;
 using SkyCD.Couchbase.Repository;
 using SkyCD.Plugin.Runtime.Collections;
-using SkyCD.Plugin.Abstractions.Capabilities;
+using SkyCD.SDK.Capabilities;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Documents;
 using SkyCD.Plugin.Runtime.Factories;

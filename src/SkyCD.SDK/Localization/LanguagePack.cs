@@ -1,4 +1,4 @@
-namespace SkyCD.Plugin.Abstractions.Localization;
+namespace SkyCD.SDK.Localization;
 
 /// <summary>A discovered UI language and its optional display metadata.</summary>
 public sealed record LanguagePack(string CultureCode, string DisplayName, string Flag = "🌐");

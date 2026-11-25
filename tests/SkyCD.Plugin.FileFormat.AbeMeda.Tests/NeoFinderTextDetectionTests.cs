@@ -84,7 +84,7 @@ public sealed class NeoFinderTextDetectionTests
     [Fact]
     public async Task WriteAsync_IsReadOnly()
     {
-        var result = await plugin.WriteAsync(new SkyCD.Plugin.Abstractions.Capabilities.FileFormats.FileFormatWriteRequest
+        var result = await plugin.WriteAsync(new SkyCD.SDK.Capabilities.FileFormats.FileFormatWriteRequest
         {
             FormatId = "neofinder-text",
             Target = new MemoryStream(),

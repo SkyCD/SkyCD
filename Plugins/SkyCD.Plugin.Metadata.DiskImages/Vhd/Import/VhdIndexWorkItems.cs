@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
+using SkyCD.SDK.Capabilities.Indexing;
 using SkyCD.Plugin.Metadata.DiskImages.Vhd.Exceptions;
 using SkyCD.Plugin.Metadata.DiskImages.Vhd.Models;
 using SkyCD.Plugin.Metadata.DiskImages.Exceptions;

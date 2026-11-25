@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions.Capabilities.Accounts;
+using SkyCD.SDK.Capabilities.Accounts;
 using SkyCD.Plugin.Accounts.Core.Models;
 
 namespace SkyCD.Plugin.Accounts.Core.Import;

@@ -10,7 +10,7 @@ using SkyCD.Cli.Execution;
 using SkyCD.Cli.Extensions;
 using SkyCD.Cli.Exceptions;
 using SkyCD.Plugin.Runtime.Managers;
-using SkyCD.Plugin.Abstractions.Capabilities.Cli;
+using SkyCD.SDK.Capabilities.Cli;
 
 namespace SkyCD.Cli.Console.FileFormats;
 

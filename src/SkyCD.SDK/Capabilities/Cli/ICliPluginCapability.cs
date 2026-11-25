@@ -1,4 +1,4 @@
-namespace SkyCD.Plugin.Abstractions.Capabilities.Cli;
+namespace SkyCD.SDK.Capabilities.Cli;
 
 /// <summary>
 /// Marker contract for plugin-provided CLI command classes.

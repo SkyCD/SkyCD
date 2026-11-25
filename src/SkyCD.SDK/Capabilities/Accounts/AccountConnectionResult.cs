@@ -1,4 +1,4 @@
-namespace SkyCD.Plugin.Abstractions.Capabilities.Accounts;
+namespace SkyCD.SDK.Capabilities.Accounts;
 
 /// <summary>Result of connecting a provider account. Never contains credentials.</summary>
 public sealed class AccountConnectionResult

@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions.Capabilities.Indexing;
+using SkyCD.SDK.Capabilities.Indexing;
 using SkyCD.Plugin.Metadata.DiskImages.BinCue.Import;
 using SkyCD.Plugin.Metadata.DiskImages.Ccd.Import;
 using SkyCD.Plugin.Metadata.DiskImages.Daa.Import;

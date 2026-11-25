@@ -1,7 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace SkyCD.Plugin.Abstractions.Capabilities.Configuration;
+namespace SkyCD.SDK.Capabilities.Configuration;
 
 /// <summary>
 /// Capability contract for plugins that expose a configuration surface to the host.

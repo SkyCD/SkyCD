@@ -6,7 +6,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading;
 using System.Xml;
-using SkyCD.Plugin.Abstractions;
+using SkyCD.SDK;
 using SkyCD.Plugin.FileFormat.CDCat.Exceptions;
 using SkyCD.Plugin.FileFormat.CDCat.Models;
 
