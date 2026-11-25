@@ -1,0 +1,56 @@
+name: rerun-failed
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  actions: write
+  pull-requests: write
+
+jobs:
+  rerun:
+    if: >
+      github.event.issue.pull_request != null &&
+      github.event.comment.body == '/rerun-failed' &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve PR head SHA
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.issue.pull_request.url }}
+        run: echo "sha=$(gh api "$PR_URL" --jq .head.sha)" >> "$GITHUB_OUTPUT"
+
+      - name: Find latest ci run for that commit
+        id: run
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ steps.pr.outputs.sha }}
+        run: |
+          id=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow test.yml \
+            --commit "$SHA" --limit 1 --json databaseId --jq '.[0].databaseId')
+          if [ -z "$id" ]; then
+            echo "No ci run found for commit $SHA"
+            echo "id=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+
+      - name: Re-run failed jobs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_ID: ${{ steps.run.outputs.id }}
+        run: |
+          if gh run view "$RUN_ID" --json status --jq '.status' | grep -q 'completed'; then
+            if gh run view "$RUN_ID" --json conclusion --jq '.conclusion' | grep -q 'failure'; then
+              gh run rerun "$RUN_ID" --failed
+              echo "Re-run triggered for failed jobs in run $RUN_ID"
+            else
+              echo "No failed jobs to re-run in run $RUN_ID"
+            fi
+          else
+            echo "Run $RUN_ID is still in progress"
+          fi
