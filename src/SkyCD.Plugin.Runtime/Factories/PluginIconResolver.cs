@@ -1,161 +1,53 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Reflection;
-using SkyCD.Plugin.Abstractions.Capabilities;
-using SkyCD.Plugin.Abstractions.Capabilities.Accounts;
-using SkyCD.Plugin.Abstractions.Capabilities.FileFormats;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
-using SkyCD.Plugin.Abstractions.Capabilities.Volume;
-using SkyCD.Plugin.Abstractions.Lifecycle;
-using SkyCD.Plugin.Runtime.Discovery;
 
 namespace SkyCD.Plugin.Runtime.Factories;
 
 /// <summary>
-/// Resolves the icon a plugin declares through <see cref="PluginIconAttribute"/> or a conventional
-/// <c>icon.png</c>, and the capability kind that supplies a well-defined fallback when none is declared.
+/// Reads the PNG icon a plugin ships inside its own assembly. Every plugin library embeds its icon at build
+/// time under <see cref="EmbeddedIconResourceName"/>; the host never derives an icon from the assembly name
+/// or from the capabilities the plugin happens to implement.
 /// </summary>
 internal static class PluginIconResolver
 {
-    internal const string ConventionalIconFileName = "icon.png";
+    /// <summary>Logical name of the PNG icon resource embedded in every plugin assembly.</summary>
+    internal const string EmbeddedIconResourceName = "SkyCD.Plugin.Icon.png";
 
-    private const string FirstPartyAssemblyPrefix = "SkyCD.Plugin.";
+    /// <summary>Upper bound for icon payloads read from untrusted plugin assemblies.</summary>
+    internal const int MaxIconBytes = 256 * 1024;
 
-    private static readonly string[] DirectIconPrefixes =
-    [
-        "lucide:", "ext:", "avares://", "data:image/", "base64:"
-    ];
-
-    public static string? ResolveDeclared(Assembly assembly)
-    {
-        var declared = assembly.GetCustomAttribute<PluginIconAttribute>()?.Icon;
-        if (NormalizeDeclaredIcon(declared, assembly) is { } icon)
-        {
-            return icon;
-        }
-
-        var directory = Path.GetDirectoryName(assembly.Location);
-        if (string.IsNullOrEmpty(directory))
-        {
-            return null;
-        }
-
-        var conventional = Path.Combine(directory, ConventionalIconFileName);
-        return File.Exists(conventional) ? conventional : null;
-    }
-
-    public static PluginIconKind ResolveKind(string? assemblySimpleName,
-        IReadOnlyList<IPluginCapability> capabilities)
-    {
-        return TryResolveKindFromAssemblyName(assemblySimpleName, out var named)
-            ? named
-            : ResolveKindFromCapabilities(capabilities);
-    }
+    private static readonly byte[] PngSignature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
 
     /// <summary>
-    /// First-party plugin assemblies carry their kind in the name (<c>SkyCD.Plugin.&lt;Kind&gt;.&lt;Subject&gt;</c>),
-    /// which classifies plugin surfaces such as Accounts.Core that expose only generic CLI capabilities.
+    /// Returns the embedded PNG icon of <paramref name="assembly"/>, or <see langword="null"/> when the
+    /// assembly ships no icon or the resource is not a bounded PNG payload.
     /// </summary>
-    internal static bool TryResolveKindFromAssemblyName(string? assemblySimpleName, out PluginIconKind kind)
+    public static byte[]? Resolve(Assembly assembly)
     {
-        kind = PluginIconKind.Feature;
-        if (string.IsNullOrWhiteSpace(assemblySimpleName) ||
-            !assemblySimpleName.StartsWith(FirstPartyAssemblyPrefix, StringComparison.Ordinal))
-        {
-            return false;
-        }
-
-        var remainder = assemblySimpleName[FirstPartyAssemblyPrefix.Length..];
-        var separator = remainder.IndexOf('.');
-        var token = separator < 0 ? remainder : remainder[..separator];
-        switch (token)
-        {
-            case "FileFormat":
-                kind = PluginIconKind.FileFormat;
-                return true;
-            case "Metadata":
-            case "Volume":
-                kind = PluginIconKind.Metadata;
-                return true;
-            case "Preview":
-                kind = PluginIconKind.Preview;
-                return true;
-            case "Accounts":
-                kind = PluginIconKind.Accounts;
-                return true;
-            case "Ai":
-                kind = PluginIconKind.Ai;
-                return true;
-            case "Feature":
-            case "Config":
-                kind = PluginIconKind.Feature;
-                return true;
-            default:
-                return false;
-        }
+        using var stream = assembly.GetManifestResourceStream(EmbeddedIconResourceName);
+        return stream is null ? null : Read(stream);
     }
 
-    internal static PluginIconKind ResolveKindFromCapabilities(IReadOnlyList<IPluginCapability> capabilities)
+    internal static byte[]? Read(Stream stream)
     {
-        if (capabilities.OfType<IFileFormatPluginCapability>().Any())
+        using var buffer = new MemoryStream();
+        var chunk = new byte[8192];
+        int read;
+        while ((read = stream.Read(chunk, 0, chunk.Length)) > 0)
         {
-            return PluginIconKind.FileFormat;
+            if (buffer.Length + read > MaxIconBytes)
+            {
+                return null;
+            }
+
+            buffer.Write(chunk, 0, read);
         }
 
-        if (capabilities.OfType<IMediaMetadataCapability>().Any() ||
-            capabilities.OfType<ILocalMediaMetadataCapability>().Any() ||
-            capabilities.OfType<IAudioCdMetadataCapability>().Any() ||
-            capabilities.OfType<IVolumeMetadataCapability>().Any())
-        {
-            return PluginIconKind.Metadata;
-        }
-
-        if (capabilities.OfType<IMediaPreviewCapability>().Any() ||
-            capabilities.OfType<ILocalMediaPreviewCapability>().Any())
-        {
-            return PluginIconKind.Preview;
-        }
-
-        if (capabilities.OfType<IAccountConnector>().Any() ||
-            capabilities.OfType<IAccountSyncProvider>().Any())
-        {
-            return PluginIconKind.Accounts;
-        }
-
-        if (capabilities.OfType<IGeneratedDescriptionCapability>().Any() ||
-            capabilities.OfType<IAiDescriptionImplementationCapability>().Any() ||
-            capabilities.OfType<IDescriptionGenerationPlanner>().Any() ||
-            capabilities.OfType<IAiProviderSettingsCapability>().Any() ||
-            capabilities.OfType<IAcpAgentSettingsCapability>().Any())
-        {
-            return PluginIconKind.Ai;
-        }
-
-        return PluginIconKind.Feature;
+        var icon = buffer.ToArray();
+        return IsPng(icon) ? icon : null;
     }
 
-    private static string? NormalizeDeclaredIcon(string? declared, Assembly assembly)
-    {
-        var value = declared?.Trim();
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return null;
-        }
-
-        if (DirectIconPrefixes.Any(prefix => value.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
-        {
-            return value;
-        }
-
-        var directory = Path.GetDirectoryName(assembly.Location);
-        if (string.IsNullOrEmpty(directory))
-        {
-            return null;
-        }
-
-        var candidate = Path.IsPathRooted(value) ? value : Path.Combine(directory, value);
-        return File.Exists(candidate) ? Path.GetFullPath(candidate) : null;
-    }
+    private static bool IsPng(byte[] payload) =>
+        payload.Length > PngSignature.Length && payload.AsSpan(0, PngSignature.Length).SequenceEqual(PngSignature);
 }

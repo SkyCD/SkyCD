@@ -31,9 +31,10 @@
         <AssemblyAttribute Include="SkyCD.Plugin.Abstractions.Lifecycle.MaxHostVersionAttribute">
             <_Parameter1>3.0.0</_Parameter1>
         </AssemblyAttribute>
-        <AssemblyAttribute Include="SkyCD.Plugin.Abstractions.Lifecycle.PluginIconAttribute">
-            <_Parameter1>Lucide:Archive</_Parameter1>
-        </AssemblyAttribute>
+    </ItemGroup>
+    <ItemGroup>
+        <!-- Exercises the icon resource the host reads from every plugin assembly. -->
+        <EmbeddedResource Include="Assets/icon.png" LogicalName="SkyCD.Plugin.Icon.png"/>
     </ItemGroup>
     <ItemGroup>
         <!-- Slice plugin assemblies packaged by staged-install fixtures and copied next to the tests. -->

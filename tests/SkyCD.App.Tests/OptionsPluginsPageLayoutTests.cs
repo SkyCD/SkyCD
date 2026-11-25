@@ -175,21 +175,38 @@ public sealed class OptionsPluginsPageLayoutTests
                               (string?)element.Attribute("Height") == "24")
             .ToList();
         Assert.Equal(4, slots.Count);
+        Assert.Equal(2, slots.Count(ContainsMaskedIcon));
 
         foreach (var slot in slots)
         {
-            var bitmap = Assert.Single(slot.Descendants().OfType<XElement>(),
-                element => element.Name.LocalName == "Image");
-            Assert.Contains("IconKey", (string?)bitmap.Attribute("Source"));
-            Assert.Contains("HasBitmapIcon", (string?)bitmap.Attribute("IsVisible"));
-
             var glyph = Assert.Single(slot.Descendants().OfType<XElement>(),
                 element => element.Name.LocalName == "PackIconControl");
-            Assert.Contains("PluginGlyphConverter", (string?)glyph.Attribute("Kind"));
-            Assert.Contains("IconKey", (string?)glyph.Attribute("Kind"));
-            Assert.Contains("HasGlyphIcon", (string?)glyph.Attribute("IsVisible"));
+
+            if (ContainsMaskedIcon(slot))
+            {
+                var mask = Assert.Single(slot.Descendants().OfType<XElement>(),
+                    element => element.Name.LocalName == "Border");
+                Assert.Contains("PluginIconMaskConverter", (string?)mask.Attribute("OpacityMask"));
+                Assert.Contains("HasBitmapIcon", (string?)mask.Attribute("IsVisible"));
+                Assert.Contains("PackIconLucideKind.Puzzle", (string?)glyph.Attribute("Kind"));
+                Assert.Contains("HasBitmapIcon", (string?)glyph.Attribute("IsVisible"));
+                Assert.Contains("!", (string?)glyph.Attribute("IsVisible"));
+            }
+            else
+            {
+                var bitmap = Assert.Single(slot.Descendants().OfType<XElement>(),
+                    element => element.Name.LocalName == "Image");
+                Assert.Contains("IconKey", (string?)bitmap.Attribute("Source"));
+                Assert.Contains("HasBitmapIcon", (string?)bitmap.Attribute("IsVisible"));
+                Assert.Contains("PluginGlyphConverter", (string?)glyph.Attribute("Kind"));
+                Assert.Contains("IconKey", (string?)glyph.Attribute("Kind"));
+                Assert.Contains("HasGlyphIcon", (string?)glyph.Attribute("IsVisible"));
+            }
         }
     }
+
+    private static bool ContainsMaskedIcon(XElement slot) =>
+        slot.Descendants().OfType<XElement>().Any(element => element.Name.LocalName == "Border");
 
     [Fact]
     public void PluginsPage_KeepsLiteralTypographyAndSpacingOutOfTheSplice()

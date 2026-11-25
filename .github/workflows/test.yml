@@ -29,6 +29,10 @@ jobs:
         shell: pwsh
         run: ./tools/scripts/ci/check-naming.ps1
 
+      - name: Check plugin icons
+        shell: pwsh
+        run: ./tools/scripts/ci/check-plugin-icons.ps1
+
       - name: Setup .NET 10
         uses: actions/setup-dotnet@v6
         with:

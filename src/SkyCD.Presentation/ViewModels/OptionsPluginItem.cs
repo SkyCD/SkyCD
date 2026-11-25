@@ -1,6 +1,4 @@
 using CommunityToolkit.Mvvm.ComponentModel;
-using SkyCD.Plugin.Runtime.Discovery;
-using SkyCD.Presentation.Plugins;
 
 namespace SkyCD.Presentation.ViewModels;
 
@@ -23,8 +21,7 @@ public sealed partial class OptionsPluginItem : ObservableObject
         string? capabilityType = null,
         long? sizeBytes = null,
         PluginUpdateSource? updateSource = null,
-        string? icon = null,
-        PluginIconKind iconKind = PluginIconKind.Feature)
+        byte[]? icon = null)
     {
         Name = name;
         Type = type;
@@ -39,8 +36,7 @@ public sealed partial class OptionsPluginItem : ObservableObject
         CapabilityType = string.IsNullOrWhiteSpace(capabilityType) ? null : capabilityType;
         SizeBytes = sizeBytes;
         UpdateSource = updateSource;
-        DeclaredIcon = string.IsNullOrWhiteSpace(icon) ? null : icon.Trim();
-        IconKind = iconKind;
+        Icon = icon is { Length: > 0 } ? icon : null;
     }
 
     public string Id { get; }
@@ -70,19 +66,11 @@ public sealed partial class OptionsPluginItem : ObservableObject
     /// <summary>Primary format extension without a leading dot, when the plugin declares one.</summary>
     public string? PrimaryExtension { get; }
 
-    /// <summary>Icon declared by the plugin, or <see langword="null"/> when the kind fallback applies.</summary>
-    public string? DeclaredIcon { get; }
+    /// <summary>PNG icon embedded in the plugin assembly, or <see langword="null"/> when it ships none.</summary>
+    public byte[]? Icon { get; }
 
-    /// <summary>Capability family that supplies the fallback icon.</summary>
-    public PluginIconKind IconKind { get; }
-
-    public string IconKey => PluginIconKey.Resolve(DeclaredIcon, IconKind, PrimaryExtension);
-
-    /// <summary>True when the icon key names a Lucide glyph rendered by the icon pack.</summary>
-    public bool HasGlyphIcon => PluginIconKey.IsGlyph(IconKey);
-
-    /// <summary>True when the icon key resolves to an image or an OS extension icon.</summary>
-    public bool HasBitmapIcon => !HasGlyphIcon;
+    /// <summary>True when the plugin ships an icon; otherwise the page renders the neutral glyph.</summary>
+    public bool HasBitmapIcon => Icon is { Length: > 0 };
 
     public string ExtendedInfo { get; }
 

@@ -1,127 +1,57 @@
 using System;
-using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
-using System.Threading;
-using System.Threading.Tasks;
-using SkyCD.Plugin.Abstractions.Capabilities;
-using SkyCD.Plugin.Abstractions.Capabilities.Accounts;
-using SkyCD.Plugin.Abstractions.Capabilities.Media;
-using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Factories;
 using Xunit;
 
 namespace SkyCD.Plugin.Runtime.Tests;
 
 /// <summary>
-/// Issue #1036: a plugin declares its icon through assembly metadata, and every plugin without one gets a
-/// well-defined fallback chosen by capability kind.
+/// Issue #1036: every plugin library ships its own icon as an embedded PNG, so the host never has to guess
+/// an icon from the assembly name or the capabilities a plugin happens to implement.
 /// </summary>
 public sealed class PluginIconResolutionTests
 {
     [Fact]
-    public void BuildFromAssembly_UsesTheDeclaredPluginIcon()
+    public void BuildFromAssembly_ReadsTheIconEmbeddedInTheLibrary()
     {
         var plugin = new DiscoveredPluginFactory().BuildFromAssembly(Assembly.GetExecutingAssembly());
 
-        Assert.Equal("Lucide:Archive", plugin.Icon);
-        Assert.Equal(PluginIconKind.FileFormat, plugin.IconKind);
-    }
-
-    [Theory]
-    [InlineData("SkyCD.Plugin.FileFormat.Json", PluginIconKind.FileFormat)]
-    [InlineData("SkyCD.Plugin.Metadata.Audio", PluginIconKind.Metadata)]
-    [InlineData("SkyCD.Plugin.Volume.Serial", PluginIconKind.Metadata)]
-    [InlineData("SkyCD.Plugin.Preview.Image", PluginIconKind.Preview)]
-    [InlineData("SkyCD.Plugin.Accounts.Core", PluginIconKind.Accounts)]
-    [InlineData("SkyCD.Plugin.Ai.Description", PluginIconKind.Ai)]
-    [InlineData("SkyCD.Plugin.Feature.Split", PluginIconKind.Feature)]
-    public void AssemblyName_ResolvesFirstPartyKind(string assemblyName, PluginIconKind expected)
-    {
-        Assert.True(PluginIconResolver.TryResolveKindFromAssemblyName(assemblyName, out var kind));
-        Assert.Equal(expected, kind);
-    }
-
-    [Theory]
-    [InlineData("SkyCD.Plugin.Sample.Config")]
-    [InlineData("SkyCD.Plugin.Runtime.Tests")]
-    [InlineData("Acme.SkyCD.Plugin.Accounts.Core")]
-    [InlineData("MyPlugin")]
-    public void AssemblyName_RejectsNamesWithoutAPluginKind(string assemblyName)
-    {
-        Assert.False(PluginIconResolver.TryResolveKindFromAssemblyName(assemblyName, out _));
+        Assert.NotNull(plugin.Icon);
+        Assert.True(plugin.Icon.Length > 8);
+        Assert.Equal(0x89, plugin.Icon[0]);
+        Assert.Equal(0x50, plugin.Icon[1]);
     }
 
     [Fact]
-    public void Capabilities_FallBackMetadataBeforePreview()
+    public void Resolve_ReturnsNullWhenTheAssemblyShipsNoIcon()
     {
-        IPluginCapability[] capabilities = [new PreviewCapability(0), new MetadataCapability(0)];
-
-        Assert.Equal(PluginIconKind.Metadata, PluginIconResolver.ResolveKindFromCapabilities(capabilities));
+        Assert.Null(PluginIconResolver.Resolve(typeof(string).Assembly));
     }
 
     [Fact]
-    public void Capabilities_ResolveEachKind()
+    public void ToDocument_PersistsTheIconForStaleDescriptors()
     {
-        Assert.Equal(PluginIconKind.Metadata,
-            PluginIconResolver.ResolveKindFromCapabilities([new MetadataCapability(0)]));
-        Assert.Equal(PluginIconKind.Preview,
-            PluginIconResolver.ResolveKindFromCapabilities([new PreviewCapability(0)]));
-        Assert.Equal(PluginIconKind.Accounts,
-            PluginIconResolver.ResolveKindFromCapabilities([new AccountConnectorCapability(0)]));
-        Assert.Equal(PluginIconKind.Ai,
-            PluginIconResolver.ResolveKindFromCapabilities([new GeneratedDescriptionCapability(0)]));
+        var plugin = new DiscoveredPluginFactory().BuildFromAssembly(Assembly.GetExecutingAssembly());
+
+        var document = plugin.ToDocument();
+
+        Assert.Equal(Convert.ToBase64String(plugin.Icon!), document.IconPng);
     }
 
     [Fact]
-    public void Capabilities_WithoutAKnownSurfaceFallBackToFeature()
+    public void Read_RejectsPayloadsThatAreNotPng()
     {
-        Assert.Equal(PluginIconKind.Feature,
-            PluginIconResolver.ResolveKindFromCapabilities([new PlainCapability(0)]));
-        Assert.Equal(PluginIconKind.Feature,
-            PluginIconResolver.ResolveKindFromCapabilities([]));
+        using var stream = new MemoryStream("not a png icon"u8.ToArray());
+
+        Assert.Null(PluginIconResolver.Read(stream));
     }
 
-    // The fakes take a constructor argument so the capability scan, which only instantiates parameterless
-    // types, cannot pick them up when the whole test assembly is treated as a plugin.
-    private abstract class ScanExcludedCapability(int ordinal)
+    [Fact]
+    public void Read_RejectsOversizedPayloads()
     {
-        protected int Ordinal => ordinal;
-    }
+        using var stream = new MemoryStream(new byte[PluginIconResolver.MaxIconBytes + 1]);
 
-    private sealed class PlainCapability(int ordinal) : ScanExcludedCapability(ordinal), IPluginCapability;
-
-    private abstract class MediaCapability(int ordinal) : ScanExcludedCapability(ordinal), IPluginCapability
-    {
-        public MediaDescriptor Descriptor { get; } = new([".bin"], ["application/octet-stream"],
-            new MediaMetadataSchema("test", 1, []));
-    }
-
-    private sealed class MetadataCapability(int ordinal) : MediaCapability(ordinal), IMediaMetadataCapability
-    {
-        public Task<MediaExtractionResult> ExtractAsync(MediaItem item, IMediaSource source,
-            IProgress<MediaProgress>? progress, CancellationToken cancellationToken) =>
-            Task.FromResult(new MediaExtractionResult([]));
-    }
-
-    private sealed class PreviewCapability(int ordinal) : MediaCapability(ordinal), IMediaPreviewCapability
-    {
-        public Task<MediaPreviewResult> GeneratePreviewAsync(MediaItem item, IMediaSource source,
-            IProgress<MediaProgress>? progress, CancellationToken cancellationToken) =>
-            Task.FromResult(new MediaPreviewResult([]));
-    }
-
-    private sealed class AccountConnectorCapability(int ordinal) : ScanExcludedCapability(ordinal), IAccountConnector
-    {
-        public Task<AccountConnectionResult> ConnectAsync(CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException();
-    }
-
-    private sealed class GeneratedDescriptionCapability(int ordinal)
-        : ScanExcludedCapability(ordinal), IGeneratedDescriptionCapability
-    {
-        public MediaMetadataSchema Schema { get; } = new("test", 1, []);
-
-        public Task<GeneratedDescription> GenerateAsync(DescriptionContext context,
-            CancellationToken cancellationToken) => throw new NotSupportedException();
+        Assert.Null(PluginIconResolver.Read(stream));
     }
 }

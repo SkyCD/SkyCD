@@ -23,11 +23,8 @@ public sealed class PluginDocument
 
     public string? PrimaryExtension { get; set; }
 
-    /// <summary>Icon declared by the plugin, or <see langword="null"/> when the kind fallback applies.</summary>
-    public string? Icon { get; set; }
-
-    /// <summary>Persisted <see cref="Discovery.PluginIconKind"/> name for stale descriptors.</summary>
-    public string? IconKind { get; set; }
+    /// <summary>Base64 PNG icon last read from the plugin assembly, so stale descriptors keep their icon.</summary>
+    public string? IconPng { get; set; }
 
     public string AssemblyPath { get; set; } = string.Empty;
 

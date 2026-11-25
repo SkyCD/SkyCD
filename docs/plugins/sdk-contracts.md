@@ -11,7 +11,7 @@ remain `SkyCD.Plugin.Abstractions.*`, so source is portable across the rename). 
 
 The package contains only the plugin-authoring surface:
 
-- lifecycle and identity: `IPlugin`, `IPluginCapability`, `PluginIdAttribute`, `MinHostVersionAttribute`, `MaxHostVersionAttribute`, `PluginIconAttribute`;
+- lifecycle and identity: `IPlugin`, `IPluginCapability`, `PluginIdAttribute`, `MinHostVersionAttribute`, `MaxHostVersionAttribute`;
 - the capability contracts under `Capabilities/**` and the host services plugins call back into
   (`ICatalogApi`, `IHostCommandApi`, `IHostDialogApi`, `IPluginStorageApi` / `IPluginStorageConsumer`, `IOAuthService`, `ILocalizationService`);
 - the request/result/descriptor models exchanged across those contracts.
@@ -137,26 +137,30 @@ the file.
 
 ## Plugin icon (SDK 3.0)
 
-Options → Plugins shows one 24 px icon slot in the installed list, the plugin details header and the
-marketplace row. A plugin can declare its icon at assembly level:
+Options → Plugins shows one 24 px icon slot in the installed list and in the plugin details header.
+Every plugin library ships its own icon inside the assembly, so the icon travels with the DLL to the
+build output, the install folder and the NuGet package.
 
-```csharp
-[assembly: PluginIcon("Lucide:Archive")]
+Add `Assets/icon.png` to the plugin project and embed it under the fixed logical name:
+
+```xml
+<ItemGroup>
+  <EmbeddedResource Include="Assets/icon.png" LogicalName="SkyCD.Plugin.Icon.png" />
+</ItemGroup>
 ```
 
-| Declared value | Rendering |
-| --- | --- |
-| `Lucide:<Name>` | Lucide glyph from the icon pack, for example `Lucide:Archive` or `Lucide:FileText`. |
-| `ext:<extension>` | The operating system or portable icon for that extension. |
-| `avares://…`, `data:image/…`, `base64:…` | The referenced embedded image. |
-| A path relative to the plugin assembly | A packaged image; the path is resolved beside the assembly. |
+First-party projects get that item from `Plugins/Directory.Build.props` automatically. Every plugin
+project must ship `Assets/icon.png`; `tools/scripts/ci/check-plugin-icons.ps1` fails CI when one is
+missing.
 
-When `PluginIconAttribute` is absent, an `icon.png` beside the plugin assembly is used before the
-fallback. Without either, the icon is chosen by the plugin's primary capability kind, so plugins of
-different functions never share the same generic icon: file format → extension icon (or a document
-icon when it has no extension), metadata → tag, preview → eye, accounts → user, AI → sparkles, and
-feature/menu/modal → puzzle. First-party assemblies additionally use their
-`SkyCD.Plugin.<Kind>.<Subject>` name, which classifies surfaces such as an accounts CLI plugin.
+- The file must be a square PNG of at least 24 px (64 px recommended) and at most 256 KiB.
+- Draw the artwork with transparency. The host paints the alpha channel with the theme foreground, so
+  one icon follows both light and dark themes.
+- Discovery reads the resource from the plugin assembly; there is no attribute, no adjacent file and
+  no assembly-name or capability fallback. A plugin without the resource shows the neutral puzzle
+  glyph.
+- Marketplace catalog entries may declare a `Lucide:<Name>` or `ext:<extension>` key so the browse row
+  has an icon before the package is installed; see [marketplace-catalog.md](marketplace-catalog.md).
 
 ## Runtime Discovery
 - Runtime scans assemblies for concrete capability classes with public parameterless constructors.

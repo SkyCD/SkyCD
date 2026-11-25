@@ -28,14 +28,13 @@ public sealed class DiscoveredPlugin
 
     public string Description { get; init; } = string.Empty;
 
-    /// <summary>Primary format extension without a leading dot, used as the plugin's icon identity.</summary>
+    /// <summary>Primary format extension without a leading dot, shown with the plugin details.</summary>
     public string? PrimaryExtension { get; init; }
 
-    /// <summary>Icon declared by the plugin, or <see langword="null"/> when the host must use the kind fallback.</summary>
-    public string? Icon { get; init; }
-
-    /// <summary>Capability family that supplies the fallback icon when <see cref="Icon"/> is absent.</summary>
-    public PluginIconKind IconKind { get; init; } = PluginIconKind.Feature;
+    /// <summary>
+    /// PNG icon embedded in the plugin assembly, or <see langword="null"/> when the plugin ships none.
+    /// </summary>
+    public byte[]? Icon { get; init; }
 
     public required string FileName { get; init; }
 
@@ -78,8 +77,7 @@ public sealed class DiscoveredPlugin
             },
             Description = Description,
             PrimaryExtension = PrimaryExtension,
-            Icon = Icon,
-            IconKind = IconKind.ToString(),
+            IconPng = Icon is { Length: > 0 } ? Convert.ToBase64String(Icon) : null,
             AssemblyPath = FileName,
             IsEnabled = true,
             IsAvailable = true,
