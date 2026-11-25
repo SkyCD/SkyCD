@@ -106,6 +106,7 @@ namespace SkyCD.Presentation.UndoRedo.Actions
                     DeleteFromCollection(document.Id);
                 }
             });
+            _repository.InvalidateSnapshot();
 
             CatalogSizeMaintenance.RecalculateAncestors(_repository, _externalParentIds);
 

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Couchbase.Lite;
+using Couchbase.Lite.Query;
 using SkyCD.Couchbase.Attributes;
 using SkyCD.Couchbase.Helpers;
 using SkyCD.Couchbase.Models;
@@ -10,10 +11,18 @@ namespace SkyCD.Couchbase.Repository;
 
 /// <summary>
 /// Tree-aware repository helpers for documents that expose string id properties configured at repository creation.
+/// Child lookups use an indexed query on the parent property, and the whole-collection snapshot is cached so a
+/// single navigation reuses one read until the collection changes.
 /// </summary>
 public class TreeRepository<TDocument> : RepositoryBase<TDocument>
     where TDocument : class, new()
 {
+    private const string ParentIndexPrefix = "idx_tree_parent_";
+
+    private readonly object snapshotLock = new();
+    private IReadOnlyList<TDocument>? snapshot;
+    private ListenerToken? changeListener;
+
     public DocumentPropertyBinding ParentIdProperty { get; internal set; } = new("ParentId", null);
 
     public override void Initialize(Type documentType, string collectionName, Collection collection)
@@ -24,36 +33,75 @@ public class TreeRepository<TDocument> : RepositoryBase<TDocument>
             documentType: documentType,
             attributeType: typeof(ParentId),
             defaultPropertyName: "ParentId");
+
+        EnsureParentIndex();
+        EnsureChangeListener();
+    }
+
+    public override void Save(string id, TDocument value)
+    {
+        base.Save(id, value);
+        InvalidateSnapshot();
+    }
+
+    /// <summary>
+    /// Returns the cached whole-collection snapshot, loading it once per collection change. Callers treat the
+    /// documents as read-only projections; writes go through <see cref="Save"/> or explicitly invalidate.
+    /// </summary>
+    public override IReadOnlyList<TDocument> GetAll()
+    {
+        lock (snapshotLock)
+        {
+            return snapshot ??= base.GetAll();
+        }
+    }
+
+    /// <summary>Drops the cached snapshot after a bulk write that bypassed <see cref="Save"/>.</summary>
+    public void InvalidateSnapshot()
+    {
+        lock (snapshotLock)
+        {
+            snapshot = null;
+        }
     }
 
     public IReadOnlyList<TDocument> GetRoots()
     {
-        var roots = new List<TDocument>();
-        foreach (var item in GetAll())
+        if (ParentIdProperty.Property is null)
         {
-            if (string.IsNullOrWhiteSpace(GetParentId(item)))
-            {
-                roots.Add(item);
-            }
+            return [];
         }
 
-        return roots;
+        var parent = Expression.Property(ParentIdProperty.Name);
+        using var query = QueryBuilder
+            .Select(SelectResult.All())
+            .From(DataSource.Collection(Collection))
+            .Where(parent.IsNotValued().Or(parent.EqualTo(Expression.String(string.Empty))));
+
+        using var results = query.Execute();
+        return ReadResults(results);
     }
 
-    public IReadOnlyList<TDocument> GetChildrenOf(string parentId)
+    /// <summary>
+    /// Returns the children of one parent with an indexed query on <see cref="ParentIdProperty"/>, so the cost
+    /// follows the size of the folder instead of the size of the catalog.
+    /// </summary>
+    public virtual IReadOnlyList<TDocument> GetChildrenOf(string parentId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(parentId);
 
-        var children = new List<TDocument>();
-        foreach (var item in GetAll())
+        if (ParentIdProperty.Property is null)
         {
-            if (string.Equals(GetParentId(item), parentId, StringComparison.Ordinal))
-            {
-                children.Add(item);
-            }
+            return [];
         }
 
-        return children;
+        using var query = QueryBuilder
+            .Select(SelectResult.All())
+            .From(DataSource.Collection(Collection))
+            .Where(Expression.Property(ParentIdProperty.Name).EqualTo(Expression.String(parentId)));
+
+        using var results = query.Execute();
+        return ReadResults(results);
     }
 
     public IReadOnlyList<TDocument> GetDescendantsOf(string parentId)
@@ -118,6 +166,28 @@ public class TreeRepository<TDocument> : RepositoryBase<TDocument>
         }
 
         return descendants;
+    }
+
+    private void EnsureParentIndex()
+    {
+        if (ParentIdProperty.Property is null)
+        {
+            return;
+        }
+
+        Collection.CreateIndex(
+            ParentIndexPrefix + CollectionName.ToLowerInvariant(),
+            IndexBuilder.ValueIndex(ValueIndexItem.Property(ParentIdProperty.Name)));
+    }
+
+    /// <summary>
+    /// Writes that bypass <see cref="Save"/> (bulk deletes, imports) still invalidate the snapshot. The
+    /// listener is a backstop; bulk paths also invalidate explicitly so the next read sees their result.
+    /// </summary>
+    private void EnsureChangeListener()
+    {
+        changeListener?.Remove();
+        changeListener = Collection.AddChangeListener((_, _) => InvalidateSnapshot());
     }
 
     private string? GetId(TDocument document)
