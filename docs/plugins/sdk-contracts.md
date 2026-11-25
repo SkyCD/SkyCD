@@ -135,6 +135,34 @@ the file.
 - `FileFormatWriteRequest.CatalogScopeItems` carries the same scope snapshot to writers. Formats that
   preserve scope (currently the native JSON catalog) serialize it; see [json-catalog.md](json-catalog.md).
 
+## Plugin icon (SDK 3.0)
+
+Options → Plugins shows one 24 px icon slot in the installed list and in the plugin details header.
+Every plugin library ships its own icon inside the assembly, so the icon travels with the DLL to the
+build output, the install folder and the NuGet package.
+
+Add `Assets/icon.ico` to the plugin project and embed it under the fixed logical name:
+
+```xml
+<ItemGroup>
+  <EmbeddedResource Include="Assets/icon.ico" LogicalName="SkyCD.Plugin.Icon.ico" />
+</ItemGroup>
+```
+
+First-party projects get that item from `Plugins/Directory.Build.props` automatically. Their ICO files
+contain 16, 20, 24, 30, 32, 36, 40, 48, 60, 64, 72, 80, 96 and 256 px images. The CI icon check
+verifies the ICO and its sizes.
+
+- The ICO must be at most 256 KiB and contain at least one PNG-encoded frame; the host displays its
+  largest square PNG frame. Separate PNG files are unnecessary.
+- Use full-color artwork with transparency and enough edge contrast to read on both light and dark themes.
+  The host displays the image's original colors.
+- Discovery reads the resource from the plugin assembly; there is no attribute, no adjacent file and
+  no assembly-name or capability fallback. A plugin without the resource shows the neutral puzzle
+  glyph.
+- Marketplace catalog entries may declare a `Lucide:<Name>` or `ext:<extension>` key so the browse row
+  has an icon before the package is installed; see [marketplace-catalog.md](marketplace-catalog.md).
+
 ## Runtime Discovery
 - Runtime scans assemblies for concrete capability classes with public parameterless constructors.
 - Identity and version constraints come from assembly metadata; no manifest is required.

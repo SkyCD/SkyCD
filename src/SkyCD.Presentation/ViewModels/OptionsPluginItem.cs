@@ -20,7 +20,8 @@ public sealed partial class OptionsPluginItem : ObservableObject
         string? version = null,
         string? capabilityType = null,
         long? sizeBytes = null,
-        PluginUpdateSource? updateSource = null)
+        PluginUpdateSource? updateSource = null,
+        byte[]? icon = null)
     {
         Name = name;
         Type = type;
@@ -35,6 +36,7 @@ public sealed partial class OptionsPluginItem : ObservableObject
         CapabilityType = string.IsNullOrWhiteSpace(capabilityType) ? null : capabilityType;
         SizeBytes = sizeBytes;
         UpdateSource = updateSource;
+        Icon = icon is { Length: > 0 } ? icon : null;
     }
 
     public string Id { get; }
@@ -64,9 +66,11 @@ public sealed partial class OptionsPluginItem : ObservableObject
     /// <summary>Primary format extension without a leading dot, when the plugin declares one.</summary>
     public string? PrimaryExtension { get; }
 
-    public string? IconKey => PrimaryExtension is null ? null : $"ext:{PrimaryExtension}";
+    /// <summary>PNG frame extracted from the plugin's ICO, or <see langword="null"/> when it ships none.</summary>
+    public byte[]? Icon { get; }
 
-    public bool HasIcon => IconKey is not null;
+    /// <summary>True when the plugin ships an icon; otherwise the page renders the neutral glyph.</summary>
+    public bool HasBitmapIcon => Icon is { Length: > 0 };
 
     public string ExtendedInfo { get; }
 

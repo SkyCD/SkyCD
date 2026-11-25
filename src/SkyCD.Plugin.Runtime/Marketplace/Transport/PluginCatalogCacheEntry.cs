@@ -34,6 +34,7 @@ public sealed record PublisherManifestCacheEntry(
 /// <param name="FeedText">Feed URL text declared by the manifest.</param>
 /// <param name="Compatibility">Verdict that does not depend on the feed. An eligible release is stored as
 /// compatible; feed availability is never cached because it changes without a manifest edit.</param>
+/// <param name="Icon">Package icon key declared by the manifest, when any.</param>
 public sealed record CachedManifestRelease(
     string PackageId,
     string Version,
@@ -45,7 +46,8 @@ public sealed record CachedManifestRelease(
     string? License,
     string? ProjectUrl,
     string FeedText,
-    CachedManifestReleaseCompatibility Compatibility);
+    CachedManifestReleaseCompatibility Compatibility,
+    string? Icon = null);
 
 /// <summary>Eligibility verdict stored with a cached release.</summary>
 /// <param name="Status">Compatible or incompatible.</param>

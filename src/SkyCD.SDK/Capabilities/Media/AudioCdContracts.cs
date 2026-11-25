@@ -39,8 +39,8 @@ public interface IAudioCdMetadataCapability : IPluginCapability
     int Priority { get; }
 
     /// <summary>
-    /// Extension, without a leading dot, used as the plugin icon identity. Audio CD capabilities have no
-    /// file-format descriptor, so this names the virtual track format the host shows instead.
+    /// Extension, without a leading dot, naming the virtual track format. Audio CD capabilities have no
+    /// file-format descriptor, so the host shows this with the plugin details instead.
     /// </summary>
     string? PrimaryExtension { get; }
 
