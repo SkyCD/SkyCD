@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using Couchbase.Lite;
 using DryIoc;
 using Microsoft.Extensions.Logging;
@@ -277,7 +278,17 @@ public class CouchbaseContractsTests
         var repositories = new RepositoryCollection(databases);
         var repository = Assert.IsType<TestTreeRepository>(repositories.GetOrAdd(typeof(AnnotatedDocument)));
 
+        // The collection's change listener clears the cached snapshot on a background queue, a moment after
+        // Save already invalidated it. Wait for that notification so it cannot land between the two reads.
+        using var changeObserved = new ManualResetEventSlim(false);
+        var changeToken = repository.Collection.AddChangeListener((_, _) => changeObserved.Set());
+
         repository.Save("a", new AnnotatedDocument { Id = "a", Name = "A" });
+        Assert.True(
+            changeObserved.Wait(TimeSpan.FromSeconds(10)),
+            "The collection change notification did not arrive.");
+        changeToken.Remove();
+
         var first = repository.GetAll();
         var second = repository.GetAll();
 
