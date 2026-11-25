@@ -813,7 +813,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
 
         var collection = repository.Collection;
-        collection.Database.InBatch(() =>
+        DatabaseGate.InBatch(collection.Database, () =>
         {
             foreach (var entry in entries)
             {
@@ -1532,7 +1532,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         {
             if (catalogRepository is not null)
             {
-                catalogRepository.Collection.Database.InBatch(apply);
+                DatabaseGate.InBatch(catalogRepository.Collection.Database, apply);
             }
             else
             {
@@ -4347,7 +4347,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             if (repository is null || rootId is null || catalogPath != viewModel.CurrentCatalogPath)
                 throw new MotionCaptureCatalogUnavailableException();
             var importedParents = new List<string?>();
-            await Task.Run(() => repository.Collection.Database.InBatch(() =>
+            await Task.Run(() => DatabaseGate.InBatch(repository.Collection.Database, () =>
             {
                 string Folder(string parent, string name)
                 {
@@ -4827,7 +4827,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             }
         }
 
-        catalogRepository.Collection.Database.InBatch(() =>
+        DatabaseGate.InBatch(catalogRepository.Collection.Database, () =>
         {
             foreach (var id in allIdsToDelete)
             {

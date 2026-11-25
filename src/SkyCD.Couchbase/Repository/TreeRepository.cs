@@ -58,10 +58,15 @@ public class TreeRepository<TDocument> : RepositoryBase<TDocument>
     /// </summary>
     public override IReadOnlyList<TDocument> GetAll()
     {
-        lock (snapshotLock)
+        // The gate is taken before the snapshot lock so a reload never waits for the gate while holding a
+        // lock that a gated writer (which invalidates the snapshot) needs.
+        return DatabaseGate.Run(Collection.Database, () =>
         {
-            return snapshot ??= base.GetAll();
-        }
+            lock (snapshotLock)
+            {
+                return snapshot ??= base.GetAll();
+            }
+        });
     }
 
     /// <summary>Drops the cached snapshot after a bulk write that bypassed <see cref="Save"/>.</summary>
@@ -86,8 +91,11 @@ public class TreeRepository<TDocument> : RepositoryBase<TDocument>
             .From(DataSource.Collection(Collection))
             .Where(parent.IsNotValued().Or(parent.EqualTo(Expression.String(string.Empty))));
 
-        using var results = query.Execute();
-        return ReadResults(results);
+        return DatabaseGate.Run(Collection.Database, () =>
+        {
+            using var results = query.Execute();
+            return ReadResults(results);
+        });
     }
 
     /// <summary>
@@ -108,8 +116,11 @@ public class TreeRepository<TDocument> : RepositoryBase<TDocument>
             .From(DataSource.Collection(Collection))
             .Where(Expression.Property(ParentIdProperty.Name).EqualTo(Expression.String(parentId)));
 
-        using var results = query.Execute();
-        return ReadResults(results);
+        return DatabaseGate.Run(Collection.Database, () =>
+        {
+            using var results = query.Execute();
+            return ReadResults(results);
+        });
     }
 
     public IReadOnlyList<TDocument> GetDescendantsOf(string parentId)

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using SkyCD.Core.UndoRedo;
+using SkyCD.Couchbase;
 using SkyCD.Documents;
 using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
@@ -247,7 +248,7 @@ public sealed class CatalogScanPublisher(CatalogEntryMerger? entryMerger = null)
         try
         {
             // Keep every chunk in one transaction so later failures roll back earlier writes.
-            repository.Collection.Database.InBatch(() =>
+            DatabaseGate.InBatch(repository.Collection.Database, () =>
             {
                 var batchSize = Math.Max(1, options.BatchSize);
                 for (var i = 0; i < mergedDocuments.Count;)

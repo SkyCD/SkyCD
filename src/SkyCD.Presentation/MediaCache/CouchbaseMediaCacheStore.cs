@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Couchbase.Lite;
 using Couchbase.Lite.Query;
+using SkyCD.Couchbase;
 using SkyCD.Couchbase.Mapping;
 
 namespace SkyCD.Presentation.MediaCache;
@@ -55,7 +56,7 @@ public sealed class CouchbaseMediaCacheStore : MediaCacheStoreBase
 
     protected override void WriteRecord(MediaCachePayload payload)
     {
-        database.InBatch(() =>
+        DatabaseGate.InBatch(database, () =>
         {
             using var existing = recordsCollection.GetDocument(payload.Record.Id);
             using var document = payload.Record.ToMutableDocument(payload.Record.Id);
@@ -112,7 +113,7 @@ public sealed class CouchbaseMediaCacheStore : MediaCacheStoreBase
 
     protected override void RemoveBatch(string batchId)
     {
-        database.InBatch(() =>
+        DatabaseGate.InBatch(database, () =>
         {
             using var document = batchesCollection.GetDocument(batchId);
             if (document is not null)
@@ -126,47 +127,50 @@ public sealed class CouchbaseMediaCacheStore : MediaCacheStoreBase
 
     protected override IReadOnlyList<MediaCachePayload> ReadStagedPayloads(string batchId)
     {
-        using var query = QueryBuilder
-            .Select(SelectResult.Expression(Meta.ID))
-            .From(DataSource.Collection(stagedCollection))
-            .Where(Expression.Property(BatchIdPropertyName).EqualTo(Expression.String(batchId)))
-            .OrderBy(Ordering.Property(SequencePropertyName).Ascending());
-
-        using var results = query.Execute();
-        var payloads = new List<MediaCachePayload>();
-
-        foreach (var row in results)
+        return DatabaseGate.Run(database, () =>
         {
-            var stagedId = row.GetString("id");
-            if (string.IsNullOrEmpty(stagedId))
+            using var query = QueryBuilder
+                .Select(SelectResult.Expression(Meta.ID))
+                .From(DataSource.Collection(stagedCollection))
+                .Where(Expression.Property(BatchIdPropertyName).EqualTo(Expression.String(batchId)))
+                .OrderBy(Ordering.Property(SequencePropertyName).Ascending());
+
+            using var results = query.Execute();
+            var payloads = new List<MediaCachePayload>();
+
+            foreach (var row in results)
             {
-                continue;
+                var stagedId = row.GetString("id");
+                if (string.IsNullOrEmpty(stagedId))
+                {
+                    continue;
+                }
+
+                // Blobs are read from the stored document so their content stays resolvable.
+                using var stagedDocument = stagedCollection.GetDocument(stagedId);
+                if (stagedDocument is null)
+                {
+                    continue;
+                }
+
+                var record = stagedDocument.FromDocument<MediaCacheRecord>();
+                if (record is null)
+                {
+                    continue;
+                }
+
+                payloads.Add(new MediaCachePayload(record, ReadBlobs(stagedDocument, record)));
             }
 
-            // Blobs are read from the stored document so their content stays resolvable.
-            using var stagedDocument = stagedCollection.GetDocument(stagedId);
-            if (stagedDocument is null)
-            {
-                continue;
-            }
-
-            var record = stagedDocument.FromDocument<MediaCacheRecord>();
-            if (record is null)
-            {
-                continue;
-            }
-
-            payloads.Add(new MediaCachePayload(record, ReadBlobs(stagedDocument, record)));
-        }
-
-        return payloads;
+            return payloads;
+        });
     }
 
     protected override void WriteStagedRecord(string batchId, MediaCachePayload payload)
     {
         var stagedId = $"{batchId}:{payload.Record.Id}";
 
-        database.InBatch(() =>
+        DatabaseGate.InBatch(database, () =>
         {
             using var existingDocument = stagedCollection.GetDocument(stagedId)
                                          ?? recordsCollection.GetDocument(payload.Record.Id);
@@ -180,10 +184,11 @@ public sealed class CouchbaseMediaCacheStore : MediaCacheStoreBase
 
     protected override void RemoveStagedRecords(string batchId)
     {
-        database.InBatch(() => RemoveStagedDocuments(batchId));
+        DatabaseGate.InBatch(database, () => RemoveStagedDocuments(batchId));
     }
 
-    protected override void CompactStorage() => database.PerformMaintenance(MaintenanceType.Compact);
+    protected override void CompactStorage() =>
+        DatabaseGate.Run(database, () => database.PerformMaintenance(MaintenanceType.Compact));
 
     private void RemoveStagedDocuments(string batchId)
     {
@@ -215,18 +220,21 @@ public sealed class CouchbaseMediaCacheStore : MediaCacheStoreBase
             .Select(SelectResult.Expression(Meta.ID))
             .From(DataSource.Collection(collection));
 
-        using var results = query.Execute();
-        var ids = new List<string>();
-        foreach (var row in results)
+        return DatabaseGate.Run(collection.Database, () =>
         {
-            var id = row.GetString("id");
-            if (!string.IsNullOrEmpty(id))
+            using var results = query.Execute();
+            var ids = new List<string>();
+            foreach (var row in results)
             {
-                ids.Add(id);
+                var id = row.GetString("id");
+                if (!string.IsNullOrEmpty(id))
+                {
+                    ids.Add(id);
+                }
             }
-        }
 
-        return ids;
+            return ids;
+        });
     }
 
     private static Collection GetOrCreateCollection(Database database, string collectionName) =>

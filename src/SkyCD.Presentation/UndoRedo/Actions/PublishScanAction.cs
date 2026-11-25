@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using SkyCD.Core.UndoRedo;
+using SkyCD.Couchbase;
 using SkyCD.Documents;
 using SkyCD.Documents.Repository;
 using SkyCD.Presentation.Catalog;
@@ -75,7 +76,7 @@ public sealed class PublishScanAction : UndoableActionBase
 
     public override Task UndoAsync()
     {
-        repository.Collection.Database.InBatch(() =>
+        DatabaseGate.InBatch(repository.Collection.Database, () =>
         {
             // Remove all newly inserted documents
             foreach (var doc in insertedDocuments)
@@ -102,7 +103,7 @@ public sealed class PublishScanAction : UndoableActionBase
 
     public override Task RedoAsync()
     {
-        repository.Collection.Database.InBatch(() =>
+        DatabaseGate.InBatch(repository.Collection.Database, () =>
         {
             // Re-insert added documents
             foreach (var doc in insertedDocuments)

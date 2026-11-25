@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using SkyCD.Couchbase;
 using SkyCD.Couchbase.Repository;
 using SkyCD.Plugin.Runtime.Documents;
 
@@ -63,7 +64,7 @@ public sealed class PluginConfigurationStore(IRepository<PluginConfigurationDocu
     {
         ArgumentNullException.ThrowIfNull(settings);
         if (settings.Count == 0) return;
-        repository.Collection.Database.InBatch(() =>
+        DatabaseGate.InBatch(repository.Collection.Database, () =>
         {
             foreach (var (id, values) in settings) SaveSettings(id, values);
         });

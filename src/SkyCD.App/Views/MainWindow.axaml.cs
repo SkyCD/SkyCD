@@ -1947,7 +1947,7 @@ public partial class MainWindow : Window
             reloadedViewModel = await new CatalogLoadService(fileFormatManager).LoadAsync(localPath, (payload, importProgress) =>
             {
                 var entries = ExtractCatalogEntries(payload);
-                catalogRepository.Collection.Database.InBatch(() =>
+                DatabaseGate.InBatch(catalogRepository.Collection.Database, () =>
                 {
                     ReplaceCatalogContent(entries, importProgress);
                 });
