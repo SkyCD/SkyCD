@@ -172,7 +172,6 @@ public partial class MainWindow : Window
             subscribedViewModel.SaveCatalogRequested -= OnSaveCatalogRequested;
             subscribedViewModel.AboutRequested -= OnAboutRequested;
             subscribedViewModel.FindCatalogRequested -= OnFindCatalogRequested;
-            subscribedViewModel.CollectionsRequested -= OnCollectionsRequested;
             subscribedViewModel.AdvancedFindRequested -= OnAdvancedFindRequested;
             subscribedViewModel.OptionsRequested -= OnOptionsRequested;
             subscribedViewModel.PropertiesRequested -= OnPropertiesRequested;
@@ -199,7 +198,6 @@ public partial class MainWindow : Window
             subscribedViewModel.SaveCatalogRequested += OnSaveCatalogRequested;
             subscribedViewModel.AboutRequested += OnAboutRequested;
             subscribedViewModel.FindCatalogRequested += OnFindCatalogRequested;
-            subscribedViewModel.CollectionsRequested += OnCollectionsRequested;
             subscribedViewModel.AdvancedFindRequested += OnAdvancedFindRequested;
             subscribedViewModel.OptionsRequested += OnOptionsRequested;
             subscribedViewModel.PropertiesRequested += OnPropertiesRequested;
@@ -696,11 +694,6 @@ public partial class MainWindow : Window
         if (subscribedViewModel is not { SelectedQuickFindResult: not null } vm) return;
         vm.OpenQuickFindResultCommand.Execute(null);
         MainBrowserItemsView.FocusActiveControl();
-    }
-
-    private async void OnCollectionsRequested(object? sender, CollectionsDialogRequestedEventArgs e)
-    {
-        await new CollectionsWindow { DataContext = e.Dialog }.ShowDialog<bool?>(this);
     }
 
     private async void OnAdvancedFindRequested(object? sender, AdvancedFindDialogRequestedEventArgs e)
@@ -1681,7 +1674,9 @@ public partial class MainWindow : Window
         {
             e.Dialog.SettingsSearchText = string.Empty;
             e.Dialog.SelectedSettingCategory = e.Dialog.SettingCategories.FirstOrDefault(category =>
-                category.BuiltInIndex >= 0 && category.Title == e.PreselectSettingCategory);
+                category.Id == e.PreselectSettingCategory)
+                ?? e.Dialog.SettingCategories.FirstOrDefault(category =>
+                    category.BuiltInIndex >= 0 && category.Title == e.PreselectSettingCategory);
         }
 
         var dialog = new OptionsWindow

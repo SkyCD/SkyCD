@@ -183,6 +183,7 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
                 new("language", LocalizationService.Current.Get(TextKeys.Language), 1),
                 new("statuses", LocalizationService.Current.Get(TextKeys.Statuses), 3),
                 new("custom-properties", LocalizationService.Current.Get(UiKeys.CustomProperties), 4),
+                new(CollectionsCategoryId, LocalizationService.Current.Get(UiKeys.Collections), CollectionsCategoryIndex),
                 new("scan", LocalizationService.Current.Get(TextKeys.Scan), 6),
                 new("details-columns", LocalizationService.Current.Get(UiKeys.DetailsColumns), 7,
                     Group: uiGroup),
@@ -290,7 +291,7 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         ShowPluginInfoSection ||
         ShowLanguageSection ||
         ShowMcpSection ||
-        ShowStatusesSection || ShowCustomPropertiesSection || ShowAcpSection || ShowScanSection ||
+        ShowStatusesSection || ShowCustomPropertiesSection || ShowCollectionsSection || ShowAcpSection || ShowScanSection ||
         ShowDetailsColumnsSection || ShowToolbarSection ||
         ShowAiDescriptionSection || ShowAiProviderSection || ShowMcpToolsSection ||
         ShowPluginSettingsSection || ShowPluginsSettingsSection;
@@ -804,6 +805,7 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(ShowMcpSection));
         OnPropertyChanged(nameof(ShowStatusesSection));
         OnPropertyChanged(nameof(ShowCustomPropertiesSection));
+        OnPropertyChanged(nameof(ShowCollectionsSection));
         OnPropertyChanged(nameof(IsDetailsColumnsCategorySelected));
         OnPropertyChanged(nameof(ShowDetailsColumnsSection));
         OnPropertyChanged(nameof(IsToolbarCategorySelected));

@@ -246,3 +246,8 @@ text.PluginUninstallNotCatalogOwned: "šis įskiepis nebuvo įdiegtas per SkyCD,
 text.PluginUninstallFilesInUse: "įskiepio failai naudojami arba tik skaitomi, todėl nieko nebuvo ištrinta."
 text.PluginFilterNoMatches: "Joks įskiepis neatitinka filtro."
 text.PluginMarketplaceFilterNoMatches: "Joks rinkos įskiepis neatitinka filtro."
+text.CollectionCreated: "Sukurtas rinkinys {0}."
+text.CollectionRenamed: "Rinkinys pervadintas į {0}."
+text.CollectionDeleted: "Ištrintas rinkinys {0}."
+text.CollectionNameRequired: "Įveskite rinkinio pavadinimą."
+text.CollectionCleaned: "Pašalinta trūkstamų nuorodų: {0}."

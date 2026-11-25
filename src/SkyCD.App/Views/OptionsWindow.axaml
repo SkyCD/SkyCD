@@ -1143,6 +1143,156 @@
                                        TextWrapping="Wrap" />
                         </Border>
                     </Grid>
+                    <Grid Grid.Row="2"
+                          IsVisible="{Binding ShowCollectionsSection}"
+                          RowDefinitions="Auto,Auto,Auto,*,Auto"
+                          RowSpacing="{DynamicResource SkySpaceSm}">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Collections}}" FontSize="{DynamicResource SkyFontBody}" />
+                            <Border Grid.Column="1" Height="1" Background="#2E2E2E" VerticalAlignment="Center" />
+                        </Grid>
+
+                        <Grid Grid.Row="1" ColumnDefinitions="Auto,2*,Auto,2*" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.NewCollection}}"
+                                       VerticalAlignment="Center" />
+                            <TextBox Grid.Column="1"
+                                     Text="{Binding Collections.NewCollectionName, UpdateSourceTrigger=PropertyChanged}"
+                                     PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.CollectionName}}"
+                                     AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.NewCollection}}" />
+                            <TextBlock Grid.Column="2"
+                                       Text="{i18n:Translate {x:Static i18n:UiKeys.RenameCollection}}"
+                                       VerticalAlignment="Center" />
+                            <TextBox Grid.Column="3"
+                                     Text="{Binding Collections.RenameTo, UpdateSourceTrigger=PropertyChanged}"
+                                     PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.CollectionName}}"
+                                     AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.RenameCollection}}" />
+                        </Grid>
+
+                        <StackPanel Grid.Row="2"
+                                    Orientation="Horizontal"
+                                    HorizontalAlignment="Right"
+                                    Spacing="{DynamicResource SkySpaceSm}">
+                            <Button Content="+"
+                                    FontSize="{DynamicResource SkyFontSubtitle}"
+                                    Width="34"
+                                    Height="28"
+                                    ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.NewCollection}}"
+                                    AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.NewCollection}}"
+                                    Command="{Binding Collections.CreateCollectionCommand}" />
+                            <Button Content="✎"
+                                    FontSize="{DynamicResource SkyFontSubtitle}"
+                                    Width="34"
+                                    Height="28"
+                                    ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.RenameCollection}}"
+                                    AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.RenameCollection}}"
+                                    Command="{Binding Collections.RenameCollectionCommand}" />
+                            <Button Content="-"
+                                    FontSize="{DynamicResource SkyFontSubtitle}"
+                                    Width="34"
+                                    Height="28"
+                                    ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.DeleteCollection}}"
+                                    AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.DeleteCollection}}"
+                                    Command="{Binding Collections.DeleteCollectionCommand}" />
+                            <Button Content="↺"
+                                    FontSize="{DynamicResource SkyFontSubtitle}"
+                                    Width="34"
+                                    Height="28"
+                                    ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.RemoveMissing}}"
+                                    AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.RemoveMissing}}"
+                                    Command="{Binding Collections.RemoveMissingEntriesCommand}" />
+                            <Button Content="→"
+                                    FontSize="{DynamicResource SkyFontSubtitle}"
+                                    Width="34"
+                                    Height="28"
+                                    ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.GoToEntry}}"
+                                    AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.GoToEntry}}"
+                                    Command="{Binding Collections.NavigateToSelectedCommand}" />
+                            <Button Content="↻"
+                                    FontSize="{DynamicResource SkyFontSubtitle}"
+                                    Width="34"
+                                    Height="28"
+                                    ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.RefreshResults}}"
+                                    AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.RefreshResults}}"
+                                    Command="{Binding Collections.RefreshResultsCommand}" />
+                        </StackPanel>
+
+                        <Grid Grid.Row="3" ColumnDefinitions="2*,3*" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                            <Border BorderBrush="#2E2E2E" BorderThickness="1">
+                                <Grid RowDefinitions="Auto,*">
+                                    <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="{DynamicResource SkyRowPadding}">
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.CollectionName}}" FontWeight="SemiBold" />
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{i18n:Translate {x:Static i18n:UiKeys.CollectionEntries}}"
+                                                       FontWeight="SemiBold" />
+                                        </Grid>
+                                    </Border>
+                                    <ListBox Grid.Row="1"
+                                             ItemsSource="{Binding Collections.Collections}"
+                                             SelectedItem="{Binding Collections.SelectedCollection}"
+                                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                             AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.Collections}}">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:CollectionListItemViewModel">
+                                                <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="{DynamicResource SkyRowPadding}">
+                                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                                                        <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceXs}">
+                                                            <TextBlock Text="{Binding Name}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SavedSearch}}"
+                                                                       IsVisible="{Binding IsDynamic}"
+                                                                       Opacity="0.7"
+                                                                       VerticalAlignment="Center" />
+                                                        </StackPanel>
+                                                        <TextBlock Grid.Column="1"
+                                                                   Text="{Binding EntryCount}"
+                                                                   Opacity="0.7"
+                                                                   VerticalAlignment="Center" />
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </Grid>
+                            </Border>
+
+                            <Border Grid.Column="1" BorderBrush="#2E2E2E" BorderThickness="1">
+                                <Grid RowDefinitions="Auto,*">
+                                    <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="{DynamicResource SkyRowPadding}">
+                                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.CollectionMembers}}" FontWeight="SemiBold" />
+                                    </Border>
+                                    <ListBox Grid.Row="1"
+                                             ItemsSource="{Binding Collections.Members}"
+                                             SelectedItem="{Binding Collections.SelectedMember}"
+                                             DoubleTapped="OnCollectionsMembersDoubleTapped"
+                                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                             AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.CollectionMembers}}">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:CollectionMemberViewModel">
+                                                <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="{DynamicResource SkyRowPadding}">
+                                                    <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
+                                                        <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock Text="{Binding FullPath}"
+                                                                   Opacity="0.7"
+                                                                   TextTrimming="CharacterEllipsis" />
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </Grid>
+                            </Border>
+                        </Grid>
+
+                        <TextBlock Grid.Row="4"
+                                   Text="{Binding Collections.StatusText}"
+                                   Foreground="{DynamicResource ThemeForegroundLowBrush}"
+                                   TextWrapping="Wrap" />
+                    </Grid>
+
                     <Grid Grid.Row="2" IsVisible="{Binding ShowAcpSection}"
                           RowDefinitions="Auto,*,Auto">
                         <TextBox Margin="{DynamicResource SkyGapBottomMd}"

@@ -148,7 +148,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public event EventHandler? SaveCatalogRequested;
     public event EventHandler? AboutRequested;
     public event EventHandler? FindCatalogRequested;
-    public event EventHandler<CollectionsDialogRequestedEventArgs>? CollectionsRequested;
     public event EventHandler<AdvancedFindDialogRequestedEventArgs>? AdvancedFindRequested;
     public event EventHandler<OptionsDialogRequestedEventArgs>? OptionsRequested;
     public event EventHandler? DetailsColumnsChanged;
@@ -2863,7 +2862,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             return;
         }
 
-        var dialog = new OptionsDialogViewModel();
+        var dialog = new OptionsDialogViewModel(CreateCollectionsDialogViewModel());
         OptionsRequested.Invoke(this, new OptionsDialogRequestedEventArgs
         {
             Dialog = dialog,
@@ -5227,12 +5226,17 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void OpenCollectionsDialog()
     {
+        ShowOptions(OptionsDialogViewModel.CollectionsCategoryId);
+    }
+
+    private CollectionsDialogViewModel? CreateCollectionsDialogViewModel()
+    {
         if (collectionService is null || collectionRepository is null || catalogRepository is null)
         {
-            return;
+            return null;
         }
 
-        var dialog = new CollectionsDialogViewModel(
+        return new CollectionsDialogViewModel(
             collectionService,
             undoManager,
             catalogRepository,
@@ -5245,7 +5249,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 RefreshBrowserItemsForSelection();
             },
             navigate: NavigateToDocument);
-        CollectionsRequested?.Invoke(this, new CollectionsDialogRequestedEventArgs { Dialog = dialog });
     }
 
     private IReadOnlyList<CatalogDocument> GetSelectedBrowserItems()

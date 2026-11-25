@@ -85,15 +85,10 @@ public sealed partial class CollectionsDialogViewModel : ObservableObject
     private string statusText = string.Empty;
 
     [ObservableProperty]
-    private bool dialogAccepted;
-
-    [ObservableProperty]
     private int unavailableCount;
 
     [ObservableProperty]
     private bool hasMissingMembers;
-
-    public bool CollectionsAvailable => service is not null;
 
     partial void OnSelectedCollectionChanged(CollectionListItemViewModel? value)
     {
@@ -375,11 +370,5 @@ public sealed partial class CollectionsDialogViewModel : ObservableObject
     {
         RefreshMembers();
         onChanged?.Invoke();
-    }
-
-    [RelayCommand]
-    private void Confirm()
-    {
-        DialogAccepted = true;
     }
 }

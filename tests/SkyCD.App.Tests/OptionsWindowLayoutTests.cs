@@ -296,6 +296,53 @@ public class OptionsWindowLayoutTests
             element => (string?)element.Attribute("IsVisible") == "{Binding ShowScanSection}");
     }
 
+    [Fact]
+    public void CollectionsSection_HostsEveryManagerActionOnTheSharedListPage()
+    {
+        var xaml = ReadRepoFile("src", "SkyCD.App", "Views", "OptionsWindow.axaml");
+        var document = XDocument.Parse(xaml);
+        var section = Assert.Single(document.Descendants(),
+            element => (string?)element.Attribute("IsVisible") == "{Binding ShowCollectionsSection}");
+
+        Assert.Equal("Grid", section.Name.LocalName);
+        Assert.Equal("Auto,Auto,Auto,*,Auto", (string?)section.Attribute("RowDefinitions"));
+
+        var commands = section.Descendants(Avalonia + "Button")
+            .Select(button => button.Attribute("Command")?.Value ?? string.Empty)
+            .ToArray();
+        Assert.Equal(
+        [
+            "{Binding Collections.CreateCollectionCommand}",
+            "{Binding Collections.RenameCollectionCommand}",
+            "{Binding Collections.DeleteCollectionCommand}",
+            "{Binding Collections.RemoveMissingEntriesCommand}",
+            "{Binding Collections.NavigateToSelectedCommand}",
+            "{Binding Collections.RefreshResultsCommand}"
+        ], commands);
+
+        var lists = section.Descendants(Avalonia + "ListBox").ToArray();
+        Assert.Equal(2, lists.Length);
+        Assert.Contains("UiKeys.SavedSearch", lists[0].ToString(), StringComparison.Ordinal);
+        Assert.Contains("UiKeys.CollectionEntries", section.ToString(), StringComparison.Ordinal);
+        Assert.Equal("{Binding Collections.Collections}", (string?)lists[0].Attribute("ItemsSource"));
+        Assert.Equal("{Binding Collections.Members}", (string?)lists[1].Attribute("ItemsSource"));
+        Assert.Equal("OnCollectionsMembersDoubleTapped", (string?)lists[1].Attribute("DoubleTapped"));
+
+        var memberPane = Assert.Single(section.Descendants(Avalonia + "Border"),
+            border => (string?)border.Attribute("Grid.Column") == "1" &&
+                      border.ToString().Contains("UiKeys.CollectionMembers", StringComparison.Ordinal));
+        Assert.Contains("UiKeys.CollectionMembers", memberPane.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void CollectionsWindow_IsNoLongerASeparateDialog()
+    {
+        var root = FindRepoRoot();
+
+        Assert.False(File.Exists(Path.Combine(root, "src", "SkyCD.App", "Views", "CollectionsWindow.axaml")));
+        Assert.False(File.Exists(Path.Combine(root, "src", "SkyCD.App", "Views", "CollectionsWindow.axaml.cs")));
+    }
+
     private static string ReadRepoFile(params string[] parts)
     {
         var root = FindRepoRoot();

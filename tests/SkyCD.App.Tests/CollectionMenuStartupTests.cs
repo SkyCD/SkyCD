@@ -11,6 +11,7 @@ using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.TestSupport;
+using SkyCD.UI.Localization;
 using Xunit;
 
 namespace SkyCD.App.Tests;
@@ -117,6 +118,25 @@ public sealed class CollectionMenuStartupTests : IDisposable
 
     private static IReadOnlyList<string> StoredEntryIds(Stack stack, string collectionId) =>
         stack.Collections.Get(collectionId)!.EntryIds ?? [];
+
+    [Fact]
+    public void ManageCollectionsMenu_OpensOptionsOnCollectionsPage()
+    {
+        using var stack = CreateSeededStack();
+        CreateCollection(stack, "Favorites", "file-a");
+        using var viewModel = stack.CreateViewModel();
+        OptionsDialogRequestedEventArgs? request = null;
+        viewModel.OptionsRequested += (_, args) => request = args;
+
+        var manage = CollectionsParent(viewModel).Items.Single(item =>
+            item.Header == LocalizationService.Current.Get(UiKeys.ManageCollections));
+        manage.Command!.Execute(null);
+
+        Assert.NotNull(request);
+        Assert.Equal(OptionsDialogViewModel.CollectionsCategoryId, request!.PreselectSettingCategory);
+        Assert.NotNull(request.Dialog.Collections);
+        Assert.Equal("Favorites", request.Dialog.Collections!.Collections.Single().Name);
+    }
 
     [Fact]
     public void StartupWithStaticCollectionAndSelectedFolder_DoesNotThrowAndShowsCorrectState()

@@ -60,6 +60,7 @@ public partial class OptionsWindow : Window
         {
             vm.PropertyChanged -= OnViewModelPropertyChanged;
             vm.PropertyChanged += OnViewModelPropertyChanged;
+            vm.Collections?.WatchCatalogChanges(action => Dispatcher.UIThread.Post(action));
         }
     }
 
@@ -112,6 +113,15 @@ public partial class OptionsWindow : Window
         if (DataContext is OptionsDialogViewModel { Toolbar: { AddCommand: var add } } && add.CanExecute(null))
         {
             add.Execute(null);
+        }
+    }
+
+    private void OnCollectionsMembersDoubleTapped(object? sender, TappedEventArgs e)
+    {
+        if (DataContext is OptionsDialogViewModel { Collections: { } collections } &&
+            collections.NavigateToSelectedCommand.CanExecute(null))
+        {
+            collections.NavigateToSelectedCommand.Execute(null);
         }
     }
 
