@@ -907,14 +907,23 @@
                         </Grid>
                         <StackPanel Grid.Row="1" Spacing="{DynamicResource SkySpaceXs}">
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceXs}">
-                                <TextBox Text="{Binding PluginPath}"
-                                         AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.PluginPath}}" />
+                                <TextBox Text="{Binding PluginPath, UpdateSourceTrigger=PropertyChanged}"
+                                         LostFocus="OnPluginPathFieldLostFocus"
+                                         AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.PluginPath}}">
+                                    <TextBox.KeyBindings>
+                                        <KeyBinding Gesture="Enter" Command="{Binding RescanPluginPathCommand}" />
+                                    </TextBox.KeyBindings>
+                                </TextBox>
                                 <Button Grid.Column="1"
                                         Content="{i18n:Translate {x:Static i18n:UiKeys.Browse}}"
                                         Command="{Binding BrowsePluginPathCommand}" />
                             </Grid>
                             <TextBlock Classes="caption"
                                        Text="{Binding InfoMessage}"
+                                       TextWrapping="Wrap" />
+                            <TextBlock Foreground="#DC2626"
+                                       IsVisible="{Binding HasPluginPathHint}"
+                                       Text="{Binding PluginPathHint}"
                                        TextWrapping="Wrap" />
                         </StackPanel>
                         <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled">
@@ -1349,6 +1358,28 @@
                         <TextBlock Grid.Row="3"
                                    Text="{Binding CollectionsPage.StatusText}"
                                    TextWrapping="Wrap" />
+                    </Grid>
+                    <Grid Grid.Row="2"
+                          IsVisible="{Binding ShowContributedOptionsPageSection}"
+                          RowDefinitions="Auto,Auto,*"
+                          RowSpacing="{DynamicResource SkySpaceSm}">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                            <TextBlock Text="{Binding SelectedContributedPage.Title}"
+                                       FontSize="{DynamicResource SkyFontBody}" />
+                            <Border Grid.Column="1"
+                                    Height="1"
+                                    Background="{DynamicResource ThemeBorderLowBrush}"
+                                    VerticalAlignment="Center" />
+                        </Grid>
+                        <TextBlock Grid.Row="1"
+                                   Text="{Binding SelectedContributedPage.Error}"
+                                   IsVisible="{Binding SelectedContributedPage.HasError}"
+                                   TextWrapping="Wrap" />
+                        <ContentControl Grid.Row="2"
+                                        Content="{Binding SelectedContributedPage.Content}"
+                                        IsVisible="{Binding SelectedContributedPage.HasContent}"
+                                        HorizontalContentAlignment="Stretch"
+                                        VerticalContentAlignment="Stretch" />
                     </Grid>
                     <Grid Grid.Row="2" IsVisible="{Binding ShowAcpSection}"
                           RowDefinitions="Auto,*,Auto">

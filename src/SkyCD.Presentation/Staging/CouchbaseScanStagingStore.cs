@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Couchbase.Lite;
 using Couchbase.Lite.Query;
+using SkyCD.Couchbase;
 using SkyCD.Couchbase.Mapping;
 using SkyCD.Documents;
 using SkyCD.Presentation.Staging.Exceptions;
@@ -76,26 +77,29 @@ public sealed class CouchbaseScanStagingStore : IStagingStore
             .Select(SelectResult.All())
             .From(DataSource.Collection(sessionsCollection));
 
-        using var results = query.Execute();
-        var list = new List<ScanStagingSession>();
-
-        foreach (var row in results)
+        return DatabaseGate.Run(database, () =>
         {
-            var dict = row.GetDictionary(sessionsCollection.Name);
-            if (dict is null)
+            using var results = query.Execute();
+            var list = new List<ScanStagingSession>();
+
+            foreach (var row in results)
             {
-                continue;
+                var dict = row.GetDictionary(sessionsCollection.Name);
+                if (dict is null)
+                {
+                    continue;
+                }
+
+                using var doc = new MutableDocument(dict.ToDictionary());
+                var session = doc.FromDocument<ScanStagingSession>();
+                if (session is not null)
+                {
+                    list.Add(session);
+                }
             }
 
-            using var doc = new MutableDocument(dict.ToDictionary());
-            var session = doc.FromDocument<ScanStagingSession>();
-            if (session is not null)
-            {
-                list.Add(session);
-            }
-        }
-
-        return list;
+            return list;
+        });
     }
 
     public void StageDocuments(string sessionId, IEnumerable<CatalogDocument> documents)
@@ -123,7 +127,7 @@ public sealed class CouchbaseScanStagingStore : IStagingStore
             return;
         }
 
-        database.InBatch(() =>
+        DatabaseGate.InBatch(database, () =>
         {
             var counter = session.DocumentsCount;
             foreach (var doc in docList)
@@ -156,26 +160,29 @@ public sealed class CouchbaseScanStagingStore : IStagingStore
             .Where(Expression.Property("SessionId").EqualTo(Expression.String(sessionId)))
             .OrderBy(Ordering.Property("Sequence").Ascending());
 
-        using var results = query.Execute();
-        var list = new List<CatalogDocument>();
-
-        foreach (var row in results)
+        return DatabaseGate.Run(database, () =>
         {
-            var dict = row.GetDictionary(documentsCollection.Name);
-            if (dict is null)
+            using var results = query.Execute();
+            var list = new List<CatalogDocument>();
+
+            foreach (var row in results)
             {
-                continue;
+                var dict = row.GetDictionary(documentsCollection.Name);
+                if (dict is null)
+                {
+                    continue;
+                }
+
+                using var doc = new MutableDocument(dict.ToDictionary());
+                var catalogDoc = doc.FromDocument<CatalogDocument>();
+                if (catalogDoc is not null)
+                {
+                    list.Add(catalogDoc);
+                }
             }
 
-            using var doc = new MutableDocument(dict.ToDictionary());
-            var catalogDoc = doc.FromDocument<CatalogDocument>();
-            if (catalogDoc is not null)
-            {
-                list.Add(catalogDoc);
-            }
-        }
-
-        return list;
+            return list;
+        });
     }
 
     public void UpdateSession(ScanStagingSession session)
@@ -197,7 +204,7 @@ public sealed class CouchbaseScanStagingStore : IStagingStore
         ThrowIfDisposed();
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
 
-        database.InBatch(() =>
+        DatabaseGate.InBatch(database, () =>
         {
             using var sessionDoc = sessionsCollection.GetDocument(sessionId);
             if (sessionDoc is not null)

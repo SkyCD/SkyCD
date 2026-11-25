@@ -30,6 +30,7 @@ using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
 using SkyCD.SDK.Capabilities.FileFormats;
 using SkyCD.SDK.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Options;
 using SkyCD.Core.DependencyInjection;
 using SkyCD.Core.DependencyInjection.Registrators;
 using SkyCD.SDK.Capabilities.Catalog;
@@ -848,13 +849,19 @@ public partial class MainWindow : Window
         ApplyLanguage(options.Language);
         if (!string.IsNullOrWhiteSpace(options.LastOpenedCatalogPath) && File.Exists(options.LastOpenedCatalogPath))
         {
-            EnsureFileFormatProvidersLoaded();
+            // Advertise the restore before the first frame so the shell paints with its busy state, then wait
+            // for that frame: plugin discovery and the import would otherwise block rendering and leave the
+            // window as a transparent client area (#1109).
+            vm.BeginCatalogLoad();
+            await Dispatcher.UIThread.InvokeAsync(static () => { }, DispatcherPriority.Background);
             try
             {
+                EnsureFileFormatProvidersLoaded();
                 await TryLoadCatalogIntoViewModelAsync(options.LastOpenedCatalogPath);
             }
             catch (Exception exception)
             {
+                vm.EndCatalogLoad();
                 vm.StatusText = LocalizationService.Current.Format(TextKeys.FailedToOpenCatalog, exception.Message);
             }
         }
@@ -1627,7 +1634,7 @@ public partial class MainWindow : Window
         var options = LoadAppOptions();
         var pluginPath = options.PluginPath;
 
-        e.Dialog.PluginPath = pluginPath;
+        e.Dialog.InitializePluginPath(pluginPath);
         e.Dialog.SetPluginRepositories(options.PluginRepositorySources);
         e.Dialog.IsMcpServerEnabled = options.IsMcpServerEnabled;
         e.Dialog.McpPort = options.McpPort;
@@ -1664,6 +1671,7 @@ public partial class MainWindow : Window
         e.Dialog.SetPluginUninstaller(pluginUninstaller);
         e.Dialog.BrowsePluginPathRequested += OnBrowsePluginPathRequested;
         e.Dialog.RefreshPluginsRequested += OnRefreshPluginsRequested;
+        e.Dialog.PluginPathScanRequested += OnPluginPathScanRequested;
         e.Dialog.ResetStatusVariantsRequested += OnResetStatusVariantsRequested;
         e.Dialog.ResetScanExclusionRulesRequested += OnResetScanExclusionRulesRequested;
         e.Dialog.ResetAiScanExclusionsRequested += OnResetAiScanExclusionsRequested;
@@ -1754,9 +1762,16 @@ public partial class MainWindow : Window
             // Trigger UI refresh to apply new language
             InvalidateVisual();
         }
+        else
+        {
+            // A rescan performed while the dialog was open changed live plugin state; put the stored
+            // folder back so Cancel leaves the running app on the persisted path.
+            e.Dialog.RevertPluginPathPreview();
+        }
 
         e.Dialog.BrowsePluginPathRequested -= OnBrowsePluginPathRequested;
         e.Dialog.RefreshPluginsRequested -= OnRefreshPluginsRequested;
+        e.Dialog.PluginPathScanRequested -= OnPluginPathScanRequested;
         e.Dialog.ResetStatusVariantsRequested -= OnResetStatusVariantsRequested;
         e.Dialog.ResetScanExclusionRulesRequested -= OnResetScanExclusionRulesRequested;
         e.Dialog.ResetAiScanExclusionsRequested -= OnResetAiScanExclusionsRequested;
@@ -1932,7 +1947,7 @@ public partial class MainWindow : Window
             reloadedViewModel = await new CatalogLoadService(fileFormatManager).LoadAsync(localPath, (payload, importProgress) =>
             {
                 var entries = ExtractCatalogEntries(payload);
-                catalogRepository.Collection.Database.InBatch(() =>
+                DatabaseGate.InBatch(catalogRepository.Collection.Database, () =>
                 {
                     ReplaceCatalogContent(entries, importProgress);
                 });
@@ -2145,6 +2160,24 @@ public partial class MainWindow : Window
         RefreshPlugins(dialogVm);
     }
 
+    /// <summary>Handles the folder field's typing pause, Enter and lost focus.</summary>
+    private void OnPluginPathScanRequested(object? sender, EventArgs e)
+    {
+        if (sender is not OptionsDialogViewModel dialogVm)
+        {
+            return;
+        }
+
+        // The debounce expires on a pool thread, while the list it rebuilds is bound to the UI thread.
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            RefreshPlugins(dialogVm);
+            return;
+        }
+
+        Dispatcher.UIThread.Post(() => RefreshPlugins(dialogVm));
+    }
+
     private async void OnResetStatusVariantsRequested(object? sender, EventArgs e)
     {
         if (sender is not OptionsDialogViewModel dialogVm)
@@ -2213,6 +2246,8 @@ public partial class MainWindow : Window
     {
         dialogVm.CapturePluginStates();
         pluginManager.Discover(dialogVm.PluginPath, hostVersionProvider.Current);
+        // The runtime now reflects this folder: it is the path Cancel has to restore.
+        dialogVm.MarkPluginPathScanned(dialogVm.PluginPath);
         var descriptors = pluginManager.GetPluginDescriptors();
         var discoveredById = pluginManager.AvailablePlugins
             .ToDictionary(static item => item.Id, StringComparer.OrdinalIgnoreCase);
@@ -2225,6 +2260,9 @@ public partial class MainWindow : Window
             .ToArray();
 
         dialogVm.SetPlugins(plugins);
+        dialogVm.SetPluginOptionsPages(pluginManager.AvailablePlugins.SelectMany(plugin =>
+            plugin.Capabilities.OfType<IOptionsPageCapability>()
+                .Select(capability => new OptionsPageProvider(plugin.Id, plugin.Name, capability))));
         dialogVm.SetPluginConfigurations(configurationManager, PluginConfigurationTimeout);
     }
 

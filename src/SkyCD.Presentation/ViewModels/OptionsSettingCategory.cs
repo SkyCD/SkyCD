@@ -6,4 +6,5 @@ public sealed record OptionsSettingCategory(
     string Title,
     int BuiltInIndex = -1,
     OptionsPluginPage? PluginPage = null,
-    string? Group = null);
+    string? Group = null,
+    OptionsContributedPage? ContributedPage = null);

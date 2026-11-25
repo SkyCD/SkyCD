@@ -60,6 +60,7 @@ public partial class OptionsWindow : Window
         {
             vm.PropertyChanged -= OnViewModelPropertyChanged;
             vm.PropertyChanged += OnViewModelPropertyChanged;
+            vm.SelectedContributedPage?.EnsureContent();
             vm.CollectionsPage?.WatchCatalogChanges(action => Dispatcher.UIThread.Post(action));
         }
     }
@@ -76,6 +77,11 @@ public partial class OptionsWindow : Window
         {
             await LoadPluginPageIfVisibleAsync();
         }
+        else if (e.PropertyName == nameof(OptionsDialogViewModel.ShowContributedOptionsPageSection) &&
+                 DataContext is OptionsDialogViewModel optionsViewModel)
+        {
+            optionsViewModel.SelectedContributedPage?.EnsureContent();
+        }
         else if (e.PropertyName == nameof(OptionsDialogViewModel.ShowAcpSection))
         {
             await LoadAcpAgentsIfVisibleAsync();
@@ -90,6 +96,15 @@ public partial class OptionsWindow : Window
     private void OnCancelClicked(object? sender, RoutedEventArgs e)
     {
         Close(false);
+    }
+
+    private void OnPluginPathFieldLostFocus(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is OptionsDialogViewModel vm)
+        {
+            // Leaving the field ends the typing pause and rescans right away.
+            vm.RescanPluginPathCommand.Execute(null);
+        }
     }
 
     private void OnInstalledPluginsSelectionChanged(object? sender, SelectionChangedEventArgs e)

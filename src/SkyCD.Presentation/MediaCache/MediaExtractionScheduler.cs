@@ -245,7 +245,9 @@ public sealed class MediaExtractionScheduler
     }
 
     private static string ResolveSourceName(MediaExtractionRequest request) =>
-        string.IsNullOrWhiteSpace(request.SourcePath) ? string.Empty : Path.GetFileName(request.SourcePath);
+        string.IsNullOrWhiteSpace(request.SourcePath)
+            ? string.Empty
+            : Path.GetFileName(request.SourcePath.Replace('\\', '/'));
 
     private static MediaThumbnailArtifact? SelectThumbnailArtifact(MediaCachePayload payload)
     {

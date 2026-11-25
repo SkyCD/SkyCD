@@ -6,7 +6,7 @@
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
         <AssemblyTitle>Locations</AssemblyTitle>
-        <Description>Manages storage locations and contributes the location column, search field and management window to the catalog.</Description>
+        <Description>Manages storage locations and contributes the location column, search field and Options page to the catalog.</Description>
     </PropertyGroup>
     <ItemGroup>
         <ProjectReference Include="..\..\src\SkyCD.SDK\SkyCD.SDK.csproj"/>

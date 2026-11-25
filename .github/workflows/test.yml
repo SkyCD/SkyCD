@@ -21,6 +21,7 @@ jobs:
   style:
     name: Style (.NET format)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -53,9 +54,11 @@ jobs:
     needs: style
     strategy:
       fail-fast: false
+      max-parallel: 2
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -78,35 +81,17 @@ jobs:
 
       - name: Test solution
         shell: bash
+        timeout-minutes: 20
         run: |
-          # A crashed test host aborts its whole assembly run, so one crashing assembly can fail the jobs of
-          # unrelated changes. Rerun only for that signature; assertion and build failures fail immediately.
-          test_command=(dotnet test SkyCD.slnx --configuration Release --no-build --verbosity normal
-            --test-adapter-path "${{ github.workspace }}/tools/SkyCD.TestLogger/bin/Release/net10.0"
-            --logger "console;verbosity=quiet"
-            --logger "ansi"
-            --logger "trx;LogFilePrefix=test-results-${{ matrix.os }}"
-            --results-directory "artifacts/test-results/${{ matrix.os }}")
-
-          mkdir -p artifacts/test-logs
-
-          for attempt in 1 2 3; do
-            log="artifacts/test-logs/dotnet-test-attempt-${attempt}.log"
-            status=0
-            "${test_command[@]}" 2>&1 | tee "$log" || status=$?
-
-            if [ "$status" -eq 0 ]; then
-              exit 0
-            fi
-
-            if ! grep -q "Test host process crashed" "$log"; then
-              exit "$status"
-            fi
-
-            echo "::warning::Test host process crashed on attempt ${attempt}; rerunning the solution tests."
-          done
-
-          exit 1
+          # No `tee` and no redirect: streaming straight to the job log keeps the output live, and
+          # a test host left running after dotnet test exits cannot hold a pipe open and stall the step.
+          dotnet test SkyCD.slnx --configuration Release --no-build --verbosity normal \
+            --test-adapter-path "${{ github.workspace }}/tools/SkyCD.TestLogger/bin/Release/net10.0" \
+            --logger "console;verbosity=quiet" \
+            --logger "ansi" \
+            --logger "trx;LogFilePrefix=test-results-${{ matrix.os }}" \
+            --results-directory "artifacts/test-results/${{ matrix.os }}" \
+            --blame-hang --blame-hang-timeout 5m --blame-hang-dump-type none
 
       - name: Upload test results
         if: always()
@@ -119,6 +104,7 @@ jobs:
     name: License Compliance
     needs: style
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -151,6 +137,7 @@ jobs:
     if: github.event_name == 'push'
     needs: style
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v7
