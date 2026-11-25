@@ -5,7 +5,6 @@
         xmlns:avaloniaConverters="using:Avalonia.Data.Converters"
         xmlns:converters="using:SkyCD.App.Converters"
         xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
-        xmlns:lucide="clr-namespace:IconPacks.Avalonia.Lucide;assembly=IconPacks.Avalonia.Lucide"
         xmlns:views="using:SkyCD.App.Views"
         x:Class="SkyCD.App.Views.AddToListWindow"
         x:DataType="vm:AddToListDialogViewModel"
@@ -25,6 +24,7 @@
 
     <Window.Resources>
         <converters:InternetProtocolIconConverter x:Key="InternetProtocolIcon" />
+        <converters:SourceIconImageConverter x:Key="SourceIconImage" />
         <!-- Issue #1030: the dropdown rows share the closed field's inset. -->
         <ControlTheme x:Key="SourceComboBoxItemTheme"
                       TargetType="ComboBoxItem"
@@ -77,10 +77,10 @@
                         Command="{Binding SelectSourceCommand}"
                         CommandParameter="Media">
                     <StackPanel Spacing="{DynamicResource SkySpaceXs}" HorizontalAlignment="Center">
-                        <iconPacks:PackIconControl Width="40"
-                                                   Height="40"
-                                                   HorizontalAlignment="Center"
-                                                   Kind="{x:Static lucide:PackIconLucideKind.Disc3}" />
+                        <Image Width="40"
+                               Height="40"
+                               HorizontalAlignment="Center"
+                               Source="{Binding Converter={StaticResource SourceIconImage}, ConverterParameter=Media}" />
                         <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.FromMedia}}" HorizontalAlignment="Center" TextWrapping="Wrap" />
                     </StackPanel>
                 </Button>
@@ -89,10 +89,10 @@
                         Command="{Binding SelectSourceCommand}"
                         CommandParameter="Folder">
                     <StackPanel Spacing="{DynamicResource SkySpaceXs}" HorizontalAlignment="Center">
-                        <iconPacks:PackIconControl Width="40"
-                                                   Height="40"
-                                                   HorizontalAlignment="Center"
-                                                   Kind="{x:Static lucide:PackIconLucideKind.Folder}" />
+                        <Image Width="40"
+                               Height="40"
+                               HorizontalAlignment="Center"
+                               Source="{Binding Converter={StaticResource SourceIconImage}, ConverterParameter=Folder}" />
                         <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.FromFolder}}" HorizontalAlignment="Center" TextWrapping="Wrap" />
                     </StackPanel>
                 </Button>
@@ -101,10 +101,10 @@
                         Command="{Binding SelectSourceCommand}"
                         CommandParameter="Internet">
                     <StackPanel Spacing="{DynamicResource SkySpaceXs}" HorizontalAlignment="Center">
-                        <iconPacks:PackIconControl Width="40"
-                                                   Height="40"
-                                                   HorizontalAlignment="Center"
-                                                   Kind="{x:Static lucide:PackIconLucideKind.Globe}" />
+                        <Image Width="40"
+                               Height="40"
+                               HorizontalAlignment="Center"
+                               Source="{Binding Converter={StaticResource SourceIconImage}, ConverterParameter=Internet}" />
                         <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.FromInternet}}" HorizontalAlignment="Center" TextWrapping="Wrap" />
                     </StackPanel>
                 </Button>
@@ -113,10 +113,10 @@
                         Command="{Binding SelectSourceCommand}"
                         CommandParameter="TitleOnly">
                     <StackPanel Spacing="{DynamicResource SkySpaceXs}" HorizontalAlignment="Center">
-                        <iconPacks:PackIconControl Width="40"
-                                                   Height="40"
-                                                   HorizontalAlignment="Center"
-                                                   Kind="{x:Static lucide:PackIconLucideKind.Type}" />
+                        <Image Width="40"
+                               Height="40"
+                               HorizontalAlignment="Center"
+                               Source="{Binding Converter={StaticResource SourceIconImage}, ConverterParameter=TitleOnly}" />
                         <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.TitleOnly}}" HorizontalAlignment="Center" TextWrapping="Wrap" />
                     </StackPanel>
                 </Button>

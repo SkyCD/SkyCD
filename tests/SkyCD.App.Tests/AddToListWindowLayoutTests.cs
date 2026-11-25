@@ -134,10 +134,10 @@ public class AddToListWindowLayoutTests
     }
 
     [Fact]
-    public void SourceSelector_UsesDistinctSharedLineIcons()
+    public void SourceSelector_UsesDistinctColoredArtwork()
     {
-        // Issue #1061: every source mode shows its own glyph from the shared line-icon family,
-        // not a one-off 40x40 bitmap (Title only used to reuse the media artwork).
+        // Issue #1099: every source mode shows its own colored artwork from the shared Twemoji pipeline,
+        // instead of the monochrome line glyphs introduced with #1061.
         var document = XDocument.Parse(ReadRepoFile("src", "SkyCD.App", "Views", "AddToListWindow.axaml"));
         var buttons = document.Descendants(Avalonia + "Button")
             .Where(button => ((string?)button.Attribute("Classes") ?? string.Empty)
@@ -146,16 +146,32 @@ public class AddToListWindowLayoutTests
             .ToList();
 
         Assert.Equal(4, buttons.Count);
-        Assert.DoesNotContain(document.Descendants(Avalonia + "Image"), _ => true);
+        Assert.DoesNotContain(document.Descendants(IconPacks + "PackIconControl"),
+            icon => icon.Ancestors(Avalonia + "Button")
+                .Any(button => ((string?)button.Attribute("Classes") ?? string.Empty).Contains("source")));
 
-        var kinds = buttons
-            .Select(button => Assert.Single(button.Descendants(IconPacks + "PackIconControl")))
-            .Select(icon => (string?)icon.Attribute("Kind"))
+        var images = buttons
+            .Select(button => Assert.Single(button.Descendants(Avalonia + "Image")))
             .ToList();
+        var sources = images.Select(image => (string?)image.Attribute("Source")).ToList();
 
-        Assert.All(kinds, kind => Assert.StartsWith("{x:Static lucide:PackIconLucideKind.", kind, StringComparison.Ordinal));
-        Assert.Equal(4, kinds.Distinct().Count());
+        Assert.All(sources, source =>
+            Assert.Contains("SourceIconImage", source, StringComparison.Ordinal));
+        Assert.All(images, image =>
+        {
+            Assert.Equal("40", (string?)image.Attribute("Width"));
+            Assert.Equal("40", (string?)image.Attribute("Height"));
+        });
+
+        var parameters = sources
+            .Select(source => ParameterOf(source!))
+            .ToList();
+        Assert.Equal(["Media", "Folder", "Internet", "TitleOnly"], parameters);
     }
+
+    private static string ParameterOf(string source) =>
+        source[(source.IndexOf("ConverterParameter=", StringComparison.Ordinal) + "ConverterParameter=".Length)..]
+            .TrimEnd(' ', '}');
 
     [Fact]
     public void Layout_UsesDesignTokensForSpacing()
