@@ -47,7 +47,7 @@ public sealed class CatalogDeletionUndoIntegrationTests : IDisposable
         viewModel.ActivePane = ActivePane.Browser;
         viewModel.SelectedBrowserItems = new List<CatalogDocument> { scifi };
 
-        viewModel.DeleteItemCommand.Execute(null);
+        await viewModel.DeleteItemCommand.ExecuteAsync(null);
 
         Assert.Null(context.Catalog.Get("scifi"));
         Assert.Null(context.Catalog.Get("interstellar"));
@@ -89,7 +89,7 @@ public sealed class CatalogDeletionUndoIntegrationTests : IDisposable
         viewModel.ActivePane = ActivePane.Browser;
         viewModel.SelectedBrowserItems = new List<CatalogDocument> { scifi, drama };
 
-        viewModel.DeleteItemCommand.Execute(null);
+        await viewModel.DeleteItemCommand.ExecuteAsync(null);
 
         foreach (var id in new[] { "scifi", "interstellar", "arrival", "drama", "drama-film" })
         {
@@ -114,7 +114,7 @@ public sealed class CatalogDeletionUndoIntegrationTests : IDisposable
         viewModel.ActivePane = ActivePane.Tree;
         viewModel.SelectedTreeNode = context.SelectTreeNode(viewModel, "scifi");
 
-        viewModel.DeleteItemCommand.Execute("tree");
+        await viewModel.DeleteItemCommand.ExecuteAsync("tree");
 
         Assert.Null(context.Catalog.Get("interstellar"));
         Assert.Null(context.Catalog.Get("scifi"));
@@ -136,7 +136,7 @@ public sealed class CatalogDeletionUndoIntegrationTests : IDisposable
         viewModel.ActivePane = ActivePane.Tree;
         viewModel.SelectedTreeNode = context.SelectTreeNode(viewModel, "scifi");
 
-        viewModel.DeleteItemCommand.Execute("tree");
+        await viewModel.DeleteItemCommand.ExecuteAsync("tree");
 
         Assert.Null(context.FindTreeNode(viewModel, "scifi"));
         Assert.True(viewModel.CanUndo);
@@ -167,7 +167,7 @@ public sealed class CatalogDeletionUndoIntegrationTests : IDisposable
         viewModel.SelectedBrowserItem = viewModel.BrowserItems.Single(item => item.Id == "scifi");
         viewModel.SelectedBrowserItems = new List<CatalogDocument> { viewModel.SelectedBrowserItem! };
 
-        viewModel.DeleteItemCommand.Execute("list");
+        await viewModel.DeleteItemCommand.ExecuteAsync("list");
 
         Assert.Null(context.FindTreeNode(viewModel, "scifi"));
         Assert.True(viewModel.CanUndo);
@@ -198,7 +198,7 @@ public sealed class CatalogDeletionUndoIntegrationTests : IDisposable
         viewModel.ActivePane = ActivePane.Tree;
         viewModel.SelectedTreeNode = staleNode;
 
-        viewModel.DeleteItemCommand.Execute("tree");
+        await viewModel.DeleteItemCommand.ExecuteAsync("tree");
 
         // The pane is cleaned up, but nothing may be presented as reversible: there was no record left to
         // restore. A placeholder snapshot would come back as Type=File with no ParentId, which the tree
@@ -251,7 +251,7 @@ public sealed class CatalogDeletionUndoIntegrationTests : IDisposable
         viewModel.ActivePane = ActivePane.Tree;
         viewModel.SelectedTreeNode = context.SelectTreeNode(viewModel, "disc-1");
 
-        viewModel.DeleteItemCommand.Execute("tree");
+        await viewModel.DeleteItemCommand.ExecuteAsync("tree");
 
         Assert.Null(context.FindTreeNode(viewModel, "disc-1"));
         Assert.True(viewModel.CanUndo);
@@ -277,7 +277,7 @@ public sealed class CatalogDeletionUndoIntegrationTests : IDisposable
         var scifi = viewModel.BrowserItems.Single(item => item.Id == "scifi");
         viewModel.ActivePane = ActivePane.Browser;
         viewModel.SelectedBrowserItems = new List<CatalogDocument> { scifi };
-        viewModel.DeleteItemCommand.Execute(null);
+        await viewModel.DeleteItemCommand.ExecuteAsync(null);
 
         await viewModel.UndoCommand.ExecuteAsync(null);
         Assert.NotNull(context.Catalog.Get("interstellar"));
@@ -309,7 +309,7 @@ public sealed class CatalogDeletionUndoIntegrationTests : IDisposable
         {
             viewModel.BrowserItems.Single(item => item.Id == "scifi")
         };
-        viewModel.DeleteItemCommand.Execute(null);
+        await viewModel.DeleteItemCommand.ExecuteAsync(null);
 
         for (var cycle = 0; cycle < 2; cycle++)
         {
@@ -355,7 +355,7 @@ public sealed class CatalogDeletionUndoIntegrationTests : IDisposable
     }
 
     [Fact]
-    public void Publisher_ReportsWhenAnImportIsTooLargeToBeUndoable()
+    public async Task Publisher_ReportsWhenAnImportIsTooLargeToBeUndoable()
     {
         using var context = new TestContext();
         context.SeedCatalog();
@@ -385,7 +385,7 @@ public sealed class CatalogDeletionUndoIntegrationTests : IDisposable
     // ---------------------------------------------------------------- capacity and feedback
 
     [Fact]
-    public void HistoryCapacityEviction_ReleasesCachePinsAndReportsToTheUser()
+    public async Task HistoryCapacityEviction_ReleasesCachePinsAndReportsToTheUser()
     {
         using var context = new TestContext();
         context.SeedCatalog();
@@ -425,7 +425,7 @@ public sealed class CatalogDeletionUndoIntegrationTests : IDisposable
             viewModel.BrowserItems.Single(item => item.Id == "scifi")
         };
 
-        viewModel.DeleteItemCommand.Execute(null);
+        await viewModel.DeleteItemCommand.ExecuteAsync(null);
 
         // Applied, but never presented as reversible.
         Assert.Null(context.Catalog.Get("interstellar"));
@@ -439,10 +439,87 @@ public sealed class CatalogDeletionUndoIntegrationTests : IDisposable
         Assert.Null(context.Catalog.Get("interstellar"));
     }
 
+    [Fact]
+    public async Task DeletingALargeFolder_ReportsProgressAndUndoRestoresEveryRecord()
+    {
+        using var context = new TestContext();
+        context.SeedCatalog();
+
+        const int subfolderCount = 5;
+        const int fileCount = 500;
+        var removedIds = new List<string> { "bulk" };
+        context.Catalog.Save("bulk", new CatalogDocument
+        {
+            Id = "bulk",
+            Name = "Bulk",
+            ParentId = "movies",
+            Type = CatalogDocumentType.Folder
+        });
+        for (var subfolder = 0; subfolder < subfolderCount; subfolder++)
+        {
+            var id = $"bulk-{subfolder}";
+            context.Catalog.Save(id, new CatalogDocument
+            {
+                Id = id,
+                Name = $"Bulk {subfolder}",
+                ParentId = "bulk",
+                Type = CatalogDocumentType.Folder
+            });
+            removedIds.Add(id);
+        }
+
+        for (var file = 0; file < fileCount; file++)
+        {
+            var id = $"bulk-file-{file}";
+            context.Catalog.Save(id, new CatalogDocument
+            {
+                Id = id,
+                Name = $"File {file}.mkv",
+                ParentId = $"bulk-{file % subfolderCount}",
+                Type = CatalogDocumentType.File,
+                Size = 100
+            });
+            removedIds.Add(id);
+        }
+
+        using var viewModel = context.CreateViewModel();
+        var observed = new List<(bool Visible, int Value)>();
+        viewModel.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName is nameof(MainWindowViewModel.IsProgressVisible) or
+                nameof(MainWindowViewModel.ProgressValue))
+            {
+                lock (observed) observed.Add((viewModel.IsProgressVisible, viewModel.ProgressValue));
+            }
+        };
+
+        viewModel.ActivePane = ActivePane.Tree;
+        viewModel.SelectedTreeNode = context.SelectTreeNode(viewModel, "bulk");
+
+        await viewModel.DeleteItemCommand.ExecuteAsync("tree");
+
+        Assert.All(removedIds, id => Assert.Null(context.Catalog.Get(id)));
+        Assert.NotNull(context.Catalog.Get("movies"));
+        Assert.True(viewModel.CanUndo);
+        Assert.False(viewModel.IsProgressVisible);
+        Assert.Equal(0, viewModel.ProgressValue);
+        lock (observed)
+        {
+            Assert.Contains(observed, entry => entry.Visible);
+            Assert.Contains(observed, entry => entry.Visible && entry.Value is > 0 and < 100);
+        }
+
+        await viewModel.UndoCommand.ExecuteAsync(null);
+
+        Assert.All(removedIds, id => Assert.NotNull(context.Catalog.Get(id)));
+        Assert.Equal("bulk-0", context.Catalog.Get("bulk-file-0")!.ParentId);
+        Assert.Equal("movies", context.Catalog.Get("bulk")!.ParentId);
+    }
+
     // ---------------------------------------------------------------- preview artifact retention
 
     [Fact]
-    public void PreviewArtifacts_SurviveRetentionWhileHistoryCanStillRestoreTheEntry()
+    public async Task PreviewArtifacts_SurviveRetentionWhileHistoryCanStillRestoreTheEntry()
     {
         using var context = new TestContext();
         context.SeedCatalog();
@@ -456,7 +533,7 @@ public sealed class CatalogDeletionUndoIntegrationTests : IDisposable
         {
             viewModel.BrowserItems.Single(item => item.Id == "scifi")
         };
-        viewModel.DeleteItemCommand.Execute(null);
+        await viewModel.DeleteItemCommand.ExecuteAsync(null);
 
         Assert.Null(context.Catalog.Get("interstellar"));
 
@@ -486,7 +563,7 @@ public sealed class CatalogDeletionUndoIntegrationTests : IDisposable
         {
             viewModel.BrowserItems.Single(item => item.Id == "scifi")
         };
-        viewModel.DeleteItemCommand.Execute(null);
+        await viewModel.DeleteItemCommand.ExecuteAsync(null);
         await viewModel.UndoCommand.ExecuteAsync(null);
 
         var snapshot = new MediaPreviewResolver(viewModel.MediaCache).Resolve(context.Catalog.Get("interstellar")!);
@@ -508,7 +585,7 @@ public sealed class CatalogDeletionUndoIntegrationTests : IDisposable
         {
             viewModel.BrowserItems.Single(item => item.Id == "scifi")
         };
-        viewModel.DeleteItemCommand.Execute(null);
+        await viewModel.DeleteItemCommand.ExecuteAsync(null);
 
         // Closing the database underneath the view model is the storage failure a detached drive produces.
         context.CloseDatabase();
@@ -538,7 +615,7 @@ public sealed class CatalogDeletionUndoIntegrationTests : IDisposable
             {
                 viewModel.BrowserItems.Single(item => item.Id == "scifi")
             };
-            viewModel.DeleteItemCommand.Execute(null);
+            await viewModel.DeleteItemCommand.ExecuteAsync(null);
             await viewModel.UndoCommand.ExecuteAsync(null);
         }
 
@@ -563,7 +640,7 @@ public sealed class CatalogDeletionUndoIntegrationTests : IDisposable
             {
                 viewModel.BrowserItems.Single(item => item.Id == "scifi")
             };
-            viewModel.DeleteItemCommand.Execute(null);
+            await viewModel.DeleteItemCommand.ExecuteAsync(null);
         }
 
         using var reopened = context.CreateViewModel();
@@ -574,7 +651,7 @@ public sealed class CatalogDeletionUndoIntegrationTests : IDisposable
     }
 
     [Fact]
-    public void DeletingCatalogEntries_NeverTouchesTheFilesystem()
+    public async Task DeletingCatalogEntries_NeverTouchesTheFilesystem()
     {
         using var context = new TestContext();
         context.SeedCatalog();
@@ -588,7 +665,7 @@ public sealed class CatalogDeletionUndoIntegrationTests : IDisposable
         {
             viewModel.BrowserItems.Single(item => item.Id == "scifi")
         };
-        viewModel.DeleteItemCommand.Execute(null);
+        await viewModel.DeleteItemCommand.ExecuteAsync(null);
 
         Assert.Null(context.Catalog.Get("interstellar"));
         Assert.True(File.Exists(context.SourceFile));

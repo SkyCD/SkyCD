@@ -141,6 +141,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private const string ItemStatusIconColorPropertyKey = "StatusIconColor";
     private const string ItemStatusIconTextPropertyKey = "StatusIconText";
 
+    /// <summary>Record deletions between progress reports, so a large subtree keeps the bar moving.</summary>
+    private const int ProgressReportInterval = 100;
+
     public event EventHandler? AddToListRequested;
     public event EventHandler? NewCatalogRequested;
     public event EventHandler? OpenCatalogRequested;
@@ -2124,21 +2127,35 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     }
 
     [RelayCommand(CanExecute = nameof(CanDeleteItem))]
-    private void DeleteItem(object? parameter = null)
+    private async Task DeleteItemAsync(object? parameter = null)
     {
         var targetPane = ResolveTargetPane(parameter);
-        if (targetPane == ActivePane.Tree)
+        try
         {
-            DeleteSelectedTreeNode();
+            if (targetPane == ActivePane.Tree)
+            {
+                await DeleteSelectedTreeNodeAsync();
+            }
+            else
+            {
+                await DeleteSelectedBrowserItemsAsync();
+            }
         }
-        else
+        catch (Exception exception)
         {
-            DeleteSelectedBrowserItems();
+            EndDeleteProgress();
+            StatusText = LocalizationService.Current.Format(TextKeys.DeleteFailed,
+                exception.GetBaseException().Message);
         }
     }
 
     public bool CanDeleteItem(object? parameter = null)
     {
+        if (IsProgressVisible)
+        {
+            return false;
+        }
+
         var targetPane = ResolveTargetPane(parameter);
         if (targetPane == ActivePane.Tree)
         {
@@ -2171,7 +2188,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         return ActivePane;
     }
 
-    private void DeleteSelectedBrowserItems()
+    private async Task DeleteSelectedBrowserItemsAsync()
     {
         var itemsToDelete = GetSelectedBrowserItems();
         if (itemsToDelete.Count == 0)
@@ -2198,11 +2215,15 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         IReadOnlyList<CatalogDocument> removedDocuments;
         if (catalogRepository is not null)
         {
-            removedDocuments = DeleteCatalogEntriesFromRepository(itemsToDelete);
+            StartOperation(LocalizationService.Current.Get(TextKeys.Deleting));
+            removedDocuments = await Task.Run(() =>
+                    DeleteCatalogEntriesFromRepository(itemsToDelete, new DeletionProgressReporter(this)))
+                .ConfigureAwait(true);
+            ForgetRemovedCatalogEntries(removedDocuments);
         }
         else if (inMemoryCatalogEntries is not null)
         {
-            removedDocuments = DeleteCatalogEntriesFromInMemory(itemsToDelete);
+            removedDocuments = await DeleteCatalogEntriesFromInMemoryAsync(itemsToDelete).ConfigureAwait(true);
         }
         else
         {
@@ -2220,6 +2241,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
             removedDocuments = itemsToDelete;
         }
+
+        EndDeleteProgress();
 
         // A refusal only counts when there is a history to refuse it; the in-memory view model has none and
         // must keep reporting a plain deletion.
@@ -2261,7 +2284,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         FocusBrowserRequested?.Invoke(this, EventArgs.Empty);
     }
 
-    private void DeleteSelectedTreeNode()
+    private async Task DeleteSelectedTreeNodeAsync()
     {
         if (SelectedTreeNode is null || !CanDeleteTreeNode(SelectedTreeNode))
         {
@@ -2284,19 +2307,30 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         IReadOnlyList<CatalogDocument> removedDocuments;
         if (catalogRepository is not null)
         {
-            var target = catalogRepository.Get(targetNode.Key);
-            removedDocuments = target is null ? [] : DeleteCatalogEntriesFromRepository([target]);
+            StartOperation(LocalizationService.Current.Get(TextKeys.Deleting));
+            removedDocuments = await Task.Run<IReadOnlyList<CatalogDocument>>(() =>
+            {
+                var target = catalogRepository.Get(targetNode.Key);
+                return target is null
+                    ? []
+                    : DeleteCatalogEntriesFromRepository([target], new DeletionProgressReporter(this));
+            }).ConfigureAwait(true);
+            ForgetRemovedCatalogEntries(removedDocuments);
         }
         else if (inMemoryCatalogEntries is not null)
         {
             var target = inMemoryCatalogEntries.FirstOrDefault(entry =>
                 string.Equals(entry.Id, targetNode.Key, StringComparison.Ordinal));
-            removedDocuments = target is null ? [] : DeleteCatalogEntriesFromInMemory([target]);
+            removedDocuments = target is null
+                ? []
+                : await DeleteCatalogEntriesFromInMemoryAsync([target]).ConfigureAwait(true);
         }
         else
         {
             removedDocuments = [];
         }
+
+        EndDeleteProgress();
 
         // Nothing removed means the node was a stale artifact: detaching it is the whole operation. Leaving
         // it out of history matters, because an empty snapshot records no action and Ctrl+Z would then
@@ -2399,29 +2433,18 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     /// In-memory counterpart of <see cref="DeleteCatalogEntriesFromRepository"/>: expands to the full subtree
     /// and returns what was removed, so the caller records a snapshot undo can actually restore.
     /// </summary>
-    private IReadOnlyList<CatalogDocument> DeleteCatalogEntriesFromInMemory(IReadOnlyList<CatalogDocument> items)
+    private async Task<IReadOnlyList<CatalogDocument>> DeleteCatalogEntriesFromInMemoryAsync(
+        IReadOnlyList<CatalogDocument> items)
     {
         if (inMemoryCatalogEntries is null || items.Count == 0)
         {
             return [];
         }
 
-        var toDelete = new HashSet<string>(
-            items.Select(static entry => entry.Id).Where(static id => !string.IsNullOrWhiteSpace(id)),
-            StringComparer.Ordinal);
-
-        var added = true;
-        while (added)
-        {
-            added = false;
-            foreach (var entry in inMemoryCatalogEntries)
-            {
-                if (entry.ParentId is not null && toDelete.Contains(entry.ParentId) && toDelete.Add(entry.Id))
-                {
-                    added = true;
-                }
-            }
-        }
+        // The subtree walk reads the list the browser is bound to, so it runs over a copy and the removal is
+        // applied back on the UI thread afterwards.
+        var entries = inMemoryCatalogEntries.ToArray();
+        var toDelete = await Task.Run(() => ExpandInMemoryDeletion(entries, items)).ConfigureAwait(true);
 
         var removed = inMemoryCatalogEntries
             .Where(entry => toDelete.Contains(entry.Id))
@@ -2437,12 +2460,33 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
         foreach (var deletedId in toDelete)
         {
-            addedItemsByNodeKey.Remove(deletedId);
-            deletedItemNamesByNodeKey.Remove(deletedId);
-            renamedBrowserItemNamesByNodeKey.Remove(deletedId);
+            ForgetDeletedCatalogEntry(deletedId);
         }
 
         return removed;
+    }
+
+    private static HashSet<string> ExpandInMemoryDeletion(IReadOnlyList<CatalogDocument> entries,
+        IReadOnlyList<CatalogDocument> items)
+    {
+        var toDelete = new HashSet<string>(
+            items.Select(static entry => entry.Id).Where(static id => !string.IsNullOrWhiteSpace(id)),
+            StringComparer.Ordinal);
+
+        var added = true;
+        while (added)
+        {
+            added = false;
+            foreach (var entry in entries)
+            {
+                if (entry.ParentId is not null && toDelete.Contains(entry.ParentId) && toDelete.Add(entry.Id))
+                {
+                    added = true;
+                }
+            }
+        }
+
+        return toDelete;
     }
 
     private bool CanDeleteTreeNode(BrowserTreeNode? node)
@@ -3861,6 +3905,49 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         SetStatus(initialStatus);
     }
 
+    /// <summary>Hides the operation progress without replacing the status the deletion sets next.</summary>
+    private void EndDeleteProgress()
+    {
+        IsProgressVisible = false;
+        ProgressValue = 0;
+    }
+
+    /// <summary>
+    /// Applies a deletion progress update from the background delete loop. The bar is percent-driven by the
+    /// known number of records, so a large subtree keeps moving instead of looking hung.
+    /// </summary>
+    private void ReportDeletionProgress(int value)
+    {
+        if (Avalonia.Application.Current is null || Dispatcher.UIThread.CheckAccess())
+        {
+            if (IsProgressVisible)
+            {
+                SetProgress(value);
+            }
+
+            return;
+        }
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (IsProgressVisible)
+            {
+                SetProgress(value);
+            }
+        });
+    }
+
+    partial void OnIsProgressVisibleChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsDeleteEnabled));
+        DeleteItemCommand.NotifyCanExecuteChanged();
+    }
+
+    private sealed class DeletionProgressReporter(MainWindowViewModel viewModel) : IProgress<int>
+    {
+        public void Report(int value) => viewModel.ReportDeletionProgress(value);
+    }
+
     private void SetProgress(int value, string? status = null)
     {
         ProgressValue = Math.Clamp(value, 0, 100);
@@ -4800,11 +4887,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         return inMemoryEntries;
     }
 
-    private void DeleteCatalogEntryFromRepository(CatalogDocument item)
-    {
-        DeleteCatalogEntriesFromRepository([item]);
-    }
-
     /// <summary>
     /// Deletes the given entries together with every descendant, and returns the complete set of documents
     /// that was removed.
@@ -4815,7 +4897,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     /// Documents are read from the repository rather than taken from the caller's list, so the snapshot holds
     /// what was actually stored and not a view-model overlay copy.
     /// </returns>
-    private IReadOnlyList<CatalogDocument> DeleteCatalogEntriesFromRepository(IReadOnlyList<CatalogDocument> items)
+    private IReadOnlyList<CatalogDocument> DeleteCatalogEntriesFromRepository(IReadOnlyList<CatalogDocument> items,
+        IProgress<int>? progress)
     {
         if (catalogRepository is null || items.Count == 0)
         {
@@ -4843,22 +4926,32 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             .Distinct(StringComparer.Ordinal)
             .ToArray();
 
-        var snapshot = new List<CatalogDocument>(allIdsToDelete.Length);
-        foreach (var id in allIdsToDelete)
+        // The snapshot reuses the documents the descendant walk already loaded; only the selected roots need
+        // their own read. One Get per removed id was most of the UI time for a large subtree.
+        var rootsById = new Dictionary<string, CatalogDocument>(StringComparer.Ordinal);
+        foreach (var item in items)
         {
-            var stored = catalogRepository.Get(id);
-            if (stored is null)
+            if (!string.IsNullOrWhiteSpace(item.Id))
             {
-                descendantsById.TryGetValue(id, out stored);
-            }
-
-            stored ??= items.FirstOrDefault(item => string.Equals(item.Id, id, StringComparison.Ordinal));
-            if (stored is not null)
-            {
-                snapshot.Add(stored);
+                rootsById[item.Id] = catalogRepository.Get(item.Id) ?? item;
             }
         }
 
+        var snapshot = new List<CatalogDocument>(allIdsToDelete.Length);
+        foreach (var id in allIdsToDelete)
+        {
+            if (rootsById.TryGetValue(id, out var root))
+            {
+                snapshot.Add(root);
+            }
+            else if (descendantsById.TryGetValue(id, out var descendant))
+            {
+                snapshot.Add(descendant);
+            }
+        }
+
+        var total = allIdsToDelete.Length;
+        var processed = 0;
         DatabaseGate.InBatch(catalogRepository.Collection.Database, () =>
         {
             foreach (var id in allIdsToDelete)
@@ -4868,26 +4961,44 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 {
                     catalogRepository.Collection.Delete(descendantDocument);
                 }
+
+                processed++;
+                if (progress is not null && (processed % ProgressReportInterval == 0 || processed == total))
+                {
+                    progress.Report(Math.Clamp(processed * 100 / total, 0, 100));
+                }
             }
         });
         catalogRepository.InvalidateSnapshot();
 
-        foreach (var descendantId in allIdsToDelete)
+        return snapshot;
+    }
+
+    /// <summary>Applies catalog bookkeeping for documents already removed from the repository.</summary>
+    private void ForgetRemovedCatalogEntries(IReadOnlyList<CatalogDocument> removedDocuments)
+    {
+        foreach (var document in removedDocuments)
         {
-            addedItemsByNodeKey.Remove(descendantId);
-            deletedItemNamesByNodeKey.Remove(descendantId);
-            renamedBrowserItemNamesByNodeKey.Remove(descendantId);
+            if (!string.IsNullOrWhiteSpace(document.Id))
+            {
+                ForgetDeletedCatalogEntry(document.Id);
+            }
         }
 
         // The ancestors of what was removed now total less. The recount happens off the UI thread so a
         // large catalog does not delay the deletion the user just made.
         ScheduleSizeMaintenance(
-            snapshot
+            removedDocuments
                 .Select(static entry => entry.ParentId)
                 .Where(static parentId => !string.IsNullOrWhiteSpace(parentId))
                 .ToArray());
+    }
 
-        return snapshot;
+    private void ForgetDeletedCatalogEntry(string id)
+    {
+        addedItemsByNodeKey.Remove(id);
+        deletedItemNamesByNodeKey.Remove(id);
+        renamedBrowserItemNamesByNodeKey.Remove(id);
     }
 
     /// <summary>

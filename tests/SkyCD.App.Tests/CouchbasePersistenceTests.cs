@@ -155,7 +155,7 @@ public sealed class CouchbasePersistenceTests : IDisposable
     }
 
     [Fact]
-    public void MainWindowViewModel_DeleteItem_SyncsWithRepositoryState()
+    public async Task MainWindowViewModel_DeleteItem_SyncsWithRepositoryState()
     {
         using var provider = new Container();
         new CouchbaseServiceRegistrator().RegisterServices(provider);
@@ -178,7 +178,7 @@ public sealed class CouchbasePersistenceTests : IDisposable
         viewModel.SelectedTreeNode = moviesNode;
         viewModel.SelectedBrowserItem = viewModel.BrowserItems.Single(item => item.Id == "arrival");
 
-        viewModel.DeleteItemCommand.Execute(null);
+        await viewModel.DeleteItemCommand.ExecuteAsync(null);
 
         using var reloadedViewModel = new MainWindowViewModel(repositoryManager);
         var reloadedMoviesNode = reloadedViewModel.TreeNodes.Single().Children.Single(child => child.Key == "movies");
@@ -189,7 +189,7 @@ public sealed class CouchbasePersistenceTests : IDisposable
     }
 
     [Fact]
-    public void MainWindowViewModel_DeleteMultiBrowserSelection_RemovesSiblingEntriesAndPersistsAcrossReopen()
+    public async Task MainWindowViewModel_DeleteMultiBrowserSelection_RemovesSiblingEntriesAndPersistsAcrossReopen()
     {
         using var provider = new Container();
         new CouchbaseServiceRegistrator().RegisterServices(provider);
@@ -219,7 +219,7 @@ public sealed class CouchbasePersistenceTests : IDisposable
         Assert.True(viewModel.DeleteItemCommand.CanExecute(null));
         Assert.True(viewModel.IsDeleteEnabled);
 
-        viewModel.DeleteItemCommand.Execute(null);
+        await viewModel.DeleteItemCommand.ExecuteAsync(null);
 
         Assert.Contains("Arrival.mkv", viewModel.StatusText);
         Assert.Contains("Interstellar.mkv", viewModel.StatusText);
@@ -236,7 +236,7 @@ public sealed class CouchbasePersistenceTests : IDisposable
     }
 
     [Fact]
-    public void MainWindowViewModel_DeleteTreeNode_RemovesNestedFolderAndDescendantsConsistently()
+    public async Task MainWindowViewModel_DeleteTreeNode_RemovesNestedFolderAndDescendantsConsistently()
     {
         using var provider = new Container();
         new CouchbaseServiceRegistrator().RegisterServices(provider);
@@ -262,7 +262,7 @@ public sealed class CouchbasePersistenceTests : IDisposable
         Assert.True(viewModel.DeleteItemCommand.CanExecute(null));
         Assert.True(viewModel.IsDeleteEnabled);
 
-        viewModel.DeleteItemCommand.Execute(null);
+        await viewModel.DeleteItemCommand.ExecuteAsync(null);
 
         Assert.Equal("Deleted Movies.", viewModel.StatusText);
         Assert.Equal("music", viewModel.SelectedTreeNode?.Key);
@@ -277,7 +277,7 @@ public sealed class CouchbasePersistenceTests : IDisposable
     }
 
     [Fact]
-    public void MainWindowViewModel_TreeDelete_WithUnrelatedBrowserSelection_TargetsTreeFolderNotBrowserItem()
+    public async Task MainWindowViewModel_TreeDelete_WithUnrelatedBrowserSelection_TargetsTreeFolderNotBrowserItem()
     {
         using var provider = new Container();
         new CouchbaseServiceRegistrator().RegisterServices(provider);
@@ -303,7 +303,7 @@ public sealed class CouchbasePersistenceTests : IDisposable
         viewModel.ActivePane = ActivePane.Tree;
 
         // Execute Delete with Tree active
-        viewModel.DeleteItemCommand.Execute(null);
+        await viewModel.DeleteItemCommand.ExecuteAsync(null);
 
         Assert.Equal("Deleted Music.", viewModel.StatusText);
         Assert.Equal("projects", viewModel.SelectedTreeNode?.Key);
@@ -321,7 +321,7 @@ public sealed class CouchbasePersistenceTests : IDisposable
     }
 
     [Fact]
-    public void MainWindowViewModel_DeleteMultipleFoldersAndItems_PerformsFastBatchDeletion()
+    public async Task MainWindowViewModel_DeleteMultipleFoldersAndItems_PerformsFastBatchDeletion()
     {
         using var provider = new Container();
         new CouchbaseServiceRegistrator().RegisterServices(provider);
@@ -348,7 +348,7 @@ public sealed class CouchbasePersistenceTests : IDisposable
         viewModel.SelectedBrowserItems = new List<CatalogDocument> { movies, music };
 
         Assert.True(viewModel.DeleteItemCommand.CanExecute(null));
-        viewModel.DeleteItemCommand.Execute(null);
+        await viewModel.DeleteItemCommand.ExecuteAsync(null);
 
         Assert.Null(catalogRepository.Get("movies"));
         Assert.Null(catalogRepository.Get("arrival"));
@@ -360,7 +360,7 @@ public sealed class CouchbasePersistenceTests : IDisposable
     }
 
     [Fact]
-    public void MainWindowViewModel_DeleteSyntheticRoot_IsDisabledAndProtected()
+    public async Task MainWindowViewModel_DeleteSyntheticRoot_IsDisabledAndProtected()
     {
         using var provider = new Container();
         new CouchbaseServiceRegistrator().RegisterServices(provider);
@@ -385,7 +385,7 @@ public sealed class CouchbasePersistenceTests : IDisposable
         Assert.False(viewModel.DeleteItemCommand.CanExecute(null));
         Assert.False(viewModel.IsDeleteEnabled);
 
-        viewModel.DeleteItemCommand.Execute(null);
+        await viewModel.DeleteItemCommand.ExecuteAsync(null);
 
         Assert.NotNull(catalogRepository.Get("library"));
         Assert.NotEmpty(viewModel.TreeNodes);
