@@ -41,6 +41,8 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
         {
             vm.RecomputeValidation();
             vm.RefreshLocationChoiceLabels();
+            vm.OnPropertyChanged(nameof(vm.TargetParentDescription));
+            vm.OnPropertyChanged(nameof(vm.HasTargetParentDescription));
         });
     }
 
@@ -98,6 +100,33 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
     public bool IsTargetSelectedFolder => TargetPlacement == AddToListTargetPlacement.SelectedFolder;
 
     public bool IsTargetNewMedia => TargetPlacement == AddToListTargetPlacement.NewMedia;
+
+    /// <summary>
+    /// Catalog container chosen before the dialog opened (a drop target or the tree selection).
+    /// Captured up front so the destination cannot drift while the dialog is open.
+    /// </summary>
+    public string? TargetParentId { get; private set; }
+
+    [ObservableProperty] private string? targetParentName;
+
+    public string? TargetParentDescription => string.IsNullOrWhiteSpace(TargetParentName)
+        ? null
+        : LocalizationService.Current.Format(UiKeys.DropTargetFormat, TargetParentName);
+
+    public bool HasTargetParentDescription =>
+        IsTargetSelectedFolder && !string.IsNullOrWhiteSpace(TargetParentDescription);
+
+    public void SetTargetParent(string? parentId, string? displayName)
+    {
+        TargetParentId = string.IsNullOrWhiteSpace(parentId) ? DropDestination.LibraryRootId : parentId;
+        TargetParentName = displayName;
+    }
+
+    partial void OnTargetParentNameChanged(string? value)
+    {
+        OnPropertyChanged(nameof(TargetParentDescription));
+        OnPropertyChanged(nameof(HasTargetParentDescription));
+    }
 
     [ObservableProperty] private AddToListSourceMode sourceMode = AddToListSourceMode.Media;
 
@@ -393,6 +422,8 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
         RecomputeValidation();
         OnPropertyChanged(nameof(IsTargetSelectedFolder));
         OnPropertyChanged(nameof(IsTargetNewMedia));
+        OnPropertyChanged(nameof(TargetParentDescription));
+        OnPropertyChanged(nameof(HasTargetParentDescription));
     }
 
     partial void OnMediaNameChanged(string value)
