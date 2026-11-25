@@ -169,6 +169,34 @@ public class CouchbaseContractsTests
     }
 
     [Fact]
+    public void DatabaseManager_Disconnect_ReleasesTheDatabaseFiles()
+    {
+        var directory = CreateTempDirectory();
+        using var manager = new DatabaseManager();
+        manager.Connect("disconnect-test", directory);
+
+        Assert.True(manager.Disconnect("disconnect-test"));
+
+        // The recursive delete only succeeds once the native handle is released, which is what lets a test
+        // sandbox remove the database directory it owns.
+        Directory.Delete(directory, recursive: true);
+        Assert.False(Directory.Exists(directory));
+    }
+
+    [Fact]
+    public void DatabaseManager_Dispose_ReleasesTheDatabaseFiles()
+    {
+        var directory = CreateTempDirectory();
+        var manager = new DatabaseManager();
+        manager.Connect("dispose-test", directory);
+
+        manager.Dispose();
+
+        Directory.Delete(directory, recursive: true);
+        Assert.False(Directory.Exists(directory));
+    }
+
+    [Fact]
     public void RepositoryManager_ProvidesRepositoryWithCrudAndTreeApis()
     {
         var databaseName = "default";

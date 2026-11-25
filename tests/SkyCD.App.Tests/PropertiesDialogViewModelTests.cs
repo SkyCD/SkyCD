@@ -105,21 +105,80 @@ public class PropertiesDialogViewModelTests
     [Fact]
     public void Constructor_PlacesTheDescriptionRowFirstInEveryCulture()
     {
-        var previous = CultureInfo.CurrentUICulture;
+        var previousCulture = LocalizationService.Current.CurrentCulture;
         try
         {
-            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("lt-LT");
+            LocalizationService.Current.SetCulture(CultureInfo.GetCultureInfo("lt"));
             var vm = new PropertiesDialogViewModel("key", "name", "icon", string.Empty,
                 new PropertiesCollection { ["Description"] = "Importuotas aprašymas", ["Size"] = 1, ["FullName"] = "/item" });
 
             // The description position does not depend on the localized label's alphabetical place.
-            Assert.Equal([vm.DescriptionHeader, "FullName", "Size"], vm.InfoProperties.Keys);
+            Assert.Equal([vm.DescriptionHeader, "Dydis", "Pilnas pavadinimas"], vm.InfoProperties.Keys);
             Assert.Equal("Importuotas aprašymas", vm.InfoProperties[vm.DescriptionHeader]);
         }
         finally
         {
-            CultureInfo.CurrentUICulture = previous;
+            LocalizationService.Current.SetCulture(previousCulture);
         }
+    }
+
+    [Theory]
+    [InlineData("en", "FullName", "Full name")]
+    [InlineData("en", "LastWriteTime", "Last modified")]
+    [InlineData("en", "IsReadOnly", "Read-only")]
+    [InlineData("lt", "FullName", "Pilnas pavadinimas")]
+    [InlineData("lt", "LastWriteTime", "Paskutinio keitimo laikas")]
+    [InlineData("lt", "IsReadOnly", "Tik skaitymui")]
+    public void ResolveLabel_UsesCoreMetadataCatalog(string cultureName, string key, string expected)
+    {
+        var previousCulture = LocalizationService.Current.CurrentCulture;
+        try
+        {
+            LocalizationService.Current.SetCulture(CultureInfo.GetCultureInfo(cultureName));
+
+            Assert.Equal(expected, MediaMetadataValueFormatter.ResolveLabel(key));
+        }
+        finally
+        {
+            LocalizationService.Current.SetCulture(previousCulture);
+        }
+    }
+
+    [Theory]
+    [InlineData("FullName", "Full name")]
+    [InlineData("LastWriteTime", "Last write time")]
+    [InlineData("sizeBytes", "Size bytes")]
+    [InlineData("ContentsState", "Contents state")]
+    [InlineData("SHA256", "SHA256")]
+    public void HumanizeKey_TurnsIdentifiersIntoLabels(string key, string expected)
+    {
+        Assert.Equal(expected, MediaMetadataValueFormatter.HumanizeKey(key));
+    }
+
+    [Fact]
+    public void ResolveLabel_PrefersTheCapturingPluginsOwnTranslation()
+    {
+        var provider = new TestTranslationProvider(new Dictionary<string, string>
+        {
+            ["en"] = "metadata.Bitrate: \"Audio bitrate\""
+        });
+        LocalizationService.Current.Register("plugins.demo.audio", provider);
+        try
+        {
+            Assert.Equal("Audio bitrate", MediaMetadataValueFormatter.ResolveLabel("Bitrate", "demo.audio"));
+            // Without plugin provenance the same key falls back to its humanized form.
+            Assert.Equal("Bitrate", MediaMetadataValueFormatter.ResolveLabel("Bitrate"));
+        }
+        finally
+        {
+            LocalizationService.Current.Unregister("plugins.demo.audio");
+        }
+    }
+
+    private sealed class TestTranslationProvider(IReadOnlyDictionary<string, string> translations)
+        : SkyCD.Plugin.Abstractions.Localization.ITranslationProvider
+    {
+        public IReadOnlyDictionary<string, string> GetTranslations() => translations;
     }
 
     [Fact]
@@ -209,20 +268,18 @@ public class PropertiesDialogViewModelTests
             ["Attributes"] = "ReadOnly"
         };
         var culture = CultureInfo.GetCultureInfo("en-US");
-        var previousCulture = CultureInfo.CurrentCulture;
-        var previousUiCulture = CultureInfo.CurrentUICulture;
+        var previousCulture = LocalizationService.Current.CurrentCulture;
         try
         {
-            CultureInfo.CurrentCulture = culture;
-            CultureInfo.CurrentUICulture = culture;
+            LocalizationService.Current.SetCulture(culture);
             var vm = new PropertiesDialogViewModel("key", "item", "icon", "general comment", source);
 
             Assert.True(vm.HasInfoTab);
-            Assert.Equal(["Attributes", "Comments", "Created", "FullName", "Size"], vm.InfoProperties.Keys);
+            Assert.Equal(["Attributes", "Comments", "Created", "Full name", "Size"], vm.InfoProperties.Keys);
             Assert.Equal("ReadOnly", vm.InfoProperties["Attributes"]);
             Assert.Equal("imported comments", vm.InfoProperties["Comments"]);
             Assert.Equal(new DateTime(2016, 6, 5, 16, 49, 14).ToString("G", culture), vm.InfoProperties["Created"]);
-            Assert.Equal(@"C:\item", vm.InfoProperties["FullName"]);
+            Assert.Equal(@"C:\item", vm.InfoProperties["Full name"]);
             Assert.Equal("1 KB (1,024 bytes)", vm.InfoProperties["Size"]);
             Assert.Equal("item", vm.GetProperties()["Name"]);
             Assert.Equal("directory", vm.GetProperties()["RealDirectoryName"]);
@@ -231,8 +288,7 @@ public class PropertiesDialogViewModelTests
         }
         finally
         {
-            CultureInfo.CurrentCulture = previousCulture;
-            CultureInfo.CurrentUICulture = previousUiCulture;
+            LocalizationService.Current.SetCulture(previousCulture);
         }
     }
 
@@ -359,7 +415,7 @@ public class PropertiesDialogViewModelTests
     {
         var vm = CreateWithCulture("1536", CultureInfo.GetCultureInfo("en-US"), key);
 
-        Assert.Equal("1.5 KB (1,536 bytes)", vm.InfoProperties[key]);
+        Assert.Equal("1.5 KB (1,536 bytes)", vm.InfoProperties[MediaMetadataValueFormatter.ResolveLabel(key)]);
         Assert.Equal("1536", vm.GetProperties()[key]);
     }
 
@@ -418,7 +474,7 @@ public class PropertiesDialogViewModelTests
         var values = new PropertiesCollection { ["FileSize"] = -1L, ["Size"] = 1536.0 };
         var vm = new PropertiesDialogViewModel("key", "name", "icon", "", values);
 
-        Assert.Equal("-1", vm.InfoProperties["FileSize"]);
+        Assert.Equal("-1", vm.InfoProperties[MediaMetadataValueFormatter.ResolveLabel("FileSize")]);
         Assert.Equal(1536.0.ToString(), vm.InfoProperties["Size"]);
         Assert.Equal(-1L, vm.GetProperties()["FileSize"]);
         Assert.Equal(1536.0, vm.GetProperties()["Size"]);
@@ -431,7 +487,7 @@ public class PropertiesDialogViewModelTests
     {
         var vm = CreateWithCulture("1536", CultureInfo.GetCultureInfo("en-US"), key);
 
-        Assert.Equal("1536", vm.InfoProperties[key]);
+        Assert.Equal("1536", vm.InfoProperties[MediaMetadataValueFormatter.ResolveLabel(key)]);
         Assert.Equal("1536", vm.GetProperties()[key]);
     }
 
@@ -451,8 +507,9 @@ public class PropertiesDialogViewModelTests
     {
         var culture = CultureInfo.GetCultureInfo(cultureName);
         var vm = CreateWithCulture("503206458", culture, "Size");
+        var unit = LocalizationService.Current.Get(PreviewKeys.BytesUnit, culture);
 
-        Assert.EndsWith($" ({503206458L.ToString("N0", culture)} bytes)", Assert.IsType<string>(vm.InfoProperties["Size"]), StringComparison.Ordinal);
+        Assert.EndsWith($" ({503206458L.ToString("N0", culture)} {unit})", Assert.IsType<string>(vm.InfoProperties["Size"]), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -544,11 +601,12 @@ public class PropertiesDialogViewModelTests
         {
             CultureInfo.CurrentUICulture = culture;
             var vm = new PropertiesDialogViewModel("key", "name", "icon", "", values);
+            string Label(string key) => MediaMetadataValueFormatter.ResolveLabel(key);
 
-            Assert.Equal(TimeZoneInfo.ConvertTimeFromUtc(utc, TimeZoneInfo.Local).ToString("G", culture), vm.InfoProperties["Utc"]);
-            Assert.Equal(local.ToString("G", culture), vm.InfoProperties["Local"]);
-            Assert.Equal("2016-06-05 16:49:14", vm.InfoProperties["WallClock"]);
-            Assert.Equal(TimeZoneInfo.ConvertTimeFromUtc(utc, TimeZoneInfo.Local).ToString("G", culture), vm.InfoProperties["Offset"]);
+            Assert.Equal(TimeZoneInfo.ConvertTimeFromUtc(utc, TimeZoneInfo.Local).ToString("G", culture), vm.InfoProperties[Label("Utc")]);
+            Assert.Equal(local.ToString("G", culture), vm.InfoProperties[Label("Local")]);
+            Assert.Equal("2016-06-05 16:49:14", vm.InfoProperties[Label("WallClock")]);
+            Assert.Equal(TimeZoneInfo.ConvertTimeFromUtc(utc, TimeZoneInfo.Local).ToString("G", culture), vm.InfoProperties[Label("Offset")]);
             Assert.Equal(utc, vm.GetProperties()["Utc"]);
             Assert.Equal(local, vm.GetProperties()["Local"]);
             Assert.Equal(unspecified, vm.GetProperties()["WallClock"]);
@@ -653,7 +711,7 @@ public class PropertiesDialogViewModelTests
             LocalizationService.Current.SetCulture(CultureInfo.GetCultureInfo("lt"));
             var localizedHeader = vm.DescriptionHeader;
 
-            Assert.Equal([localizedHeader, "Size"], vm.InfoProperties.Keys);
+            Assert.Equal([localizedHeader, "Dydis"], vm.InfoProperties.Keys);
             Assert.Equal("Imported description", vm.InfoProperties[localizedHeader]);
         }
         finally

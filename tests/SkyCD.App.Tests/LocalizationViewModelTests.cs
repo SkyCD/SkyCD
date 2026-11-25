@@ -88,7 +88,7 @@ public sealed class LocalizationViewModelTests : IDisposable
 
         LocalizationService.Current.SetCulture(lithuanian);
 
-        Assert.EndsWith($" ({503206458L.ToString("N0", lithuanian)} bytes)", Assert.IsType<string>(vm.InfoProperties["Size"]), StringComparison.Ordinal);
+        Assert.EndsWith($" ({503206458L.ToString("N0", lithuanian)} baitų)", Assert.IsType<string>(vm.InfoProperties["Dydis"]), StringComparison.Ordinal);
         Assert.Equal(size, vm.GetProperties()["Size"]);
         Assert.Equal(size, source["Size"]);
     }

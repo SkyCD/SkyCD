@@ -27,10 +27,10 @@ public sealed class TabControlContentInsetTests
             var tabs = Assert.IsType<TabControl>(window.FindControl<Control>("MainTabs"));
             AssertSharedInset(tabs);
 
-            tabs.SelectedIndex = 0;
+            tabs.SelectedIndex = 1;
             Dispatcher.UIThread.RunJobs();
 
-            var body = Assert.IsType<StackPanel>(Assert.IsType<TabItem>(tabs.Items[0]).Content);
+            var body = Assert.IsType<StackPanel>(Assert.IsType<TabItem>(tabs.Items[1]).Content);
             AssertInsetFromContentHost(tabs, body);
         }
         finally
