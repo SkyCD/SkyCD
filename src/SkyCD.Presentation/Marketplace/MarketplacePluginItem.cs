@@ -3,6 +3,7 @@ using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using SkyCD.Plugin.Runtime.Installation;
 using SkyCD.Plugin.Runtime.Marketplace.Models;
+using SkyCD.Presentation.Plugins;
 using SkyCD.UI.Localization;
 
 namespace SkyCD.Presentation.Marketplace;
@@ -59,6 +60,13 @@ public sealed partial class MarketplacePluginItem : ObservableObject
     public string? ProjectUrl { get; }
 
     public string Summary { get; }
+
+    /// <summary>Icon declared by the catalog entry, or the neutral marketplace glyph.</summary>
+    public string IconKey => PluginIconKey.ForMarketplace(Package.Icon);
+
+    public bool HasGlyphIcon => PluginIconKey.IsGlyph(IconKey);
+
+    public bool HasBitmapIcon => !HasGlyphIcon;
 
     public string CompatibilityMessage { get; }
 

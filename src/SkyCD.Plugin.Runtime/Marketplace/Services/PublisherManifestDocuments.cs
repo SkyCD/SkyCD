@@ -21,6 +21,7 @@ internal sealed record ParsedManifestPackage(
     string? Summary,
     string? License,
     string? ProjectUrl,
+    string? Icon,
     IReadOnlyList<ParsedManifestRelease> Releases);
 
 internal sealed record ParsedManifestRelease(
@@ -133,7 +134,8 @@ internal static class PublisherManifestDocuments
                 if (!TryReadOptionalString(packageElement, "displayName", out var displayName, out reason) ||
                     !TryReadOptionalString(packageElement, "summary", out var summary, out reason) ||
                     !TryReadOptionalString(packageElement, "license", out var license, out reason) ||
-                    !TryReadOptionalString(packageElement, "projectUrl", out var packageProjectUrl, out reason))
+                    !TryReadOptionalString(packageElement, "projectUrl", out var packageProjectUrl, out reason) ||
+                    !TryReadOptionalString(packageElement, "icon", out var icon, out reason))
                 {
                     return Malformed($"package '{id}': {reason}");
                 }
@@ -162,7 +164,8 @@ internal static class PublisherManifestDocuments
                     releases.Add(release);
                 }
 
-                packages.Add(new ParsedManifestPackage(id, displayName, summary, license, packageProjectUrl, releases));
+                packages.Add(new ParsedManifestPackage(id, displayName, summary, license, packageProjectUrl, icon,
+                    releases));
             }
 
             return new ManifestReadResult(ManifestReadStatus.Parsed, schemaVersion, string.Empty,

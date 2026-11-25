@@ -42,6 +42,7 @@ public sealed class DiscoveredPluginFactory
             MaxHostVersion = metadata.MaxHostVersion,
             Description = metadata.Description,
             PrimaryExtension = ResolvePrimaryExtension(capabilities),
+            Icon = PluginIconResolver.Resolve(assembly),
             FileName = metadata.FileName,
             AssemblyLocation = assembly.Location,
             Capabilities = capabilities

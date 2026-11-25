@@ -49,6 +49,27 @@ public sealed class OptionsPluginsPageTests
     }
 
     [Fact]
+    public async Task MarketplaceRows_UseTheCatalogIconAndFallBackToTheNeutralGlyph()
+    {
+        var service = new FakeMarketplaceService
+        {
+            Snapshot = SnapshotAt(
+                Package("acme.xml", "1.0.0", displayName: "XML", icon: "Lucide:Archive"),
+                Package("acme.json", "1.0.0", displayName: "JSON", icon: "https://evil.example/icon.png"),
+                Package("acme.csv", "1.0.0", displayName: "CSV"))
+        };
+        using var vm = CreateViewModel(service);
+
+        await vm.LoadMarketplaceAsync(forceRefresh: false);
+
+        var byId = vm.FilteredMarketplacePlugins.ToDictionary(item => item.PackageId);
+        Assert.Equal("Lucide:Archive", byId["acme.xml"].IconKey);
+        Assert.True(byId["acme.xml"].HasGlyphIcon);
+        Assert.Equal("lucide:Puzzle", byId["acme.json"].IconKey);
+        Assert.Equal("lucide:Puzzle", byId["acme.csv"].IconKey);
+    }
+
+    [Fact]
     public async Task EmptyCatalog_ShowsCatalogEmptyStateInsteadOfFilterMessage()
     {
         var service = new FakeMarketplaceService();
@@ -285,7 +306,8 @@ public sealed class OptionsPluginsPageTests
         string packageId,
         string version,
         string? displayName = null,
-        string source = "https://publisher.example/plugins.json")
+        string source = "https://publisher.example/plugins.json",
+        string? icon = null)
     {
         var sourceUri = new Uri(source);
         var release = new MarketplaceRelease
@@ -304,6 +326,7 @@ public sealed class OptionsPluginsPageTests
             DisplayName = displayName ?? packageId,
             Publisher = "Acme Publishing",
             Summary = "Test package.",
+            Icon = icon,
             Releases = [release],
             BestRelease = release
         };

@@ -5,6 +5,7 @@ using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using IconPacks.Avalonia;
+using IconPacks.Avalonia.Lucide;
 using SkyCD.App.Converters;
 using SkyCD.App.Views;
 using SkyCD.Presentation.ViewModels;
@@ -35,7 +36,7 @@ public sealed class PluginIconConverterTests
     }
 
     [AvaloniaFact]
-    public void InstalledPlugins_ShowFormatIconOrFallback()
+    public void InstalledPlugins_ShowNeutralGlyphWhenTheLibraryShipsNoIcon()
     {
         var viewModel = new OptionsDialogViewModel(["English"]);
         viewModel.SetPlugins(
@@ -49,17 +50,48 @@ public sealed class PluginIconConverterTests
 
         try
         {
-            var pluginImages = window.GetVisualDescendants()
-                .OfType<Image>()
-                .Where(image => image.DataContext is OptionsPluginItem)
-                .ToArray();
-            var fallbackIcons = window.GetVisualDescendants()
+            var rowIcons = window.GetVisualDescendants()
                 .OfType<PackIconControl>()
-                .Where(icon => icon.DataContext is OptionsPluginItem && icon.IsVisible)
+                .Where(icon => icon.DataContext is OptionsPluginItem)
                 .ToArray();
 
-            Assert.NotEmpty(pluginImages);
-            Assert.NotEmpty(fallbackIcons);
+            Assert.NotEmpty(rowIcons);
+            Assert.All(rowIcons, icon =>
+            {
+                Assert.Equal(PackIconLucideKind.Puzzle, icon.Kind);
+                Assert.True(icon.IsVisible);
+            });
+
+            Assert.All(window.GetVisualDescendants().OfType<Image>()
+                .Where(image => image.DataContext is OptionsPluginItem), image => Assert.False(image.IsVisible));
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public void InstalledPlugins_ShowTheIconEmbeddedInTheLibrary()
+    {
+        var icon = System.Convert.FromBase64String(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==");
+        var viewModel = new OptionsDialogViewModel(["English"]);
+        viewModel.SetPlugins([new OptionsPluginItem("JSON", "SkyCD", "json v1", id: "json", icon: icon)]);
+        var window = new OptionsWindow { DataContext = viewModel };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        try
+        {
+            var glyph = Assert.Single(window.GetVisualDescendants().OfType<PackIconControl>(),
+                candidate => candidate.DataContext is OptionsPluginItem);
+            Assert.Equal(PackIconLucideKind.Puzzle, glyph.Kind);
+            Assert.False(glyph.IsVisible);
+
+            var image = Assert.Single(window.GetVisualDescendants().OfType<Image>(),
+                candidate => candidate.DataContext is OptionsPluginItem && candidate.Source is not null);
+            Assert.True(image.IsVisible);
         }
         finally
         {

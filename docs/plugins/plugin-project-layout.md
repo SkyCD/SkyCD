@@ -9,6 +9,7 @@ assembly names follow [assembly-naming.md](assembly-naming.md).
 ```
 Plugins/SkyCD.Plugin.<Kind>.<Subject>/
   <Name>Plugin.cs              # capability entry points only (IPlugin metadata stays in the assembly)
+  Assets/                      # multi-size icon.ico (see sdk-contracts.md)
   Configuration/               # configuration capability, settings editor, configuration window + code-behind
   Models/                      # documents, records, settings, schema, enums, path/limit value types
   Parsing/                     # format detection, readers, parsers, binary decoders, signatures
@@ -35,6 +36,9 @@ Plugins/SkyCD.Plugin.<Kind>.<Subject>/
    name prefix in the parent namespace. Apply this same layout inside the nested folder: capability
    entry types in its root and role folders underneath, with the nested namespace as their base.
 6. `Plugins/Shared` and the sample plugins follow the same layout.
+7. Every plugin project ships `Assets/icon.ico`, embedded as the plugin icon resource. Keep only that
+   icon in `Assets/`; see
+   [sdk-contracts.md](sdk-contracts.md#plugin-icon-sdk-30).
 
 Multiple capability entry types may share the root, including partial-class files of the same
 plugin type. The configuration capability belongs in `Configuration/` together with its editor and
