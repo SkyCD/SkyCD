@@ -75,6 +75,21 @@ public sealed class AddingProgressThumbnailLayoutTests
         Assert.Equal("1", (string?)footer.Attribute("Grid.Row"));
     }
 
+    /// <summary>
+    /// Issue #1107: binding the content height back to the scroller viewport sustains the Auto
+    /// scrollbar; the scroller stretches its content to the viewport on its own.
+    /// </summary>
+    [Fact]
+    public void ProgressContent_DoesNotBindItsHeightToTheScrollerViewport()
+    {
+        var grid = RootGrid();
+        var scroller = grid.Parent!;
+
+        Assert.Null(grid.Attribute("MinHeight"));
+        Assert.DoesNotContain("#ProgressContentScroller.Viewport", grid.ToString(), StringComparison.Ordinal);
+        Assert.Equal("Auto", (string?)scroller.Attribute("VerticalScrollBarVisibility"));
+    }
+
     private static XElement RootGrid()
     {
         var xaml = File.ReadAllText(Path.Combine(FindRepoRoot(), "src", "SkyCD.App", "Views",
