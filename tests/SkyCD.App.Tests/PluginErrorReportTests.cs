@@ -68,6 +68,7 @@ public sealed class PluginErrorReportTests
     [InlineData("uninstall")]
     [InlineData("audio-cd")]
     [InlineData("audio-cd-settings")]
+    [InlineData("online-metadata")]
     public void HostControlledOperations_ArePreservedInReports(string operation)
     {
         Assert.Equal(operation, PluginFailure.Create(GetType(), operation, new InvalidOperationException()).Operation);

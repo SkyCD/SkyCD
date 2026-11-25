@@ -159,6 +159,13 @@ public sealed class PluginServiceRegistrator
             plugin.Capabilities.OfType<IGeneratedDescriptionCapability>())),
             ifAlreadyRegistered: IfAlreadyRegistered.Replace);
 
+        // Online metadata sources are aggregated host-side so a description generator consumes facts without
+        // owning site parsing; only enabled plugins reach this list, which is what makes each source disable-able.
+        registrator.RegisterInstance(new OnlineMetadataExtensionManager(plugins.SelectMany(plugin =>
+                plugin.Capabilities.OfType<IOnlineMetadataSourceCapability>()
+                    .Select(capability => new OnlineMetadataProvider(plugin.Id, plugin.Version.ToString(), capability)))),
+            ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+
         // Catalog feature contributions (decorations, columns, search fields, entry commands) and post-import
         // hooks aggregate over enabled plugins. The managers are domain-neutral: no specific feature is referenced.
         registrator.RegisterInstance(new CatalogFeatureExtensionManager(plugins.SelectMany(plugin =>

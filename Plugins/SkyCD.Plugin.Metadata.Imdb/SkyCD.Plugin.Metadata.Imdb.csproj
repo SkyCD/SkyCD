@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\SkyCD.SDK\SkyCD.SDK.csproj"/>
+    </ItemGroup>
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>disable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <Company>SkyCD</Company>
+        <Authors>SkyCD</Authors>
+        <AssemblyTitle>IMDb Metadata</AssemblyTitle>
+        <Description>Looks media entries up on IMDb and returns title, genre, year, runtime, cast and rating facts to description generators.</Description>
+    </PropertyGroup>
+    <ItemGroup>
+        <!-- Shared online metadata parsing; the same MIT parser the GenDesc and DiskExplorer plugins use. -->
+        <PackageReference Include="AngleSharp" Version="1.10.4"/>
+    </ItemGroup>
+    <ItemGroup>
+        <Compile Include="..\Shared\OnlineMetadata\Models\DescriptionFacts.cs" Link="Shared\OnlineMetadata\Models\DescriptionFacts.cs"/>
+        <Compile Include="..\Shared\OnlineMetadata\Parsing\PageMeta.cs" Link="Shared\OnlineMetadata\Parsing\PageMeta.cs"/>
+        <Compile Include="..\Shared\OnlineMetadata\Sources\UrlHelpers.cs" Link="Shared\OnlineMetadata\Sources\UrlHelpers.cs"/>
+        <Compile Include="..\Shared\OnlineMetadata\Sources\IWebFetcher.cs" Link="Shared\OnlineMetadata\Sources\IWebFetcher.cs"/>
+        <Compile Include="..\Shared\OnlineMetadata\Sources\HttpWebFetcher.cs" Link="Shared\OnlineMetadata\Sources\HttpWebFetcher.cs"/>
+    </ItemGroup>
+    <ItemGroup>
+        <InternalsVisibleTo Include="SkyCD.Plugin.Metadata.Imdb.Tests"/>
+    </ItemGroup>
+</Project>
