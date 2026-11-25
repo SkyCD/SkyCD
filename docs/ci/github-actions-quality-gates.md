@@ -6,41 +6,34 @@ Default CI validates only the v3 solution path (`SkyCD.slnx`) and does not build
 ## Workflows
 - `ci`:
 - `style` job runs `dotnet format --verify-no-changes`.
-- `build` job restores and builds `SkyCD.slnx` with warnings as errors on `ubuntu-latest`, `windows-latest`, and `macos-latest`.
-- `test-shards` job runs before the test matrix, splits the sorted test projects into eight round-robin
-  shards, and publishes the shard-to-project mapping in the job summary.
-- `test` job runs one job per OS and shard, at most five at a time. Each shard's test step is named
-  after the projects it covers and runs them one after another with `--blame-hang`; a failing project
-  is reported by name and does not rerun.
+- `build-test` job restores, builds, and tests `SkyCD.slnx` on `ubuntu-latest`, `windows-latest`, and
+  `macos-latest`, with at most two OS jobs running at a time (`max-parallel: 2`).
 - `license-compliance` job scans dependency licenses with Trivy and fails on CRITICAL/HIGH licenses.
 - `sbom` job (push to `main` only) generates the CycloneDX SBOM release artifact.
 - `dependabot-automerge`:
 - Dependabot-only metadata, approval, and auto-merge workflow.
 
 ## Required Branch Protection Checks
-For `main`, branch protection currently requires:
+For `main`, branch protection currently requires only:
 - `License Compliance`
 
-The `Build (...)` and `Test (...)` checks report the remaining gates but are not individually required.
+The `Build & Test (...)` checks report the remaining gates but are not individually required.
 
 ## Test Results and Artifacts
-- CI publishes each shard's TRX results under `artifacts/test-results/<os>/shard-<n>/<project>/` and the
-  per-project `dotnet test` logs under `artifacts/test-logs/`.
-- The shard artifacts are named `test-results-<os>-shard-<n>`.
+- CI publishes per-OS TRX results under `artifacts/test-results/<os>/` and the test log under
+  `artifacts/test-logs/`.
+- The per-OS artifacts are named `test-results-<os>` and contain both.
 - License compliance reports are published as `license-artifacts`.
 
 ## Timeouts and Hang Diagnostics
-Every job declares `timeout-minutes` (style 10, build 20, test-shards 5, test 20, license 10, sbom 20),
-and each shard test step is capped at 15 minutes, so a stuck test host can no longer hold a run open
-until GitHub's 6-hour limit.
-- Sharding limits the blast radius: a hung or failing project only fails its own shard job, and the job
-  name identifies the OS and shard.
-- The test step redirects each project's output to a log file instead of piping into `tee`: an orphaned
-  test host that inherited the pipe's write end cannot keep the step alive after `dotnet test` finishes.
+Every job declares `timeout-minutes` (style 10, build-test 30, license 10, sbom 20), and the test step
+is capped at 20 minutes, so a stuck test host can no longer hold a run open until GitHub's 6-hour limit.
+- A failing test, crashed test host, or failed build fails the job immediately; there is no automatic retry.
+- The test step redirects output to a log file instead of piping into `tee`: an orphaned test host that
+  inherited the pipe's write end cannot keep the step alive after `dotnet test` exits.
 - `dotnet test` runs with `--blame-hang --blame-hang-timeout 5m --blame-hang-dump-type none`, so a test
-  that never completes fails the project run after five minutes and writes a sequence file naming it.
-- The sequence file is uploaded with the shard artifact; the failed project's log is also printed in
-  the job output.
+  that never completes fails its project after five minutes and writes a sequence file naming it.
+- On failure the captured log is printed in the job output and uploaded with the OS artifact.
 
 ## Runtime and Flaky-Risk Notes
 - Matrix execution increases runtime during SDK/dependency update waves.

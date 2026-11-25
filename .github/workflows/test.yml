@@ -49,15 +49,16 @@ jobs:
       - name: Verify formatting
         run: dotnet format SkyCD.slnx --verify-no-changes --verbosity minimal
 
-  build:
-    name: Build (${{ matrix.os }})
+  build-test:
+    name: Build & Test (${{ matrix.os }})
     needs: style
     strategy:
       fail-fast: false
+      max-parallel: 2
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -78,110 +79,28 @@ jobs:
       - name: Build solution
         run: dotnet build SkyCD.slnx --configuration Release --no-restore -warnaserror
 
-  test-shards:
-    name: Plan test shards
-    needs: style
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      matrix: ${{ steps.plan.outputs.matrix }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Plan shards
-        id: plan
+      - name: Test solution
         shell: bash
+        timeout-minutes: 20
         run: |
-          mapfile -t projects < <(find tests -mindepth 2 -maxdepth 2 -name '*.Tests.csproj' | sort)
-
-          matrix=$(printf '%s\n' "${projects[@]}" | jq -R -s -c --argjson shards 8 '
-            split("\n") | map(select(length > 0))
-            | . as $all
-            | [range(0; $shards) as $shard
-                | [$all | to_entries[] | select(.key % $shards == $shard) | .value] as $assigned
-                | {
-                    id: $shard,
-                    paths: ($assigned | join(" ")),
-                    label: ($assigned | map(split("/")[-1] | sub("\\.csproj$"; "")) | join(", "))
-                  }]
-          ')
-
-          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
-          {
-            echo "### Test shards"
-            echo ""
-            echo "| Shard | Projects |"
-            echo "| :--- | :--- |"
-            jq -r '.[] | "| \(.id) | \(.label) |"' <<< "$matrix"
-          } >> "$GITHUB_STEP_SUMMARY"
-
-  test:
-    name: Test (${{ matrix.os }}, shard ${{ matrix.shard.id }})
-    needs: [style, test-shards]
-    strategy:
-      fail-fast: false
-      max-parallel: 5
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        shard: ${{ fromJSON(needs.test-shards.outputs.matrix) }}
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Setup .NET 10
-        uses: actions/setup-dotnet@v6
-        with:
-          dotnet-version: 10.0.x
-          cache: true
-          cache-dependency-path: |
-            **/*.csproj
-            **/packages.lock.json
-
-      - name: Build test logger
-        run: dotnet build tools/SkyCD.TestLogger/SkyCD.TestLogger.csproj --configuration Release
-
-      - name: Test ${{ matrix.shard.label }}
-        shell: bash
-        timeout-minutes: 15
-        env:
-          SHARD_PATHS: ${{ matrix.shard.paths }}
-        run: |
-          # The shard assignment is computed by the Plan test shards job, so every OS runs the same
-          # projects and the step name lists exactly what this job covers.
-          read -r -a projects <<< "$SHARD_PATHS"
-
-          results="artifacts/test-results/${{ matrix.os }}/shard-${{ matrix.shard.id }}"
-          mkdir -p artifacts/test-logs "$results"
-
+          mkdir -p artifacts/test-logs
+          log="artifacts/test-logs/dotnet-test.log"
           status=0
-          for project in "${projects[@]}"; do
-            name=$(basename "$project" .csproj)
-            log="artifacts/test-logs/${name}.log"
-            echo "::group::${name}"
-            project_status=0
-            dotnet test "$project" --configuration Release \
-              --test-adapter-path "${{ github.workspace }}/tools/SkyCD.TestLogger/bin/Release/net10.0" \
-              --logger "console;verbosity=quiet" \
-              --logger "ansi" \
-              --logger "trx;LogFilePrefix=${name}" \
-              --results-directory "$results/${name}" \
-              --blame-hang --blame-hang-timeout 5m --blame-hang-dump-type none \
-              > "$log" 2>&1 || project_status=$?
+          # Redirect to a file instead of piping through tee: a test host still running after
+          # dotnet test exits would inherit the pipe and keep the step alive indefinitely.
+          dotnet test SkyCD.slnx --configuration Release --no-build --verbosity normal \
+            --test-adapter-path "${{ github.workspace }}/tools/SkyCD.TestLogger/bin/Release/net10.0" \
+            --logger "console;verbosity=quiet" \
+            --logger "ansi" \
+            --logger "trx;LogFilePrefix=test-results-${{ matrix.os }}" \
+            --results-directory "artifacts/test-results/${{ matrix.os }}" \
+            --blame-hang --blame-hang-timeout 5m --blame-hang-dump-type none \
+            > "$log" 2>&1 || status=$?
 
-            if [ "$project_status" -ne 0 ]; then
-              echo "::error::${name} failed with exit code ${project_status}."
-              cat "$log"
-              status=$project_status
-            else
-              echo "Passed ${name}."
-            fi
-            echo "::endgroup::"
-          done
+          if [ "$status" -ne 0 ]; then
+            echo "::error::dotnet test failed with exit code ${status}."
+            cat "$log"
+          fi
 
           exit "$status"
 
@@ -189,9 +108,9 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: test-results-${{ matrix.os }}-shard-${{ matrix.shard.id }}
+          name: test-results-${{ matrix.os }}
           path: |
-            artifacts/test-results/${{ matrix.os }}/shard-${{ matrix.shard.id }}/
+            artifacts/test-results/${{ matrix.os }}/
             artifacts/test-logs/
 
   license-compliance:
