@@ -155,23 +155,18 @@ public class AddToListWindowLayoutTests
             .ToList();
         var sources = images.Select(image => (string?)image.Attribute("Source")).ToList();
 
-        Assert.All(sources, source =>
-            Assert.Contains("SourceIconImage", source, StringComparison.Ordinal));
+        Assert.Equal(
+            ["{x:Static icons:SourceIcons.Media}",
+             "{x:Static icons:SourceIcons.Folder}",
+             "{x:Static icons:SourceIcons.Internet}",
+             "{x:Static icons:SourceIcons.TitleOnly}"],
+            sources);
         Assert.All(images, image =>
         {
             Assert.Equal("40", (string?)image.Attribute("Width"));
             Assert.Equal("40", (string?)image.Attribute("Height"));
         });
-
-        var parameters = sources
-            .Select(source => ParameterOf(source!))
-            .ToList();
-        Assert.Equal(["Media", "Folder", "Internet", "TitleOnly"], parameters);
     }
-
-    private static string ParameterOf(string source) =>
-        source[(source.IndexOf("ConverterParameter=", StringComparison.Ordinal) + "ConverterParameter=".Length)..]
-            .TrimEnd(' ', '}');
 
     [Fact]
     public void Layout_UsesDesignTokensForSpacing()

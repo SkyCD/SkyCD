@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Xml.Linq;
 using Avalonia.Media;
-using SkyCD.App.Converters;
 using SkyCD.App.Icons;
 using Xunit;
 
@@ -16,14 +15,14 @@ namespace SkyCD.App.Tests;
 /// </summary>
 public sealed class SourceIconImageTests
 {
-    [Fact]
-    public void EverySource_HasDistinctArtwork()
-    {
-        var names = SourceIconImageConverter.Keys.Select(SourceIconImageConverter.IconNameFor).ToArray();
-
-        Assert.Equal(4, names.Length);
-        Assert.Equal(names.Length, names.Distinct(StringComparer.Ordinal).Count());
-    }
+    // The Twemoji assets SourceIcons.Media, .Folder, .Internet and .TitleOnly are built from.
+    private static readonly string[] AssetNames =
+    [
+        "optical-disk",
+        "file-folder",
+        "globe-showing-europe-africa",
+        "letter-t"
+    ];
 
     /// <summary>
     /// The asset the running application loads, parsed through the shared pipeline: each source icon must
@@ -34,18 +33,17 @@ public sealed class SourceIconImageTests
     {
         var assets = TwemojiAssetDirectory();
 
-        var palettes = SourceIconImageConverter.Keys
-            .Select(key => ShippedLayers(assets, SourceIconImageConverter.IconNameFor(key)))
+        var palettes = AssetNames
+            .Select(name => ShippedLayers(assets, name))
             .Select(layers => string.Join(',', layers.Select(layer => layer.Fill).Distinct(StringComparer.OrdinalIgnoreCase)))
             .ToArray();
 
-        Assert.Equal(4, palettes.Distinct(StringComparer.Ordinal).Count());
+        Assert.Equal(AssetNames.Length, palettes.Distinct(StringComparer.Ordinal).Count());
 
-        foreach (var key in SourceIconImageConverter.Keys)
+        foreach (var name in AssetNames)
         {
-            var name = SourceIconImageConverter.IconNameFor(key);
             Assert.True(File.Exists(Path.Combine(assets, name + ".svg")),
-                $"Twemoji asset '{name}' for source '{key}' was not materialized in {assets}.");
+                $"Twemoji asset '{name}' used by the Add To List source icons was not materialized in {assets}.");
 
             var layers = ShippedLayers(assets, name);
 
@@ -56,12 +54,6 @@ public sealed class SourceIconImageTests
                 Assert.True(Color.Parse(layer.Fill).A > 0, $"Layer fill '{layer.Fill}' paints nothing.");
             });
         }
-    }
-
-    [Fact]
-    public void UnknownSource_FailsLoudly()
-    {
-        Assert.Throws<NotSupportedException>(() => SourceIconImageConverter.Resolve("Unknown"));
     }
 
     private static IReadOnlyList<TwemojiArtwork.Layer> ShippedLayers(string assets, string name) =>

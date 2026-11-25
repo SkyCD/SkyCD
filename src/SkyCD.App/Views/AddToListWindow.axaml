@@ -5,6 +5,7 @@
         xmlns:avaloniaConverters="using:Avalonia.Data.Converters"
         xmlns:converters="using:SkyCD.App.Converters"
         xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
+        xmlns:icons="using:SkyCD.App.Icons"
         xmlns:views="using:SkyCD.App.Views"
         x:Class="SkyCD.App.Views.AddToListWindow"
         x:DataType="vm:AddToListDialogViewModel"
@@ -24,7 +25,6 @@
 
     <Window.Resources>
         <converters:InternetProtocolIconConverter x:Key="InternetProtocolIcon" />
-        <converters:SourceIconImageConverter x:Key="SourceIconImage" />
         <!-- Issue #1030: the dropdown rows share the closed field's inset. -->
         <ControlTheme x:Key="SourceComboBoxItemTheme"
                       TargetType="ComboBoxItem"
@@ -80,7 +80,7 @@
                         <Image Width="40"
                                Height="40"
                                HorizontalAlignment="Center"
-                               Source="{Binding Converter={StaticResource SourceIconImage}, ConverterParameter=Media}" />
+                               Source="{x:Static icons:SourceIcons.Media}" />
                         <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.FromMedia}}" HorizontalAlignment="Center" TextWrapping="Wrap" />
                     </StackPanel>
                 </Button>
@@ -92,7 +92,7 @@
                         <Image Width="40"
                                Height="40"
                                HorizontalAlignment="Center"
-                               Source="{Binding Converter={StaticResource SourceIconImage}, ConverterParameter=Folder}" />
+                               Source="{x:Static icons:SourceIcons.Folder}" />
                         <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.FromFolder}}" HorizontalAlignment="Center" TextWrapping="Wrap" />
                     </StackPanel>
                 </Button>
@@ -104,7 +104,7 @@
                         <Image Width="40"
                                Height="40"
                                HorizontalAlignment="Center"
-                               Source="{Binding Converter={StaticResource SourceIconImage}, ConverterParameter=Internet}" />
+                               Source="{x:Static icons:SourceIcons.Internet}" />
                         <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.FromInternet}}" HorizontalAlignment="Center" TextWrapping="Wrap" />
                     </StackPanel>
                 </Button>
@@ -116,7 +116,7 @@
                         <Image Width="40"
                                Height="40"
                                HorizontalAlignment="Center"
-                               Source="{Binding Converter={StaticResource SourceIconImage}, ConverterParameter=TitleOnly}" />
+                               Source="{x:Static icons:SourceIcons.TitleOnly}" />
                         <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.TitleOnly}}" HorizontalAlignment="Center" TextWrapping="Wrap" />
                     </StackPanel>
                 </Button>
