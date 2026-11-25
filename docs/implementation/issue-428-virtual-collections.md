@@ -41,11 +41,10 @@ throw `CollectionDuplicateNameException`.
   The toggle adds missing entries or removes existing ones without touching
   unrelated memberships; dynamic entries open the manager for navigation.
   Selection changes refresh the menu and toggle availability.
-- `CollectionsWindow` (`SkyCD.App`) hosts the dialog view model; `MainWindow`
-  subscribes to `CollectionsRequested` and shows it modally. Navigation locates
-  the original entry via `NavigateToFindResult`, so activation never moves or
-  copies catalog nodes.
-
+- `OptionsWindow` (`SkyCD.App`) hosts the dialog view model on the Collections
+  settings page (issue #1068); the manager command opens Options preselected on
+  that page. Navigation locates the original entry via `NavigateToFindResult`,
+  so activation never moves or copies catalog nodes.
 ## Undo
 
 `CreateVirtualCollectionAction`, `RenameVirtualCollectionAction`,

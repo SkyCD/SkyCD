@@ -1,0 +1,12 @@
+<Project>
+    <!-- Import the repository-wide props this folder would otherwise shadow. -->
+    <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+    <!--
+      Every plugin library embeds one multiresolution ICO under the name read by PluginIconResolver.
+    -->
+    <ItemGroup Condition="Exists('Assets/icon.ico')">
+        <None Remove="Assets/icon.ico" />
+        <EmbeddedResource Include="Assets/icon.ico" LogicalName="SkyCD.Plugin.Icon.ico" />
+    </ItemGroup>
+</Project>

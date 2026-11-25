@@ -2254,7 +2254,8 @@ public partial class MainWindow : Window
             version: version,
             capabilityType: ResolveCapabilityType(discovered),
             sizeBytes: PluginFolderSize.TryComputeBytes(discovered?.AssemblyLocation),
-            updateSource: ResolveUpdateSource(descriptor.Id, discovered, installStates));
+            updateSource: ResolveUpdateSource(descriptor.Id, discovered, installStates),
+            icon: discovered?.Icon ?? PluginIconKey.TryDecodePersisted(descriptor.IconPng));
     }
 
     private static string? ResolveCapabilityType(DiscoveredPlugin? plugin)
