@@ -141,7 +141,9 @@ public sealed class PdfPluginIntegrationTests : IDisposable
     public async Task SlowRasterizer_IsTimedOutByTheHostWithoutHangingThePass()
     {
         var pdf = PdfFixtures.Document();
-        var manager = CreateManager(new MediaExecutionLimits(TimeoutMilliseconds: 150), slowRendererDelay: 10_000);
+        // The metadata parse must fit the per-provider budget even on a cold, loaded runner; the
+        // budget stays far below the 10s rasterizer delay, so the preview still times out.
+        var manager = CreateManager(new MediaExecutionLimits(TimeoutMilliseconds: 2_000), slowRendererDelay: 10_000);
 
         var results = await manager.ProcessAsync(
             new MediaItem(".pdf", "application/pdf", pdf.Length),

@@ -43,7 +43,7 @@ public sealed class OptionsPluginsSettingsPageLayoutTests : IDisposable
             var list = window.GetVisualDescendants().OfType<ListBox>()
                 .Single(control => ReferenceEquals(control.ItemsSource, viewModel.PluginRepositories));
             var container = list.GetVisualAncestors().OfType<Border>().First();
-            var section = list.GetVisualAncestors().OfType<StackPanel>().First();
+            var section = container.GetVisualAncestors().OfType<Grid>().First();
             var buttons = section.GetVisualDescendants().OfType<Button>()
                 .Where(button => button.Content is "+" or "-")
                 .ToArray();

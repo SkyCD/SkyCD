@@ -1,6 +1,8 @@
 using System;
 using System.Buffers.Binary;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 
 namespace SkyCD.Plugin.Runtime.Factories;
@@ -29,7 +31,21 @@ internal static class PluginIconResolver
         return stream is null ? null : Read(stream);
     }
 
+    /// <summary>
+    /// Returns every valid square PNG frame from the embedded ICO, or an empty list for invalid icons.
+    /// </summary>
+    internal static IReadOnlyList<PluginIconFrame> ReadFrames(Assembly assembly)
+    {
+        using var stream = assembly.GetManifestResourceStream(EmbeddedIconResourceName);
+        return stream is null ? [] : ReadFrames(stream);
+    }
+
     internal static byte[]? Read(Stream stream)
+    {
+        return ReadFrames(stream).MaxBy(static frame => frame.Size)?.Png;
+    }
+
+    internal static IReadOnlyList<PluginIconFrame> ReadFrames(Stream stream)
     {
         using var buffer = new MemoryStream();
         var chunk = new byte[8192];
@@ -38,7 +54,7 @@ internal static class PluginIconResolver
         {
             if (buffer.Length + read > MaxIconBytes)
             {
-                return null;
+                return [];
             }
 
             buffer.Write(chunk, 0, read);
@@ -48,18 +64,17 @@ internal static class PluginIconResolver
         if (icon.Length < 6 || BinaryPrimitives.ReadUInt16LittleEndian(icon) != 0 ||
             BinaryPrimitives.ReadUInt16LittleEndian(icon[2..]) != 1)
         {
-            return null;
+            return [];
         }
 
         var count = BinaryPrimitives.ReadUInt16LittleEndian(icon[4..]);
         var directoryEnd = 6 + (16 * count);
         if (count == 0 || directoryEnd > icon.Length)
         {
-            return null;
+            return [];
         }
 
-        var bestSize = 0;
-        byte[]? best = null;
+        var frames = new List<PluginIconFrame>();
         for (var i = 0; i < count; i++)
         {
             var entry = icon.Slice(6 + (16 * i), 16);
@@ -67,7 +82,7 @@ internal static class PluginIconResolver
             var height = entry[1] == 0 ? 256 : entry[1];
             var length = BinaryPrimitives.ReadUInt32LittleEndian(entry[8..]);
             var offset = BinaryPrimitives.ReadUInt32LittleEndian(entry[12..]);
-            if (width != height || width <= bestSize || offset < directoryEnd ||
+            if (width != height || offset < directoryEnd ||
                 offset > icon.Length || length > icon.Length - offset || length <= PngSignature.Length)
             {
                 continue;
@@ -76,11 +91,10 @@ internal static class PluginIconResolver
             var frame = icon.Slice((int)offset, (int)length);
             if (frame[..PngSignature.Length].SequenceEqual(PngSignature))
             {
-                bestSize = width;
-                best = frame.ToArray();
+                frames.Add(new PluginIconFrame(width, frame.ToArray()));
             }
         }
 
-        return best;
+        return frames;
     }
 }

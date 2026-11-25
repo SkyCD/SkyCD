@@ -8,13 +8,14 @@ using SkyCD.Presentation.ViewModels;
 namespace SkyCD.App.Icons;
 
 /// <summary>
-/// The colored Twemoji artwork behind every <c>ToolbarIcon.*</c> key the application ships (issue #1022).
+/// The colored Twemoji artwork behind the <c>ToolbarIcon.*</c> keys with a fitting emoji (issue #1022).
 /// A toolbar command names a key, so the main toolbar, the Tools &gt; Toolbar lists and any menu showing the
 /// command all paint the same artwork through <see cref="ToolbarIconResolver"/>.
 /// </summary>
 /// <remarks>
 /// A key missing here keeps the monochrome glyph of
-/// <c>avares://SkyCD.App/Styles/ToolbarIcons.axaml</c>, which is what a plugin command without an
+/// <c>avares://SkyCD.App/Styles/ToolbarIcons.axaml</c> (issue #1140: the project-owned glyph reads better
+/// than any emoji for views, panes and the add command), which is what a plugin command without an
 /// equivalent emoji still resolves to.
 /// </remarks>
 internal static class TwemojiToolbarIcons
@@ -30,22 +31,18 @@ internal static class TwemojiToolbarIcons
             [ToolbarIconKeys.OpenCatalog] = ("open-file-folder", () => Twemoji.OpenFileFolder),
             [ToolbarIconKeys.SaveCatalog] = ("floppy-disk", () => Twemoji.FloppyDisk),
             [ToolbarIconKeys.SaveCatalogAs] = ("memo", () => Twemoji.Memo),
-            [ToolbarIconKeys.Undo] = ("left-arrow-curving-right", () => Twemoji.LeftArrowCurvingRight),
-            [ToolbarIconKeys.Redo] = ("right-arrow-curving-left", () => Twemoji.RightArrowCurvingLeft),
-            [ToolbarIconKeys.AddItem] = ("inbox-tray", () => Twemoji.InboxTray),
+            // Issue #1140: the hook arrowheads were verified against the shipped SVG geometry —
+            // RightArrowCurvingLeft draws ↩ (undo) and LeftArrowCurvingRight draws ↪ (redo).
+            [ToolbarIconKeys.Undo] = ("right-arrow-curving-left", () => Twemoji.RightArrowCurvingLeft),
+            [ToolbarIconKeys.Redo] = ("left-arrow-curving-right", () => Twemoji.LeftArrowCurvingRight),
             [ToolbarIconKeys.DeleteItem] = ("wastebasket", () => Twemoji.Wastebasket),
-            [ToolbarIconKeys.Properties] = ("name-badge", () => Twemoji.NameBadge),
+            [ToolbarIconKeys.Properties] = ("gear", () => Twemoji.Gear),
             [ToolbarIconKeys.ViewTiles] = ("framed-picture", () => Twemoji.FramedPicture),
-            [ToolbarIconKeys.ViewSmallIcons] = ("small-orange-diamond", () => Twemoji.SmallOrangeDiamond),
-            [ToolbarIconKeys.ViewLargeIcons] = ("large-orange-diamond", () => Twemoji.LargeOrangeDiamond),
-            [ToolbarIconKeys.ViewList] = ("scroll", () => Twemoji.Scroll),
             [ToolbarIconKeys.ViewDetails] = ("card-index-dividers", () => Twemoji.CardIndexDividers),
-            [ToolbarIconKeys.StatusBar] = ("bar-chart", () => Twemoji.BarChart),
             [ToolbarIconKeys.PreviewPane] = ("crystal-ball", () => Twemoji.CrystalBall),
             [ToolbarIconKeys.Refresh] = ("clockwise-vertical-arrows", () => Twemoji.ClockwiseVerticalArrows),
             [ToolbarIconKeys.Find] = ("magnifying-glass-tilted-left", () => Twemoji.MagnifyingGlassTiltedLeft),
             [ToolbarIconKeys.AdvancedFind] = ("telescope", () => Twemoji.Telescope),
-            [ToolbarIconKeys.Options] = ("toolbox", () => Twemoji.Toolbox),
             [ToolbarIconKeys.Tags] = ("label", () => Twemoji.Label),
             [ToolbarIconKeys.Collections] = ("books", () => Twemoji.Books)
         };

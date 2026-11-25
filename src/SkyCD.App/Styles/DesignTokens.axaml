@@ -16,12 +16,6 @@
 
     <Thickness x:Key="SkyWindowPadding">12</Thickness>
 
-    <!--
-        Tallest tab a fixed-size dialog allows for its scrolling source fields (#942). The Add To List
-        dialog is 445x480; this keeps the name/Location block, the actions and the validation line
-        inside the client area, and the source fields scroll beyond it.
-    -->
-    <x:Double x:Key="SkyFormFieldsMaxHeight">230</x:Double>
     <Thickness x:Key="SkySectionPadding">12</Thickness>
     <Thickness x:Key="SkyControlPadding">8,4</Thickness>
     <Thickness x:Key="SkyInsetXxs">2</Thickness>
