@@ -848,13 +848,19 @@ public partial class MainWindow : Window
         ApplyLanguage(options.Language);
         if (!string.IsNullOrWhiteSpace(options.LastOpenedCatalogPath) && File.Exists(options.LastOpenedCatalogPath))
         {
-            EnsureFileFormatProvidersLoaded();
+            // Advertise the restore before the first frame so the shell paints with its busy state, then wait
+            // for that frame: plugin discovery and the import would otherwise block rendering and leave the
+            // window as a transparent client area (#1109).
+            vm.BeginCatalogLoad();
+            await Dispatcher.UIThread.InvokeAsync(static () => { }, DispatcherPriority.Background);
             try
             {
+                EnsureFileFormatProvidersLoaded();
                 await TryLoadCatalogIntoViewModelAsync(options.LastOpenedCatalogPath);
             }
             catch (Exception exception)
             {
+                vm.EndCatalogLoad();
                 vm.StatusText = LocalizationService.Current.Format(TextKeys.FailedToOpenCatalog, exception.Message);
             }
         }
