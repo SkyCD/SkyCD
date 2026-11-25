@@ -36,6 +36,24 @@ public sealed class PreviewPaneUiContractTests
     }
 
     [Fact]
+    public void QuickFind_DividerAppearsOnlyBetweenTheBarAndBrowser()
+    {
+        var xaml = ReadRepoFile("src", "SkyCD.App", "Views", "MainWindow.axaml");
+        var quickFindIndex = xaml.IndexOf("IsVisible=\"{Binding IsQuickFilterOpen}\"", StringComparison.Ordinal);
+        var dividerIndex = xaml.IndexOf("<Border DockPanel.Dock=\"Top\"", StringComparison.Ordinal);
+        var browserIndex = xaml.IndexOf("<cl:BrowserItemsView", StringComparison.Ordinal);
+
+        Assert.True(quickFindIndex >= 0);
+        Assert.True(dividerIndex > quickFindIndex);
+        Assert.True(browserIndex > dividerIndex);
+        Assert.Contains("Height=\"1\"", xaml[dividerIndex..browserIndex], StringComparison.Ordinal);
+        Assert.Contains("Background=\"{DynamicResource ThemeBorderLowBrush}\"", xaml[dividerIndex..browserIndex],
+            StringComparison.Ordinal);
+        Assert.Contains("IsVisible=\"{Binding IsQuickFilterOpen}\"", xaml[dividerIndex..browserIndex],
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void QuickFind_ShowsWhichCapturedFieldMatched()
     {
         var xaml = ReadRepoFile("src", "SkyCD.App", "Views", "MainWindow.axaml");
