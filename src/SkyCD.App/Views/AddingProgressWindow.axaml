@@ -185,16 +185,40 @@
                         CornerRadius="3"
                         Background="{DynamicResource ThemeBackgroundBrush}">
                     <ScrollViewer x:Name="LogScrollViewer"
-                                  HorizontalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled"
                                   VerticalScrollBarVisibility="Auto">
                         <ItemsControl ItemsSource="{Binding LogEntries}">
                             <ItemsControl.ItemTemplate>
+                                <!--
+                                    Compact log row (issue #1203): fixed timestamp and glyph columns so
+                                    every message starts at the same x, wrapping message column so long
+                                    paths never need horizontal scrolling. The glyph column reuses
+                                    SkyIconSize instead of space padding, which cannot align emoji.
+                                -->
                                 <DataTemplate x:DataType="ops:OperationLogEntry">
-                                    <TextBlock Text="{Binding DisplayText}"
-                                               FontFamily="Cascadia Code,Consolas,Courier New,monospace"
-                                               FontSize="{DynamicResource SkyFontSecondary}"
-                                               Margin="{DynamicResource SkyControlPaddingTight}"
-                                               TextWrapping="NoWrap" />
+                                    <Grid Margin="{DynamicResource SkyControlPaddingTight}"
+                                          ColumnSpacing="{DynamicResource SkySpaceXs}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="{DynamicResource SkyIconSize}" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding CompactTimestamp, StringFormat='[{0}]'}"
+                                                   FontFamily="Cascadia Code,Consolas,Courier New,monospace"
+                                                   FontSize="{DynamicResource SkyFontSecondary}"
+                                                   VerticalAlignment="Top" />
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding LevelGlyph}"
+                                                   FontFamily="Cascadia Code,Consolas,Courier New,monospace"
+                                                   FontSize="{DynamicResource SkyFontSecondary}"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Top" />
+                                        <TextBlock Grid.Column="2"
+                                                   Text="{Binding CompactMessage}"
+                                                   FontFamily="Cascadia Code,Consolas,Courier New,monospace"
+                                                   FontSize="{DynamicResource SkyFontSecondary}"
+                                                   TextWrapping="Wrap" />
+                                    </Grid>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>

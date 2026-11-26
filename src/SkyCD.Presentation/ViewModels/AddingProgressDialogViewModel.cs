@@ -71,6 +71,7 @@ public partial class AddingProgressDialogViewModel : ObservableObject, IOperatio
 
     private readonly object gate = new();
     private string? currentStage;
+    private string? scanRootPath;
 
     // Scan reports arrive from a worker thread faster than the UI can lay them out (#1063).
     // They are merged into this pending state and published on the UI thread at a bounded rate.
@@ -722,8 +723,33 @@ public partial class AddingProgressDialogViewModel : ObservableObject, IOperatio
             StageWorkTotal = incoming.StageWorkTotal ?? pending?.StageWorkTotal
         };
 
+    /// <summary>
+    /// Learns the scan root from the first scan-start entry (the Information entry that carries
+    /// the root as its path, e.g. "Starting folder scan") and stamps it on later entries so the
+    /// compact line can render descendants relative to the root. Entries that already carry an
+    /// explicit root keep it; entries outside the learned root keep absolute paths.
+    /// </summary>
+    private OperationLogEntry StampScanRootLocked(OperationLogEntry entry)
+    {
+        if (!string.IsNullOrEmpty(entry.ScanRoot))
+        {
+            scanRootPath = entry.ScanRoot;
+            return entry;
+        }
+
+        if (string.IsNullOrEmpty(scanRootPath)
+            && entry.Level == OperationLogLevel.Information
+            && !string.IsNullOrEmpty(entry.ItemPath))
+        {
+            scanRootPath = entry.ItemPath;
+        }
+
+        return string.IsNullOrEmpty(scanRootPath) ? entry : entry with { ScanRoot = scanRootPath };
+    }
+
     private void EnqueueEntryLocked(OperationLogEntry entry)
     {
+        entry = StampScanRootLocked(entry);
         loggedTotal++;
 
         switch (entry.Level)
