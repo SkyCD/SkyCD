@@ -9,6 +9,7 @@ using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 using DryIoc;
 using Microsoft.Extensions.Logging;
+using SkyCD.App.Icons;
 using SkyCD.App.Views;
 using SkyCD.App.Marketplace;
 using SkyCD.App.Mcp;
@@ -75,6 +76,7 @@ public partial class App : Avalonia.Application
                     options.PluginRepositorySources);
                 lastOpenedCatalogPath = options.LastOpenedCatalogPath;
                 LocalizationService.Current.SetLanguage(options.Language);
+                StatusIconCatalog.RegisterKeys(StatusIconResolver.GetAllKeys());
                 InitializePlugins(appServiceProvider.Resolve<RepositoryManager>());
                 InitializeDefaultStatuses(appServiceProvider.Resolve<RepositoryManager>());
                 InitializeDefaultScanExclusionRules(appServiceProvider.Resolve<RepositoryManager>());

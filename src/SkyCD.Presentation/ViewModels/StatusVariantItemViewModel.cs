@@ -6,7 +6,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using SkyCD.Documents;
 using SkyCD.Documents.Enum;
 using SkyCD.UI.Controls.Selectors.MultiSelectDropdown;
-using Avalonia.Media;
 using SkyCD.UI.Localization;
 
 namespace SkyCD.Presentation.ViewModels;
@@ -25,6 +24,7 @@ public partial class StatusVariantItemViewModel : ObservableObject
     [ObservableProperty] private bool isDropHintVisible;
 
     public ObservableCollection<MultiSelectOptionItem> TypeOptions { get; } = [];
+    /// <summary>Pack/key strings registered at host startup; resolution happens in App converters.</summary>
     public IReadOnlyList<string> IconOptions => StatusIconCatalog.GetAllKeys();
     public IReadOnlyList<string> ColorOptions { get; } =
     [
@@ -34,8 +34,8 @@ public partial class StatusVariantItemViewModel : ObservableObject
         "#D9E1F2", "#E2EFDA", "#FCE4D6", "#FFF2CC", "#EDEDED", "#D6E3F3", "#E2F0D9", "#FBE5D6"
     ];
 
-    public object? IconKind => StatusIconCatalog.TryResolveKind(IconGlyph, out var kind) ? kind : null;
-    public IBrush IconBrush => StatusIconCatalog.ResolveBrush(IconColor);
+    // IconKind and IconBrush intentionally live in App converters (StatusIconResolver):
+    // view models expose the IconGlyph/IconColor strings only, never Avalonia types.
 
     public StatusVariantItemViewModel()
     {
@@ -111,19 +111,7 @@ public partial class StatusVariantItemViewModel : ObservableObject
         }
 
         vm.OnPropertyChanged(nameof(SelectedItemTypesDisplayText));
-        vm.OnPropertyChanged(nameof(IconKind));
-        vm.OnPropertyChanged(nameof(IconBrush));
         return vm;
-    }
-
-    partial void OnIconGlyphChanged(string value)
-    {
-        OnPropertyChanged(nameof(IconKind));
-    }
-
-    partial void OnIconColorChanged(string value)
-    {
-        OnPropertyChanged(nameof(IconBrush));
     }
 
     private HashSet<CatalogDocumentType> GetSelectedTypes()

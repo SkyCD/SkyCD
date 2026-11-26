@@ -10,6 +10,9 @@
         <ProjectReference Include="..\SkyCD.Couchbase\SkyCD.Couchbase.csproj" />
     </ItemGroup>
     <ItemGroup>
+        <!-- Declared explicitly (issue #1226): Presentation still renders Avalonia images/controls in the
+             thumbnail pipeline, so the framework is a direct dependency, not only a transitive one. -->
+        <PackageReference Include="Avalonia" Version="12.1.6" />
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
         <PackageReference Include="Couchbase.Lite" Version="4.1.3" />
         <PackageReference Include="FluentFTP" Version="55.1.0" />

@@ -1,0 +1,106 @@
+# License-category rules for the license-compliance gate (issue #1237).
+#
+# Trivy classifies each dependency license with the Google license classification and maps
+# each category to a severity (Forbidden = CRITICAL, Restricted = HIGH, Reciprocal = MEDIUM,
+# Notice/Unencumbered = LOW, Unknown = UNKNOWN). The gate fails on CRITICAL,HIGH.
+#
+# Each list below REPLACES Trivy's whole default list for that category, so the three lists
+# reproduce Trivy 0.76.2's defaults plus exactly two deltas:
+#   1. LGPL-2.0/2.1/3.0 (both -only and -or-later: an -or-later grant includes the -only
+#      terms) move from Restricted to Reciprocal. SkyCD ships NuGet assemblies as separate,
+#      replaceable DLLs, so unmodified weak-copyleft dependencies are compatible (#925).
+#   2. SSPL-1.0 is added to Forbidden. Trivy has no default category for it, so it would
+#      otherwise land in Unknown and pass the gate silently.
+#
+# Categories NOT listed here (notice, unencumbered) keep Trivy's defaults: permissive licenses
+# (MIT, Apache-2.0, BSD, ISC, Zlib, 0BSD, Unlicense, ...) stay LOW, unknown ids stay UNKNOWN
+# (reported, not failing).
+#
+# Verified against Trivy 0.76.2 with a synthetic CycloneDX SBOM covering ~190 SPDX ids:
+# every id below classifies as stated, and spot-checked defaults outside these lists
+# (AGPL/GPL = fail, MPL/EPL/CDDL = pass, MIT = pass, EUPL = unknown/pass) are unchanged.
+#
+# WHEN TRIVY IS BUMPED, re-sync these lists (docs/legal/dependency-policy.md describes how):
+# new Trivy versions can add, remove or reclassify ids, which silently changes the gate.
+license:
+  forbidden:
+    # Strong copyleft.
+    - AGPL-1.0-only
+    - AGPL-1.0-or-later
+    - AGPL-3.0-only
+    - AGPL-3.0-or-later
+    # Non-commercial only: not usable by a redistributed binary.
+    - CC-BY-NC-1.0
+    - CC-BY-NC-2.0
+    - CC-BY-NC-3.0
+    - CC-BY-NC-4.0
+    - CC-BY-NC-ND-1.0
+    - CC-BY-NC-ND-2.0
+    - CC-BY-NC-ND-2.5
+    - CC-BY-NC-ND-3.0
+    - CC-BY-NC-ND-4.0
+    - CC-BY-NC-SA-1.0
+    - CC-BY-NC-SA-2.0
+    - CC-BY-NC-SA-2.5
+    - CC-BY-NC-SA-3.0
+    - CC-BY-NC-SA-4.0
+    # No-conditions public-domain dedication with a no-warranty clause Trivy rejects outright.
+    - WTFPL
+    # DELTA: Trivy has no default category for SSPL-1.0; without this entry it lands in
+    # Unknown and would pass the gate silently.
+    - SSPL-1.0
+  restricted:
+    - GPL-1.0-only
+    - GPL-1.0-or-later
+    - GPL-2.0-only
+    - GPL-2.0-or-later
+    - GPL-2.0-with-bison-exception
+    - GPL-2.0-with-classpath-exception
+    - GPL-2.0-with-font-exception
+    - GPL-2.0-with-GCC-exception
+    - GPL-3.0-only
+    - GPL-3.0-or-later
+    - GPL-3.0-with-autoconf-exception
+    - GPL-3.0-with-GCC-exception
+    - OSL-1.0
+    - OSL-1.1
+    - OSL-2.0
+    - OSL-2.1
+    - OSL-3.0
+    - QPL-1.0
+    - Sleepycat
+    - NPL-1.0
+    - NPL-1.1
+    - CC-BY-ND-1.0
+    - CC-BY-ND-2.0
+    - CC-BY-ND-2.5
+    - CC-BY-ND-3.0
+    - CC-BY-ND-4.0
+    - CC-BY-SA-1.0
+    - CC-BY-SA-2.0
+    - CC-BY-SA-2.5
+    - CC-BY-SA-3.0
+    - CC-BY-SA-4.0
+  reciprocal:
+    - APSL-1.0
+    - APSL-1.1
+    - APSL-1.2
+    - APSL-2.0
+    - CDDL-1.0
+    - CDDL-1.1
+    - CPL-1.0
+    - EPL-1.0
+    - EPL-2.0
+    - IPL-1.0
+    - MPL-1.0
+    - MPL-1.1
+    - MPL-2.0
+    - Ruby
+    # DELTA: unmodified weak copyleft passes (see header). An -or-later grant includes the
+    # corresponding -only terms, so both forms are listed.
+    - LGPL-2.0-only
+    - LGPL-2.0-or-later
+    - LGPL-2.1-only
+    - LGPL-2.1-or-later
+    - LGPL-3.0-only
+    - LGPL-3.0-or-later

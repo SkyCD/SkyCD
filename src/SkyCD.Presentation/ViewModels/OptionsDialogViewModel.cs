@@ -207,9 +207,15 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
                 .ThenBy(static page => page.Title, StringComparer.OrdinalIgnoreCase)
                 .Select(page => new OptionsSettingCategory(page.Id, page.Title, ContributedPage: page)));
 
+            var scanGroup = LocalizationService.Current.Get(UiKeys.ScanExclusions);
             categories.AddRange(
             [
-                new("scan", LocalizationService.Current.Get(TextKeys.Scan), 6),
+                new(ScanCategoryId, LocalizationService.Current.Get(UiKeys.ScanSettings), ScanCategoryIndex,
+                    Group: scanGroup),
+                new(ScanRulesCategoryId, LocalizationService.Current.Get(UiKeys.ExclusionByScanName),
+                    ScanRulesCategoryIndex, Group: scanGroup),
+                new(ScanCompletionCategoryId, LocalizationService.Current.Get(UiKeys.ScanCompletionPage),
+                    ScanCompletionCategoryIndex, Group: scanGroup),
                 new("details-columns", LocalizationService.Current.Get(UiKeys.DetailsColumns), 7,
                     Group: uiGroup),
                 new(ToolbarCategoryId, LocalizationService.Current.Get(UiKeys.Toolbar), ToolbarCategoryIndex,
@@ -317,6 +323,7 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         ShowLanguageSection ||
         ShowMcpSection ||
         ShowStatusesSection || ShowCustomPropertiesSection || ShowAcpSection || ShowScanSection ||
+        ShowScanRulesSection || ShowScanCompletionSection ||
         ShowDetailsColumnsSection || ShowToolbarSection ||
         ShowAiDescriptionSection || ShowAiProviderSection || ShowMcpToolsSection ||
         ShowPluginSettingsSection || ShowPluginsSettingsSection ||
@@ -408,6 +415,7 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         if (ScanExclusionRules.Any(static rule => string.IsNullOrWhiteSpace(rule.Pattern)))
         {
             ScanAlertMessage = LocalizationService.Current.Get(TextKeys.AllRulesNeedPattern);
+            RevealScanRulesPage();
             return;
         }
 
@@ -657,8 +665,11 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         }
 
         // Group labels carry the expanded abbreviations ("User Interface (UI)",
-        // "Artificial Intelligence (AI)"), so a search for the abbreviation keeps the group's pages.
-        if (category.Group is { } group && IsExpandedAbbreviationGroup(group) && MatchesSearch(group))
+        // "Artificial Intelligence (AI)") and the scan-exclusions group name, so a search
+        // for that label keeps the group's pages.
+        if (category.Group is { } group &&
+            (IsExpandedAbbreviationGroup(group) || IsScanExclusionsGroup(group)) &&
+            MatchesSearch(group))
         {
             return true;
         }
@@ -696,6 +707,9 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
     private static bool IsExpandedAbbreviationGroup(string group) =>
         string.Equals(group, LocalizationService.Current.Get(UiKeys.UiGroup), StringComparison.OrdinalIgnoreCase) ||
         string.Equals(group, LocalizationService.Current.Get(UiKeys.AiGroup), StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsScanExclusionsGroup(string group) =>
+        string.Equals(group, LocalizationService.Current.Get(UiKeys.ScanExclusions), StringComparison.OrdinalIgnoreCase);
 
     partial void OnSelectedSettingCategoryChanged(OptionsSettingCategory? value)
     {
@@ -868,6 +882,10 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(ShowAcpSection));
         OnPropertyChanged(nameof(IsScanCategorySelected));
         OnPropertyChanged(nameof(ShowScanSection));
+        OnPropertyChanged(nameof(IsScanRulesCategorySelected));
+        OnPropertyChanged(nameof(ShowScanRulesSection));
+        OnPropertyChanged(nameof(IsScanCompletionCategorySelected));
+        OnPropertyChanged(nameof(ShowScanCompletionSection));
         OnPropertyChanged(nameof(IsAiDescriptionCategorySelected));
         OnPropertyChanged(nameof(ShowAiDescriptionSection));
         OnPropertyChanged(nameof(IsAiProviderCategorySelected));
