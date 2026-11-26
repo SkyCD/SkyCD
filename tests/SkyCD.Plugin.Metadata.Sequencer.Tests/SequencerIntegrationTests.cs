@@ -68,7 +68,7 @@ public sealed class SequencerIntegrationTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task MidiRecognizesSmfAndRiffAndRendersDeterministically(bool riff)
+    public async Task MidiRecognizesSmfAndRiff(bool riff)
     {
         var bytes = Convert.FromHexString("4D546864000000060000000101E04D54726B0000000D00903C648360803C0000FF2F00");
         var extension = riff ? ".rmi" : ".mid";
@@ -86,7 +86,6 @@ public sealed class SequencerIntegrationTests
         Assert.Equal(1, facts["TrackCount"].Integer);
         Assert.Equal(1, facts["NoteCount"].Integer);
         Assert.Equal(0.5, facts["Duration"].Number);
-        await AssertPreview(new SequencerMidiPreviewPlugin(), extension, bytes);
     }
 
     [Fact]
@@ -225,7 +224,7 @@ public sealed class SequencerIntegrationTests
     private static async Task AssertPreview(IMediaPreviewCapability plugin, string extension, byte[] bytes)
     {
         Assert.Equal(10, plugin.Descriptor.Priority);
-        Assert.Equal(plugin is SequencerMidiPreviewPlugin, plugin.Descriptor.IndexTimePreview);
+        Assert.False(plugin.Descriptor.IndexTimePreview);
         Assert.Equal("skycd.sequencer.preview", plugin.Descriptor.Schema.Id);
         var item = new MediaItem(extension, null, bytes.Length);
         var first = Assert.Single((await plugin.GeneratePreviewAsync(item, new Source(bytes), null, TestContextToken)).Artifacts);

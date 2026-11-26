@@ -13,7 +13,7 @@ internal static class SequencerSource
     internal static async Task<MediaExtractionResult> ExtractAsync(MediaFamily family, MediaItem item, IMediaSource source,
         IProgress<MediaProgress>? progress, CancellationToken token)
     {
-        var facts = await ReadAsync(family, item, source, false, token).ConfigureAwait(false);
+        var facts = await ReadAsync(family, item, source, token).ConfigureAwait(false);
         progress?.Report(new MediaProgress(1));
         return new(facts?.Values.ToArray() ?? []);
     }
@@ -21,13 +21,13 @@ internal static class SequencerSource
     internal static async Task<MediaPreviewResult> PreviewAsync(MediaFamily family, MediaItem item, IMediaSource source,
         IProgress<MediaProgress>? progress, CancellationToken token)
     {
-        var facts = await ReadAsync(family, item, source, true, token).ConfigureAwait(false);
-        var png = facts is null ? null : SequencerRenderer.Render(facts, family == MediaFamily.Midi, token);
+        var facts = await ReadAsync(family, item, source, token).ConfigureAwait(false);
+        var png = facts is null ? null : SequencerRenderer.Render(facts, token);
         progress?.Report(new MediaProgress(1));
         return new(png is { Length: > 0 and <= 4 * 1024 * 1024 } ? [new MediaPreviewArtifact("image/png", png)] : []);
     }
 
-    private static async Task<SequencerFacts?> ReadAsync(MediaFamily family, MediaItem item, IMediaSource source, bool preview,
+    private static async Task<SequencerFacts?> ReadAsync(MediaFamily family, MediaItem item, IMediaSource source,
         CancellationToken token)
     {
         var length = source.Length;
@@ -45,7 +45,7 @@ internal static class SequencerSource
             return family switch
             {
                 MediaFamily.Project => ProjectReader.Read(bytes, extension, token),
-                MediaFamily.Midi => MidiReader.Read(bytes, extension, preview, token),
+                MediaFamily.Midi => MidiReader.Read(bytes, extension, token),
                 MediaFamily.Module => ModuleReader.Read(bytes, extension, token),
                 _ => null
             };

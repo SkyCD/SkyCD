@@ -8,7 +8,7 @@ namespace SkyCD.Plugin.Metadata.Sequencer.Parsing;
 
 internal static class MidiReader
 {
-    internal static SequencerFacts? Read(byte[] bytes, string extension, bool preview, CancellationToken token)
+    internal static SequencerFacts? Read(byte[] bytes, string extension, CancellationToken token)
     {
         var (start, length) = FindSmf(bytes);
         var data = bytes.AsSpan(start, length);
@@ -123,31 +123,15 @@ internal static class MidiReader
             token.ThrowIfCancellationRequested();
             var map = format == 2 ? new MidiFile(track) { TimeDivision = timeDivision }.GetTempoMap() : tempoMap;
             duration = Math.Max(duration, ToSeconds(track.Events.Sum(e => e.DeltaTime), map));
-            foreach (var note in track.GetNotes())
+            foreach (var _ in track.GetNotes())
             {
                 token.ThrowIfCancellationRequested();
                 count++;
-                if (!preview || facts.Notes.Count == 10_000 || (byte)note.NoteNumber is < 21 or > 108)
-                    continue;
-                var startSeconds = ToSeconds(note.Time, map);
-                if (startSeconds < 120)
-                    facts.Notes.Add(new(startSeconds, ToSeconds(note.EndTime, map), (byte)note.NoteNumber, (byte)note.Channel));
             }
         }
 
         facts.Integer("NoteCount", count);
         facts.Number("Duration", duration);
-        if (preview && timeDivision is TicksPerQuarterNoteTimeDivision ppq)
-        {
-            var end = Math.Min(120, duration);
-            for (long tick = 0; facts.Beats.Count < 2000; tick += ppq.TicksPerQuarterNote)
-            {
-                var seconds = ToSeconds(tick, tempoMap);
-                if (seconds > end)
-                    break;
-                facts.Beats.Add(seconds);
-            }
-        }
         return facts;
     }
 

@@ -12,8 +12,6 @@ internal sealed class SequencerFacts(string kind, string format)
 
     internal IReadOnlyCollection<MediaMetadataValue> Values => values.Values;
     internal List<string> Names { get; } = [];
-    internal List<PianoNote> Notes { get; } = [];
-    internal List<double> Beats { get; } = [];
 
     internal void Text(string key, string? value)
     {
