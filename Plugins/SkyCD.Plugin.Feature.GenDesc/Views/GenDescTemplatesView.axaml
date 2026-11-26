@@ -1,0 +1,184 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:i18n="clr-namespace:SkyCD.UI.Localization;assembly=SkyCD.UI"
+             xmlns:l="clr-namespace:SkyCD.Plugin.Feature.GenDesc.Localization"
+             xmlns:models="clr-namespace:SkyCD.Plugin.Feature.GenDesc.Models"
+             xmlns:views="clr-namespace:SkyCD.Plugin.Feature.GenDesc.Views"
+             xmlns:vm="clr-namespace:SkyCD.Plugin.Feature.GenDesc.ViewModels"
+             x:Class="SkyCD.Plugin.Feature.GenDesc.Views.GenDescTemplatesView"
+             x:DataType="vm:GenDescTemplatesViewModel">
+    <Grid RowDefinitions="Auto,Auto,*,Auto,Auto"
+          Margin="{DynamicResource SkyInsetMd}"
+          RowSpacing="{DynamicResource SkySpaceSm}">
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,220,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
+            <TextBlock Grid.Column="0"
+                       Text="{i18n:Translate {x:Static l:GenDescKeys.TemplateList}}"
+                       VerticalAlignment="Center" />
+            <ComboBox Grid.Column="1"
+                      ItemsSource="{Binding KindOptions}"
+                      SelectedItem="{Binding SelectedKindOption, Mode=TwoWay}"
+                      Padding="{DynamicResource SkyComboBoxContentPadding}"
+                      HorizontalAlignment="Stretch">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:KindOption">
+                        <TextBlock Text="{Binding Label}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+            <TextBlock Grid.Column="2"
+                       Text="{i18n:Translate {x:Static l:GenDescKeys.OptionsHint}}"
+                       Foreground="{DynamicResource ThemeForegroundLowBrush}"
+                       TextWrapping="Wrap"
+                       VerticalAlignment="Center" />
+        </Grid>
+
+        <Grid Grid.Row="1" ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto"
+              ColumnSpacing="{DynamicResource SkySpaceSm}"
+              RowSpacing="{DynamicResource SkySpaceXs}">
+            <StackPanel Grid.Row="0" Grid.Column="0" Spacing="{DynamicResource SkySpaceXxs}">
+                <TextBlock Text="{i18n:Translate {x:Static l:GenDescKeys.Id}}" />
+                <TextBox Text="{Binding EditorId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         FontFamily="{DynamicResource SkyFontFamilyMono}" />
+            </StackPanel>
+            <StackPanel Grid.Row="0" Grid.Column="1" Spacing="{DynamicResource SkySpaceXxs}">
+                <TextBlock Text="{i18n:Translate {x:Static l:GenDescKeys.Category}}" />
+                <TextBox Text="{Binding EditorCategory, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         FontFamily="{DynamicResource SkyFontFamilyMono}" />
+            </StackPanel>
+            <StackPanel Grid.Row="1" Grid.Column="0" Spacing="{DynamicResource SkySpaceXxs}">
+                <TextBlock Text="{i18n:Translate {x:Static l:GenDescKeys.Language}}" />
+                <TextBox Text="{Binding EditorLanguage, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         FontFamily="{DynamicResource SkyFontFamilyMono}" />
+            </StackPanel>
+            <StackPanel Grid.Row="1" Grid.Column="1" Spacing="{DynamicResource SkySpaceXxs}">
+                <TextBlock Text="{i18n:Translate {x:Static l:GenDescKeys.Site}}" />
+                <TextBox Text="{Binding EditorSite, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         FontFamily="{DynamicResource SkyFontFamilyMono}" />
+            </StackPanel>
+            <StackPanel Grid.Row="2" Grid.Column="0" Spacing="{DynamicResource SkySpaceXxs}">
+                <TextBlock Text="{i18n:Translate {x:Static l:GenDescKeys.Version}}" />
+                <TextBox Text="{Binding EditorVersion, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         FontFamily="{DynamicResource SkyFontFamilyMono}" />
+            </StackPanel>
+            <StackPanel Grid.Row="2" Grid.Column="1" Spacing="{DynamicResource SkySpaceXxs}">
+                <TextBlock Text="{i18n:Translate {x:Static l:GenDescKeys.MimeTypes}}" />
+                <TextBox Text="{Binding EditorMime, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         FontFamily="{DynamicResource SkyFontFamilyMono}" />
+            </StackPanel>
+            <StackPanel Grid.Row="3" Grid.Column="0" Spacing="{DynamicResource SkySpaceXxs}">
+                <TextBlock Text="{i18n:Translate {x:Static l:GenDescKeys.Extensions}}" />
+                <TextBox Text="{Binding EditorExtensions, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         FontFamily="{DynamicResource SkyFontFamilyMono}" />
+            </StackPanel>
+            <TextBlock Grid.Row="3" Grid.Column="1"
+                       Text="{i18n:Translate {x:Static l:GenDescKeys.CategoriesHint}}"
+                       Foreground="{DynamicResource ThemeForegroundLowBrush}"
+                       TextWrapping="Wrap"
+                       VerticalAlignment="Bottom"
+                       Margin="{DynamicResource SkyGapBottomXs}" />
+        </Grid>
+
+        <Grid Grid.Row="2" ColumnDefinitions="260,*" ColumnSpacing="{DynamicResource SkySpaceMd}">
+            <DockPanel Grid.Column="0">
+                <TextBlock DockPanel.Dock="Top"
+                           Text="{i18n:Translate {x:Static l:GenDescKeys.TemplateList}}"
+                           FontWeight="SemiBold"
+                           Margin="{DynamicResource SkyGapBottomXs}" />
+                <TextBlock DockPanel.Dock="Bottom"
+                           Text="{Binding TemplateDirectory}"
+                           FontSize="{DynamicResource SkyFontCaption}"
+                           Foreground="{DynamicResource ThemeForegroundLowBrush}"
+                           TextWrapping="Wrap"
+                           Margin="{DynamicResource SkyGapTopXs}" />
+                <ListBox ItemsSource="{Binding Templates}"
+                         SelectedItem="{Binding SelectedTemplate, Mode=TwoWay}"
+                         AutomationProperties.Name="{i18n:Translate {x:Static l:GenDescKeys.TemplateList}}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="models:TemplateInfo">
+                            <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
+                                <TextBlock Text="{Binding DisplayName}" />
+                                <TextBlock Text="{Binding MimeTypes}"
+                                           FontSize="{DynamicResource SkyFontCaption}"
+                                           Foreground="{DynamicResource ThemeForegroundLowBrush}"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+
+            <TabControl Grid.Column="1">
+                <TabItem Header="{i18n:Translate {x:Static l:GenDescKeys.Body}}">
+                    <TextBox Text="{Binding EditorBody, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             AcceptsReturn="True"
+                             TextWrapping="NoWrap"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                             FontFamily="{DynamicResource SkyFontFamilyMono}"
+                             Margin="{DynamicResource SkyGapTopXs}" />
+                </TabItem>
+                <TabItem Header="{i18n:Translate {x:Static l:GenDescKeys.Highlighted}}">
+                    <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                                  VerticalScrollBarVisibility="Auto"
+                                  Margin="{DynamicResource SkyGapTopXs}">
+                        <views:TemplateSyntaxView TemplateText="{Binding EditorBody}"
+                                                  TextWrapping="NoWrap"
+                                                  FontFamily="{DynamicResource SkyFontFamilyMono}"
+                                                  Padding="{DynamicResource SkyInsetSm}"
+                                                  Foreground="{DynamicResource ThemeForegroundBrush}"
+                                                  TextBrush="{DynamicResource ThemeForegroundBrush}"
+                                                  TagBrush="{DynamicResource ThemeForegroundLowBrush}"
+                                                  KeywordBrush="{DynamicResource ThemeAccentBrush}"
+                                                  FunctionBrush="{DynamicResource ThemeForegroundBrush}"
+                                                  StringBrush="{DynamicResource ThemeAccentBrush}"
+                                                  NumberBrush="{DynamicResource ThemeForegroundBrush}"
+                                                  CommentBrush="{DynamicResource ThemeForegroundLowBrush}"
+                                                  BbCodeBrush="{DynamicResource ThemeAccentBrush}" />
+                    </ScrollViewer>
+                </TabItem>
+                <TabItem Header="{i18n:Translate {x:Static l:GenDescKeys.Preview}}">
+                    <TextBox Text="{Binding PreviewText}"
+                             IsReadOnly="True"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             FontFamily="{DynamicResource SkyFontFamilyMono}"
+                             Margin="{DynamicResource SkyGapTopXs}" />
+                </TabItem>
+            </TabControl>
+        </Grid>
+
+        <Grid Grid.Row="3" ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}">
+                <ComboBox ItemsSource="{Binding Tokens}"
+                          SelectedItem="{Binding SelectedToken, Mode=TwoWay}"
+                          MinWidth="260"
+                          Padding="{DynamicResource SkyComboBoxContentPadding}"
+                          AutomationProperties.Name="{i18n:Translate {x:Static l:GenDescKeys.Tokens}}" />
+                <Button Content="{i18n:Translate {x:Static l:GenDescKeys.InsertToken}}"
+                        Command="{Binding InsertTokenCommand}" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}">
+                <Button Content="{i18n:Translate {x:Static l:GenDescKeys.New}}" Command="{Binding NewCommand}" />
+                <Button Content="{i18n:Translate {x:Static l:GenDescKeys.Duplicate}}" Command="{Binding DuplicateCommand}" />
+                <Button Content="{i18n:Translate {x:Static l:GenDescKeys.Delete}}" Command="{Binding DeleteCommand}" />
+                <Button Content="{i18n:Translate {x:Static l:GenDescKeys.Import}}" Command="{Binding ImportCommand}" />
+                <Button Content="{i18n:Translate {x:Static l:GenDescKeys.Export}}" Command="{Binding ExportCommand}" />
+                <Button Content="{i18n:Translate {x:Static l:GenDescKeys.Reload}}" Command="{Binding ReloadCommand}" />
+                <Button Content="{i18n:Translate {x:Static l:GenDescKeys.Save}}" Command="{Binding SaveCommand}" />
+            </StackPanel>
+        </Grid>
+
+        <StackPanel Grid.Row="4" Spacing="{DynamicResource SkySpaceXxs}">
+            <TextBlock Text="{Binding StatusText}"
+                       Foreground="{DynamicResource ThemeForegroundLowBrush}"
+                       TextWrapping="Wrap" />
+            <TextBlock Text="{Binding ErrorText}"
+                       FontWeight="SemiBold"
+                       TextWrapping="Wrap" />
+            <TextBlock Text="{Binding PreviewError}"
+                       Foreground="{DynamicResource ThemeForegroundLowBrush}"
+                       TextWrapping="Wrap" />
+        </StackPanel>
+    </Grid>
+</UserControl>

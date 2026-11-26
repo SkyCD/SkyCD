@@ -116,4 +116,6 @@
 
     <!-- Classic Windows look, with the packaged Inter font as the cross-platform fallback. -->
     <FontFamily x:Key="SkyFontFamily">Segoe UI, Inter</FontFamily>
+    <!-- Template and code editors: fixed pitch so columns line up. -->
+    <FontFamily x:Key="SkyFontFamilyMono">Consolas, Menlo, DejaVu Sans Mono, monospace</FontFamily>
 </ResourceDictionary>
