@@ -13,6 +13,8 @@
                          Background="Transparent"
                          BorderThickness="0"
                          Padding="{DynamicResource SkyInputPadding}"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         ScrollViewer.VerticalScrollBarVisibility="Disabled"
                          VerticalContentAlignment="Center"
                          KeyDown="OnInlineSearchTextBoxKeyDown"
                          TextChanged="OnInlineSearchTextChanged"

@@ -1,6 +1,7 @@
 using System.Linq;
 using Avalonia.Automation;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Templates;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
@@ -139,6 +140,53 @@ public sealed class MultiSelectDropdownTests
         {
             window.Close();
         }
+    }
+
+    [AvaloniaFact]
+    public void ClosedDropdownFieldsShowNoScrollbarInIconOrTypeMode()
+    {
+        var iconPicker = CreateIconPicker("Lucide:Star");
+        var typePicker = new MultiSelectDropdown
+        {
+            ItemsSource = [new MultiSelectOptionItem { Label = "Music" }]
+        };
+        var window = new Window
+        {
+            Content = new StackPanel { Children = { iconPicker, typePicker } }
+        };
+        window.Show();
+
+        try
+        {
+            Dispatcher.UIThread.RunJobs();
+            foreach (var dropdown in new[] { iconPicker, typePicker })
+            {
+                AssertNoVisibleScrollbar(dropdown);
+
+                // Focus opens the popup; the inline field itself must still stay bare,
+                // leaving all scrolling to the popup's list.
+                dropdown.FindControl<TextBox>("InlineSearchTextBox")!.Focus();
+                Dispatcher.UIThread.RunJobs();
+                AssertFieldHasNoVisibleScrollbar(dropdown.FindControl<TextBox>("InlineSearchTextBox")!);
+            }
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    private static void AssertNoVisibleScrollbar(MultiSelectDropdown dropdown)
+    {
+        Assert.False(dropdown.FindControl<Popup>("DropdownPopup")!.IsOpen);
+        AssertFieldHasNoVisibleScrollbar(dropdown.FindControl<TextBox>("InlineSearchTextBox")!);
+    }
+
+    private static void AssertFieldHasNoVisibleScrollbar(TextBox search)
+    {
+        Assert.Equal(ScrollBarVisibility.Disabled, ScrollViewer.GetHorizontalScrollBarVisibility(search));
+        Assert.Equal(ScrollBarVisibility.Disabled, ScrollViewer.GetVerticalScrollBarVisibility(search));
+        Assert.Equal(0, search.GetVisualDescendants().OfType<ScrollBar>().Count(bar => bar.IsVisible));
     }
 
     private static MultiSelectDropdown CreateIconPicker(string? selectedIconKey) => new()
