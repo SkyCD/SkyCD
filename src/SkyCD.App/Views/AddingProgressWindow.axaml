@@ -200,7 +200,7 @@
                                           ColumnSpacing="{DynamicResource SkySpaceXs}">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="{DynamicResource SkyIconSize}" />
+                                            <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Text="{Binding CompactTimestamp, StringFormat='[{0}]'}"
@@ -211,7 +211,9 @@
                                                    Text="{Binding LevelGlyph}"
                                                    FontFamily="Cascadia Code,Consolas,Courier New,monospace"
                                                    FontSize="{DynamicResource SkyFontSecondary}"
+                                                   Width="{DynamicResource SkyIconSize}"
                                                    HorizontalAlignment="Center"
+                                                   TextAlignment="Center"
                                                    VerticalAlignment="Top" />
                                         <TextBlock Grid.Column="2"
                                                    Text="{Binding CompactMessage}"
