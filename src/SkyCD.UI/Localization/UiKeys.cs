@@ -259,6 +259,7 @@ public static class UiKeys
     public const string Type = "core.ui.Type";
     public const string Color = "core.ui.Color";
     public const string SelectIcon = "core.ui.SelectIcon";
+    public const string SearchIcons = "core.ui.SearchIcons";
     public const string SelectItemTypes = "core.ui.SelectItemTypes";
     public const string NoSettingsMatch = "core.ui.NoSettingsMatch";
     public const string Save = "core.ui.Save";

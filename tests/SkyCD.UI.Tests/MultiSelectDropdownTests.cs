@@ -113,16 +113,26 @@ public sealed class MultiSelectDropdownTests
 
         try
         {
-            var search = dropdown.FindControl<TextBox>("InlineSearchTextBox")!;
+            var inline = dropdown.FindControl<TextBox>("InlineSearchTextBox")!;
+            var search = dropdown.FindControl<TextBox>("IconSearchTextBox")!;
             var preview = dropdown.FindControl<ContentControl>("SelectedIconPreview")!;
-            var iconList = dropdown.FindControl<ListBox>("IconItemsListBox")!;
+            var iconList = dropdown.FindControl<ListBox>("IconTilesListBox")!;
+            var popup = dropdown.FindControl<Avalonia.Controls.Primitives.Popup>("DropdownPopup")!;
 
-            search.Focus();
+            Assert.True(inline.IsReadOnly);
+            Assert.True(inline.Focus());
             Dispatcher.UIThread.RunJobs();
+            Assert.True(popup.IsOpen);
             Assert.False(preview.IsVisible);
 
-            iconList.SelectedIndex = 1;
             search.RaiseEvent(new KeyEventArgs
+            {
+                RoutedEvent = InputElement.KeyDownEvent,
+                Key = Key.Down,
+                KeyModifiers = KeyModifiers.None
+            });
+            Dispatcher.UIThread.RunJobs();
+            iconList.RaiseEvent(new KeyEventArgs
             {
                 RoutedEvent = InputElement.KeyDownEvent,
                 Key = Key.Enter,
@@ -131,10 +141,11 @@ public sealed class MultiSelectDropdownTests
             Dispatcher.UIThread.RunJobs();
 
             Assert.Equal("Lucide:Heart", dropdown.SelectedIconKey);
+            Assert.False(popup.IsOpen);
             Assert.True(preview.IsVisible);
             Assert.Equal("Lucide:Heart", preview.Content);
-            Assert.Equal(string.Empty, search.Text);
-            Assert.Equal("Lucide:Heart", AutomationProperties.GetName(search));
+            Assert.Equal(string.Empty, inline.Text);
+            Assert.Equal("Lucide:Heart", AutomationProperties.GetName(inline));
         }
         finally
         {

@@ -86,6 +86,7 @@
         <converters:IconGlyphToSymbolConverter x:Key="IconGlyphToSymbolConverter" />
         <converters:LanguageFlagImageConverter x:Key="LanguageFlagImageConverter" />
         <converters:StatusBadgeIconConverter x:Key="StatusBadgeIconConverter" />
+        <converters:StatusIconTileConverter x:Key="StatusIconTileConverter" />
         <converters:AcpAgentIconConverter x:Key="AcpAgentIconConverter" />
         <converters:AcpAgentSelectionConverter x:Key="AcpAgentSelectionConverter" />
         <converters:ToolbarIconConverter x:Key="ToolbarIconConverter" />
@@ -1107,6 +1108,14 @@
                                                                                 Content="{Binding ., Converter={StaticResource StatusBadgeIconConverter}}" />
                                                             </DataTemplate>
                                                         </multiSelect:MultiSelectDropdown.ItemPreviewTemplate>
+                                                        <multiSelect:MultiSelectDropdown.ItemTileTemplate>
+                                                            <DataTemplate x:DataType="x:String">
+                                                                <ContentControl Width="16" Height="16"
+                                                                                HorizontalContentAlignment="Stretch"
+                                                                                VerticalContentAlignment="Stretch"
+                                                                                Content="{Binding ., Converter={StaticResource StatusIconTileConverter}}" />
+                                                            </DataTemplate>
+                                                        </multiSelect:MultiSelectDropdown.ItemTileTemplate>
                                                     </multiSelect:MultiSelectDropdown>
                                                     <multiSelect:MultiSelectDropdown Grid.Column="2"
                                                                                      ItemsSource="{Binding TypeOptions}"
