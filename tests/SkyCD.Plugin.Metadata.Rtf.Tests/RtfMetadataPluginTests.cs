@@ -105,6 +105,26 @@ public class RtfMetadataPluginTests
     }
 
     [Fact]
+    public async Task VendorGroupsAndLegacyCodepage_DecodeLikeTheFormerReader()
+    {
+        // 0xE8 is c-caron in Windows-1250 but e-grave in Windows-1252, so the title only
+        // matches when the declared code page is honored. The font table, stylesheet and color
+        // table carry no catalog facts and must not leak into the excerpt.
+        var rtf =
+            @"{\rtf1\ansi\ansicpg1250\deff0{\fonttbl{\f0 Calibri;}}{\stylesheet{\s0 Normal;}}{\colortbl;\red0\green0\blue0;}" +
+            (@"{\info{\title Caf" + (char)0xE8 + @"}{\nofwords 12}}" + @"\pard Body\par}");
+
+        var result = await ExtractAsync(System.Text.Encoding.Latin1.GetBytes(rtf));
+
+        Assert.Equal("rtf", Text(result, RtfSchema.Container));
+        Assert.Equal(1L, Integer(result, RtfSchema.RtfVersion));
+        Assert.Equal(1250L, Integer(result, RtfSchema.AnsiCodePage));
+        Assert.Equal("Caf\u010D", Text(result, RtfSchema.Title));
+        Assert.Equal(12L, Integer(result, RtfSchema.WordCount));
+        Assert.Contains("Body", Text(result, RtfSchema.TextExcerpt), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ProtectedDocument_IsFlaggedAndStillReadable()
     {
         var result = await ExtractAsync(RtfFixtures.Document(

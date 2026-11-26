@@ -675,6 +675,19 @@
           "Microsoft.TestPlatform.ObjectModel": "18.11.0"
         }
       },
+      "OfficeIMO.Core": {
+        "type": "Transitive",
+        "resolved": "3.6.2",
+        "contentHash": "g1vThR3DWAIlFBf7NujMtYdWtYVx5bsKPKDU0I1SVCvmDGLEhr1ezPxXlYnBJSOlMagY1WmTuMJPMfGv9NxyCw=="
+      },
+      "OfficeIMO.Rtf": {
+        "type": "Transitive",
+        "resolved": "3.6.2",
+        "contentHash": "j8kLjsJhFYuxas/KRNn7pQhcYmbV8EqAGK+ViC9zRwYG4FjTfQkBCt2zA9ITXuA8bnFNrj//cx/Ar+Ih0iun/Q==",
+        "dependencies": {
+          "OfficeIMO.Core": "3.6.2"
+        }
+      },
       "SerialQueue": {
         "type": "Transitive",
         "resolved": "2.1.0",
@@ -833,6 +846,7 @@
       "skycd.plugin.metadata.rtf": {
         "type": "Project",
         "dependencies": {
+          "OfficeIMO.Rtf": "[3.6.2, )",
           "SkiaSharp": "[3.119.4, )",
           "SkiaSharp.NativeAssets.Linux": "[3.119.4, )",
           "SkiaSharp.NativeAssets.Win32": "[3.119.4, )",
