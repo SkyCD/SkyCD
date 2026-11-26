@@ -22,6 +22,10 @@ public sealed class AppOptionsDocument
     /// </summary>
     public System.Collections.Generic.List<ToolbarItemDocument>? Toolbar { get; set; }
 
+    public string? ActiveToolbarId { get; set; }
+
+    public System.Collections.Generic.List<PluginToolbarLayoutDocument> PluginToolbarLayouts { get; set; } = [];
+
     public string PluginPath { get; set; } = string.Empty;
 
     /// <summary>Repository manifests the user added beside the built-in catalog; <c>null</c> means none.</summary>

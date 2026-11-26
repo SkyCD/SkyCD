@@ -16,7 +16,10 @@ public enum CatalogEntryKind
     Volume,
 
     /// <summary>An entry that does not fit the other kinds.</summary>
-    Other
+    Other,
+
+    /// <summary>A physical medium.</summary>
+    Media
 }
 
 /// <summary>
@@ -79,4 +82,8 @@ public sealed record AdvancedSearchFieldContribution(
     Func<CatalogEntry, string?>? SelectValue = null);
 
 /// <summary>A per-entry command a plugin contributes to the browser/tree context menu for a single entry.</summary>
-public sealed record EntryCommandContribution(string CommandId, string Title, int Order);
+public sealed record EntryCommandContribution(string CommandId, string Title, int Order)
+{
+    /// <summary>When supplied, every selected entry must satisfy this predicate.</summary>
+    public Func<CatalogEntry, bool>? AppliesTo { get; init; }
+}

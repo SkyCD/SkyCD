@@ -9,6 +9,8 @@
         <Compile Include="..\Shared\Preview\Export\SkiaPageText.cs" Link="Shared\Preview\Export\SkiaPageText.cs"/>
     </ItemGroup>
     <ItemGroup>
+        <!-- MIT: read-only legacy WordPerfect 5.x/6.x importer for the preview body text. -->
+        <PackageReference Include="OfficeIMO.Word" Version="3.6.2"/>
         <!-- MIT: renders the recovered body text to a bounded PNG thumbnail. -->
         <PackageReference Include="SkiaSharp" Version="3.119.4"/>
         <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.4"/>

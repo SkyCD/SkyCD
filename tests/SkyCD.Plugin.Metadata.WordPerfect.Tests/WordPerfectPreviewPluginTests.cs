@@ -28,9 +28,9 @@ public class WordPerfectPreviewPluginTests
     public async Task RenderedBody_ProducesABoundedPng()
     {
         var body = WordPerfectFixtures.Body(
-            WordPerfectFixtures.Text("Quarterly operations summary for the regional offices."),
-            [0xC7],
-            WordPerfectFixtures.Text("Second paragraph with enough words to wrap onto another line."));
+            WordPerfectFixtures.Wp6Text("Quarterly operations summary for the regional offices."),
+            [0xCA],
+            WordPerfectFixtures.Wp6Text("Second paragraph with enough words to wrap onto another line."));
         var document = WordPerfectFixtures.DocumentWithBody(body);
         var plugin = new WordPerfectPreviewPlugin(new WordPerfectPluginOptions(maxThumbnailDimension: 320));
 
@@ -95,10 +95,10 @@ public class WordPerfectPreviewPluginTests
     }
 
     [Fact]
-    public async Task WordPerfectFiveDocument_ProducesNoArtifact()
+    public async Task WordPerfectFiveDocument_ProducesAPreview()
     {
-        var document = WordPerfectFixtures.WithSummary(
-            [], majorVersion: 0, minorVersion: 0, body: WordPerfectFixtures.Text("Unsupported layout"));
+        var document = WordPerfectFixtures.Wp5DocumentWithBody(
+            WordPerfectFixtures.Text("WP5 leading text"));
         var renderer = new StubRenderer(available: true, image: [1, 2, 3]);
 
         var result = await new WordPerfectPreviewPlugin(WordPerfectPluginOptions.Default, renderer)
@@ -108,8 +108,8 @@ public class WordPerfectPreviewPluginTests
                 progress: null,
                 CancellationToken.None);
 
-        Assert.Empty(result.Artifacts);
-        Assert.Null(renderer.Text);
+        Assert.Single(result.Artifacts);
+        Assert.Equal("WP5 leading text", renderer.Text);
     }
 
     [Fact]
@@ -204,7 +204,7 @@ public class WordPerfectPreviewPluginTests
     }
 
     [Fact]
-    public async Task CorruptGroup_KeepsOnlyTheRecoveredText()
+    public async Task CorruptBody_FailsWithADecodeError()
     {
         var corrupt = WordPerfectFixtures.VariableGroup(0xD3, 0, WordPerfectFixtures.Text("hidden"));
         corrupt[2] = 0xFF;
@@ -214,22 +214,22 @@ public class WordPerfectPreviewPluginTests
             corrupt));
         var renderer = new StubRenderer(available: true, image: [9, 9, 9]);
 
-        var result = await new WordPerfectPreviewPlugin(WordPerfectPluginOptions.Default, renderer)
-            .GeneratePreviewAsync(
-                new MediaItem(".wpd", null, document.Length),
-                new ByteArrayMediaSource(document),
-                progress: null,
-                CancellationToken.None);
+        await Assert.ThrowsAsync<WordPerfectDecodeException>(() =>
+            new WordPerfectPreviewPlugin(WordPerfectPluginOptions.Default, renderer)
+                .GeneratePreviewAsync(
+                    new MediaItem(".wpd", null, document.Length),
+                    new ByteArrayMediaSource(document),
+                    progress: null,
+                    CancellationToken.None));
 
-        Assert.Single(result.Artifacts);
-        Assert.Equal("Lead", renderer.Text);
+        Assert.Null(renderer.Text);
     }
 
     [Fact]
     public async Task CompoundDocumentBody_IsRendered()
     {
         var document = WordPerfectFixtures.WrapInCompoundDocument(
-            WordPerfectFixtures.DocumentWithBody(WordPerfectFixtures.Text("Wrapped text")));
+            WordPerfectFixtures.DocumentWithBody(WordPerfectFixtures.Wp6Text("Wrapped text")));
         var renderer = new StubRenderer(available: true, image: [4, 5, 6]);
 
         var result = await new WordPerfectPreviewPlugin(WordPerfectPluginOptions.Default, renderer)

@@ -48,7 +48,7 @@ public sealed class PluginHostApiAdapterTests
         Assert.Equal(3, entries.Count);
         var movie = Assert.Single(entries, entry => entry.Id == "matrix");
         Assert.Equal("/Library/Movies/The Matrix", movie.Path);
-        Assert.Equal(CatalogEntryKind.File, movie.Kind);
+        Assert.Equal(CatalogEntryKind.Media, movie.Kind);
         Assert.Equal("movies", movie.ParentId);
         Assert.Equal(42, movie.Size);
         Assert.Null(await api.GetEntryAsync("missing"));

@@ -77,6 +77,7 @@ public static class UiKeys
     public const string ToSelectedMediaFolder = "core.ui.ToSelectedMediaFolder";
     public const string Misc = "core.ui.Misc";
     public const string IncludeExtendedInfo = "core.ui.IncludeExtendedInfo";
+    public const string Toolbars = "core.ui.Toolbars";
     public const string FileMenu = "core.ui.FileMenu";
     public const string EditMenu = "core.ui.EditMenu";
     public const string ViewMenu = "core.ui.ViewMenu";
