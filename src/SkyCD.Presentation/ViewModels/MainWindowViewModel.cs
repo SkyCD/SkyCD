@@ -1557,6 +1557,127 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public IReadOnlyList<CatalogDocument> GetAllCatalogEntries() =>
         catalogRepository?.GetAll() ?? (IReadOnlyList<CatalogDocument>)(inMemoryCatalogEntries?.ToArray() ?? []);
 
+    /// <summary>
+    /// Re-publishes the account folders of this catalog from live connector snapshots. Connected
+    /// accounts refresh folder properties and entries; disconnected folders keep their entries and
+    /// are marked sign-in required. Folders never move and are never deleted here.
+    /// </summary>
+    public async Task SyncAccountFoldersToCatalogAsync(
+        IEnumerable<SDK.Capabilities.Accounts.IAccountSession> sessions,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(sessions);
+        var entries = GetAllCatalogEntries();
+        var folders = SkyCD.Presentation.Accounts.CatalogAccountReader.ReadAccountFolders(entries);
+        if (folders.Count == 0)
+        {
+            return;
+        }
+
+        var byDocumentId = entries.ToDictionary(static document => document.Id, StringComparer.Ordinal);
+        var changed = false;
+        foreach (var session in sessions)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            SDK.Capabilities.Accounts.AccountSessionStatus status;
+            try
+            {
+                status = await session.GetStatusAsync(cancellationToken);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                continue;
+            }
+
+            var folder = folders.FirstOrDefault(candidate =>
+                string.Equals(candidate.ProviderId, status.ProviderId, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(candidate.AccountKey, status.AccountId, StringComparison.OrdinalIgnoreCase));
+            if (folder is null || !byDocumentId.TryGetValue(folder.FolderId, out var document))
+            {
+                continue;
+            }
+
+            if (!status.IsConnected)
+            {
+                document.Properties.TryGetValue(SkyCD.Presentation.Accounts.CatalogAccountReader.ConnectedKey, out var connectedValue);
+                if (!Equals(connectedValue, false))
+                {
+                    document.Properties[SkyCD.Presentation.Accounts.CatalogAccountReader.ConnectedKey] = false;
+                    PersistAccountDocument(document);
+                    changed = true;
+                }
+
+                continue;
+            }
+
+            var plan = SkyCD.Presentation.Accounts.AccountCatalogBuilder.BuildPlan(status);
+            var rebuilt = SkyCD.Presentation.Accounts.AccountCatalogBuilder.BuildDocuments(plan, document.ParentId);
+            foreach (var rebuiltDocument in rebuilt)
+            {
+                PersistAccountDocument(rebuiltDocument);
+            }
+
+            changed = true;
+        }
+
+        if (changed)
+        {
+            RefreshTreeNodes();
+            RefreshBrowserItemsForSelection();
+            IsDirtyDocument = true;
+        }
+    }
+
+    /// <summary>Marks one account folder disconnected without deleting it or its entries.</summary>
+    public void MarkAccountFolderDisconnected(string providerId, string accountKey)
+    {
+        var folders = SkyCD.Presentation.Accounts.CatalogAccountReader.ReadAccountFolders(GetAllCatalogEntries());
+        var folder = folders.FirstOrDefault(candidate =>
+            string.Equals(candidate.ProviderId, providerId, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(candidate.AccountKey, accountKey, StringComparison.OrdinalIgnoreCase));
+        if (folder is null)
+        {
+            return;
+        }
+
+        var entries = GetAllCatalogEntries();
+        var document = entries.FirstOrDefault(candidate => string.Equals(candidate.Id, folder.FolderId, StringComparison.Ordinal));
+        if (document is null)
+        {
+            return;
+        }
+
+        document.Properties[SkyCD.Presentation.Accounts.CatalogAccountReader.ConnectedKey] = false;
+        PersistAccountDocument(document);
+        RefreshTreeNodes();
+        RefreshBrowserItemsForSelection();
+        IsDirtyDocument = true;
+    }
+
+    private void PersistAccountDocument(CatalogDocument document)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        if (catalogRepository is not null)
+        {
+            catalogRepository.Save(document.Id, document);
+            return;
+        }
+
+        if (inMemoryCatalogEntries is not null)
+        {
+            var index = inMemoryCatalogEntries.FindIndex(candidate =>
+                string.Equals(candidate.Id, document.Id, StringComparison.Ordinal));
+            if (index >= 0)
+            {
+                inMemoryCatalogEntries[index] = document;
+            }
+            else
+            {
+                inMemoryCatalogEntries.Add(document);
+            }
+        }
+    }
+
     private void NavigateToFindResult(CatalogFindResult result)
     {
         var document = result.Document;

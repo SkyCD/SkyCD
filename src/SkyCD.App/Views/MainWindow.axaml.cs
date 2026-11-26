@@ -1118,6 +1118,8 @@ public partial class MainWindow : Window
             dialogVm.ApplyDroppedSources(droppedSources);
         }
 
+        // The account list comes from this catalog's folders; a different catalog starts empty.
+        dialogVm.SetCatalogAccountFolders(vm.GetAllCatalogEntries());
         // Connector status comes from local token-free snapshots, so the picker is ready when the dialog opens.
         await dialogVm.RefreshAccountsAsync();
 
@@ -1848,6 +1850,10 @@ public partial class MainWindow : Window
             options.AiDescriptionImplementation);
         e.Dialog.SetAiScanExclusions(aiScanExclusionRepository.GetOrdered());
         e.Dialog.SetAccountSessions(pluginManager.GetCapabilities<IAccountSession>());
+        if (DataContext is MainWindowViewModel catalogViewModel)
+        {
+            e.Dialog.SetCatalogAccountFolders(catalogViewModel.GetAllCatalogEntries());
+        }
         e.Dialog.AiScanMaxFileSizeMegabytes = ToAiScanMaxFileSizeMegabytes(options.AiScanMaxFileSizeBytes);
         // Discovery must never block opening Options; an unreachable bridge keeps the stored selection intact.
         e.Dialog.InitializeMcpTools(options.ExposedMcpTools);

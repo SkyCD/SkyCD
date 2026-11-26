@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using SkyCD.Documents;
 using SkyCD.SDK.Capabilities.Accounts;
 
 namespace SkyCD.Presentation.ViewModels;
@@ -14,7 +16,9 @@ public partial class OptionsDialogViewModel
 
     private CancellationTokenSource? accountsCancellation;
 
-    /// <summary>Account connectors discovered from the enabled plugins.</summary>
+    private HashSet<string>? catalogAccountFilter;
+
+    /// <summary>Account connectors for the open catalog (filtered from the enabled plugins).</summary>
     public ObservableCollection<AccountConnectorItemViewModel> Accounts { get; } = [];
 
     public bool IsAccountsCategorySelected => SelectedBuiltInIndex == AccountsCategoryIndex;
@@ -37,9 +41,34 @@ public partial class OptionsDialogViewModel
         _ = RefreshAccountsAsync(accountsCancellation.Token);
     }
 
+    /// <summary>
+    /// Scopes the Options accounts list to the open catalog. Only connectors with an account folder
+    /// in the given documents stay visible; a catalog without folders shows an empty list. Null
+    /// clears the filter (all discovered connectors).
+    /// </summary>
+    public void SetCatalogAccountFolders(IEnumerable<CatalogDocument>? catalogDocuments)
+    {
+        if (catalogDocuments is null)
+        {
+            catalogAccountFilter = null;
+        }
+        else
+        {
+            var folders = SkyCD.Presentation.Accounts.CatalogAccountReader.ReadAccountFolders(catalogDocuments);
+            catalogAccountFilter = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var folder in folders)
+            {
+                catalogAccountFilter.Add(folder.ProviderId + "\n" + folder.AccountKey);
+            }
+        }
+
+        ApplyCatalogFilterAfterRefresh();
+        OnPropertyChanged(nameof(HasAccounts));
+    }
+
     public async Task RefreshAccountsAsync(CancellationToken cancellationToken = default)
     {
-        foreach (var account in Accounts)
+        foreach (var account in Accounts.ToList())
         {
             if (cancellationToken.IsCancellationRequested)
             {
@@ -53,6 +82,32 @@ public partial class OptionsDialogViewModel
             catch (OperationCanceledException)
             {
                 return;
+            }
+        }
+
+        ApplyCatalogFilterAfterRefresh();
+        OnPropertyChanged(nameof(HasAccounts));
+    }
+
+    private void ApplyCatalogFilterAfterRefresh()
+    {
+        if (catalogAccountFilter is null)
+        {
+            return;
+        }
+
+        for (var index = Accounts.Count - 1; index >= 0; index--)
+        {
+            var status = Accounts[index].LastStatus;
+            if (status is null)
+            {
+                continue;
+            }
+
+            var key = status.ProviderId + "\n" + status.AccountId;
+            if (!catalogAccountFilter.Contains(key))
+            {
+                Accounts.RemoveAt(index);
             }
         }
     }
