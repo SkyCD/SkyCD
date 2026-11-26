@@ -165,9 +165,9 @@ public sealed class LoansPlugin : IPluginCapability, ICatalogRepositoryConsumer,
     [
         new("skycd.loans.lending", LocalizationService.Current.Get(LoansKeys.Lending), 50,
         [
-            new(LendCommandId, ToolbarIconKeys.AddItem),
-            new(ReturnCommandId, ToolbarIconKeys.Undo),
-            new(EditCommandId, ToolbarIconKeys.Properties)
+            new(LendCommandId, ToolbarIconKeys.AddItem) { Label = LocalizationService.Current.Get(LoansKeys.ToolbarLend) },
+            new(ReturnCommandId, ToolbarIconKeys.Undo) { Label = LocalizationService.Current.Get(LoansKeys.ToolbarReturn) },
+            new(EditCommandId, ToolbarIconKeys.Properties) { Label = LocalizationService.Current.Get(LoansKeys.ToolbarEdit) }
         ])
     ];
 
@@ -395,6 +395,9 @@ public sealed class LoansPlugin : IPluginCapability, ICatalogRepositoryConsumer,
     private static readonly Dictionary<string, string> English = new()
     {
         ["ui.Lending"] = "Lending",
+        ["ui.ToolbarLend"] = "Lend",
+        ["ui.ToolbarReturn"] = "Return",
+        ["ui.ToolbarEdit"] = "Edit",
         ["ui.EditLending"] = "Edit lending info",
         ["ui.ConfirmReturn"] = "Mark the selected loans as returned?",
         ["ui.Loans"] = "Loans",
@@ -452,6 +455,9 @@ public sealed class LoansPlugin : IPluginCapability, ICatalogRepositoryConsumer,
     private static readonly Dictionary<string, string> Lithuanian = new()
     {
         ["ui.Lending"] = "Skolinimas",
+        ["ui.ToolbarLend"] = "Paskolinti",
+        ["ui.ToolbarReturn"] = "Grąžinti",
+        ["ui.ToolbarEdit"] = "Redaguoti",
         ["ui.EditLending"] = "Redaguoti skolinimo informaciją",
         ["ui.ConfirmReturn"] = "Pažymėti pasirinktas paskolas kaip grąžintas?",
         ["ui.Loans"] = "Paskolos",

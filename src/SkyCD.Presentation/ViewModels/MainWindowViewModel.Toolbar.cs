@@ -195,7 +195,7 @@ public partial class MainWindowViewModel
                 {
                     Id = contribution.CommandId,
                     Category = toolbar.Title,
-                    Label = contribution.Title,
+                    Label = string.IsNullOrWhiteSpace(button.Label) ? contribution.Title : button.Label,
                     IconPath = button.IconKey,
                     Command = command
                 };

@@ -37,7 +37,9 @@ public sealed class PluginToolbarTests
         Assert.False(toolbarMenu.Items[0].IsChecked);
         Assert.Equal(TestFeature.CommandId, Assert.Single(vm.ToolbarEntries).CommandId);
 
-        var command = Assert.Single(vm.ToolbarCommands(trackSelection: true)).Command!;
+        var button = Assert.Single(vm.ToolbarCommands(trackSelection: true));
+        Assert.Equal("Action", button.Label);
+        var command = button.Command!;
         var changes = 0;
         command.CanExecuteChanged += (_, _) => changes++;
         var disc = Assert.Single(vm.BrowserItems, item => item.Id == "disc");
@@ -92,7 +94,7 @@ public sealed class PluginToolbarTests
 
         public IReadOnlyList<ToolbarContribution> GetToolbars() =>
         [
-            new(ToolbarId, "Test toolbar", 0, [new(CommandId, ToolbarIconKeys.Properties), new("missing", "ignored")])
+            new(ToolbarId, "Test toolbar", 0, [new(CommandId, ToolbarIconKeys.Properties) { Label = "Action" }, new("missing", "ignored")])
         ];
 
         public Task<bool> ExecuteEntryCommandAsync(string commandId, CatalogEntry entry, CancellationToken cancellationToken)
