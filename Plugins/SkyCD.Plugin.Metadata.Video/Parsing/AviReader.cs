@@ -94,17 +94,19 @@ internal static class AviReader
             var header = await source.ReadBytesAsync(position, 8, cancellationToken).ConfigureAwait(false);
             if (header.Length < 8 || !VideoBinary.TryU32LE(header, 4, out var size))
             {
-                return;
+                throw new VideoDecodeException("the AVI chunk is truncated");
             }
 
             var fourCc = Encoding.ASCII.GetString(header, 0, 4);
             var payloadStart = position + 8;
 
             // Chunks are word aligned; an odd size carries one padding byte.
+            // A declared size past the source is a truncated file. Clamping it used to let a
+            // 24-byte AVI header look like a readable container.
             var payloadEnd = payloadStart + size + (size % 2 == 1 ? 1 : 0);
             if (payloadEnd > end)
             {
-                payloadEnd = end;
+                throw new VideoDecodeException("the AVI chunk is truncated");
             }
 
             if (fourCc == "LIST")
