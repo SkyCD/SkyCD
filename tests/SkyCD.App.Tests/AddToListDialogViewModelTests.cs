@@ -97,6 +97,21 @@ public class AddToListDialogViewModelTests
     }
 
     [Fact]
+    public void NoLocations_ScannedPathNoteStaysHiddenEverywhere()
+    {
+        var drive = new MediaDriveInfo("D:\\", "CD_ROM", "D:\\", DriveType.CDRom, true, 0, 0, 700_000_000);
+        using var vm = new AddToListDialogViewModel(new FakeDriveProvider([drive]), AddToListSourceMode.Media);
+
+        foreach (var mode in new[] { "Media", "TitleOnly", "Folder", "Internet" })
+        {
+            vm.SelectSourceCommand.Execute(mode);
+
+            Assert.False(vm.IsLocationPickerVisible);
+            Assert.False(vm.IsScannedPathNoteVisible);
+        }
+    }
+
+    [Fact]
     public void WithLocations_PickerShowsOnlyOnMediaAndTitleOnly()
     {
         var drive = new MediaDriveInfo("D:\\", "CD_ROM", "D:\\", DriveType.CDRom, true, 0, 0, 700_000_000);

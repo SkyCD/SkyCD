@@ -106,10 +106,12 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
 
     /// <summary>
     /// Folder and Internet entries keep the scanned source path, so no separate location is offered;
-    /// the dialog explains that where the picker is absent.
+    /// the dialog explains that where the picker is absent. The note only appears when locations
+    /// exist at all: with no defined locations the picker is hidden everywhere and there is no
+    /// asymmetry to explain, which also keeps the fixed dialog height the layout gates pin.
     /// </summary>
     public bool IsScannedPathNoteVisible =>
-        SourceMode is AddToListSourceMode.Folder or AddToListSourceMode.Internet;
+        HasDefinedLocations && SourceMode is AddToListSourceMode.Folder or AddToListSourceMode.Internet;
 
     public bool IsTargetSelectedFolder => TargetPlacement == AddToListTargetPlacement.SelectedFolder;
 
