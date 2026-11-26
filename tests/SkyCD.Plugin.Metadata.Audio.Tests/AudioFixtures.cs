@@ -106,6 +106,60 @@ internal static class AudioFixtures
         return output.ToArray();
     }
 
+    /// <summary>
+    /// An MP3 carrying only an APEv2 tag, the footer-based scheme some encoders append to MPEG and FLAC files.
+    /// The layout mirrors the one TagLibSharp writes: header, items, footer, with the size counting items+footer.
+    /// </summary>
+    internal static byte[] Mp3WithApeTags()
+    {
+        using var items = new MemoryStream();
+        WriteApeItem(items, "Title", "Ape Title");
+        WriteApeItem(items, "Artist", "Ape Artist");
+        WriteApeItem(items, "Album", "Ape Album");
+        WriteApeItem(items, "Year", "2003");
+        WriteApeItem(items, "Track", "4/8");
+        var itemBytes = items.ToArray();
+
+        using var output = new MemoryStream();
+        output.Write(Mp3WithoutTags());
+        var tagSize = itemBytes.Length + ApeBlockSize;
+        WriteApeBlock(output, tagSize, itemCount: 5, flags: 0xA0000000);   // header, tag has a footer
+        output.Write(itemBytes);
+        WriteApeBlock(output, tagSize, itemCount: 5, flags: 0x80000000);   // footer, tag has a header
+        return output.ToArray();
+    }
+
+    private const int ApeBlockSize = 32;
+
+    private static void WriteApeItem(Stream output, string key, string value)
+    {
+        var keyBytes = Encoding.ASCII.GetBytes(key);
+        var valueBytes = Encoding.UTF8.GetBytes(value);
+        WriteUInt32LE(output, (uint)valueBytes.Length);
+        WriteUInt32LE(output, 0);   // item flags
+        output.Write(keyBytes);
+        output.WriteByte(0);        // key terminator
+        output.Write(valueBytes);
+    }
+
+    private static void WriteApeBlock(Stream output, int tagSize, uint itemCount, uint flags)
+    {
+        output.Write(Encoding.ASCII.GetBytes("APETAGEX"));
+        WriteUInt32LE(output, 2000);            // version
+        WriteUInt32LE(output, (uint)tagSize);   // items plus footer
+        WriteUInt32LE(output, itemCount);
+        WriteUInt32LE(output, flags);
+        output.Write(new byte[8]);              // reserved
+    }
+
+    private static void WriteUInt32LE(Stream output, uint value)
+    {
+        output.WriteByte((byte)value);
+        output.WriteByte((byte)(value >> 8));
+        output.WriteByte((byte)(value >> 16));
+        output.WriteByte((byte)(value >> 24));
+    }
+
     /// <summary>An MP3 whose ID3v2 tag repeats the artist frame, which is how several performers are stored.</summary>
     internal static byte[] Mp3WithTwoArtists()
     {
@@ -185,7 +239,12 @@ internal static class AudioFixtures
         payload.Write(Encoding.ASCII.GetBytes(mimeType));
         payload.WriteByte(0);
         payload.WriteByte(pictureType);
-        payload.WriteByte(0);   // empty description, single-byte terminator
+        payload.WriteByte(0);   // empty description terminator
+        if (encoding is 1 or 2)
+        {
+            payload.WriteByte(0);   // UTF-16 encodes the terminator as two bytes
+        }
+
         payload.Write(picture, 0, picture.Length);
         WriteFrame(output, "APIC", payload.ToArray());
     }

@@ -20,6 +20,7 @@
         <AvaloniaResource Include="Assets\**" />
         <AvaloniaResource Include="Styles\**" />
         <None Update="THIRD-PARTY-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+        <None Include="Licenses\LGPL-2.1.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     </ItemGroup>
     <ItemGroup>
         <!-- Legacy icons linked from legacy Resources folder -->

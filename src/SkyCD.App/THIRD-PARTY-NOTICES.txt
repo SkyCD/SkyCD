@@ -204,6 +204,19 @@ Docnet.Core and PDFium
 Sources: https://github.com/GowenGit/docnet and https://pdfium.googlesource.com/pdfium/
 License: MIT (Docnet.Core) and BSD 3-Clause (PDFium)
 
+TagLibSharp
+Copyright (c) 2006-2022 Brian Nickel, Gabriel Burt, Aaron Bockover and contributors
+Source: https://github.com/mono/taglib-sharp
+Version: 2.3.0
+License: GNU Lesser General Public License 2.1 (LGPL-2.1-only)
+https://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt
+Full license text: Licenses/LGPL-2.1.txt
+
+The audio metadata plugin reads tags and stream facts with TagLibSharp 2.3.0:
+https://www.nuget.org/packages/TagLibSharp/2.3.0
+TagLibSharp is distributed as a separate, unmodified assembly loaded from the plugin folder,
+is not statically linked into SkyCD, and can be replaced by the operator.
+
 SharpGLTF.Core
 Copyright (c) 2026 Vicente Penades
 Source: https://github.com/vpenades/SharpGLTF
