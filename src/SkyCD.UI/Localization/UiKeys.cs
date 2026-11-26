@@ -54,6 +54,16 @@ public static class UiKeys
     public const string FromAccount = "core.ui.FromAccount";
     public const string TitleOnly = "core.ui.TitleOnly";
     public const string TitleOnlyMediaHint = "core.ui.TitleOnlyMediaHint";
+    public const string CaptureSource = "core.ui.CaptureSource";
+    public const string CapturePlugin = "core.ui.CapturePlugin";
+    public const string CaptureSourceType = "core.ui.CaptureSourceType";
+    public const string CaptureDestination = "core.ui.CaptureDestination";
+    public const string CaptureDestinationHint = "core.ui.CaptureDestinationHint";
+    public const string CaptureLabel = "core.ui.CaptureLabel";
+    public const string CapturePreview = "core.ui.CapturePreview";
+    public const string CapturePreviewTitle = "core.ui.CapturePreviewTitle";
+    public const string CaptureNoDevices = "core.ui.CaptureNoDevices";
+    public const string CaptureUnavailable = "core.ui.CaptureUnavailable";
     public const string SelectMediaName = "core.ui.SelectMediaName";
     public const string SelectDrive = "core.ui.SelectDrive";
     public const string IncludeMediaInfo = "core.ui.IncludeMediaInfo";

@@ -20,7 +20,7 @@ public sealed class OptionsPluginsPageLayoutTests
         var markup = page.ToString();
 
         Assert.Contains("Text=\"{Binding PluginSearchText", markup);
-        Assert.Contains("<TextBox.InnerLeftContent>", markup);
+        Assert.Single(page.Descendants(), element => element.Name.LocalName == "SearchTextBox");
         Assert.Contains("Command=\"{Binding UpdateAllPluginsCommand}\"", markup);
 
         // The settings flyout is gone; the path and repositories live on the Plugins settings page.

@@ -1,0 +1,75 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:i18n="clr-namespace:SkyCD.UI.Localization;assembly=SkyCD.UI"
+             xmlns:models="clr-namespace:SkyCD.Plugin.Feature.MotionDetector.Models"
+             xmlns:vm="clr-namespace:SkyCD.Plugin.Feature.MotionDetector.Views"
+             x:Class="SkyCD.Plugin.Feature.MotionDetector.Views.MotionDetectorOptionsView"
+             x:DataType="vm:MotionDetectorOptionsViewModel">
+    <DockPanel Margin="{DynamicResource SkyInsetMd}">
+        <StackPanel DockPanel.Dock="Bottom" Spacing="{DynamicResource SkySpaceSm}"
+                    Margin="{DynamicResource SkyGapTopMd}">
+            <TextBlock Text="{Binding StatusText}" Foreground="Gray" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding ErrorText}" Foreground="Firebrick" TextWrapping="Wrap" />
+            <Button Content="{i18n:Translate {x:Static models:MotionDetectorKeys.Save}}"
+                    Command="{Binding SaveCommand}"
+                    IsEnabled="{Binding IsCatalogOpen}"
+                    HorizontalAlignment="Left" />
+        </StackPanel>
+
+        <TextBlock DockPanel.Dock="Top"
+                   Text="{i18n:Translate {x:Static models:MotionDetectorKeys.CatalogUnavailable}}"
+                   IsVisible="{Binding !IsCatalogOpen}"
+                   TextWrapping="Wrap"
+                   Margin="{DynamicResource SkyGapBottomMd}" />
+
+        <TextBlock DockPanel.Dock="Top"
+                   Text="{i18n:Translate {x:Static models:MotionDetectorKeys.OptionsHint}}"
+                   TextWrapping="Wrap"
+                   Margin="{DynamicResource SkyGapBottomMd}" />
+
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="{DynamicResource SkySpaceLg}">
+            <StackPanel Grid.Column="0" Spacing="{DynamicResource SkySpaceSm}">
+                <TextBlock Text="{i18n:Translate {x:Static models:MotionDetectorKeys.DetectorLabel}}" />
+                <ComboBox ItemsSource="{Binding Detectors}"
+                          SelectedItem="{Binding SelectedDetector, Mode=TwoWay}"
+                          HorizontalAlignment="Stretch"
+                          AutomationProperties.Name="{i18n:Translate {x:Static models:MotionDetectorKeys.DetectorLabel}}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:DetectorChoice">
+                            <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
+                                <TextBlock Text="{Binding DisplayName}" />
+                                <TextBlock Text="{Binding Description}"
+                                           FontSize="{DynamicResource SkyFontCaption}"
+                                           Foreground="Gray"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" Spacing="{DynamicResource SkySpaceSm}"
+                        IsVisible="{Binding HasParameters}">
+                <TextBlock Text="{i18n:Translate {x:Static models:MotionDetectorKeys.ParametersLabel}}" />
+                <ItemsControl ItemsSource="{Binding Parameters}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:DetectorParameterRow">
+                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto"
+                                  RowSpacing="{DynamicResource SkySpaceXxs}"
+                                  Margin="{DynamicResource SkyGapBottomSm}">
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding DisplayName}" />
+                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ValueText}"
+                                           FontSize="{DynamicResource SkyFontCaption}" />
+                                <Slider Grid.Row="1" Grid.ColumnSpan="2"
+                                        Minimum="{Binding Minimum}"
+                                        Maximum="{Binding Maximum}"
+                                        Value="{Binding Value, Mode=TwoWay}"
+                                        AutomationProperties.Name="{Binding DisplayName}" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Grid>
+    </DockPanel>
+</UserControl>

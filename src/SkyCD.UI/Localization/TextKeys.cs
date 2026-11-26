@@ -102,6 +102,13 @@ public static class TextKeys
     public const string MediaNameIsRequiredForTitleOnly = "core.text.MediaNameIsRequiredForTitleOnly";
     public const string ContentsNotScanned = "core.text.ContentsNotScanned";
     public const string FolderPathIsRequiredForFolderSource = "core.text.FolderPathIsRequiredForFolderSource";
+    public const string CaptureDestinationIsRequired = "core.text.CaptureDestinationIsRequired";
+    public const string CaptureDestinationNotAbsolute = "core.text.CaptureDestinationNotAbsolute";
+    public const string CaptureSourceTypeRequired = "core.text.CaptureSourceTypeRequired";
+    public const string CaptureSourceLocationRequired = "core.text.CaptureSourceLocationRequired";
+    public const string CaptureSourceUrlInvalid = "core.text.CaptureSourceUrlInvalid";
+    public const string CaptureMetadataExtracting = "core.text.CaptureMetadataExtracting";
+    public const string CaptureMetadataExtracted = "core.text.CaptureMetadataExtracted";
     public const string AddressIsRequiredForInternetSource = "core.text.AddressIsRequiredForInternetSource";
     public const string CopyURL = "core.text.CopyURL";
     public const string Plugins = "core.text.Plugins";

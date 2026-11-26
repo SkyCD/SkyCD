@@ -6,5 +6,6 @@ public enum AddToListSourceMode
     Folder = 1,
     Internet = 2,
     TitleOnly = 3,
-    FromAccount = 4
+    FromAccount = 4,
+    CaptureSource = 5
 }

@@ -75,6 +75,17 @@ public sealed class DesignTokensTests
     }
 
     [AvaloniaFact]
+    public void Inputs_ShareOneInnerInsetAndSearchIconSize()
+    {
+        // Issue #1184: every text input uses the same inner inset, and the shared search field
+        // draws its magnifier at one token size. The inset matches the combo content padding so
+        // input text and the search icon start at one shared edge.
+        Assert.Equal(Token("SkyComboBoxContentPadding"), Token("SkyInputPadding"));
+        Assert.Equal(new Thickness(8, 4), Token("SkyInputPadding"));
+        Assert.Equal(14, Size("SkySearchIconSize"));
+    }
+
+    [AvaloniaFact]
     public void Insets_KeepThePairsThatLineMarkupDependsOn()
     {
         // The inline property editor cancels the cell padding it sits in, and the selected tab card

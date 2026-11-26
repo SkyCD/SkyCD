@@ -15,7 +15,13 @@ public static class LocationsKeys
     public const string Delete = Prefix + "Delete";
     public const string MergeInto = Prefix + "MergeInto";
     public const string Merge = Prefix + "Merge";
+    public const string MergeLocations = Prefix + "MergeLocations";
+    public const string MergeSummary = Prefix + "MergeSummary";
+    public const string Cancel = Prefix + "Cancel";
     public const string UsageCount = Prefix + "UsageCount";
+    public const string UsageColumn = Prefix + "UsageColumn";
+    public const string AddLocationTooltip = Prefix + "AddLocationTooltip";
+    public const string DeleteLocationTooltip = Prefix + "DeleteLocationTooltip";
     public const string LocationNameRequired = Prefix + "LocationNameRequired";
     public const string LocationNameDuplicate = Prefix + "LocationNameDuplicate";
     public const string LocationNotFound = Prefix + "LocationNotFound";

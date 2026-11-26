@@ -11,6 +11,7 @@
         xmlns:multiSelect="clr-namespace:SkyCD.UI.Controls.Selectors.MultiSelectDropdown;assembly=SkyCD.UI"
         xmlns:colorSelect="clr-namespace:SkyCD.UI.Controls.Selectors.ColorPaletteDropdown;assembly=SkyCD.UI"
         xmlns:actions="clr-namespace:SkyCD.UI.Controls.Actions;assembly=SkyCD.UI"
+        xmlns:search="clr-namespace:SkyCD.UI.Controls.SearchTextBox;assembly=SkyCD.UI"
         x:Class="SkyCD.App.Views.OptionsWindow"
         x:DataType="vm:OptionsDialogViewModel"
         Width="760"
@@ -153,8 +154,8 @@
                     Padding="{DynamicResource SkyInsetSm}"
                     Grid.RowSpan="2">
                 <Grid RowDefinitions="Auto,*,Auto" RowSpacing="{DynamicResource SkySpaceSm}">
-                    <TextBox PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.Search}}"
-                             Text="{Binding SettingsSearchText, UpdateSourceTrigger=PropertyChanged}" />
+                    <search:SearchTextBox PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.Search}}"
+                                                 Text="{Binding SettingsSearchText, UpdateSourceTrigger=PropertyChanged}" />
 
                     <ListBox Grid.Row="1"
                              x:Name="SettingsCategoriesList"
@@ -205,17 +206,9 @@
                       RowDefinitions="Auto,*"
                       RowSpacing="{DynamicResource SkySpaceSm}">
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                        <TextBox Text="{Binding PluginSearchText, UpdateSourceTrigger=PropertyChanged}"
-                                 PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.FilterPlugins}}"
-                                 AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.FilterPlugins}}">
-                            <TextBox.InnerLeftContent>
-                                <iconPacks:PackIconControl Kind="{x:Static lucide:PackIconLucideKind.Search}"
-                                                           Width="14"
-                                                           Height="14"
-                                                           Margin="{DynamicResource SkyGapLeftSm}"
-                                                           Foreground="{DynamicResource ThemeForegroundLowBrush}" />
-                            </TextBox.InnerLeftContent>
-                        </TextBox>
+                        <search:SearchTextBox Text="{Binding PluginSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                                 PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.FilterPlugins}}"
+                                                 AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.FilterPlugins}}" />
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{DynamicResource SkySpaceXs}">
                             <Button Content="{i18n:Translate {x:Static i18n:UiKeys.PluginUpdateAll}}"
                                     Command="{Binding UpdateAllPluginsCommand}"
@@ -1204,35 +1197,22 @@
                         </Grid>
 
                         <StackPanel Grid.Row="1" Spacing="{DynamicResource SkySpaceXs}">
-                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                                <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}">
-                                    <TextBox x:Name="NewCollectionNameBox"
-                                             Width="200"
-                                             Text="{Binding CollectionsPage.NewCollectionName}"
-                                             PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.NewCollection}}"
-                                             AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.NewCollection}}" />
-                                    <Button Content="{i18n:Translate {x:Static i18n:UiKeys.NewCollection}}"
-                                            Command="{Binding CollectionsPage.CreateCollectionCommand}"
-                                            ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.NewCollection}}" />
-                                </StackPanel>
-                                <StackPanel Grid.Column="1"
-                                            Orientation="Horizontal"
-                                            HorizontalAlignment="Right"
-                                            Spacing="{DynamicResource SkySpaceSm}">
-                                    <Button Content="{i18n:Translate {x:Static i18n:UiKeys.DeleteCollection}}"
-                                            Command="{Binding CollectionsPage.DeleteCollectionCommand}"
-                                            ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.DeleteCollection}}" />
-                                    <Button Content="{i18n:Translate {x:Static i18n:UiKeys.RemoveMissing}}"
-                                            Command="{Binding CollectionsPage.RemoveMissingEntriesCommand}"
-                                            ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.RemoveMissing}}" />
-                                    <Button Content="{i18n:Translate {x:Static i18n:UiKeys.GoToEntry}}"
-                                            Command="{Binding CollectionsPage.NavigateToSelectedCommand}"
-                                            ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.GoToEntry}}" />
-                                    <Button Content="{i18n:Translate {x:Static i18n:UiKeys.OpenFolder}}"
-                                            Command="{Binding CollectionsPage.OpenMemberFolderCommand}"
-                                            ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.OpenFolder}}" />
-                                </StackPanel>
-                            </Grid>
+                            <StackPanel Orientation="Horizontal"
+                                        HorizontalAlignment="Right"
+                                        Spacing="{DynamicResource SkySpaceSm}">
+                                <Button Content="+"
+                                        FontSize="{DynamicResource SkyFontSubtitle}"
+                                        Width="34"
+                                        Height="28"
+                                        Command="{Binding CollectionsPage.AddCollectionCommand}"
+                                        ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.NewCollection}}" />
+                                <Button Content="-"
+                                        FontSize="{DynamicResource SkyFontSubtitle}"
+                                        Width="34"
+                                        Height="28"
+                                        Command="{Binding CollectionsPage.DeleteCollectionCommand}"
+                                        ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.DeleteCollection}}" />
+                            </StackPanel>
                             <Border IsVisible="{Binding CollectionsPage.IsDeleteCollectionConfirmationVisible}"
                                     BorderBrush="{DynamicResource ThemeBorderLowBrush}"
                                     BorderThickness="1"
@@ -1277,6 +1257,12 @@
                                              ScrollViewer.VerticalScrollBarVisibility="Auto"
                                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                              AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.Collections}}">
+                                        <ListBox.ContextMenu>
+                                            <ContextMenu>
+                                                <MenuItem Header="{i18n:Translate {x:Static i18n:UiKeys.RemoveMissing}}"
+                                                          Command="{Binding CollectionsPage.RemoveMissingEntriesCommand}" />
+                                            </ContextMenu>
+                                        </ListBox.ContextMenu>
                                         <ListBox.ItemTemplate>
                                             <DataTemplate x:DataType="vm:CollectionListItemViewModel">
                                                 <Border BorderBrush="{DynamicResource ThemeBorderLowBrush}"
@@ -1355,7 +1341,7 @@
                                     <Border BorderBrush="{DynamicResource ThemeBorderLowBrush}"
                                             BorderThickness="0,0,0,1"
                                             Padding="{DynamicResource SkyRowPadding}">
-                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
                                             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.CollectionMembers}}"
                                                        FontWeight="SemiBold"
                                                        VerticalAlignment="Center" />
@@ -1364,6 +1350,23 @@
                                                        IsVisible="{Binding CollectionsPage.HasMissingMembers}"
                                                        Text="{Binding CollectionsPage.MissingMembersNotice}"
                                                        VerticalAlignment="Center" />
+                                            <StackPanel Grid.Column="2"
+                                                        Orientation="Horizontal"
+                                                        HorizontalAlignment="Right"
+                                                        Spacing="{DynamicResource SkySpaceXs}">
+                                                <Button Content="+"
+                                                        FontSize="{DynamicResource SkyFontSubtitle}"
+                                                        Width="34"
+                                                        Height="28"
+                                                        Command="{Binding CollectionsPage.AddSelectedEntriesCommand}"
+                                                        ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.AddSelected}}" />
+                                                <Button Content="-"
+                                                        FontSize="{DynamicResource SkyFontSubtitle}"
+                                                        Width="34"
+                                                        Height="28"
+                                                        Command="{Binding CollectionsPage.RequestRemoveSelectedMemberCommand}"
+                                                        ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.Remove}}" />
+                                            </StackPanel>
                                         </Grid>
                                     </Border>
                                     <Border Grid.Row="1"
@@ -1384,24 +1387,11 @@
                                                    Text="{Binding CollectionsPage.NoSavedSearchNotice}"
                                                    TextWrapping="Wrap" />
                                     </Border>
-                                    <Grid Grid.Row="2"
-                                          ColumnDefinitions="*,Auto"
-                                          ColumnSpacing="{DynamicResource SkySpaceSm}"
-                                          Margin="{DynamicResource SkyRowPadding}">
-                                        <TextBox Text="{Binding CollectionsPage.MemberFilterText}"
-                                                 PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.FilterMembers}}"
-                                                 AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.FilterMembers}}" />
-                                        <StackPanel Grid.Column="1"
-                                                    Orientation="Horizontal"
-                                                    Spacing="{DynamicResource SkySpaceXs}">
-                                            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.AddSelected}}"
-                                                    Command="{Binding CollectionsPage.AddSelectedEntriesCommand}"
-                                                    ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.AddSelected}}" />
-                                            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Remove}}"
-                                                    Command="{Binding CollectionsPage.RequestRemoveSelectedMemberCommand}"
-                                                    ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.Remove}}" />
-                                        </StackPanel>
-                                    </Grid>
+                                    <search:SearchTextBox Grid.Row="2"
+                                                                 Text="{Binding CollectionsPage.MemberFilterText}"
+                                                                 Margin="{DynamicResource SkyRowPadding}"
+                                                                 PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.FilterMembers}}"
+                                                                 AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.FilterMembers}}" />
                                     <ListBox Grid.Row="3"
                                              ItemsSource="{Binding CollectionsPage.FilteredMembers}"
                                              SelectedItem="{Binding CollectionsPage.SelectedMember}"
@@ -1409,6 +1399,14 @@
                                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                              AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.CollectionMembers}}"
                                              DoubleTapped="OnCollectionMemberDoubleTapped">
+                                        <ListBox.ContextMenu>
+                                            <ContextMenu>
+                                                <MenuItem Header="{i18n:Translate {x:Static i18n:UiKeys.GoToEntry}}"
+                                                          Command="{Binding CollectionsPage.NavigateToSelectedCommand}" />
+                                                <MenuItem Header="{i18n:Translate {x:Static i18n:UiKeys.OpenFolder}}"
+                                                          Command="{Binding CollectionsPage.OpenMemberFolderCommand}" />
+                                            </ContextMenu>
+                                        </ListBox.ContextMenu>
                                         <ListBox.ItemTemplate>
                                             <DataTemplate x:DataType="vm:CollectionMemberViewModel">
                                                 <Border BorderBrush="{DynamicResource ThemeBorderLowBrush}"
@@ -1604,10 +1602,10 @@
                     </Grid>
                     <Grid Grid.Row="2" IsVisible="{Binding ShowAcpSection}"
                           RowDefinitions="Auto,*,Auto">
-                        <TextBox Margin="{DynamicResource SkyGapBottomMd}"
-                                 PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.SearchAcpAgents}}"
-                                 Text="{Binding AcpSearchText, UpdateSourceTrigger=PropertyChanged}"
-                                 IsEnabled="{Binding !IsAcpLoading}" />
+                        <search:SearchTextBox Margin="{DynamicResource SkyGapBottomMd}"
+                                                 PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.SearchAcpAgents}}"
+                                                 Text="{Binding AcpSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                                 IsEnabled="{Binding !IsAcpLoading}" />
 
                         <Border Grid.Row="1" BorderBrush="{DynamicResource TabCardBorderBrush}"
                                 BorderThickness="1" CornerRadius="6">
@@ -2256,9 +2254,9 @@
                                     VerticalAlignment="Center" />
                         </Grid>
 
-                        <TextBox Grid.Row="1"
-                                 PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.SearchMcpTools}}"
-                                 Text="{Binding McpToolSearchText, UpdateSourceTrigger=PropertyChanged}" />
+                        <search:SearchTextBox Grid.Row="1"
+                                                 PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.SearchMcpTools}}"
+                                                 Text="{Binding McpToolSearchText, UpdateSourceTrigger=PropertyChanged}" />
 
                         <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
                             <TextBlock Text="{Binding McpExposedSummary}"

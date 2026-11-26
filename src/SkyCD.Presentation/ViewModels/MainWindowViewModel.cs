@@ -172,6 +172,14 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private readonly SemaphoreSlim metadataPublicationGate = new(1, 1);
     private readonly CancellationTokenSource metadataLifetime = new();
 
+    // Captured files are enqueued durably and extracted off the UI thread; the queue lives in the catalog
+    // database so a restart resumes whatever a capture wrote but nothing extracted yet.
+    private const int MaxCaptureMetadataAttempts = 3;
+    private CaptureMetadataQueueRepository? captureMetadataQueue;
+    private CancellationTokenSource? captureQueueLifetime;
+    private readonly object captureQueueGate = new();
+    private Task? captureQueueTask;
+
     // Ancestor counts after a deletion run off the UI thread; cancelling this stops them when the view
     // model closes so a recount cannot write into a repository the catalog owner has already released.
     private readonly CancellationTokenSource sizeMaintenanceLifetime = new();
@@ -185,6 +193,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         ArgumentNullException.ThrowIfNull(updatedManager);
         mediaMetadataService = new MediaMetadataService(updatedManager, mediaCacheStore, workItems: indexWorkItems);
+        RequestCaptureMetadataExtraction();
         this.volumeMetadataProvider = volumeMetadataProvider;
         InvalidateMediaCatalogEffects();
         audioCdMetadataService = audioCdMetadataProvider is null
@@ -342,6 +351,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             ? new CatalogLocationService(this.catalogRepository, this.locationRepository)
             : null;
         this.collectionRepository = CreateCollectionDocuments(this.catalogRepository);
+        this.captureMetadataQueue = OpenSiblingRepository<CaptureMetadataQueueDocument,
+            CaptureMetadataQueueRepository>(this.catalogRepository);
         this.collectionService = this.collectionRepository is not null
             ? new VirtualCollectionService(this.catalogRepository, this.collectionRepository, () => BuildAdvancedFindMetadata().Lookup, entries => ProjectLocations(entries))
             : null;
@@ -397,6 +408,306 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         openCatalogState = state;
         state.Attach(catalogRepository);
         state.Path = CurrentCatalogPath;
+    }
+
+    /// <summary>
+    /// Queues captured entries durably and drains the queue in the background, so a capture keeps importing
+    /// while metadata extraction runs off the UI thread and resumes after a restart.
+    /// </summary>
+    private void EnqueueCapturedEntries(IReadOnlyList<string> entryIds)
+    {
+        var queue = captureMetadataQueue;
+        if (queue is null || entryIds.Count == 0 || isDisposed)
+        {
+            return;
+        }
+
+        var enqueuedAt = DateTimeOffset.UtcNow;
+        foreach (var entryId in entryIds)
+        {
+            queue.Enqueue(entryId, enqueuedAt);
+        }
+
+        RequestCaptureMetadataExtraction();
+    }
+
+    private void RequestCaptureMetadataExtraction()
+    {
+        CancellationToken token;
+        lock (captureQueueGate)
+        {
+            if (captureQueueTask is { IsCompleted: false })
+            {
+                return;
+            }
+
+            captureQueueLifetime?.Dispose();
+            captureQueueLifetime = new CancellationTokenSource();
+            token = captureQueueLifetime.Token;
+            captureQueueTask = Task.Run(() => DrainCaptureMetadataQueueAsync(token), token);
+        }
+    }
+
+    private async Task DrainCaptureMetadataQueueAsync(CancellationToken cancellationToken)
+    {
+        var extractedAny = false;
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested && !isDisposed)
+            {
+                var queue = captureMetadataQueue;
+                var repository = catalogRepository;
+                var service = mediaMetadataService;
+                if (queue is null || repository is null)
+                {
+                    return;
+                }
+
+                var pending = queue.GetPending();
+                if (pending.Count == 0)
+                {
+                    if (extractedAny)
+                    {
+                        ReportCaptureQueueStatus(
+                            LocalizationService.Current.Get(TextKeys.CaptureMetadataExtracted));
+                    }
+
+                    return;
+                }
+
+                // A queue with no capable extractor stays pending until services are refreshed; dropping it
+                // would lose the work a capture already imported.
+                if (service is null || !service.CanCollect)
+                {
+                    return;
+                }
+                ReportCaptureQueueStatus(
+                    LocalizationService.Current.Format(TextKeys.CaptureMetadataExtracting, pending.Count));
+
+                var catalog = repository.GetAll();
+                var extracted = 0;
+                var retried = 0;
+                foreach (var item in pending)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var entry = catalog.FirstOrDefault(candidate => candidate.Id == item.EntryId);
+                    if (entry is null)
+                    {
+                        queue.Remove(item.EntryId);
+                        continue;
+                    }
+
+                    MediaMetadataOutcome outcome;
+                    try
+                    {
+                        outcome = await service.CollectAsync(entry, catalog, cancellationToken: cancellationToken)
+                            .ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                    {
+                        throw;
+                    }
+                    catch (Exception exception)
+                    {
+                        Debug.WriteLine($"Captured entry metadata extraction failed: {exception.Message}");
+                        queue.Remove(item.EntryId);
+                        continue;
+                    }
+
+                    if (outcome.SkipReason == MediaMetadataSkipReason.SourceUnavailable &&
+                        item.Attempts + 1 < MaxCaptureMetadataAttempts)
+                    {
+                        queue.RecordAttempt(item.EntryId);
+                        retried++;
+                        continue;
+                    }
+
+                    queue.Remove(item.EntryId);
+                    extracted++;
+                }
+
+                if (extracted > 0)
+                {
+                    extractedAny = true;
+                    await Dispatcher.UIThread.InvokeAsync(() =>
+                    {
+                        if (!isDisposed)
+                        {
+                            RefreshBrowserItemsForSelection();
+                        }
+                    });
+                }
+
+                if (retried > 0 && extracted == 0)
+                {
+                    // The sources may still be flushing; back off before the next attempt.
+                    await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken).ConfigureAwait(false);
+                }
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            // The queue is durable, so a failed pass loses nothing; the next request resumes it.
+            Debug.WriteLine($"Captured entry metadata queue stopped: {exception.Message}");
+        }
+    }
+
+    private void ReportCaptureQueueStatus(string status)
+    {
+        if (Avalonia.Application.Current is null || Dispatcher.UIThread.CheckAccess())
+        {
+            if (!isDisposed)
+            {
+                StatusText = status;
+            }
+
+            return;
+        }
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (!isDisposed)
+            {
+                StatusText = status;
+            }
+        });
+    }
+
+    private void StopCaptureMetadataQueue()
+    {
+        lock (captureQueueGate)
+        {
+            captureQueueLifetime?.Cancel();
+            captureQueueLifetime = null;
+            captureQueueTask = null;
+        }
+    }
+
+    /// <summary>Gets whether captured files can be written into an open, writable catalog right now.</summary>
+    public bool IsCaptureCatalogOpen => !isDisposed && CurrentCatalogPath is not null && catalogRepository is not null;
+
+    /// <summary>
+    /// Writes captured files into the open catalog under the capture folder the plugin reports, then queues
+    /// their metadata extraction. Safe to call from a plugin worker thread.
+    /// </summary>
+    public async Task ImportCapturedFilesAsync(IReadOnlyList<CapturedCatalogFile> files,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(files);
+        if (files.Count <= 0)
+        {
+            return;
+        }
+
+        // The plugin keeps running across catalog switches, so the repository and root are resolved on
+        // every call instead of when the capture source was configured.
+        var repository = catalogRepository;
+        var rootId = TreeNodes.FirstOrDefault()?.Key;
+        if (repository is null || rootId is null || isDisposed || CurrentCatalogPath is null)
+        {
+            throw new MotionCaptureCatalogUnavailableException();
+        }
+
+        var importedParents = new List<string?>();
+        var createdEntryIds = new List<string>();
+        await Task.Run(() => DatabaseGate.InBatch(repository.Collection.Database, () =>
+        {
+            string Folder(string parent, string name)
+            {
+                var existing = repository.GetChildrenOf(parent)
+                    .FirstOrDefault(x => x.Name == name && x.Type == CatalogDocumentType.Folder);
+                if (existing is not null) return existing.Id;
+                var id = Guid.NewGuid().ToString("N");
+                repository.Save(id, new CatalogDocument
+                {
+                    Id = id,
+                    ParentId = parent,
+                    Name = name,
+                    Type = CatalogDocumentType.Folder
+                });
+                return id;
+            }
+
+            foreach (var file in files)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var parent = Folder(Folder(rootId, file.Folder), file.Date);
+                var id = Guid.NewGuid().ToString("N");
+                var properties = new PropertiesCollection();
+                foreach (var property in file.Properties) properties[property.Key] = property.Value;
+                repository.Save(id, new CatalogDocument
+                {
+                    Id = id,
+                    ParentId = parent,
+                    Name = file.Name,
+                    Size = file.Size,
+                    Type = CatalogDocumentType.File,
+                    Properties = properties
+                });
+                importedParents.Add(parent);
+                createdEntryIds.Add(id);
+            }
+        }), cancellationToken).ConfigureAwait(false);
+
+        EnqueueCapturedEntries(createdEntryIds);
+
+        // Captured files land in folders that were just created empty, so their totals have to be
+        // summed from the files in the same pass (#1001).
+        await Task.Run(
+            () => CatalogSizeMaintenance.RecalculateAncestors(repository, importedParents),
+            cancellationToken).ConfigureAwait(false);
+
+        void RefreshAfterImport()
+        {
+            if (isDisposed)
+            {
+                return;
+            }
+
+            RefreshTreeNodes();
+            RefreshBrowserItemsForSelection();
+            IsDirtyDocument = true;
+        }
+
+        if (Avalonia.Application.Current is null || Dispatcher.UIThread.CheckAccess())
+        {
+            RefreshAfterImport();
+        }
+        else
+        {
+            await Dispatcher.UIThread.InvokeAsync(RefreshAfterImport);
+        }
+    }
+
+    /// <summary>Reports a capture-plugin message on the status bar from any thread.</summary>
+    public Task ReportCaptureMessageAsync(string message, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return Task.CompletedTask;
+        }
+
+        if (Avalonia.Application.Current is null || Dispatcher.UIThread.CheckAccess())
+        {
+            if (!isDisposed)
+            {
+                StatusText = message;
+            }
+
+            return Task.CompletedTask;
+        }
+
+        return Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            if (!isDisposed)
+            {
+                StatusText = message;
+            }
+        }).GetTask();
     }
 
     /// <summary>
@@ -763,6 +1074,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         isDisposed = true;
         pluginCommandCancellation?.Cancel();
         metadataLifetime.Cancel();
+        StopCaptureMetadataQueue();
         sizeMaintenanceLifetime.Cancel();
         sizeMaintenanceLifetime.Dispose();
         backgroundMediaSync?.Dispose();
@@ -1284,6 +1596,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public void CompleteNewCatalog()
     {
+        StopCaptureMetadataQueue();
         inMemoryCatalogEntries?.Clear();
         commentsByObjectKey.Clear();
         addedItemsByNodeKey.Clear();
@@ -4461,7 +4774,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private sealed class ViewModelHostCommandApi(MainWindowViewModel viewModel) : ICatalogCaptureHostApi, IDescriptionHostApi
     {
-        private readonly string? rootId = viewModel.TreeNodes.FirstOrDefault()?.Key;
         private readonly string? catalogPath = viewModel.CurrentCatalogPath;
         private readonly string? descriptionEntryId = viewModel.GetSelectedBrowserItems() is { Count: 1 } selected ? selected[0].Id : null;
 
@@ -4489,54 +4801,19 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             });
         }
 
-        public async Task ImportCapturedFilesAsync(IReadOnlyList<CapturedCatalogFile> files, CancellationToken cancellationToken = default)
-        {
-            var repository = viewModel.catalogRepository;
-            if (repository is null || rootId is null || catalogPath != viewModel.CurrentCatalogPath)
-                throw new MotionCaptureCatalogUnavailableException();
-            var importedParents = new List<string?>();
-            await Task.Run(() => DatabaseGate.InBatch(repository.Collection.Database, () =>
-            {
-                string Folder(string parent, string name)
-                {
-                    var existing = repository.GetChildrenOf(parent).FirstOrDefault(x => x.Name == name && x.Type == CatalogDocumentType.Folder);
-                    if (existing is not null) return existing.Id;
-                    var id = Guid.NewGuid().ToString("N");
-                    repository.Save(id, new CatalogDocument { Id = id, ParentId = parent, Name = name, Type = CatalogDocumentType.Folder });
-                    return id;
-                }
-                foreach (var file in files)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    var parent = Folder(Folder(rootId, file.Folder), file.Date);
-                    var id = Guid.NewGuid().ToString("N");
-                    var properties = new PropertiesCollection();
-                    foreach (var property in file.Properties) properties[property.Key] = property.Value;
-                    repository.Save(id, new CatalogDocument { Id = id, ParentId = parent, Name = file.Name, Size = file.Size, Properties = properties });
-                    importedParents.Add(parent);
-                }
-            }), cancellationToken);
+        public Task ImportCapturedFilesAsync(IReadOnlyList<CapturedCatalogFile> files, CancellationToken cancellationToken = default) =>
+            viewModel.ImportCapturedFilesAsync(files, cancellationToken);
 
-            // Captured files land in folders that were just created empty, so their totals have to be
-            // summed from the files in the same pass (#1001).
-            await Task.Run(
-                () => CatalogSizeMaintenance.RecalculateAncestors(repository, importedParents),
-                cancellationToken);
-            viewModel.RefreshTreeNodes();
-            viewModel.RefreshBrowserItemsForSelection();
-            viewModel.IsDirtyDocument = true;
-        }
         public Task NavigateToNodeAsync(long nodeId, CancellationToken cancellationToken = default)
         {
             viewModel.StatusText = LocalizationService.Current.Format(TextKeys.NavigatedToNode, nodeId);
             return Task.CompletedTask;
         }
 
-        public Task NotifyAsync(string message, CancellationToken cancellationToken = default)
+        public async Task NotifyAsync(string message, CancellationToken cancellationToken = default)
         {
-            viewModel.StatusText = message;
+            await viewModel.ReportCaptureMessageAsync(message, cancellationToken);
             Notified = true;
-            return Task.CompletedTask;
         }
     }
 

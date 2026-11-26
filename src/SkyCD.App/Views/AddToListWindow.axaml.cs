@@ -8,6 +8,7 @@ using Avalonia.Controls;
 using Avalonia.Input.Platform;
 using Avalonia.Layout;
 using Avalonia.Interactivity;
+using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using SkyCD.Presentation.ViewModels;
@@ -212,6 +213,110 @@ public partial class AddToListWindow : Window
     private void OnCancelClicked(object? sender, RoutedEventArgs e)
     {
         Close(false);
+    }
+
+    private async void OnBrowseCaptureDestinationClicked(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not AddToListDialogViewModel vm)
+        {
+            return;
+        }
+
+        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = LocalizationService.Current.Get(UiKeys.CaptureDestination),
+            AllowMultiple = false
+        });
+
+        var localPath = folders.FirstOrDefault()?.TryGetLocalPath();
+        if (!string.IsNullOrWhiteSpace(localPath))
+        {
+            vm.CaptureDestination = localPath;
+        }
+    }
+
+    private async void OnBrowseCaptureSourceClicked(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not AddToListDialogViewModel vm)
+        {
+            return;
+        }
+
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = vm.CaptureLocationLabel,
+            AllowMultiple = false,
+            FileTypeFilter =
+            [
+                new FilePickerFileType(LocalizationService.Current.Get(UiKeys.CaptureSource))
+                {
+                    Patterns =
+                    [
+                        "*.mp4", "*.avi", "*.mkv", "*.mov", "*.wmv", "*.mpg", "*.mpeg", "*.webm", "*.mjpg",
+                        "*.mjpeg", "*.ts", "*.m2ts", "*.dv"
+                    ]
+                }
+            ]
+        });
+
+        var localPath = files.FirstOrDefault()?.TryGetLocalPath();
+        if (!string.IsNullOrWhiteSpace(localPath))
+        {
+            vm.CaptureLocation = localPath;
+        }
+    }
+
+    private async void OnPreviewCaptureClicked(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not AddToListDialogViewModel vm)
+        {
+            return;
+        }
+
+        var result = await vm.CapturePreviewAsync();
+        if (result is { Succeeded: true, Image: { Length: > 0 } image })
+        {
+            await ShowCapturePreviewAsync(image);
+        }
+    }
+
+    private Task ShowCapturePreviewAsync(byte[] image)
+    {
+        var localization = LocalizationService.Current;
+        var close = new Button
+        {
+            Content = localization.Get(UiKeys.Ok),
+            HorizontalAlignment = HorizontalAlignment.Right,
+            IsDefault = true,
+            IsCancel = true,
+        };
+        var dialog = new Window
+        {
+            Title = localization.Get(UiKeys.CapturePreviewTitle),
+            Width = 660,
+            MaxHeight = 760,
+            SizeToContent = SizeToContent.Height,
+            CanResize = true,
+            ShowInTaskbar = false,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Content = new StackPanel
+            {
+                Margin = new Thickness(14),
+                Spacing = 12,
+                Children =
+                {
+                    new Image
+                    {
+                        Source = new Bitmap(new MemoryStream(image)),
+                        Stretch = Avalonia.Media.Stretch.Uniform,
+                        MaxHeight = 640,
+                    },
+                    close,
+                },
+            },
+        };
+        close.Click += (_, _) => dialog.Close();
+        return dialog.ShowDialog(this);
     }
 
     private void OnOpenAccountSettingsClicked(object? sender, RoutedEventArgs e)

@@ -115,6 +115,27 @@ public sealed class CollectionsDialogViewModelTests : IDisposable
     }
 
     [Fact]
+    public void AddCollection_CreatesUniqueNameAndOpensInlineEdit()
+    {
+        using var stack = new Stack();
+        var viewModel = stack.CreateViewModel();
+
+        viewModel.AddCollectionCommand.Execute(null);
+
+        var first = Assert.Single(viewModel.Collections);
+        Assert.Same(first, viewModel.SelectedCollection);
+        Assert.True(first.IsRenaming);
+        Assert.Equal(first.Name, first.RenameDraft);
+
+        viewModel.AddCollectionCommand.Execute(null);
+
+        Assert.Equal(2, viewModel.Collections.Count);
+        Assert.NotEqual(first.Name, viewModel.SelectedCollection!.Name);
+        Assert.True(viewModel.SelectedCollection.IsRenaming);
+        Assert.Equal(viewModel.SelectedCollection.Name, viewModel.SelectedCollection.RenameDraft);
+    }
+
+    [Fact]
     public void RenameCollection_PersistsTheEditedName()
     {
         using var stack = new Stack();

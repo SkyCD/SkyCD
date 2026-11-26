@@ -5,77 +5,113 @@
              xmlns:vm="clr-namespace:SkyCD.Plugin.Feature.Locations.Views"
              x:Class="SkyCD.Plugin.Feature.Locations.Views.LocationsView"
              x:DataType="vm:LocationsManagerViewModel">
-    <DockPanel Margin="{DynamicResource SkyInsetMd}">
-        <StackPanel DockPanel.Dock="Bottom" Spacing="{DynamicResource SkySpaceSm}" Margin="{DynamicResource SkyGapTopMd}">
-            <TextBlock Text="{Binding StatusText}" Foreground="Gray" TextWrapping="Wrap" />
-            <TextBlock Text="{Binding ErrorText}" Foreground="Firebrick" TextWrapping="Wrap" />
-        </StackPanel>
-
-        <TextBlock DockPanel.Dock="Top"
-                   Text="{i18n:Translate {x:Static models:LocationsKeys.CatalogUnavailable}}"
-                   IsVisible="{Binding ShowCatalogUnavailable}"
-                   TextWrapping="Wrap"
-                   Margin="{DynamicResource SkyGapBottomMd}" />
-
-        <TextBlock DockPanel.Dock="Top"
-                   Text="{i18n:Translate {x:Static models:LocationsKeys.ManageHint}}"
-                   IsVisible="{Binding IsCatalogOpen}"
-                   TextWrapping="Wrap"
-                   Margin="{DynamicResource SkyGapBottomMd}" />
-
-        <Grid ColumnDefinitions="*,180"
-              ColumnSpacing="{DynamicResource SkySpaceMd}"
+    <Grid RowDefinitions="Auto,*,Auto"
+          RowSpacing="{DynamicResource SkySpaceSm}">
+        <Grid ColumnDefinitions="*,Auto"
+              ColumnSpacing="{DynamicResource SkySpaceSm}"
               IsVisible="{Binding IsCatalogOpen}">
-            <DockPanel Grid.Column="0">
-                <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
-                            Spacing="{DynamicResource SkySpaceSm}" Margin="{DynamicResource SkyGapTopSm}">
-                    <TextBox Text="{Binding NewLocationName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                             MinWidth="180"
-                             PlaceholderText="{i18n:Translate {x:Static models:LocationsKeys.NewLocation}}"
-                             AutomationProperties.Name="{i18n:Translate {x:Static models:LocationsKeys.NewLocation}}" />
-                    <Button Content="{i18n:Translate {x:Static models:LocationsKeys.Create}}"
-                            Command="{Binding CreateLocationCommand}" />
-                    <Button Content="{i18n:Translate {x:Static models:LocationsKeys.Delete}}"
-                            Command="{Binding DeleteLocationCommand}" />
-                </StackPanel>
-
-                <ListBox ItemsSource="{Binding Locations}"
-                         SelectedItem="{Binding SelectedLocation, Mode=TwoWay}"
-                         AutomationProperties.Name="{i18n:Translate {x:Static models:LocationsKeys.Locations}}">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate x:DataType="models:LocationRow">
-                            <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
-                                <TextBlock Text="{Binding Name}" />
-                                <TextBlock Text="{Binding UsageText}"
-                                           FontSize="{DynamicResource SkyFontCaption}"
-                                           Foreground="Gray" />
-                            </StackPanel>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-            </DockPanel>
-
-            <StackPanel Grid.Column="1" Spacing="{DynamicResource SkySpaceSm}">
-                <TextBlock Text="{i18n:Translate {x:Static models:LocationsKeys.LocationName}}" />
-                <TextBox Text="{Binding LocationName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                         AutomationProperties.Name="{i18n:Translate {x:Static models:LocationsKeys.LocationName}}" />
-                <Button Content="{i18n:Translate {x:Static models:LocationsKeys.Rename}}"
-                        Command="{Binding RenameLocationCommand}" />
-
-                <TextBlock Text="{i18n:Translate {x:Static models:LocationsKeys.MergeInto}}"
-                           Margin="{DynamicResource SkyGapTopSm}" />
-                <ComboBox ItemsSource="{Binding MergeTargets}"
-                          SelectedItem="{Binding MergeTarget, Mode=TwoWay}"
-                          AutomationProperties.Name="{i18n:Translate {x:Static models:LocationsKeys.MergeInto}}">
-                    <ComboBox.ItemTemplate>
-                        <DataTemplate x:DataType="models:LocationRow">
-                            <TextBlock Text="{Binding Name}" />
-                        </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
+            <TextBlock Classes="caption"
+                       Text="{i18n:Translate {x:Static models:LocationsKeys.ManageHint}}"
+                       TextWrapping="Wrap"
+                       VerticalAlignment="Center" />
+            <StackPanel Grid.Column="1"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        Spacing="{DynamicResource SkySpaceSm}">
+                <Button Content="+"
+                        FontSize="{DynamicResource SkyFontSubtitle}"
+                        Width="34"
+                        Height="28"
+                        ToolTip.Tip="{i18n:Translate {x:Static models:LocationsKeys.AddLocationTooltip}}"
+                        Command="{Binding AddLocationCommand}" />
+                <Button Content="-"
+                        FontSize="{DynamicResource SkyFontSubtitle}"
+                        Width="34"
+                        Height="28"
+                        ToolTip.Tip="{i18n:Translate {x:Static models:LocationsKeys.DeleteLocationTooltip}}"
+                        Command="{Binding DeleteLocationCommand}" />
                 <Button Content="{i18n:Translate {x:Static models:LocationsKeys.Merge}}"
+                        ToolTip.Tip="{i18n:Translate {x:Static models:LocationsKeys.MergeLocations}}"
                         Command="{Binding MergeLocationsCommand}" />
             </StackPanel>
         </Grid>
-    </DockPanel>
+
+        <Border Grid.Row="1"
+                BorderBrush="{DynamicResource ThemeBorderLowBrush}"
+                BorderThickness="1"
+                IsVisible="{Binding IsCatalogOpen}">
+            <Grid RowDefinitions="Auto,*">
+                <Border BorderBrush="{DynamicResource ThemeBorderLowBrush}"
+                        BorderThickness="0,0,0,1"
+                        Padding="{DynamicResource SkyRowPadding}">
+                    <Grid ColumnDefinitions="*,180"
+                          ColumnSpacing="{DynamicResource SkySpaceSm}">
+                        <TextBlock Text="{i18n:Translate {x:Static models:LocationsKeys.LocationName}}"
+                                   FontWeight="SemiBold" />
+                        <TextBlock Grid.Column="1"
+                                   Text="{i18n:Translate {x:Static models:LocationsKeys.UsageColumn}}"
+                                   FontWeight="SemiBold" />
+                    </Grid>
+                </Border>
+                <ListBox x:Name="LocationsList"
+                         Grid.Row="1"
+                         ItemsSource="{Binding Locations}"
+                         SelectedItem="{Binding SelectedLocation}"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         KeyDown="OnLocationsListKeyDown"
+                         DoubleTapped="OnLocationsListDoubleTapped"
+                         SelectionChanged="OnLocationsSelectionChanged">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="models:LocationRow">
+                            <Border BorderBrush="{DynamicResource ThemeBorderLowBrush}"
+                                    BorderThickness="0,0,0,1"
+                                    Padding="{DynamicResource SkyRowPadding}">
+                                <Grid ColumnDefinitions="*,180"
+                                      ColumnSpacing="{DynamicResource SkySpaceSm}">
+                                    <Panel>
+                                        <TextBlock Text="{Binding Name}"
+                                                   VerticalAlignment="Center"
+                                                   IsVisible="{Binding !IsEditing}" />
+                                        <TextBox Text="{Binding EditName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                 IsVisible="{Binding IsEditing}"
+                                                 AutomationProperties.Name="{i18n:Translate {x:Static models:LocationsKeys.LocationName}}"
+                                                 KeyDown="OnLocationNameEditorKeyDown" />
+                                    </Panel>
+                                    <TextBlock Grid.Column="1"
+                                               Classes="caption"
+                                               Text="{Binding UsageText}"
+                                               VerticalAlignment="Center" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
+        </Border>
+
+        <TextBlock Grid.Row="1"
+                   Text="{i18n:Translate {x:Static models:LocationsKeys.CatalogUnavailable}}"
+                   IsVisible="{Binding ShowCatalogUnavailable}"
+                   TextWrapping="Wrap" />
+
+        <StackPanel Grid.Row="2"
+                    Spacing="{DynamicResource SkySpaceSm}">
+            <Border IsVisible="{Binding HasError}"
+                    Background="{DynamicResource ThemeControlLowBrush}"
+                    BorderBrush="{DynamicResource ThemeBorderLowBrush}"
+                    BorderThickness="1"
+                    CornerRadius="{DynamicResource SkyCornerRadius}"
+                    Padding="{DynamicResource SkyControlPadding}">
+                <TextBlock Text="{Binding ErrorText}"
+                           Foreground="{DynamicResource ThemeForegroundBrush}"
+                           TextWrapping="Wrap" />
+            </Border>
+            <TextBlock Classes="caption"
+                       Foreground="{DynamicResource ThemeForegroundLowBrush}"
+                       Text="{Binding StatusText}"
+                       TextWrapping="Wrap"
+                       IsVisible="{Binding HasStatus}" />
+        </StackPanel>
+    </Grid>
 </UserControl>

@@ -18,4 +18,6 @@ public static class SourceIcons
     public static DrawingImage TitleOnly { get; } = TwemojiArtwork.Create(Twemoji.LetterT);
 
     public static DrawingImage Account { get; } = TwemojiArtwork.Create(Twemoji.BustInSilhouette);
+
+    public static DrawingImage Capture { get; } = TwemojiArtwork.Create(Twemoji.VideoCamera);
 }

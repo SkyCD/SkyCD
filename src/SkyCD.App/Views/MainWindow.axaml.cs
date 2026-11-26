@@ -34,6 +34,7 @@ using SkyCD.SDK.Capabilities.Options;
 using SkyCD.Core.DependencyInjection;
 using SkyCD.Core.DependencyInjection.Registrators;
 using SkyCD.SDK.Capabilities.Accounts;
+using SkyCD.SDK.Capabilities.Capture;
 using SkyCD.SDK.Capabilities.Catalog;
 using SkyCD.Plugin.Host.Catalog;
 using SkyCD.Plugin.Host.Indexing;
@@ -1109,7 +1110,8 @@ public partial class MainWindow : Window
         var dialogVm = new AddToListDialogViewModel(
             mediaDriveProvider,
             locationOptions: vm.GetLocationChoices(),
-            accountSessions: pluginManager.GetCapabilities<IAccountSession>());
+            accountSessions: pluginManager.GetCapabilities<IAccountSession>(),
+            captureProviders: pluginManager.GetCapabilities<ICaptureSourcePluginCapability>());
         dialogVm.SetTargetParent(targetParent.ParentId, targetParent.DisplayName);
         if (droppedSources is { Count: > 0 })
         {
@@ -1139,6 +1141,22 @@ public partial class MainWindow : Window
         var targetParentId = dialogVm.TargetPlacement == AddToListTargetPlacement.NewMedia
             ? null
             : dialogVm.TargetParentId ?? DropDestination.LibraryRootId;
+
+        if (dialogVm.SourceMode == AddToListSourceMode.CaptureSource)
+        {
+            try
+            {
+                // The plugin owns the capture source: it persists the draft, starts the loop and reports
+                // frames through the host capture API, so the dialog only routes the confirmed input.
+                await dialogVm.AddCaptureSourceAsync();
+            }
+            catch (Exception ex)
+            {
+                vm.StatusText = SecretSanitizer.Sanitize(ex.Message);
+            }
+
+            return;
+        }
 
         if (dialogVm.SourceMode == AddToListSourceMode.FromAccount)
         {
