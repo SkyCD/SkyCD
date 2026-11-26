@@ -1,6 +1,7 @@
 using System.Linq;
 using Avalonia.Automation;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Templates;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
@@ -112,16 +113,26 @@ public sealed class MultiSelectDropdownTests
 
         try
         {
-            var search = dropdown.FindControl<TextBox>("InlineSearchTextBox")!;
+            var inline = dropdown.FindControl<TextBox>("InlineSearchTextBox")!;
+            var search = dropdown.FindControl<TextBox>("IconSearchTextBox")!;
             var preview = dropdown.FindControl<ContentControl>("SelectedIconPreview")!;
-            var iconList = dropdown.FindControl<ListBox>("IconItemsListBox")!;
+            var iconList = dropdown.FindControl<ListBox>("IconTilesListBox")!;
+            var popup = dropdown.FindControl<Avalonia.Controls.Primitives.Popup>("DropdownPopup")!;
 
-            search.Focus();
+            Assert.True(inline.IsReadOnly);
+            Assert.True(inline.Focus());
             Dispatcher.UIThread.RunJobs();
+            Assert.True(popup.IsOpen);
             Assert.False(preview.IsVisible);
 
-            iconList.SelectedIndex = 1;
             search.RaiseEvent(new KeyEventArgs
+            {
+                RoutedEvent = InputElement.KeyDownEvent,
+                Key = Key.Down,
+                KeyModifiers = KeyModifiers.None
+            });
+            Dispatcher.UIThread.RunJobs();
+            iconList.RaiseEvent(new KeyEventArgs
             {
                 RoutedEvent = InputElement.KeyDownEvent,
                 Key = Key.Enter,
@@ -130,14 +141,56 @@ public sealed class MultiSelectDropdownTests
             Dispatcher.UIThread.RunJobs();
 
             Assert.Equal("Lucide:Heart", dropdown.SelectedIconKey);
+            Assert.False(popup.IsOpen);
             Assert.True(preview.IsVisible);
             Assert.Equal("Lucide:Heart", preview.Content);
-            Assert.Equal(string.Empty, search.Text);
-            Assert.Equal("Lucide:Heart", AutomationProperties.GetName(search));
+            Assert.Equal(string.Empty, inline.Text);
+            Assert.Equal("Lucide:Heart", AutomationProperties.GetName(inline));
         }
         finally
         {
             window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public void CollapsedFieldExposesNoVisibleScrollBar()
+    {
+        var star = new MultiSelectOptionItem { Label = "Star" };
+        var dropdowns = new[]
+        {
+            CreateIconPicker("Lucide:Star"),
+            new MultiSelectDropdown
+            {
+                IsSingleSelect = false,
+                ItemsSource = [star],
+                PlaceholderText = "Select item types"
+            }
+        };
+
+        foreach (var dropdown in dropdowns)
+        {
+            var window = new Window { Width = 400, Height = 400, Content = dropdown };
+            window.Show();
+
+            try
+            {
+                Dispatcher.UIThread.RunJobs();
+                var search = dropdown.FindControl<TextBox>("InlineSearchTextBox")!;
+                var popup = dropdown.FindControl<Popup>("DropdownPopup")!;
+                search.UpdateLayout();
+
+                Assert.False(popup.IsOpen);
+                Assert.Equal(ScrollBarVisibility.Disabled, ScrollViewer.GetHorizontalScrollBarVisibility(search));
+                Assert.Equal(ScrollBarVisibility.Disabled, ScrollViewer.GetVerticalScrollBarVisibility(search));
+                Assert.DoesNotContain(
+                    search.GetVisualDescendants().OfType<ScrollBar>(),
+                    static bar => bar.IsVisible);
+            }
+            finally
+            {
+                window.Close();
+            }
         }
     }
 

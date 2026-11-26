@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Enforces design-token usage for spacing, insets and typography.
+    Enforces design-token usage for spacing, insets, typography, colors and control metrics.
 
 .DESCRIPTION
     Fails when:
@@ -9,8 +9,20 @@
       - an AXAML file under src/ or Plugins/ declares a literal numeric Margin or Padding,
         as an attribute or as a Setter value; plain zero resets stay allowed because they
         cancel an inset inherited from a shared style;
-      - the About reference dialog uses a hard-coded hex color instead of a theme brush;
-      - a {DynamicResource Sky...} reference has no matching key in DesignTokens.axaml.
+      - an AXAML file under src/ or Plugins/ paints a surface with a hard-coded hex color,
+        as an attribute or as a Setter value; brush definitions (Color="...") stay allowed
+        because DesignTokens.axaml and the theme dictionaries are the single place
+        literal colors may appear;
+      - an AXAML file under src/ or Plugins/ declares a literal numeric CornerRadius,
+        as an attribute or as a Setter value; SkyCornerRadius* tokens carry every radius;
+      - an AXAML file under src/ or Plugins/ opens a column list with a literal pixel width,
+        as a ColumnDefinitions attribute or as the first ColumnDefinition element; star-sized
+        and Auto columns need no token, and grids use the element form with
+        Width="{DynamicResource ...}" because an attribute value cannot mix a markup
+        extension with the comma-separated column list;
+      - a {DynamicResource Sky...} or {StaticResource Sky...} reference has no matching
+        key in DesignTokens.axaml (value converters keyed *Converter live beside their
+        consumer, so they stay outside this check).
 #>
 param(
     [string]$RepositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..\..")).Path
@@ -22,8 +34,14 @@ $tokenFile = Join-Path $RepositoryRoot "src/SkyCD.App/Styles/DesignTokens.axaml"
 $literalPattern = '(FontSize|Spacing|RowSpacing|ColumnSpacing)="[0-9.]+"'
 $insetPattern = '(?:(?:[A-Za-z]+)\.)?(?:Margin|Padding)="(?<inset>[^"]*)"'
 $insetSetterPattern = 'Property="(?:(?:[A-Za-z]+)\.)?(?:Margin|Padding)" Value="(?<inset>[^"]*)"'
-$colorPattern = '#[0-9A-Fa-f]{6,8}'
+$colorAttributePattern = '(Background|Foreground|BorderBrush|Fill|Stroke)="#[0-9A-Fa-f]{6,8}"'
+$colorSetterPattern = 'Property="(Background|Foreground|BorderBrush|Fill|Stroke)" Value="#[0-9A-Fa-f]{6,8}"'
+$cornerAttributePattern = 'CornerRadius="[0-9]'
+$cornerSetterPattern = 'Property="CornerRadius" Value="[0-9]'
+$columnAttributePattern = 'ColumnDefinitions="[0-9]+(,|")'
+$columnElementPattern = '<Grid\.ColumnDefinitions>\s*<ColumnDefinition Width="[0-9]'
 $referencePattern = 'DynamicResource (Sky[A-Za-z]+)'
+$staticReferencePattern = 'StaticResource (Sky[A-Za-z]+)'
 $definitionPattern = 'x:Key="(Sky[A-Za-z]+)"'
 
 $violations = New-Object System.Collections.Generic.List[string]
@@ -80,15 +98,41 @@ foreach ($file in $files) {
         }
     }
 
-    if ($file.Name -eq "AboutWindow.axaml") {
-        foreach ($match in [regex]::Matches($text, $colorPattern)) {
-            Add-Violation "$relative uses hard-coded color '$($match.Value)'; use a theme brush instead."
-        }
+    foreach ($match in [regex]::Matches($text, $colorAttributePattern)) {
+        Add-Violation "$relative paints a surface with hard-coded color '$($match.Value)'; use a theme brush or a Sky brush token instead."
+    }
+
+    foreach ($match in [regex]::Matches($text, $colorSetterPattern)) {
+        Add-Violation "$relative paints a surface with hard-coded color '$($match.Value)'; use a theme brush or a Sky brush token instead."
+    }
+
+    foreach ($match in [regex]::Matches($text, $cornerAttributePattern)) {
+        Add-Violation "$relative uses a literal CornerRadius value '$($match.Value)'; use a SkyCornerRadius token instead."
+    }
+
+    foreach ($match in [regex]::Matches($text, $cornerSetterPattern)) {
+        Add-Violation "$relative uses a literal CornerRadius value '$($match.Value)'; use a SkyCornerRadius token instead."
+    }
+
+    foreach ($match in [regex]::Matches($text, $columnAttributePattern)) {
+        Add-Violation "$relative opens a column list with a literal width '$($match.Value)'; use a Sky label-width token in element form instead."
+    }
+
+    foreach ($match in [regex]::Matches($text, $columnElementPattern)) {
+        Add-Violation "$relative opens a column list with a literal Width; use a Sky label-width token instead."
     }
 
     foreach ($match in [regex]::Matches($text, $referencePattern)) {
         $key = $match.Groups[1].Value
         if (-not $definedTokens.ContainsKey($key)) {
+            Add-Violation "$relative references undefined design token '$key'."
+        }
+    }
+
+    foreach ($match in [regex]::Matches($text, $staticReferencePattern)) {
+        $key = $match.Groups[1].Value
+        # Value converters live beside their consumer and are keyed by convention, not by token.
+        if ($key -notlike '*Converter' -and -not $definedTokens.ContainsKey($key)) {
             Add-Violation "$relative references undefined design token '$key'."
         }
     }

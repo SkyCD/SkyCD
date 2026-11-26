@@ -18,6 +18,8 @@ public static class AiProviderCatalog
     [
         Preset("lmstudio", "LM Studio", 1234, "google/gemma-4-e2b", true,
             ["google/gemma-4-e2b", "meta-llama-3.1-8b-instruct", "qwen2.5-7b-instruct"],
+        Preset("lmstudio", "LM Studio", 1234, "google/gemma-4-e2b", true,
+            ["google/gemma-4-e2b", "meta-llama-3.1-8b-instruct", "qwen2.5-7b-instruct"],
             "LM", "https://lmstudio.ai/docs/developer/core/authentication"),
         Preset("ollama", "Ollama", 11434, "llama3.2", true,
             ["llama3.2", "llama3.1", "qwen3", "gemma3", "mistral"], "OL"),
@@ -28,9 +30,11 @@ public static class AiProviderCatalog
         Preset("koboldcpp", "KoboldCpp", 5001, null, false, null, "KC",
             "https://github.com/LostRuins/koboldcpp/wiki#can-i-add-authentication"),
         Preset("jan", "Jan", 1337, null, false, null, "JAN"),
-        Preset("localai", "LocalAI", 8080, null, false, null, "LA",
+        Preset("localai", "LocalAI", 8080, "llama-3.2-1b-instruct:q4_k_m", false,
+            ["llama-3.2-1b-instruct:q4_k_m"], "LA",
             "https://localai.io/docs/administration/authentication/"),
-        Preset("vllm", "vLLM", 8000, null, false, null, "VL",
+        Preset("vllm", "vLLM", 8000, "Qwen/Qwen2.5-1.5B-Instruct", false,
+            ["Qwen/Qwen2.5-1.5B-Instruct", "Qwen/Qwen2.5-7B-Instruct"], "VL",
             "https://docs.vllm.ai/en/stable/serving/online_serving/openai_compatible_server/"),
         Preset("custom", "Custom local OpenAI-compatible", 8000, null, false, null, "AI")
     ];

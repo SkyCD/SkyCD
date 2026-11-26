@@ -107,13 +107,23 @@ public sealed class AdvancedCatalogFindWindowLayoutTests
         var root = GetRootGrid();
         var header = root.Elements(Avalonia + "Grid").Single(grid => (string?)grid.Attribute("Grid.Row") == "2");
         var filterRow = root.Descendants(Avalonia + "Grid").Single(grid =>
-            (string?)grid.Attribute("ColumnDefinitions") == "150,150,140,*,Auto"
-            && grid.Ancestors(Avalonia + "ListBox").Any());
+            grid.Ancestors(Avalonia + "ListBox").Any()
+            && grid.Elements(Avalonia + "Grid.ColumnDefinitions").Any());
 
-        Assert.Equal((string?)header.Attribute("ColumnDefinitions"), (string?)filterRow.Attribute("ColumnDefinitions"));
+        Assert.Equal(FirstColumnWidth(header), FirstColumnWidth(filterRow));
+        Assert.Equal("{StaticResource SkyAdvancedFindLabelWidth}", FirstColumnWidth(filterRow));
+        Assert.Equal(RemainingColumnWidths(header), RemainingColumnWidths(filterRow));
         Assert.Equal("{DynamicResource SkySpaceSm}", (string?)header.Attribute("ColumnSpacing"));
         Assert.Equal("{DynamicResource SkySpaceSm}", (string?)filterRow.Attribute("ColumnSpacing"));
     }
+
+    private static string? FirstColumnWidth(XElement grid) =>
+        grid.Elements(Avalonia + "Grid.ColumnDefinitions").Elements(Avalonia + "ColumnDefinition")
+            .Select(column => (string?)column.Attribute("Width")).FirstOrDefault();
+
+    private static string RemainingColumnWidths(XElement grid) =>
+        string.Join(",", grid.Elements(Avalonia + "Grid.ColumnDefinitions").Elements(Avalonia + "ColumnDefinition")
+            .Select(column => (string?)column.Attribute("Width")).Skip(1));
 
     [Fact]
     public void ResultRowsUsePaddingTokensInsteadOfLiteralMargins()

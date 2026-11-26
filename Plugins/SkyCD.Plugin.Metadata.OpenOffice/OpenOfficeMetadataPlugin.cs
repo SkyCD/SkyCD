@@ -51,7 +51,7 @@ public sealed class OpenOfficeMetadataPlugin : IMediaMetadataCapability
                 .ConfigureAwait(false);
             progress?.Report(new MediaProgress(0.3));
 
-            using var package = OpenOfficePackage.Open(data);
+            using var package = OpenOfficePackage.Open(data, options);
             cancellationToken.ThrowIfCancellationRequested();
 
             var contentType = package.TryReadContentType(MaxContentTypeBytes);

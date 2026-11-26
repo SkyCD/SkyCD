@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\SkyCD.SDK\SkyCD.SDK.csproj"/>
+    </ItemGroup>
+    <ItemGroup>
+        <Compile Include="..\Shared\EncodingProfiles\LegacyEncoding.cs" Link="Shared\EncodingProfiles\LegacyEncoding.cs" />
+    </ItemGroup>
+    <ItemGroup>
+        <!-- MIT: HTML parsing, semantic document model and inert owned DOM snapshots. -->
+        <PackageReference Include="OfficeIMO.Html" Version="3.6.2"/>
+    </ItemGroup>
+    <ItemGroup>
+        <!-- Shared with the other preview plugins: one page layout and one encode helper. -->
+        <Compile Include="..\Shared\Preview\Export\PreviewArtifactEncoder.cs" Link="Shared\Preview\Export\PreviewArtifactEncoder.cs"/>
+        <Compile Include="..\Shared\Preview\Export\SkiaPageRenderer.cs" Link="Shared\Preview\Export\SkiaPageRenderer.cs"/>
+        <Compile Include="..\Shared\Preview\Export\SkiaPageText.cs" Link="Shared\Preview\Export\SkiaPageText.cs"/>
+    </ItemGroup>
+    <ItemGroup>
+        <!-- MIT: renders the leading document content to a page thumbnail. -->
+        <PackageReference Include="SkiaSharp" Version="3.119.4"/>
+        <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.4"/>
+        <PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="3.119.4"/>
+        <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="3.119.4"/>
+    </ItemGroup>
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>disable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <Company>SkyCD</Company>
+        <Authors>SkyCD</Authors>
+        <AssemblyTitle>HTML Document Metadata</AssemblyTitle>
+        <Description>Reads title, language, common meta tags, declared charset, base reference and document structure of HTML files, publishes a bounded plain-text excerpt, and renders the leading content as a page thumbnail. The source is never modified, no network or external file is ever fetched, and scripts are never executed.</Description>
+    </PropertyGroup>
+    <ItemGroup>
+        <AssemblyMetadata Include="AuthorUrl" Value="https://sourceforge.net/projects/skycd/"/>
+    </ItemGroup>
+    <ItemGroup>
+        <InternalsVisibleTo Include="SkyCD.Plugin.Metadata.Html.Tests"/>
+    </ItemGroup>
+</Project>

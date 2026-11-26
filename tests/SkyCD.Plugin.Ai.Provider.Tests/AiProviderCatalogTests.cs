@@ -1,3 +1,4 @@
+using System;
 using Xunit;
 using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Ai.Provider.Models;
@@ -82,6 +83,20 @@ public sealed class AiProviderCatalogTests
             Assert.True(stream!.Length > 32, provider.Id);
         });
         Assert.Equal("AI", AiProviderCatalog.Find("custom")!.Monogram);
+    }
+
+    [Fact]
+    public void PresetsWithSuggestedModels_IncludeTheirDefaultModel()
+    {
+        foreach (var provider in AiProviderCatalog.Providers)
+        {
+            if (provider.SuggestedModels is { Count: > 0 } suggested)
+            {
+                Assert.NotNull(provider.DefaultModel);
+                Assert.Contains(provider.DefaultModel!, suggested, StringComparer.OrdinalIgnoreCase);
+            }
+        }
+
     }
 
     [Fact]

@@ -33,13 +33,15 @@ public class OptionsWindowLayoutTests
         var section = GetCustomPropertiesSection();
 
         Assert.Equal("Grid", section.Name.LocalName);
-        Assert.Equal("Auto,Auto,*,Auto", (string?)section.Attribute("RowDefinitions"));
+        Assert.Equal("Auto,*,Auto", (string?)section.Attribute("RowDefinitions"));
         Assert.Equal("{DynamicResource SkySpaceSm}", (string?)section.Attribute("RowSpacing"));
     }
 
     [Fact]
-    public void CustomPropertiesSection_HasHeaderWithDividerAndRightAlignedToolbar()
+    public void CustomPropertiesSection_StartsWithDescriptionAndRightAlignedToolbar()
     {
+        // Issue #1213: the page title duplicated the breadcrumb, so the section now
+        // starts with the description row and only the table keeps a divider.
         var section = GetCustomPropertiesSection();
         var toolbar = Assert.Single(section.Descendants(Avalonia + "StackPanel"),
             panel => (string?)panel.Attribute("HorizontalAlignment") == "Right");
@@ -54,8 +56,8 @@ public class OptionsWindowLayoutTests
         });
         Assert.Contains("AddCustomPropertyCommand", buttons[0].ToString(), StringComparison.Ordinal);
         Assert.Contains("RemoveCustomPropertyCommand", buttons[1].ToString(), StringComparison.Ordinal);
-        Assert.Contains(section.Descendants(Avalonia + "Border"),
-            border => (string?)border.Attribute("Height") == "1" && (string?)border.Attribute("Background") == "#2E2E2E");
+        Assert.DoesNotContain(section.Elements(Avalonia + "Border"),
+            border => (string?)border.Attribute("Height") == "1" && (string?)border.Attribute("Background") == "{DynamicResource ThemeBorderLowBrush}");
     }
 
     [Fact]
@@ -63,7 +65,7 @@ public class OptionsWindowLayoutTests
     {
         var section = GetCustomPropertiesSection();
         var table = Assert.Single(section.Descendants(Avalonia + "Border"),
-            border => (string?)border.Attribute("BorderThickness") == "1" && (string?)border.Attribute("BorderBrush") == "#2E2E2E");
+            border => (string?)border.Attribute("BorderThickness") == "1" && (string?)border.Attribute("BorderBrush") == "{DynamicResource ThemeBorderLowBrush}");
         var headers = table.Descendants(Avalonia + "TextBlock")
             .Where(textBlock => (string?)textBlock.Attribute("FontWeight") == "SemiBold")
             .ToArray();
@@ -122,7 +124,7 @@ public class OptionsWindowLayoutTests
     public void ToolbarSection_HostsTheToolbarCustomizationControls()
     {
         var section = GetToolbarSection();
-        Assert.Equal("Auto,Auto,*", (string?)section.Attribute("RowDefinitions"));
+        Assert.Equal("Auto,*", (string?)section.Attribute("RowDefinitions"));
         Assert.Contains("UiKeys.CustomizeToolbarHint", section.ToString(), StringComparison.Ordinal);
 
         var commands = section.Descendants(Avalonia + "Button")
@@ -334,7 +336,7 @@ public class OptionsWindowLayoutTests
         var section = Assert.Single(document.Descendants(),
             element => (string?)element.Attribute("IsVisible") == "{Binding ShowCollectionsSection}");
 
-        Assert.Equal("Auto,Auto,*,Auto", (string?)section.Attribute("RowDefinitions"));
+        Assert.Equal("Auto,*,Auto", (string?)section.Attribute("RowDefinitions"));
         Assert.DoesNotContain("#", section.ToString(), StringComparison.Ordinal);
 
         var lists = section.Descendants(Avalonia + "ListBox").ToArray();

@@ -131,4 +131,33 @@ public sealed class MainWindowBoundsTests
         Assert.Equal(800, layout.Height);
         Assert.Null(layout.Position);
     }
+
+    [Theory]
+    [InlineData(WindowState.Normal, WindowState.Normal, 20, 800)]
+    [InlineData(WindowState.Maximized, WindowState.Maximized, 10, 1200)]
+    [InlineData(WindowState.Minimized, WindowState.Normal, 10, 1200)]
+    public void Capture_PersistsNormalBoundsAndRestorableState(WindowState currentState,
+        WindowState savedState, int savedLeft, double savedWidth)
+    {
+        var options = new WindowOptionsDocument { Left = 10, Top = 15, Width = 1200, Height = 850 };
+
+        MainWindowPlacement.Capture(options, currentState, new PixelPoint(20, 25), 800, 600, new GridLength(320));
+
+        Assert.Equal(savedState, options.State);
+        Assert.Equal(savedLeft, options.Left);
+        Assert.Equal(savedLeft + 5, options.Top);
+        Assert.Equal(savedWidth, options.Width);
+        Assert.Equal(currentState == WindowState.Normal ? 600 : 850, options.Height);
+        Assert.Equal(320, options.TreePaneWidth);
+    }
+
+    [Fact]
+    public void Capture_KeepsSavedTreeWidthForProportionalLayout()
+    {
+        var options = new WindowOptionsDocument { TreePaneWidth = 320 };
+
+        MainWindowPlacement.Capture(options, WindowState.Normal, default, 800, 600, GridLength.Star);
+
+        Assert.Equal(320, options.TreePaneWidth);
+    }
 }
