@@ -1,6 +1,6 @@
 # WordPerfect document metadata and preview plugin
 
-Implements #737 and #948 on the capability contracts from #435 (`docs/plugins/media-capabilities.md`).
+Implements #737, #948 and #1247 on the capability contracts from #435 (`docs/plugins/media-capabilities.md`).
 
 Assembly: `Plugins/SkyCD.Plugin.Metadata.WordPerfect/` → plugin id `SkyCD.Plugin.WordPerfect`.
 Tests: `tests/SkyCD.Plugin.Metadata.WordPerfect.Tests/`.
@@ -24,7 +24,7 @@ asserts none exists.
 |---|---|
 | WordPerfect 6.0 and 6.1+ documents, stored flat | Header facts, the extended document summary, and a body-text thumbnail |
 | WordPerfect 7 and later, stored as an OLE2 compound file | The `PerfectOffice_MAIN` stream is unwrapped and read the same way |
-| WordPerfect 5 documents | Header facts only; that generation has neither the extended summary nor a walkable body grammar |
+| WordPerfect 5 documents | Header facts and a body-text thumbnail recovered from the WP5 structured records; that generation has no extended summary |
 | WordPerfect for Mac 2.x–3.5e | Header facts only; its summary and body structures are out of scope |
 | WordPerfect 1–4 | Unsupported: their headers are not recognized, so extraction fails with `WordPerfectDecodeException` |
 | Any other format | Not matched by extension or content type; the plugin also rejects a mismatched header |
@@ -84,33 +84,41 @@ because a real summary is far smaller and the bounds stop a corrupted size from 
 
 ## Body text and the page thumbnail
 
-The preview capability walks the body stream from the offset recorded in the header and recovers the leading
-text until `MaxRenderedCharacters` is collected. The walk follows the WP6 grammar rather than guessing:
+The preview capability hands the extracted `WPC` stream to OfficeIMO's read-only legacy importer
+(`LegacyWordImporter`), which walks the prefix packets and body records of WordPerfect 5.x and 6.x and
+returns the recovered plain text. The plugin keeps the header, summary, storage and encryption facts on its
+own side; the importer only supplies the body.
 
-- `0x00` is a token WordPerfect leaves where content was deleted and is skipped. `0x01`–`0x1F` are the
-  single-byte multinational characters (accented Latin letters), and `0x20`–`0x7F` are ASCII.
-- `0x80`–`0xCF` are single-byte functions. Spaces and hyphens contribute their printable form, and the
-  paragraph, line, page, column and table breaks become line breaks in the thumbnail.
-- `0xD0`–`0xEF` are variable-length groups and are skipped by the size they declare. Both the repeated size
-  and the closing group id must match before the walk trusts that size.
-- `0xF0`–`0xFE` are fixed-length groups, skipped by the constant size for that id after the closing id at the
-  end of the group is checked.
-- `0xFF` has no assigned size, so the token is consumed and the walk continues.
+The importer's own recovery quality gates the preview:
 
-A group whose framing does not close ends the walk, and the text recovered so far is what gets drawn, so a
-partly overwritten body still produces a thumbnail instead of a failure. Repeated line breaks are collapsed.
+- **Structured** recovery, where the records for the source generation were walked, is drawn. This is the
+  result for every WordPerfect 5.x and 6.x body the plugin hands over.
+- **Salvage** recovery, where text is extracted conservatively from the document area without the record
+  grammar, returns the host's explicit "no preview" artifact list instead of being drawn. Macintosh and
+  unknown-generation bodies stay behind that gate, so their text is never guessed at.
 
-The recovered text is trimmed and rendered as a white page with black sans-serif text by
-`SkiaWordPerfectThumbnailRenderer`: the page width equals the configured `MaxThumbnailDimension`, the height
-follows the A-series page aspect of that width, and lines wrap inside a proportional margin. The result is a
-PNG artifact. A renderer that cannot run reports no preview before the source is read at all, so the document
-keeps its metadata with no artifact.
+The first `MaxRenderedCharacters` characters of the recovered text are trimmed and rendered as a white page
+with black sans-serif text by `SkiaWordPerfectThumbnailRenderer`: the page width equals the configured
+`MaxThumbnailDimension`, the height follows the A-series page aspect of that width, and lines wrap inside a
+proportional margin. The result is a PNG artifact. A renderer that cannot run reports no preview before the
+source is read at all, so the document keeps its metadata with no artifact.
 
 Protected and malformed documents behave exactly as they do for extraction: an encrypted header raises
-`WordPerfectAuthenticationRequiredException` and a mismatched source raises `WordPerfectDecodeException`, so a
-protected document never shows a partial thumbnail and its failure classification is unchanged. WP5 and
-Macintosh bodies use different grammars and return an empty artifact list, which is the host's explicit
+`WordPerfectAuthenticationRequiredException` and a body the importer cannot decode raises
+`WordPerfectDecodeException`, so a protected document never shows a partial thumbnail and its failure
+classification is unchanged. Macintosh bodies return an empty artifact list, which is the host's explicit
 "no preview" state.
+
+The importer never executes macros, scripts or embedded objects and never resolves source links. Cached
+WPG1 graphics are the only thing it rasterizes: they are drawn at 96 DPI under `MaxImagePixels` (16 Mi),
+i.e. about four US-letter page rasters in total, and their source plus PNG bytes are capped by
+`MaxResourceBytes` (64 MiB). Text, record and item budgets follow the source byte count, so a valid
+document cannot be rejected by an internal limit below its own size.
+
+The import projects a full editable model rather than only the text, so its cost grows linearly with the
+source. Measured on this machine: 4 KiB ≈ 6 ms, 52 KiB ≈ 14 ms, 0.5 MiB ≈ 100 ms, 2.5 MiB ≈ 380 ms per
+import. The metadata provider does not import the body, so only the preview pass pays this cost, and the
+source itself is already bounded by `MaxSourceBytes`.
 
 ## Compound documents
 
@@ -146,11 +154,12 @@ chunks and after parsing.
 
 ## Dependencies and licensing
 
-The summary parser, the body-text reader, the source reader and the compound-file reader are implemented in
-the project. The only NuGet dependency is the rasterizer used for thumbnails.
+The summary parser, the source reader and the compound-file reader are implemented in the project. The
+preview body text comes from OfficeIMO's legacy importer, and the thumbnail is rasterized by SkiaSharp.
 
 | Dependency | Version | License | Purpose |
 |---|---|---|---|
+| `OfficeIMO.Word` (with `OfficeIMO.Core` and `DocumentFormat.OpenXml`) | 3.6.2 | MIT | Read-only WordPerfect 5.x/6.x body importer. The same shared version every other OfficeIMO plugin uses; it never executes source content and its graphics rasterization is bounded by the plugin's limits. |
 | `SkiaSharp` + `SkiaSharp.NativeAssets.{Linux,macOS,Win32}` | 3.119.4 | MIT | Renders the recovered text to a bounded PNG. The same package set is already used by the RTF preview plugin, and a rasterizer failure degrades to "no preview" rather than a failed extraction. |
 
 Earlier evaluations of compound-file packages, and the reference parser used to cross-check the format:
@@ -170,14 +179,16 @@ cross-checked against libwpd's reference parser and against real sample document
 - Only the extended document summary and a leading plain-text sample of the body are read. The thumbnail shows
   text without its formatting: bold, italics, tables' structure, styles, revision history and embedded objects
   are out of scope.
-- The preview is available for WordPerfect 6.x bodies only. WordPerfect 5 and Macintosh documents return an
-  empty preview because their body grammars are different.
-- Characters stored in extended-character groups (`0xF0`) are not drawn; the thumbnail decodes ASCII and the
-  single-byte multinational set.
+- The preview is available for WordPerfect 5.x and 6.x bodies. Macintosh documents return an empty preview
+  because their body grammar is different, and salvage-quality recovery is never drawn.
+- Body characters outside ASCII and the single-byte multinational set are recovered only where the importer
+  maps the character set; unmapped glyphs become U+FFFD instead of being read as an unrelated code page.
+- A body whose record framing is damaged fails the preview with `WordPerfectDecodeException` rather than
+  drawing the text recovered before the damage; only a successful structured import is drawn.
 - User-defined summary tags (101 and above) are not published, because the schema is a fixed cached-data
   contract. Known summary tags are published under stable keys.
-- WordPerfect 5 and Mac WordPerfect documents yield header facts only; their summary structures are different
-  and are not parsed.
+- Mac WordPerfect documents yield header facts only; their summary structures are different and are not
+  parsed. WordPerfect 5 has no extended summary, so those documents publish header facts and a thumbnail.
 - `FormatVersion` is the header's generation, not a marketing product name. The header does not distinguish
   WordPerfect 7, 8, 9, X3 through X6.
 - Character-set coverage is limited to ASCII, Windows-1252 and a best-effort low-byte reading for the remaining
@@ -191,11 +202,12 @@ cross-checked against libwpd's reference parser and against real sample document
 
 `tests/SkyCD.Plugin.Metadata.WordPerfect.Tests/` builds **structurally valid WordPerfect documents and compound files
 in memory**, so the suite commits no binary blobs and every expected value is known to the test asserting it.
-Fixtures cover flat 6.0 and 6.1+ documents, a header-only document, an unsupported WP5 document, every summary
-tag, valid and invalid dates, charset 0 and charset 1 text, folded whitespace, first-group-wins, zero-length
-and overrunning groups, a summary that falls outside the file, and compound documents with both regular and
-mini-stream storage. Body fixtures add framed variable-length and fixed-length groups and a leading-text
-region, so the walker is exercised without binary samples.
+Fixtures cover flat 6.0 and 6.1+ documents, a header-only document, a WordPerfect 5 document whose body
+starts after the header, every summary tag, valid and invalid dates, charset 0 and charset 1 text, folded
+whitespace, first-group-wins, zero-length and overrunning groups, a summary that falls outside the file,
+and compound documents with both regular and mini-stream storage. Body fixtures encode WP6 text with the
+soft-space function and framed variable-length and fixed-length groups, so the importer is exercised
+without binary samples.
 
 Coverage includes the descriptor and schemas, every published field, omission of absent fields, date
 validation, multinational decoding, all summary-damage paths, encrypted and non-WordPerfect sources, empty,
@@ -204,9 +216,10 @@ the compound reader's regular and mini-stream paths, a missing `PerfectOffice_MA
 extension and content type matching, standard and opt-in selection, failure classification, assembly discovery
 without a manifest, and offline storage through the real scheduler and in-memory cache store.
 
-Preview coverage adds the body walk (multinational bytes, spaces and hyphens, variable and fixed groups,
-corrupt and truncated framing, the character cap, unassigned tokens and collapsed line breaks), a real
-SkiaSharp render whose PNG is decoded to assert the configured maximum width, the option bounds passed to the
-renderer, textless and WP5/Macintosh documents, protected and malformed sources, a missing renderer with zero
-bytes charged, a single read and charge, compound-wrapped bodies, and the host run where metadata and preview
-are published together or the preview is empty while metadata is unchanged.
+Preview coverage adds the legacy import (paragraphs, WP5 bodies, multinational bytes, spaces and hyphens,
+variable and fixed groups, the character cap, salvage quality returning no preview, and corrupt framing
+failing as a decode error), a real SkiaSharp render whose PNG is decoded to assert the configured maximum
+width, the option bounds passed to the renderer, textless and Macintosh documents, protected and malformed
+sources, a missing renderer with zero bytes charged, a single read and charge, compound-wrapped bodies, and
+the host run where metadata and preview are published together, a WP5 document publishes both, or a
+malformed body fails only the preview while metadata is unchanged.

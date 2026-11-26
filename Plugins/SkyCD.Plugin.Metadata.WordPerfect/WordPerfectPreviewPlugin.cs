@@ -13,10 +13,12 @@ namespace SkyCD.Plugin.Metadata.WordPerfect;
 /// Renders a page thumbnail from the leading text of a WordPerfect document without altering it.
 /// </summary>
 /// <remarks>
-/// Only the body grammar of WordPerfect 6.x can be walked for text, so WordPerfect 5 and Macintosh
-/// documents report an empty preview instead of guessing at their layout. Protected and malformed
-/// documents surface the same failures as extraction, which keeps "no preview" distinguishable from
-/// "cannot read". Rendering itself is delegated to <see cref="IWordPerfectThumbnailRenderer"/>.
+/// WordPerfect 5.x and 6.x bodies are recovered by the bounded legacy importer, so both generations produce
+/// a preview; Macintosh and unknown bodies report an empty preview instead of guessing at their layout.
+/// Salvage-quality recovery is also reported as "no preview", because that text is extracted from the
+/// document area rather than walked as structured records. Protected and malformed documents surface the
+/// same failures as extraction, which keeps "no preview" distinguishable from "cannot read". Rendering
+/// itself is delegated to <see cref="IWordPerfectThumbnailRenderer"/>.
 /// </remarks>
 public sealed class WordPerfectPreviewPlugin : IMediaPreviewCapability
 {
@@ -63,17 +65,16 @@ public sealed class WordPerfectPreviewPlugin : IMediaPreviewCapability
             progress?.Report(new MediaProgress(0.4));
 
             var document = WordPerfectDocument.Parse(data.Data, data.Storage);
-            if (!document.SupportsBodyText)
+            if (!document.SupportsStructuredText)
             {
-                // WP5 and Macintosh bodies use different grammars, so there is no safe text sample to draw.
+                // Macintosh and unknown bodies use different grammars, so there is no safe text sample to draw.
                 progress?.Report(new MediaProgress(1));
                 return new MediaPreviewResult([]);
             }
 
-            var text = WordPerfectBodyTextReader
-                .Read(data.Data, document.DocumentOffset, options.MaxRenderedCharacters)
-                .Trim();
-            if (text.Length == 0)
+            var text = WordPerfectBodyTextImporter
+                .ReadStructuredText(data.Data, options.MaxRenderedCharacters, cancellationToken);
+            if (text is null)
             {
                 progress?.Report(new MediaProgress(1));
                 return new MediaPreviewResult([]);
