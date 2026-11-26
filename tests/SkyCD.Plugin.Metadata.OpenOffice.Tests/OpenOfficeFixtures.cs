@@ -14,6 +14,7 @@ internal static class OpenOfficeFixtures
 {
     public const string OdfTextContentType = "application/vnd.oasis.opendocument.text";
     public const string OdfSpreadsheetContentType = "application/vnd.oasis.opendocument.spreadsheet";
+    public const string OdfTextTemplateContentType = "application/vnd.oasis.opendocument.text-template";
     public const string LegacyWriterContentType = "application/vnd.sun.xml.writer";
 
     private const string OdfOfficeNamespace = "urn:oasis:names:tc:opendocument:xmlns:office:1.0";
@@ -38,7 +39,7 @@ internal static class OpenOfficeFixtures
             contentType,
             includeMimeType,
             includeMetadata ? metaXml ?? OdfMetadata(FullMetadata()) : null,
-            manifestXml);
+            manifestXml ?? Manifest(false, contentType));
     }
 
     public static byte[] LegacyDocument(string? metaXml = null, string contentType = LegacyWriterContentType) =>
@@ -103,7 +104,11 @@ internal static class OpenOfficeFixtures
         {
             foreach (var entry in source.Entries)
             {
-                AddEntry(target, entry.FullName, ReadEntry(entry));
+                // The declared MIME type stays stored and first, as the OpenDocument specification requires.
+                var level = string.Equals(entry.FullName, "mimetype", StringComparison.Ordinal)
+                    ? CompressionLevel.NoCompression
+                    : CompressionLevel.Fastest;
+                AddEntry(target, entry.FullName, ReadEntry(entry), level);
             }
 
             AddEntry(target, name, data);
@@ -156,7 +161,7 @@ internal static class OpenOfficeFixtures
         <meta:document-statistic meta:page-count="10" meta:table-count="2" meta:image-count="3" meta:object-count="4" meta:paragraph-count="55" meta:word-count="1200" meta:character-count="7000" meta:cell-count="0" meta:sheet-count="0"/>
         """;
 
-    public static string Manifest(bool encrypted)
+    public static string Manifest(bool encrypted, string contentType = OdfTextContentType)
     {
         var encryption = encrypted
             ? """
@@ -170,7 +175,7 @@ internal static class OpenOfficeFixtures
         return $"""
             <?xml version="1.0" encoding="UTF-8"?>
             <manifest:manifest xmlns:manifest="{OdfManifestNamespace}" manifest:version="1.2">
-              <manifest:file-entry manifest:full-path="/" manifest:media-type="{OdfTextContentType}"/>
+              <manifest:file-entry manifest:full-path="/" manifest:media-type="{contentType}"/>
               <manifest:file-entry manifest:full-path="meta.xml" manifest:media-type="text/xml">{encryption}</manifest:file-entry>
             </manifest:manifest>
             """;
@@ -210,7 +215,8 @@ internal static class OpenOfficeFixtures
         {
             if (includeMimeType)
             {
-                AddEntry(archive, "mimetype", contentType);
+                // The OpenDocument specification stores the declared MIME type uncompressed as the first entry.
+                AddEntry(archive, "mimetype", contentType, CompressionLevel.NoCompression);
             }
 
             if (manifestXml is not null)
@@ -239,11 +245,17 @@ internal static class OpenOfficeFixtures
     }
 
     private static void AddEntry(ZipArchive archive, string name, string content) =>
-        AddEntry(archive, name, Encoding.UTF8.GetBytes(content));
+        AddEntry(archive, name, Encoding.UTF8.GetBytes(content), CompressionLevel.Fastest);
 
-    private static void AddEntry(ZipArchive archive, string name, byte[] content)
+    private static void AddEntry(ZipArchive archive, string name, string content, CompressionLevel level) =>
+        AddEntry(archive, name, Encoding.UTF8.GetBytes(content), level);
+
+    private static void AddEntry(ZipArchive archive, string name, byte[] content) =>
+        AddEntry(archive, name, content, CompressionLevel.Fastest);
+
+    private static void AddEntry(ZipArchive archive, string name, byte[] content, CompressionLevel level)
     {
-        var entry = archive.CreateEntry(name, CompressionLevel.Fastest);
+        var entry = archive.CreateEntry(name, level);
         using var entryStream = entry.Open();
         entryStream.Write(content, 0, content.Length);
     }
