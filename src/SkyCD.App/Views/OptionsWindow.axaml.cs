@@ -134,7 +134,11 @@ public partial class OptionsWindow : Window
 
     private void OnCreateFirstCollectionClicked(object? sender, RoutedEventArgs e)
     {
-        NewCollectionNameBox.Focus();
+        if (DataContext is OptionsDialogViewModel { CollectionsPage: { } collections } &&
+            collections.AddCollectionCommand.CanExecute(null))
+        {
+            collections.AddCollectionCommand.Execute(null);
+        }
     }
 
     private void OnToolbarCommandDoubleTapped(object? sender, TappedEventArgs e)
