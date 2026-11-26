@@ -2,6 +2,15 @@
   "version": 1,
   "dependencies": {
     "net10.0": {
+      "OfficeIMO.Rtf": {
+        "type": "Direct",
+        "requested": "[3.6.2, )",
+        "resolved": "3.6.2",
+        "contentHash": "j8kLjsJhFYuxas/KRNn7pQhcYmbV8EqAGK+ViC9zRwYG4FjTfQkBCt2zA9ITXuA8bnFNrj//cx/Ar+Ih0iun/Q==",
+        "dependencies": {
+          "OfficeIMO.Core": "3.6.2"
+        }
+      },
       "SkiaSharp": {
         "type": "Direct",
         "requested": "[3.119.4, )",
@@ -34,6 +43,11 @@
         "type": "Transitive",
         "resolved": "3.0.10",
         "contentHash": "yZIhtw8sYuvsONzQbZxWpR60tMWYHXoo0DL6nyOqSFiU5POjBTSEyWFpTQtJEZuy+oqiYTXKXY/Mjx7KnqIQFw=="
+      },
+      "OfficeIMO.Core": {
+        "type": "Transitive",
+        "resolved": "3.6.2",
+        "contentHash": "g1vThR3DWAIlFBf7NujMtYdWtYVx5bsKPKDU0I1SVCvmDGLEhr1ezPxXlYnBJSOlMagY1WmTuMJPMfGv9NxyCw=="
       },
       "skycd.formatting": {
         "type": "Project",
