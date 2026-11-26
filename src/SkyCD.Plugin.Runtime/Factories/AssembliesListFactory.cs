@@ -52,7 +52,9 @@ public sealed class AssembliesListFactory(ILogger<AssembliesListFactory> logger)
                 try
                 {
                     var assemblyName = AssemblyName.GetAssemblyName(fullPath).Name;
-                    if (string.IsNullOrWhiteSpace(assemblyName) || !seenAssemblyNames.Add(assemblyName))
+                    if (string.IsNullOrWhiteSpace(assemblyName)
+                        || Installation.PluginAssemblyAttributes.IsSdkAssemblyName(assemblyName)
+                        || !seenAssemblyNames.Add(assemblyName))
                     {
                         continue;
                     }
@@ -82,13 +84,6 @@ public sealed class AssembliesListFactory(ILogger<AssembliesListFactory> logger)
 
     private static bool IsCandidatePluginAssemblyPath(string fullPath)
     {
-        var fileName = Path.GetFileName(fullPath);
-        if (string.Equals(fileName, "SkyCD.SDK.dll", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(fileName, "SkyCD.SDK.dll", StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
         var normalized = fullPath.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
         var objSegment = $"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}";
         var refSegment = $"{Path.DirectorySeparatorChar}ref{Path.DirectorySeparatorChar}";
