@@ -23,12 +23,14 @@ using SkyCD.Plugin.Runtime.Installation;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.Runtime.Marketplace.Services;
 using SkyCD.SDK;
+using SkyCD.SDK.Capabilities.Capture;
 using SkyCD.SDK.Capabilities.Catalog;
 using SkyCD.SDK.Capabilities.GenDesc;
 using SkyCD.SDK.Capabilities.Storage;
 using SkyCD.SDK.Capabilities.Ui;
 using SkyCD.Core.DependencyInjection.Registrators;
 using SkyCD.Core.Versioning;
+using SkyCD.Presentation.Capture;
 using SkyCD.Presentation.Catalog;
 using SkyCD.Presentation.GenDesc;
 using SkyCD.Presentation.Scanning;
@@ -47,6 +49,7 @@ namespace SkyCD.App;
 public partial class App : Avalonia.Application
 {
     private IContainer? appServiceProvider;
+    private PluginManager? pluginManager;
     private McpServerHost? mcpServerHost;
     private AppBackgroundServiceHost? backgroundServiceHost;
     private IClassicDesktopStyleApplicationLifetime? desktopLifetime;
@@ -79,8 +82,10 @@ public partial class App : Avalonia.Application
                 mcpServerHost = appServiceProvider.Resolve<McpServerHost>();
                 mcpServerHost.UpdateConfiguration(options.IsMcpServerEnabled, options.McpPort, options.ExposedMcpTools);
                 backgroundServiceHost = appServiceProvider.Resolve<AppBackgroundServiceHost>();
+                var openCatalogState = appServiceProvider.Resolve<OpenCatalogState>();
+                openCatalogState.Changed += OnCatalogLifecycleChanged;
                 var mainWindowViewModel = appServiceProvider.Resolve<MainWindowViewModel>();
-                mainWindowViewModel.AttachOpenCatalogState(appServiceProvider.Resolve<OpenCatalogState>());
+                mainWindowViewModel.AttachOpenCatalogState(openCatalogState);
                 var descriptionManager = ServiceProvider.Resolve<DescriptionExtensionManager>();
                 descriptionManager.SelectImplementation(options.AiDescriptionImplementation);
                 mainWindowViewModel.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
@@ -158,6 +163,16 @@ public partial class App : Avalonia.Application
             }
         }
 
+        try
+        {
+            PluginRuntimeSynchronizer.DeactivatePlugins();
+        }
+        catch (Exception exception)
+        {
+            appServiceProvider?.Resolve<ILoggerFactory>().CreateLogger(typeof(App).FullName!)
+                .LogError(exception, "Failed to stop plugin capabilities.");
+        }
+
         Volatile.Write(ref shutdownDrainState, 2);
         desktopLifetime?.Shutdown();
     }
@@ -192,6 +207,35 @@ public partial class App : Avalonia.Application
 
         ServiceProvider.ReregisterPluginsService();
         InitializePluginConsumers(pluginManager);
+        this.pluginManager = pluginManager;
+        PluginRuntimeSynchronizer.ActivatePlugins(pluginManager);
+    }
+
+    /// <summary>
+    /// Forwards catalog open/close transitions to plugins that keep runtime work tied to a catalog, such as
+    /// capture sources whose storage lives inside the open catalog.
+    /// </summary>
+    private void OnCatalogLifecycleChanged(object? sender, CatalogLifecycle lifecycle)
+    {
+        var manager = pluginManager;
+        if (manager is null)
+        {
+            return;
+        }
+
+        var path = (sender as OpenCatalogState)?.Path;
+        foreach (var capability in manager.Plugins.SelectMany(static plugin => plugin.Capabilities)
+                     .OfType<ICatalogLifecyclePluginCapability>())
+        {
+            try
+            {
+                capability.OnCatalogLifecycle(lifecycle, path);
+            }
+            catch (Exception exception)
+            {
+                PluginFailure.Publish(capability.GetType(), "catalog", exception);
+            }
+        }
     }
 
     // Hands each plugin capability the host-owned APIs before its services are used. Failures are isolated per
@@ -211,6 +255,7 @@ public partial class App : Avalonia.Application
             (Avalonia.Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow);
         var genDescHost = appServiceProvider.Resolve<GenDescHostApi>();
         var onlineMetadata = ServiceProvider.Resolve<OnlineMetadataExtensionManager>();
+        var captureHost = new CaptureSourceHostApi(() => appServiceProvider.Resolve<MainWindowViewModel>());
 
         foreach (var plugin in pluginManager.Plugins)
         {
@@ -254,6 +299,12 @@ public partial class App : Avalonia.Application
             {
                 try { consumer.InitializeClipboard(clipboard); }
                 catch (Exception exception) { PluginFailure.Publish(consumer.GetType(), "modal", exception); }
+            }
+
+            foreach (var consumer in plugin.Capabilities.OfType<ICaptureSourceHostConsumer>())
+            {
+                try { consumer.InitializeCaptureHost(captureHost); }
+                catch (Exception exception) { PluginFailure.Publish(consumer.GetType(), "capture", exception); }
             }
 
             foreach (var consumer in plugin.Capabilities.OfType<IGenDescHostConsumer>())

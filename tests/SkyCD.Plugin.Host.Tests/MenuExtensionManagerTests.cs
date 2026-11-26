@@ -27,8 +27,15 @@ public class MenuExtensionManagerTests
     [Fact]
     public void Constructor_SkipsCapabilityWhoseContributionsThrow()
     {
-        PluginFailure? captured = null;
-        void Capture(PluginFailure failure) => captured = failure;
+        var failures = new List<PluginFailure>();
+        void Capture(PluginFailure failure)
+        {
+            lock (failures)
+            {
+                failures.Add(failure);
+            }
+        }
+
         PluginFailure.Reported += Capture;
         try
         {
@@ -38,8 +45,8 @@ public class MenuExtensionManagerTests
 
             var single = Assert.Single(contributions);
             Assert.Equal("healthy", single.CommandId);
-            Assert.NotNull(captured);
-            Assert.Equal("menu", captured.Operation);
+            // Other plugin types in this assembly publish to the same static event in parallel.
+            Assert.Contains(failures, failure => failure.Operation == "menu");
         }
         finally
         {

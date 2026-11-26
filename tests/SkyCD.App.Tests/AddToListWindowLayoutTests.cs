@@ -144,7 +144,7 @@ public class AddToListWindowLayoutTests
                 .Contains("source"))
             .ToList();
 
-        Assert.Equal(5, buttons.Count);
+        Assert.Equal(6, buttons.Count);
         Assert.DoesNotContain(document.Descendants(IconPacks + "PackIconControl"),
             icon => icon.Ancestors(Avalonia + "Button")
                 .Any(button => ((string?)button.Attribute("Classes") ?? string.Empty).Contains("source")));
@@ -159,7 +159,8 @@ public class AddToListWindowLayoutTests
              "{x:Static icons:SourceIcons.Folder}",
              "{x:Static icons:SourceIcons.Internet}",
              "{x:Static icons:SourceIcons.TitleOnly}",
-             "{x:Static icons:SourceIcons.Account}"],
+             "{x:Static icons:SourceIcons.Account}",
+             "{x:Static icons:SourceIcons.Capture}"],
             sources);
         Assert.All(images, image =>
         {

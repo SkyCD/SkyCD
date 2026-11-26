@@ -25,6 +25,7 @@ using SkyCD.Plugin.Host.Indexing;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Host.Volume;
+using SkyCD.Plugin.Runtime.Activation;
 using SkyCD.Plugin.Runtime.Collections;
 using SkyCD.Plugin.Runtime.Configuration;
 using SkyCD.Plugin.Runtime.Discovery;
@@ -94,6 +95,8 @@ public sealed class PluginServiceRegistrator
             Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
 
         registrator.Register<PluginManager>(Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+        registrator.Register<PluginActivationService>(Reuse.Singleton,
+            ifAlreadyRegistered: IfAlreadyRegistered.Replace);
     }
 
     /// <summary>

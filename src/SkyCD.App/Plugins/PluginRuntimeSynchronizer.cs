@@ -6,6 +6,7 @@ using Avalonia;
 using SkyCD.Core.DependencyInjection;
 using SkyCD.Core.DependencyInjection.Registrators;
 using SkyCD.Core.Versioning;
+using SkyCD.Plugin.Runtime.Activation;
 using SkyCD.Plugin.Runtime.Configuration;
 using SkyCD.Plugin.Runtime.Installation;
 using SkyCD.Plugin.Runtime.Managers;
@@ -57,6 +58,29 @@ public sealed class PluginRuntimeSynchronizer(
         // APIs (catalog repository, dialogs, storage) they depend on.
         (Application.Current as App)?.InitializePluginConsumers(pluginManager);
         ServiceProvider.Resolve<PluginConfigurationManager>().RefreshConsumers();
+        ActivatePlugins(pluginManager);
+    }
+
+    /// <summary>
+    /// Starts capabilities of the current discovery pass and stops capabilities that are no longer present.
+    /// Discovery rebuilds instances, so the pass before the swap is stopped and the new one started.
+    /// </summary>
+    public static void ActivatePlugins(PluginManager pluginManager)
+    {
+        ArgumentNullException.ThrowIfNull(pluginManager);
+        var activation = ServiceProvider.Resolve<PluginActivationService>();
+        Task.Run(() => activation.ApplyAsync(pluginManager.Plugins))
+            .GetAwaiter()
+            .GetResult();
+    }
+
+    /// <summary>Stops every activated plugin capability during host shutdown.</summary>
+    public static void DeactivatePlugins()
+    {
+        var activation = ServiceProvider.Resolve<PluginActivationService>();
+        Task.Run(() => activation.DeactivateAllAsync())
+            .GetAwaiter()
+            .GetResult();
     }
 
     /// <summary>Pushes readable and writable format availability of <paramref name="manager"/> to the menus.</summary>
