@@ -73,16 +73,27 @@ public sealed class OptionsCollectionsPageLayoutTests
                 button => button.Command is not null &&
                           menuOnlyCommands.Any(command => ReferenceEquals(command, button.Command)));
 
-            var collectionMenuItems = collectionsList.ContextMenu?.Items.OfType<MenuItem>().ToArray() ?? [];
+            var collectionMenu = Assert.IsType<ContextMenu>(collectionsList.ContextMenu);
+            collectionMenu.Open(collectionsList);
+            Dispatcher.UIThread.RunJobs();
+            var collectionMenuItems = collectionMenu.Items.OfType<MenuItem>().ToArray();
             var collectionMenuItem = Assert.Single(collectionMenuItems);
             Assert.Same(collections.RemoveMissingEntriesCommand, collectionMenuItem.Command);
             Assert.False(string.IsNullOrWhiteSpace(collectionMenuItem.Header as string));
+            var collectionMenuCommands = collectionMenuItems.Select(item => item.Command).OfType<ICommand>().ToArray();
+            collectionMenu.Close();
 
-            var memberMenuItems = membersList.ContextMenu?.Items.OfType<MenuItem>().ToArray() ?? [];
-            Assert.Equal(2, memberMenuItems.Length);
-            Assert.Same(collections.NavigateToSelectedCommand, memberMenuItems[0].Command);
-            Assert.Same(collections.OpenMemberFolderCommand, memberMenuItems[1].Command);
-            Assert.All(memberMenuItems, item => Assert.False(string.IsNullOrWhiteSpace(item.Header as string)));
+            var memberMenu = Assert.IsType<ContextMenu>(membersList.ContextMenu);
+            memberMenu.Open(membersList);
+            Dispatcher.UIThread.RunJobs();
+            var memberMenuCommands = memberMenu.Items.OfType<MenuItem>().Select(item => item.Command)
+                .OfType<ICommand>().ToArray();
+            Assert.Equal(2, memberMenuCommands.Length);
+            Assert.Same(collections.NavigateToSelectedCommand, memberMenuCommands[0]);
+            Assert.Same(collections.OpenMemberFolderCommand, memberMenuCommands[1]);
+            Assert.All(memberMenu.Items.OfType<MenuItem>(),
+                item => Assert.False(string.IsNullOrWhiteSpace(item.Header as string)));
+            memberMenu.Close();
 
             var headerTexts = new[]
             {
@@ -97,8 +108,8 @@ public sealed class OptionsCollectionsPageLayoutTests
 
             var reachable = window.GetVisualDescendants().OfType<Button>()
                     .Select(button => button.Command)
-                    .Concat(collectionMenuItems.Select(item => item.Command))
-                    .Concat(memberMenuItems.Select(item => item.Command))
+                    .Concat(collectionMenuCommands)
+                    .Concat(memberMenuCommands)
                     .ToArray();
             var expectedReachable = new ICommand[]
             {
