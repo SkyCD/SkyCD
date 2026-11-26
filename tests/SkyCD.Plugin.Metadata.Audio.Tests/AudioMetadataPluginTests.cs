@@ -100,6 +100,20 @@ public class AudioMetadataPluginTests
     }
 
     [Fact]
+    public async Task Mp3WithApeTags_ReadsApeItemsAndReportsApeAsTheSource()
+    {
+        var result = await ExtractAsync(AudioFixtures.Mp3WithApeTags(), ".mp3", "audio/mpeg");
+
+        Assert.Equal("ape", Text(result, AudioSchema.TagSource));
+        Assert.Equal("Ape Title", Text(result, AudioSchema.Title));
+        Assert.Equal("Ape Artist", Text(result, AudioSchema.Artist));
+        Assert.Equal("Ape Album", Text(result, AudioSchema.Album));
+        Assert.Equal(2003L, Integer(result, AudioSchema.Year));
+        Assert.Equal(4L, Integer(result, AudioSchema.TrackNumber));
+        Assert.Equal(8L, Integer(result, AudioSchema.TrackCount));
+    }
+
+    [Fact]
     public async Task Mp3WithId3v1Only_ReadsTheTailTagsAndGenreName()
     {
         var result = await ExtractAsync(AudioFixtures.Mp3WithId3v1Only(), ".mp3", "audio/mpeg");

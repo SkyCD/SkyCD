@@ -55,7 +55,7 @@ internal sealed class AudioTags
 
     public void SetYear(int? year) => Year ??= year;
 
-    public void SetSource(string source) => Source ??= source;
+    public void SetSource(string? source) => Source ??= source;
 
     /// <summary>
     /// Joins a repeated or already populated field with the next distinct value. An existing value wins over

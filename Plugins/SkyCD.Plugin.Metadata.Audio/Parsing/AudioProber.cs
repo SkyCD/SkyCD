@@ -8,7 +8,7 @@ using SkyCD.Plugin.Metadata.Audio.Models;
 namespace SkyCD.Plugin.Metadata.Audio.Parsing;
 
 /// <summary>
-/// Identifies the container from its bytes and dispatches to the matching reader.
+/// Identifies the container from its bytes and hands the source to the TagLibSharp-backed reader.
 /// </summary>
 /// <remarks>
 /// Detection is content-first: the host selects this plugin by extension or MIME type, but a file catalogued
@@ -17,7 +17,7 @@ namespace SkyCD.Plugin.Metadata.Audio.Parsing;
 /// </remarks>
 internal static class AudioProber
 {
-    public static async Task<AudioProbe> ProbeAsync(
+    public static Task<AudioProbe> ProbeAsync(
         MediaItem item,
         IMediaSource source,
         AudioPluginOptions options,
@@ -25,41 +25,47 @@ internal static class AudioProber
     {
         ArgumentNullException.ThrowIfNull(item);
         ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(options);
         cancellationToken.ThrowIfCancellationRequested();
 
+        return ProbeCoreAsync(item, source, cancellationToken);
+    }
+
+    private static async Task<AudioProbe> ProbeCoreAsync(
+        MediaItem item,
+        IMediaSource source,
+        CancellationToken cancellationToken)
+    {
         var reader = new AudioSourceReader(source, item);
         var header = await reader.ReadAsync(0, 12, cancellationToken).ConfigureAwait(false);
         var container = DetectContainer(header.Span, item.Extension);
-
-        return container switch
+        if (container.Length == 0)
         {
-            "mp3" => await MpegReader.ReadAsync(reader, options, cancellationToken).ConfigureAwait(false),
-            "flac" => await FlacReader.ReadAsync(reader, options, cancellationToken).ConfigureAwait(false),
-            "ogg" => await OggReader.ReadAsync(reader, options, cancellationToken).ConfigureAwait(false),
-            "mp4" => await Mp4Reader.ReadAsync(reader, options, cancellationToken).ConfigureAwait(false),
-            _ => throw new AudioDecodeException($"the container '{container}' has no reader")
-        };
+            throw new AudioDecodeException("the bytes match no supported audio container");
+        }
+
+        return TagLibAudioProber.Probe(reader, container, cancellationToken);
     }
 
     internal static string DetectContainer(ReadOnlySpan<byte> header, string extension)
     {
-        if (AudioBinary.StartsWith(header, 0, "fLaC"u8))
+        if (StartsWith(header, 0, "fLaC"u8))
         {
             return "flac";
         }
 
-        if (AudioBinary.StartsWith(header, 0, "OggS"u8))
+        if (StartsWith(header, 0, "OggS"u8))
         {
             return "ogg";
         }
 
         // An MP4 file type box starts at offset 4, after the box size.
-        if (header.Length >= 8 && AudioBinary.StartsWith(header, 4, "ftyp"u8))
+        if (header.Length >= 8 && StartsWith(header, 4, "ftyp"u8))
         {
             return "mp4";
         }
 
-        if (AudioBinary.StartsWith(header, 0, "ID3"u8))
+        if (StartsWith(header, 0, "ID3"u8))
         {
             return "mp3";
         }
@@ -72,6 +78,9 @@ internal static class AudioProber
 
         return FromExtension(extension);
     }
+
+    private static bool StartsWith(ReadOnlySpan<byte> data, int offset, ReadOnlySpan<byte> marker) =>
+        offset < data.Length && data[offset..].StartsWith(marker);
 
     private static string FromExtension(string extension) =>
         (extension ?? string.Empty).ToLowerInvariant() switch
