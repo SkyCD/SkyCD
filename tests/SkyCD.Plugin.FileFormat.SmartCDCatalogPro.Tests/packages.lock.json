@@ -1064,6 +1064,11 @@
           "System.Interactive.Async": "7.0.1"
         }
       },
+      "System.Reflection.MetadataLoadContext": {
+        "type": "Transitive",
+        "resolved": "10.0.15",
+        "contentHash": "BmEkRBijFmPeMP9xuJIUcRaTjCB8UXLdWeivMLTDZd1HS6DKGynBJJNPrlAeIboz8UFD4uhzzq3z5Xwy3v1XuA=="
+      },
       "System.Security.Cryptography.ProtectedData": {
         "type": "Transitive",
         "resolved": "11.0.0",
@@ -1291,7 +1296,8 @@
           "SkyCD.Documents": "[1.0.0, )",
           "SkyCD.Logging": "[1.0.0, )",
           "SkyCD.Plugin.Host": "[1.0.0, )",
-          "SkyCD.SDK": "[3.0.0, )"
+          "SkyCD.SDK": "[3.0.0, )",
+          "System.Reflection.MetadataLoadContext": "[10.0.15, )"
         }
       },
       "skycd.presentation": {

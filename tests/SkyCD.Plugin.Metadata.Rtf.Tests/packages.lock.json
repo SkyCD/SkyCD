@@ -727,6 +727,11 @@
         "resolved": "11.0.0",
         "contentHash": "F3biHUDT5JWIKhEcZrRjKuYy7XGZOe3GOU2N6rSOQeZBx+Ko/PY7K+VaC3BwD+ofQ9k0MXIhEB7uqJSRkZAkQQ=="
       },
+      "System.Reflection.MetadataLoadContext": {
+        "type": "Transitive",
+        "resolved": "10.0.15",
+        "contentHash": "BmEkRBijFmPeMP9xuJIUcRaTjCB8UXLdWeivMLTDZd1HS6DKGynBJJNPrlAeIboz8UFD4uhzzq3z5Xwy3v1XuA=="
+      },
       "System.Text.Encodings.Web": {
         "type": "Transitive",
         "resolved": "11.0.0",
@@ -856,7 +861,8 @@
           "SkyCD.Documents": "[1.0.0, )",
           "SkyCD.Logging": "[1.0.0, )",
           "SkyCD.Plugin.Host": "[1.0.0, )",
-          "SkyCD.SDK": "[3.0.0, )"
+          "SkyCD.SDK": "[3.0.0, )",
+          "System.Reflection.MetadataLoadContext": "[10.0.15, )"
         }
       },
       "skycd.sdk": {

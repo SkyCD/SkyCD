@@ -3,18 +3,23 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Loader;
 using Microsoft.Extensions.Logging;
+using SkyCD.Plugin.Runtime.Loading;
+using SkyCD.SDK.Capabilities;
 
 namespace SkyCD.Plugin.Runtime.Factories;
 
 public sealed class AssembliesListFactory(ILogger<AssembliesListFactory> logger)
 {
+    /// <summary>Contexts created by the last <see cref="BuildFromPaths"/> call, one per plugin folder.</summary>
+    public IReadOnlyCollection<PluginLoadContext> LoadedContexts { get; private set; } = [];
+
     public IReadOnlyCollection<Assembly> BuildFromPaths(
         IEnumerable<string> directories)
     {
         var assemblies = new List<Assembly>();
-        var seenAssemblyPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var seenAssemblyNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var contexts = new List<PluginLoadContext>();
 
         foreach (var directory in directories.Distinct(StringComparer.OrdinalIgnoreCase))
         {
@@ -24,99 +29,104 @@ public sealed class AssembliesListFactory(ILogger<AssembliesListFactory> logger)
                 continue;
             }
 
-            string[] files;
             try
             {
-                files = Directory.GetFiles(directory, "*.dll", SearchOption.AllDirectories);
+                var resolver = CreateMetadataResolver(directory);
+                foreach (var unreadable in PluginEntryScanner.FindUnreadableAssemblyPaths(directory))
+                {
+                    logger.LogWarning("Skipped '{AssemblyPath}' while scanning plugin assemblies.",
+                        unreadable);
+                }
+
+                BuildFromDirectory(directory, resolver, assemblies, contexts);
             }
             catch (Exception exception)
             {
                 logger.LogWarning(exception, "Skipped plugin directory '{Directory}' while scanning assemblies.",
                     directory);
-                continue;
-            }
-
-            var dllPaths = files
-                .Select(Path.GetFullPath)
-                .Where(IsCandidatePluginAssemblyPath)
-                .OrderBy(GetPriority)
-                .ThenBy(path => path, StringComparer.OrdinalIgnoreCase);
-
-            foreach (var fullPath in dllPaths)
-            {
-                if (!seenAssemblyPaths.Add(fullPath))
-                {
-                    continue;
-                }
-
-                try
-                {
-                    var assemblyName = AssemblyName.GetAssemblyName(fullPath).Name;
-                    if (string.IsNullOrWhiteSpace(assemblyName) || !seenAssemblyNames.Add(assemblyName))
-                    {
-                        continue;
-                    }
-
-                    var loadedAssembly = AppDomain.CurrentDomain
-                        .GetAssemblies()
-                        .FirstOrDefault(assembly =>
-                            string.Equals(assembly.GetName().Name, assemblyName, StringComparison.OrdinalIgnoreCase));
-                    if (loadedAssembly is not null)
-                    {
-                        assemblies.Add(loadedAssembly);
-                        continue;
-                    }
-
-                    assemblies.Add(Assembly.LoadFrom(fullPath));
-                }
-                catch (Exception exception)
-                {
-                    logger.LogWarning(exception, "Skipped '{AssemblyPath}' while scanning plugin assemblies.",
-                        fullPath);
-                }
             }
         }
 
+        LoadedContexts = contexts;
         return assemblies;
     }
 
-    private static bool IsCandidatePluginAssemblyPath(string fullPath)
+    private void BuildFromDirectory(
+        string directory,
+        PathAssemblyResolver resolver,
+        List<Assembly> assemblies,
+        List<PluginLoadContext> contexts)
     {
-        var fileName = Path.GetFileName(fullPath);
-        if (string.Equals(fileName, "SkyCD.SDK.dll", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(fileName, "SkyCD.SDK.dll", StringComparison.OrdinalIgnoreCase))
+        // Same-named entries in DIFFERENT folders must all load (side-by-side versions); only
+        // same-folder duplicates (case variants) are skipped.
+        var seenNamesByFolder = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+        var contextsByFolder = new Dictionary<string, PluginLoadContext>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var entryPath in PluginEntryScanner.FindEntryAssemblyPaths(directory, resolver))
         {
-            return false;
+            var folder = Path.GetDirectoryName(entryPath) ?? directory;
+            if (!seenNamesByFolder.TryGetValue(folder, out var seenNames))
+            {
+                seenNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                seenNamesByFolder.Add(folder, seenNames);
+            }
+
+            if (!seenNames.Add(Path.GetFileNameWithoutExtension(entryPath)))
+            {
+                continue;
+            }
+
+            if (!contextsByFolder.TryGetValue(folder, out var context))
+            {
+                context = new PluginLoadContext(folder);
+                contextsByFolder.Add(folder, context);
+                contexts.Add(context);
+            }
+
+            try
+            {
+                assemblies.Add(context.LoadEntry(entryPath));
+            }
+            catch (Exception exception)
+            {
+                logger.LogWarning(exception, "Skipped '{AssemblyPath}' while scanning plugin assemblies.",
+                    entryPath);
+            }
         }
-
-        var normalized = fullPath.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
-        var objSegment = $"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}";
-        var refSegment = $"{Path.DirectorySeparatorChar}ref{Path.DirectorySeparatorChar}";
-        var refIntSegment = $"{Path.DirectorySeparatorChar}refint{Path.DirectorySeparatorChar}";
-
-        return !normalized.Contains(objSegment, StringComparison.OrdinalIgnoreCase) &&
-               !normalized.Contains(refSegment, StringComparison.OrdinalIgnoreCase) &&
-               !normalized.Contains(refIntSegment, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static int GetPriority(string fullPath)
+    private static PathAssemblyResolver CreateMetadataResolver(string directory)
     {
-        var normalized = fullPath.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
-        var releaseSegment =
-            $"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}Release{Path.DirectorySeparatorChar}";
-        var debugSegment =
-            $"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}Debug{Path.DirectorySeparatorChar}";
-
-        if (normalized.Contains(releaseSegment, StringComparison.OrdinalIgnoreCase))
+        var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") is string trustedAssemblies)
         {
-            return 0;
+            foreach (var candidate in trustedAssemblies.Split(Path.PathSeparator))
+            {
+                AddIfFile(paths, candidate);
+            }
         }
 
-        if (normalized.Contains(debugSegment, StringComparison.OrdinalIgnoreCase))
+        AddIfFile(paths, typeof(object).Assembly.Location);
+        AddIfFile(paths, typeof(IPluginCapability).Assembly.Location);
+        foreach (var candidate in Directory.GetFiles(directory, "*.dll", SearchOption.TopDirectoryOnly))
         {
-            return 1;
+            AddIfFile(paths, Path.GetFullPath(candidate));
         }
 
-        return 2;
+        return new PathAssemblyResolver(paths);
+    }
+
+    private static void AddIfFile(HashSet<string> paths, string? candidate)
+    {
+        if (!string.IsNullOrWhiteSpace(candidate))
+        {
+            try
+            {
+                paths.Add(Path.GetFullPath(candidate));
+            }
+            catch (Exception)
+            {
+            }
+        }
     }
 }
