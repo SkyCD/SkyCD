@@ -60,6 +60,9 @@ public sealed record MediaItem(string Extension, string? ContentType, long Lengt
 /// <summary>Only bounded bytes are exposed, never a filesystem path or persistence model.</summary>
 public interface IMediaSource
 {
+    /// <summary>Bytes the source can still deliver before its read budget is exhausted.</summary>
+    long RemainingReadBytes => long.MaxValue;
+
     /// <summary>The source length in bytes.</summary>
     long Length { get; }
     /// <summary>Reads a range, charging its entire count against the cumulative source budget.</summary>

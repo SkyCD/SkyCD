@@ -3,9 +3,9 @@
              x:Class="SkyCD.UI.Controls.Selectors.MultiSelectDropdown.MultiSelectDropdown"
              x:Name="Root">
     <Grid RowDefinitions="Auto">
-        <Border BorderBrush="#3F3F46"
+        <Border BorderBrush="{DynamicResource SkyDropdownFieldBorder}"
                 BorderThickness="1"
-                CornerRadius="4"
+                CornerRadius="{DynamicResource SkyCornerRadius}"
                 Padding="{DynamicResource SkyRowPadding}"
                 Height="32">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
@@ -14,6 +14,8 @@
                          BorderThickness="0"
                          Padding="{DynamicResource SkyInputPadding}"
                          VerticalContentAlignment="Center"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         ScrollViewer.VerticalScrollBarVisibility="Disabled"
                          KeyDown="OnInlineSearchTextBoxKeyDown"
                          TextChanged="OnInlineSearchTextChanged"
                          GotFocus="OnInlineSearchTextBoxGotFocus"
@@ -28,7 +30,7 @@
                 <TextBlock Grid.Column="1"
                            VerticalAlignment="Center"
                            Text="▾"
-                           Foreground="#9CA3AF"
+                           Foreground="{DynamicResource SkyDropdownChrome}"
                            PointerPressed="OnChevronPointerPressed" />
             </Grid>
         </Border>
@@ -43,7 +45,7 @@
             <Border Background="{DynamicResource ThemeBackgroundBrush}"
                     BorderBrush="{DynamicResource ThemeBorderMidBrush}"
                     BorderThickness="1"
-                    CornerRadius="4"
+                    CornerRadius="{DynamicResource SkyCornerRadius}"
                     MinWidth="{Binding Bounds.Width, ElementName=Root}"
                     Padding="{DynamicResource SkyInsetSm}">
                 <Grid>
@@ -70,7 +72,7 @@
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <Border Padding="{DynamicResource SkyControlPadding}"
-                                        CornerRadius="2">
+                                        CornerRadius="{DynamicResource SkyCornerRadiusSmall}">
                                     <Border.Styles>
                                         <Style Selector="Border:pointerover">
                                             <Setter Property="Background" Value="{DynamicResource ThemeBorderHighBrush}" />
@@ -117,7 +119,7 @@
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <Border Padding="{DynamicResource SkyControlPadding}"
-                                        CornerRadius="2">
+                                        CornerRadius="{DynamicResource SkyCornerRadiusSmall}">
                                     <Border.Styles>
                                         <Style Selector="Border:pointerover">
                                             <Setter Property="Background" Value="{DynamicResource ThemeBorderHighBrush}" />

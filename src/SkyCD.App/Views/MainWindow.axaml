@@ -34,7 +34,7 @@
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
         <Style Selector="TextBox.rename-editor.invalid">
-            <Setter Property="BorderBrush" Value="#DC2626" />
+            <Setter Property="BorderBrush" Value="{DynamicResource SkyAlertErrorBorder}" />
             <Setter Property="BorderThickness" Value="1" />
         </Style>
     </Window.Styles>
@@ -79,7 +79,7 @@
 
         <Grid x:Name="MainLayoutGrid" RowDefinitions="*" IsEnabled="{Binding IsCatalogInteractionEnabled}">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="121" MinWidth="50" />
+                <ColumnDefinition Width="{StaticResource SkyMainSidebarWidth}" MinWidth="50" />
                 <ColumnDefinition Width="3" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>

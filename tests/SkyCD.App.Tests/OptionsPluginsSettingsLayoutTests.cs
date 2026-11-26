@@ -54,7 +54,7 @@ public sealed class OptionsPluginsSettingsLayoutTests
 
         var container = list.Parent?.Parent;
         Assert.Equal("Border", container?.Name.LocalName);
-        Assert.Equal("#2E2E2E", (string?)container?.Attribute("BorderBrush"));
+        Assert.Equal("{DynamicResource ThemeBorderLowBrush}", (string?)container?.Attribute("BorderBrush"));
         Assert.Equal("1", (string?)container?.Attribute("BorderThickness"));
 
         var header = Assert.Single(container!.Descendants().OfType<XElement>(),

@@ -113,6 +113,56 @@
 
     <CornerRadius x:Key="SkyCornerRadius">4</CornerRadius>
     <CornerRadius x:Key="SkyCornerRadiusLarge">8</CornerRadius>
+    <!-- Small control radii (issue #1206): 2 px inner elements, 3 px small controls. -->
+    <CornerRadius x:Key="SkyCornerRadiusSmall">2</CornerRadius>
+    <CornerRadius x:Key="SkyCornerRadiusMedium">3</CornerRadius>
+    <!-- Square corners cancel rounding inherited from a shared style, like a plain 0 inset. -->
+    <CornerRadius x:Key="SkyCornerRadiusNone">0</CornerRadius>
+    <!-- Surface radii that cannot round onto the ramp without changing the measured shape. -->
+    <CornerRadius x:Key="SkyColorThumbRadius">5</CornerRadius>
+    <CornerRadius x:Key="SkyAcpAgentCardRadius">6</CornerRadius>
+    <CornerRadius x:Key="SkyAcpAgentBadgeRadius">7</CornerRadius>
+
+    <!--
+        Settings form label columns (issue #1206). Grids use the element form with
+        Width="{DynamicResource ...}" because an attribute value cannot mix a markup
+        extension with the comma-separated column list. Star-sized columns need no token.
+    -->
+    <GridLength x:Key="SkyFormLabelWidth">180</GridLength>
+    <GridLength x:Key="SkySettingsLabelWidth">140</GridLength>
+    <GridLength x:Key="SkyAcpAgentIconColumnWidth">34</GridLength>
+    <GridLength x:Key="SkyMainSidebarWidth">121</GridLength>
+    <GridLength x:Key="SkyMainSplitterWidth">3</GridLength>
+    <GridLength x:Key="SkyOptionsSidebarWidth">250</GridLength>
+    <GridLength x:Key="SkyAddToListSourceWidth">89</GridLength>
+    <GridLength x:Key="SkyAdvancedFindLabelWidth">150</GridLength>
+    <GridLength x:Key="SkyRemoteCredentialsLabelWidth">130</GridLength>
+    <GridLength x:Key="SkyContactsLabelWidth">200</GridLength>
+    <GridLength x:Key="SkyGenDescTemplateLabelWidth">260</GridLength>
+
+    <!--
+        Fixed alert, status and chrome colors (issue #1206). These stay invariant across
+        themes, so they live here as the single place literal colors may appear; every
+        other AXAML file references them instead of repeating a hex value.
+    -->
+    <SolidColorBrush x:Key="SkyAlertErrorBackground" Color="#7F1D1D" />
+    <SolidColorBrush x:Key="SkyAlertErrorBorder" Color="#DC2626" />
+    <SolidColorBrush x:Key="SkyAlertErrorForeground" Color="#FEE2E2" />
+    <SolidColorBrush x:Key="SkyAlertSuccessBackground" Color="#1B5E20" />
+    <SolidColorBrush x:Key="SkyAlertSuccessBorder" Color="#2E7D32" />
+    <SolidColorBrush x:Key="SkyAlertSuccessForeground" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="SkyAlertWarningBorder" Color="#6A5C2D" />
+    <SolidColorBrush x:Key="SkyErrorForeground" Color="#DC2626" />
+    <SolidColorBrush x:Key="SkyStatusInfoForeground" Color="#9BD1FF" />
+    <SolidColorBrush x:Key="SkySourceSelectedBackground" Color="#207A7A7A" />
+    <SolidColorBrush x:Key="SkySourceSelectedBorder" Color="#7A7A7A" />
+    <SolidColorBrush x:Key="SkySourcePanelBorder" Color="#B0B0B0" />
+    <SolidColorBrush x:Key="SkyAcpAgentBadgeBackground" Color="#36516D" />
+    <SolidColorBrush x:Key="SkyAcpAgentSelectedBackground" Color="#234767" />
+    <SolidColorBrush x:Key="SkyAcpAgentSelectedBorder" Color="#5795D6" />
+    <SolidColorBrush x:Key="SkyAcpAgentSelectedForeground" Color="#E2F0FF" />
+    <SolidColorBrush x:Key="SkyDropdownFieldBorder" Color="#3F3F46" />
+    <SolidColorBrush x:Key="SkyDropdownChrome" Color="#9CA3AF" />
 
     <!-- Type scale: caption/small, secondary, body, subtitle, title, window title. -->
     <x:Double x:Key="SkyFontCaption">11</x:Double>

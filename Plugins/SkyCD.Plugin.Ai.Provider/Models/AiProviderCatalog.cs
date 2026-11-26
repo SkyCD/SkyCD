@@ -24,9 +24,11 @@ public static class AiProviderCatalog
         new("koboldcpp", "KoboldCpp", "http", "127.0.0.1", 5001, null, CanStartServer: false,
             ApiKeyHelpUrl: "https://github.com/LostRuins/koboldcpp/wiki#can-i-add-authentication"),
         new("jan", "Jan", "http", "127.0.0.1", 1337, null, CanStartServer: false),
-        new("localai", "LocalAI", "http", "127.0.0.1", 8080, null, CanStartServer: false,
+        new("localai", "LocalAI", "http", "127.0.0.1", 8080, "llama-3.2-1b-instruct:q4_k_m",
+            CanStartServer: false, ["llama-3.2-1b-instruct:q4_k_m"],
             ApiKeyHelpUrl: "https://localai.io/docs/administration/authentication/"),
-        new("vllm", "vLLM", "http", "127.0.0.1", 8000, null, CanStartServer: false,
+        new("vllm", "vLLM", "http", "127.0.0.1", 8000, "Qwen/Qwen2.5-1.5B-Instruct", CanStartServer: false,
+            ["Qwen/Qwen2.5-1.5B-Instruct", "Qwen/Qwen2.5-7B-Instruct"],
             ApiKeyHelpUrl: "https://docs.vllm.ai/en/stable/serving/online_serving/openai_compatible_server/"),
         new("custom", "Custom local OpenAI-compatible", "http", "127.0.0.1", 8000, null, CanStartServer: false)
     ];

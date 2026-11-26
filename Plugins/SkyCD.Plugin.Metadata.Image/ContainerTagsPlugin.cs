@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.SDK.Capabilities.Media;
@@ -9,9 +10,9 @@ using SkyCD.Plugin.Metadata.Image.Parsing;
 namespace SkyCD.Plugin.Metadata.Image;
 
 /// <summary>
-/// Publishes the keywords, comment and rating stored inside TIFF containers and the TIFF-based RAW formats.
+/// Publishes the keywords, comment and rating stored inside TIFF containers.
 /// The thumbnail decoder does not present these containers, so only a bounded header prefix is read: the
-/// carriers sit in the first IFD and early regions, which keeps a scan cheap on multi-gigabyte RAW files.
+/// carriers sit in the first IFD and early regions, which keeps a scan cheap on large TIFF files.
 /// </summary>
 public sealed class ContainerTagsPlugin : IMediaMetadataCapability
 {
@@ -29,6 +30,11 @@ public sealed class ContainerTagsPlugin : IMediaMetadataCapability
         IProgress<MediaProgress>? progress,
         CancellationToken cancellationToken)
     {
+        if (RawImagePlugin.Extensions.Contains(item.Extension, StringComparer.OrdinalIgnoreCase))
+        {
+            return new MediaExtractionResult([]);
+        }
+
         var data = await SourcePrefix.ReadAsync(source, item.Length, MaxScanBytes, cancellationToken)
             .ConfigureAwait(false);
         progress?.Report(new MediaProgress(0.6));

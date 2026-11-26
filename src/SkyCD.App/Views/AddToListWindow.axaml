@@ -46,8 +46,8 @@
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
         <Style Selector="Button.source.selected /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="BorderBrush" Value="#7A7A7A" />
-            <Setter Property="Background" Value="#207A7A7A" />
+            <Setter Property="BorderBrush" Value="{DynamicResource SkySourceSelectedBorder}" />
+            <Setter Property="Background" Value="{DynamicResource SkySourceSelectedBackground}" />
         </Style>
         <Style Selector="Button.source:disabled">
             <Setter Property="Opacity" Value="0.4" />
@@ -64,12 +64,16 @@
     <Grid x:Name="RootGrid"
           Margin="{DynamicResource SkyWindowPadding}"
           RowDefinitions="*,Auto"
-          ColumnDefinitions="89,*"
+         
           ColumnSpacing="{DynamicResource SkySpaceSm}">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="{StaticResource SkyAddToListSourceWidth}" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
         <Border x:Name="SourcePanel"
                 Grid.Row="0"
                 Grid.Column="0"
-                BorderBrush="#B0B0B0"
+                BorderBrush="{DynamicResource SkySourcePanelBorder}"
                 BorderThickness="1"
                 Padding="{DynamicResource SkyInsetXxs}">
             <StackPanel VerticalAlignment="Top">
@@ -238,7 +242,7 @@
                         <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.AddFiles}}"
                                   IsChecked="{Binding IncludeFiles}" />
                         <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectedRootAlwaysAdded}}"
-                                   Foreground="#666666"
+                                   Foreground="{DynamicResource ThemeForegroundLowBrush}"
                                    TextWrapping="Wrap" />
                     </StackPanel>
 
@@ -260,7 +264,7 @@
                             <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.AddFiles}}"
                                       IsChecked="{Binding IncludeFiles}" />
                             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectedRootAlwaysAdded}}"
-                                       Foreground="#666666"
+                                       Foreground="{DynamicResource ThemeForegroundLowBrush}"
                                        TextWrapping="Wrap" />
                         </StackPanel>
                     </StackPanel>
@@ -467,7 +471,7 @@
                                     HorizontalAlignment="Left"
                                     Click="OnPreviewCaptureClicked" />
                             <TextBlock Text="{Binding CaptureMessage}"
-                                       Foreground="#B00000"
+                                       Foreground="{DynamicResource SkyErrorForeground}"
                                        TextWrapping="Wrap"
                                        IsVisible="{Binding CaptureMessage, Converter={x:Static avaloniaConverters:StringConverters.IsNotNullOrEmpty}}" />
                         </StackPanel>
@@ -552,7 +556,7 @@
                    Grid.Row="1"
                    Grid.ColumnSpan="2"
                    MinHeight="14"
-                   Foreground="#B00000"
+                   Foreground="{DynamicResource SkyErrorForeground}"
                    Text="{Binding DisplayedValidationMessage}"
                    TextWrapping="Wrap" />
     </Grid>

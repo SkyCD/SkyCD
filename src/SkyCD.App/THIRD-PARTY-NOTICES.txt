@@ -126,3 +126,27 @@ https://www.nuget.org/packages/UTF.Unknown/2.8.0
 The package is shipped unmodified as a separate assembly next to the plugins that use it. Its own license
 terms apply to it.
 
+Svg.Skia and related SVG packages
+Source: https://github.com/wieslawsoltes/Svg.Skia
+Licenses: MIT and Microsoft Public License (Svg.Custom)
+https://www.nuget.org/packages/Svg.Skia/4.9.1
+https://opensource.org/license/ms-pl
+
+Magick.NET
+Copyright Dirk Lemstra
+Source: https://github.com/dlemstra/Magick.NET
+License: Apache License 2.0
+https://www.apache.org/licenses/LICENSE-2.0
+
+The image metadata plugin uses Magick.NET-Q8-AnyCPU 15.1.1. Its upstream notice,
+including the ImageMagick license and the licenses of bundled native libraries
+such as LibRaw, accompanies the plugin as Magick.NET-NOTICE.txt.
+https://www.nuget.org/packages/Magick.NET-Q8-AnyCPU/15.1.1
+
+PdfPig
+Source: https://github.com/UglyToad/PdfPig
+License: Apache License 2.0
+
+Docnet.Core and PDFium
+Sources: https://github.com/GowenGit/docnet and https://pdfium.googlesource.com/pdfium/
+License: MIT (Docnet.Core) and BSD 3-Clause (PDFium)

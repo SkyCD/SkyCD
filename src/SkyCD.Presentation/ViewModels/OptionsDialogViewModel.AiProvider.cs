@@ -349,6 +349,15 @@ public partial class OptionsDialogViewModel
             AiProviderAddress = settings.Address;
             AiProviderPort = settings.Port;
             AiProviderApiKey = settings.ApiKey;
+            AiProviderModels.Clear();
+            if (SelectedAiProvider?.SuggestedModels is { Count: > 0 } suggestedModels)
+            {
+                foreach (var model in suggestedModels)
+                {
+                    AddAiProviderModel(model);
+                }
+            }
+
             AiProviderModel = settings.Model;
             AddAiProviderModel(settings.Model);
             var resolvedLanguage = ResolveAiProviderLanguage(settings.Language);
@@ -566,9 +575,14 @@ public partial class OptionsDialogViewModel
         AiProviderAddress = value.Address;
         AiProviderPort = value.Port;
         AiProviderCanStartServer = value.CanStartServer;
+        AiProviderModels.Clear();
         if (value.SuggestedModels is { Count: > 0 })
         {
-            ReplaceAiProviderModels(value.SuggestedModels);
+            foreach (var model in value.SuggestedModels)
+            {
+                AddAiProviderModel(model);
+            }
+
             AiProviderModel = value.DefaultModel ?? value.SuggestedModels[0];
             AddAiProviderModel(AiProviderModel);
         }
@@ -576,6 +590,10 @@ public partial class OptionsDialogViewModel
         {
             AiProviderModel = value.DefaultModel;
             AddAiProviderModel(value.DefaultModel);
+        }
+        else
+        {
+            AiProviderModel = string.Empty;
         }
 
         AiProviderConnectionStatus = LocalizationService.Current.Get(UiKeys.AiProviderNotChecked);

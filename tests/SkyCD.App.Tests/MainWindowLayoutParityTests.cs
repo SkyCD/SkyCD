@@ -16,7 +16,7 @@ public class MainWindowLayoutParityTests
         Assert.Contains("MinWidth=\"320\"", xaml, StringComparison.Ordinal);
         Assert.Contains("MinHeight=\"200\"", xaml, StringComparison.Ordinal);
 
-        Assert.Contains("<ColumnDefinition Width=\"121\" MinWidth=\"50\" />", xaml, StringComparison.Ordinal);
+        Assert.Contains("<ColumnDefinition Width=\"{StaticResource SkyMainSidebarWidth}\" MinWidth=\"50\" />", xaml, StringComparison.Ordinal);
         Assert.Contains("<ColumnDefinition Width=\"3\" />", xaml, StringComparison.Ordinal);
 
         Assert.Contains("<GridSplitter Grid.Column=\"1\"", xaml, StringComparison.Ordinal);
@@ -105,12 +105,13 @@ public class MainWindowLayoutParityTests
     [Fact]
     public void MainWindow_Toolbar_AppliesLiveToggleStateFromViewModel()
     {
-        var appCode = ReadRepoFile("src", "SkyCD.App", "Views", "MainWindow.axaml.cs");
+        var wiring = ReadRepoFile("src", "SkyCD.App", "Views", "MainWindow.axaml.cs");
+        var appCode = ReadRepoFile("src", "SkyCD.App", "Views", "MainWindow.Toolbar.cs");
 
         // Issue #1004: a toggle changed from the menu or a shortcut updates the rendered button in place.
         Assert.Contains("IsToggle = descriptor.IsToggle", appCode, StringComparison.Ordinal);
         Assert.Contains("IsChecked = descriptor.IsChecked", appCode, StringComparison.Ordinal);
-        Assert.Contains("subscribedViewModel.ToolbarStateChanged += OnToolbarStateChanged;", appCode, StringComparison.Ordinal);
+        Assert.Contains("subscribedViewModel.ToolbarStateChanged += OnToolbarStateChanged;", wiring, StringComparison.Ordinal);
         Assert.Contains("MainToolbar.SetCheckedState(command.Id, command.IsChecked);", appCode, StringComparison.Ordinal);
     }
 

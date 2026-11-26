@@ -69,6 +69,169 @@ public sealed class DesignTokenGateTests
         Assert.Contains("Design token check passed", output, StringComparison.Ordinal);
     }
 
+    private const string ColorViolatingFixture = """
+        <UserControl xmlns="https://github.com/avaloniaui">
+            <StackPanel Spacing="{DynamicResource SkySpaceSm}">
+                <Border Background="#2E2E2E" />
+                <TextBlock Foreground="#9BD1FF" />
+                <Border.Styles>
+                    <Style Selector="Border.alert">
+                        <Setter Property="BorderBrush" Value="#DC2626" />
+                        <Setter Property="CornerRadius" Value="4" />
+                    </Style>
+                </Border.Styles>
+                <Border CornerRadius="7" />
+            </StackPanel>
+        </UserControl>
+        """;
+
+    private const string ColorCompliantFixture = """
+        <UserControl xmlns="https://github.com/avaloniaui">
+            <StackPanel Spacing="{DynamicResource SkySpaceSm}">
+                <Border Background="{DynamicResource ThemeBorderLowBrush}" />
+                <TextBlock Foreground="{DynamicResource SkyStatusInfoForeground}" />
+                <Border.Styles>
+                    <Style Selector="Border.alert">
+                        <Setter Property="BorderBrush" Value="{DynamicResource SkyAlertErrorBorder}" />
+                        <Setter Property="CornerRadius" Value="{DynamicResource SkyCornerRadius}" />
+                    </Style>
+                </Border.Styles>
+                <Border CornerRadius="{DynamicResource SkyAcpAgentBadgeRadius}" />
+            </StackPanel>
+        </UserControl>
+        """;
+
+    private const string BrushDefinitionFixture = """
+        <Styles xmlns="https://github.com/avaloniaui">
+            <Styles.Resources>
+                <ResourceDictionary>
+                    <ResourceDictionary.ThemeDictionaries>
+                        <ResourceDictionary x:Key="Dark">
+                            <SolidColorBrush x:Key="LocalBrush" Color="#2E2E2E" />
+                        </ResourceDictionary>
+                    </ResourceDictionary.ThemeDictionaries>
+                </ResourceDictionary>
+            </Styles.Resources>
+        </Styles>
+        """;
+
+    private const string ColumnViolatingFixture = """
+        <UserControl xmlns="https://github.com/avaloniaui">
+            <StackPanel Spacing="{DynamicResource SkySpaceSm}">
+                <Grid ColumnDefinitions="180,*" />
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="140" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                </Grid>
+                <Grid ColumnDefinitions="2*,Auto" />
+            </StackPanel>
+        </UserControl>
+        """;
+
+    private const string ColumnCompliantFixture = """
+        <UserControl xmlns="https://github.com/avaloniaui">
+            <StackPanel Spacing="{DynamicResource SkySpaceSm}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="{StaticResource SkyFormLabelWidth}" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                </Grid>
+                <Grid ColumnDefinitions="2*,Auto" />
+            </StackPanel>
+        </UserControl>
+        """;
+
+    [Fact]
+    public void Gate_FailsOnHardCodedColorsAndCornerRadii()
+    {
+        using var workspace = new TestWorkspace();
+        WriteRepository(workspace, ColorViolatingFixture);
+
+        var (exitCode, output) = RunGate(workspace.Root);
+
+        Assert.Equal(1, exitCode);
+        Assert.Contains("hard-coded color 'Background=\"#2E2E2E\"'", output, StringComparison.Ordinal);
+        Assert.Contains("hard-coded color 'Foreground=\"#9BD1FF\"'", output, StringComparison.Ordinal);
+        Assert.Contains("hard-coded color 'Property=\"BorderBrush\" Value=\"#DC2626\"'", output, StringComparison.Ordinal);
+        Assert.Contains("literal CornerRadius value 'Property=\"CornerRadius\" Value=\"4'", output, StringComparison.Ordinal);
+        Assert.Contains("literal CornerRadius value 'CornerRadius=\"7'", output, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Gate_PassesForThemeBrushesAndRadiusTokens()
+    {
+        using var workspace = new TestWorkspace();
+        WriteRepository(workspace, ColorCompliantFixture);
+
+        var (exitCode, output) = RunGate(workspace.Root);
+
+        Assert.Equal(0, exitCode);
+        Assert.Contains("Design token check passed", output, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Gate_AllowsBrushDefinitionsToCarryLiteralColors()
+    {
+        using var workspace = new TestWorkspace();
+        WriteRepository(workspace, BrushDefinitionFixture);
+
+        var (exitCode, output) = RunGate(workspace.Root);
+
+        Assert.Equal(0, exitCode);
+        Assert.Contains("Design token check passed", output, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Gate_FailsOnLiteralLeadingColumnWidths()
+    {
+        using var workspace = new TestWorkspace();
+        WriteRepository(workspace, ColumnViolatingFixture);
+
+        var (exitCode, output) = RunGate(workspace.Root);
+
+        Assert.Equal(1, exitCode);
+        Assert.Contains("literal width 'ColumnDefinitions=\"180,'", output, StringComparison.Ordinal);
+        Assert.Contains("literal Width", output, StringComparison.Ordinal);
+        Assert.DoesNotContain("2*,Auto", output, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Gate_PassesForTokenisedLabelColumnsAndStarSizes()
+    {
+        using var workspace = new TestWorkspace();
+        WriteRepository(workspace, ColumnCompliantFixture);
+
+        var (exitCode, output) = RunGate(workspace.Root);
+
+        Assert.Equal(0, exitCode);
+        Assert.Contains("Design token check passed", output, StringComparison.Ordinal);
+    }
+
+    private const string StaticReferenceFixture = """
+        <UserControl xmlns="https://github.com/avaloniaui">
+            <StackPanel Spacing="{DynamicResource SkySpaceSm}">
+                <TextBlock Text="x" Tag="{StaticResource SkyNoSuchToken}" />
+                <TextBlock Text="y" Tag="{StaticResource SkyMenuGestureTextConverter}" />
+            </StackPanel>
+        </UserControl>
+        """;
+
+    [Fact]
+    public void Gate_ValidatesStaticTokenReferencesButSkipsConverters()
+    {
+        using var workspace = new TestWorkspace();
+        WriteRepository(workspace, StaticReferenceFixture);
+
+        var (exitCode, output) = RunGate(workspace.Root);
+
+        Assert.Equal(1, exitCode);
+        Assert.Contains("references undefined design token 'SkyNoSuchToken'", output, StringComparison.Ordinal);
+        Assert.DoesNotContain("SkyMenuGestureTextConverter", output, StringComparison.Ordinal);
+    }
+
     /// <summary>
     /// The script resolves the token dictionary and the scanned roots from the repository root it is
     /// given, so a fixture only has to mirror those two paths.
