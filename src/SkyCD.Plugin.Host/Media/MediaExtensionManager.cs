@@ -34,6 +34,8 @@ public sealed class MediaExtensionManager
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(this.limits.ArtifactBytes);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(this.limits.Concurrency);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(this.limits.TimeoutMilliseconds);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(this.limits.ProbeBytes);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(this.limits.ProbeTimeoutMilliseconds);
         slots = new SemaphoreSlim(this.limits.Concurrency);
     }
 
@@ -64,6 +66,8 @@ public sealed class MediaExtensionManager
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(effective.SourceBytes);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(effective.ArtifactBytes);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(effective.TimeoutMilliseconds);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(effective.ProbeBytes);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(effective.ProbeTimeoutMilliseconds);
         ApplySettings();
 
         var results = new List<(int Priority, MediaProviderResult Result)>();
@@ -262,6 +266,11 @@ public sealed class MediaExtensionManager
                     // local source; reporting a failure would wrongly downgrade cached values.
                     if (string.IsNullOrWhiteSpace(sourcePath)) return null;
                     var context = new LocalMediaContext(sourcePath, item.Extension, item.ContentType, item.Length);
+                    if (provider.Capability is ILocalMediaFormatProbe localProbe &&
+                        !await ProbeLocalAsync(localProbe, context, limits, token))
+                    {
+                        return null;
+                    }
                     if (provider.Capability is ILocalMediaMetadataCapability localMetadata)
                     {
                         var raw = await localMetadata.ExtractAsync(context, progress, token);
@@ -275,17 +284,43 @@ public sealed class MediaExtensionManager
                 }
                 else
                 {
-                    await using var stream = await openSource(token);
-                    var source = new BoundedSource(stream, item.Length, limits.SourceBytes, token);
-                    if (provider.Capability is IMediaMetadataCapability metadataCapability)
+                    var stream = await openSource(token);
+                    var releaseStream = true;
+                    try
                     {
-                        var raw = await metadataCapability.ExtractAsync(item, source, progress, token);
-                        extraction = ValidateExtraction(descriptor, raw, limits);
+                        var prefix = ReadOnlyMemory<byte>.Empty;
+                        if (provider.Capability is IMediaFormatProbe probe)
+                        {
+                            var probed = await ProbeAsync(probe, item, stream, limits, token);
+                            if (probed.Prefix is null)
+                            {
+                                // A probe that outlived its budget may still be reading; it keeps the
+                                // stream and disposes it when the worker exits.
+                                releaseStream = probed.Pending is null;
+                                if (probed.Pending is { } pending)
+                                {
+                                    DisposeWhenCompleted(pending, stream);
+                                }
+                                return null;
+                            }
+                            prefix = probed.Prefix.Value;
+                        }
+
+                        var source = new BoundedSource(stream, item.Length, limits.SourceBytes, token, prefix);
+                        if (provider.Capability is IMediaMetadataCapability metadataCapability)
+                        {
+                            var raw = await metadataCapability.ExtractAsync(item, source, progress, token);
+                            extraction = ValidateExtraction(descriptor, raw, limits);
+                        }
+                        if (provider.Capability is IMediaPreviewCapability previewCapability && RunsPreview(selection, descriptor))
+                        {
+                            var raw = await previewCapability.GeneratePreviewAsync(item, source, progress, token);
+                            artifacts = ValidateArtifacts(raw, limits);
+                        }
                     }
-                    if (provider.Capability is IMediaPreviewCapability previewCapability && RunsPreview(selection, descriptor))
+                    finally
                     {
-                        var raw = await previewCapability.GeneratePreviewAsync(item, source, progress, token);
-                        artifacts = ValidateArtifacts(raw, limits);
+                        if (releaseStream) await stream.DisposeAsync();
                     }
                 }
                 return ((int Priority, MediaProviderResult Result)?)(descriptor.Priority,
@@ -411,11 +446,65 @@ public sealed class MediaExtensionManager
     private static void Observe(Task task) => _ = task.ContinueWith(t => _ = t.Exception,
         CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
 
-    private sealed class BoundedSource(Stream stream, long length, long budget, CancellationToken operationToken) : IMediaSource
+    /// <summary>
+    /// Runs the optional format probe under its own byte and time budget. A rejection, an exception or an
+    /// expired budget means "not this provider's format" and produces no result, record or failure; only
+    /// caller cancellation propagates. Returns the recorded header so extraction can replay it from offset 0.
+    /// </summary>
+    private static async Task<(ReadOnlyMemory<byte>? Prefix, Task<bool>? Pending)> ProbeAsync(
+        IMediaFormatProbe probe, MediaItem item, Stream stream, MediaExecutionLimits limits,
+        CancellationToken token)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
+        timeout.CancelAfter(limits.ProbeTimeoutMilliseconds);
+        var source = new ProbeSource(stream, item.Length, limits.ProbeBytes, token);
+        Task<bool>? operation = null;
+        try
+        {
+            operation = probe.CanHandleAsync(item, source, timeout.Token).AsTask();
+            var accepted = await operation.WaitAsync(timeout.Token).ConfigureAwait(false);
+            return accepted ? (source.RecordedPrefix, null) : (null, null);
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            return (null, operation is { IsCompleted: false } ? operation : null);
+        }
+    }
+
+    private static async Task<bool> ProbeLocalAsync(ILocalMediaFormatProbe probe, LocalMediaContext context,
+        MediaExecutionLimits limits, CancellationToken token)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
+        timeout.CancelAfter(limits.ProbeTimeoutMilliseconds);
+        try
+        {
+            return await probe.CanHandleAsync(context, timeout.Token).AsTask().WaitAsync(timeout.Token)
+                .ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
+    private static void DisposeWhenCompleted(Task task, Stream stream) => _ = task.ContinueWith(
+        completed => { _ = completed.Exception; stream.Dispose(); }, CancellationToken.None,
+        TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+
+    private sealed class BoundedSource(Stream stream, long length, long budget, CancellationToken operationToken,
+        ReadOnlyMemory<byte> prefix = default) : IMediaSource
     {
         private readonly SemaphoreSlim reader = new(1);
         private long remaining = budget;
-        private long position;
+        private long streamPosition = prefix.Length;
         public long Length => length;
         public long RemainingReadBytes => Interlocked.Read(ref remaining);
 
@@ -429,14 +518,74 @@ public sealed class MediaExtensionManager
                 if (offset < 0 || count < 0 || offset > Length || count > Length - offset || count > remaining)
                     throw new MediaLimitExceededException("source bytes");
                 remaining -= count;
-                if (stream.CanSeek) stream.Position = offset;
-                else if (offset != position) throw new MediaLimitExceededException("source seek");
                 var bytes = new byte[count];
-                await stream.ReadExactlyAsync(bytes, cancellationToken);
-                position = offset + count;
+                // Bytes the probe already consumed are replayed from memory, so extraction starts at
+                // offset 0 with its full budget even for a non-seekable source.
+                var replayed = (int)Math.Min(count, Math.Max(0, prefix.Length - offset));
+                if (replayed > 0) prefix.Span.Slice((int)offset, replayed).CopyTo(bytes);
+                if (replayed < count)
+                {
+                    var tail = offset + replayed;
+                    if (stream.CanSeek) stream.Position = tail;
+                    else if (tail != streamPosition) throw new MediaLimitExceededException("source seek");
+                    await stream.ReadExactlyAsync(bytes.AsMemory(replayed), cancellationToken);
+                    streamPosition = tail + count - replayed;
+                }
                 return bytes;
             }
             finally { reader.Release(); }
+        }
+    }
+
+    /// <summary>
+    /// Probe source with its own byte budget that records the contiguous header it served, so extraction can
+    /// replay those bytes from offset 0 without reopening the source.
+    /// </summary>
+    private sealed class ProbeSource(Stream stream, long length, int budget, CancellationToken operationToken)
+        : IMediaSource
+    {
+        private readonly SemaphoreSlim reader = new(1);
+        private byte[] prefix = [];
+        private long recorded;
+        private long streamPosition;
+        private long remaining = budget;
+        public long Length => length;
+        public ReadOnlyMemory<byte> RecordedPrefix => prefix.AsMemory(0, (int)recorded);
+
+        public async ValueTask<ReadOnlyMemory<byte>> ReadAsync(long offset, int count, CancellationToken cancellationToken)
+        {
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, operationToken);
+            cancellationToken = linked.Token;
+            await reader.WaitAsync(cancellationToken);
+            try
+            {
+                if (offset < 0 || count < 0 || offset > Length || count > Length - offset || count > remaining)
+                    throw new MediaLimitExceededException("source bytes");
+                remaining -= count;
+                var bytes = new byte[count];
+                var replayed = (int)Math.Min(count, Math.Max(0, recorded - offset));
+                if (replayed > 0) prefix.AsSpan((int)offset, replayed).CopyTo(bytes);
+                if (replayed < count)
+                {
+                    var tail = offset + replayed;
+                    if (stream.CanSeek) stream.Position = tail;
+                    else if (tail != streamPosition) throw new MediaLimitExceededException("source seek");
+                    await stream.ReadExactlyAsync(bytes.AsMemory(replayed), cancellationToken);
+                    streamPosition = tail + count - replayed;
+                    // Only the contiguous prefix is kept; a gap cannot be replayed to extraction.
+                    if (tail == recorded) Record(bytes.AsSpan(replayed));
+                }
+                return bytes;
+            }
+            finally { reader.Release(); }
+        }
+
+        private void Record(ReadOnlySpan<byte> data)
+        {
+            var required = (int)recorded + data.Length;
+            if (prefix.Length < required) Array.Resize(ref prefix, required);
+            data.CopyTo(prefix.AsSpan((int)recorded));
+            recorded += data.Length;
         }
     }
 }

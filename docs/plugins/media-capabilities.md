@@ -6,7 +6,9 @@ compatibility, availability and enabled-state filtering apply before host regist
 No manifest or separate registry is involved. Existing plugin interfaces are unchanged.
 
 Descriptors declare extensions (including the leading dot), MIME content types and a versioned
-schema. Either extension or MIME match selects the provider, case-insensitively. Schema IDs
+schema. Either extension or MIME match selects the provider, case-insensitively. Claiming an
+extension is not ownership: several plugins may support the same one, and the optional format
+probe described below is how a plugin rejects content that only shares it. Schema IDs
 and field keys must remain stable; incompatible schema changes require a new schema version.
 Values declare exactly one matching primitive type. Units use stable symbols, for example
 `s`, `px`, or `byte`; changing a field's meaning or unit is a schema change.
@@ -42,6 +44,58 @@ requires a separate process. Plugins must honor cancellation and avoid retaining
 The host stores results durably and keeps them available offline; plugins hold no state of their
 own. See `docs/architecture/media-cache-lifecycle.md` for how a descriptor's schema id and version
 key the stored result, and why bumping the schema version is what invalidates cached data.
+
+## Shared extensions and format probes
+
+Several plugins can claim the same extension, and neither extension nor MIME ownership decides
+which one is right for a file. `.prefab` is Unity YAML in one project and O3DE, Flax or Cocos
+JSON in another; `.scene` is Cocos, Flax or s&box; `.material` is Unity YAML or O3DE/Flax JSON;
+`.mdl` is a Digitrakker module or a Quake model; `.mat` is Unity YAML or MATLAB; `.tsx` is
+TypeScript or a Tiled tileset. Without a probe every matching provider runs, and a foreign file
+either captures an empty record or fails, marking the entry failed even when another provider
+read it fine.
+
+A metadata or preview capability that also implements `IMediaFormatProbe` is asked, before
+extraction, whether the bounded header really is its format:
+
+```csharp
+public interface IMediaFormatProbe
+{
+    ValueTask<bool> CanHandleAsync(MediaItem item, IMediaSource source, CancellationToken cancellationToken);
+}
+```
+
+`true` runs extraction as usual. `false` means "definitely not this format": the host skips only
+that provider for the item — no result, no cache record, no `PluginFailure` and no entry-level
+failure — while the other providers and the generic file metadata continue. Claiming an
+extension is therefore a cheap filter, not a promise; a plugin that cannot probe keeps today's
+behaviour. Probes are deliberately conservative: return `false` only when the header is
+conclusive, and return `true` when unsure, because a wrong `false` silently loses metadata.
+Providers that need more than a magic prefix (a `$type`/`TypeName` marker inside Unity YAML, a
+ZIP entry lookup for `.c3p`/`.xrns`, gzip-then-root-element detection for `.als`/`.mmpz`, or
+`project.xml` plus an XML root for `.drp`) can express it here without the host growing a
+format-description language. When one plugin has both a metadata and a preview class, a shared
+parse helper should own the probe logic.
+
+The host bounds the probe itself instead of trusting the plugin: it runs under `ProbeBytes`
+(default 64 KiB) and `ProbeTimeoutMilliseconds` (default 500 ms) on `MediaExecutionLimits`, with
+a separate budget from extraction. After an accepted probe, extraction reads from offset 0 with
+the full source budget; the bytes the probe already consumed are replayed from memory, so a
+non-seekable source works too. A probe that throws or exceeds its budget is a rejection, not a
+failure — a foreign file is expected input, so nothing is published. Only a provider that
+probes `true` and then throws during extraction produces the usual failed record.
+
+Rejections are per extraction and are not persisted: the provider simply has no record for that
+file, `ResolveProviders` and cache identity never invoke a probe (they stay IO-free), and a
+rejected file with a record from an older plugin version is left to the normal supersede/stale
+logic. Multiple providers may accept and all still capture; priority only orders their results
+and the first thumbnail, and there is no exclusivity or conflict resolution.
+
+Probes must be read-only and side-effect free: no writes, no referenced or sibling files, no
+state that outlives the call, and no persisted paths. Path-addressed capabilities implement
+`ILocalMediaFormatProbe` with the same rules against `LocalMediaContext`; it is only asked while
+a validated local source path exists, so the existing skip rule still applies without one, and
+preview-only capabilities may probe too.
 
 ## OS-assigned metadata
 
@@ -369,7 +423,8 @@ pixel previews and one on-demand structure preview, all discovered from assembly
 family, format, versions, sizes, counts and bounded name samples for 22 engine families and never opens a
 referenced tileset, script, GUID target or media file. Extensions that several engines or the text plugin
 share (`.prefab`, `.scene`, `.material`, `.mat`, `.mtl`, `.scn`, `.meta`, `.anim`, `.tsx`, `.go`,
-`.project`) are deliberately unclaimed until the shared format probe (#1258) exists.
+`.project`) are claimed behind the shared format probe (#1258): the host reads a 64 KiB header and rejects
+TypeScript, Go source, Eclipse projects, Wavefront materials and other foreign content before extraction.
 
 Preview providers are marked `IndexTimePreview` only for artwork the catalog list shows: Aseprite frame 0,
 Unity package `preview.png`, the Unreal package thumbnail, the Wicked Engine scene JPEG and uncompressed XNB

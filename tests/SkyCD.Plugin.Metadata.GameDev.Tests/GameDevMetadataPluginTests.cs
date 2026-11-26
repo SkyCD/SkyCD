@@ -25,18 +25,12 @@ public sealed class GameDevMetadataPluginTests
     }
 
     [Fact]
-    public void Descriptor_leaves_probe_blocked_extensions_unclaimed()
+    public void Descriptor_claims_shared_extensions_behind_the_probe()
     {
         var claimed = new HashSet<string>(new GameDevMetadataPlugin().Descriptor.Extensions,
             StringComparer.OrdinalIgnoreCase);
 
-        string[] shared =
-        [
-            ".prefab", ".scene", ".material", ".mat", ".mtl", ".scn", ".meta", ".anim", ".tsx", ".go",
-            ".project"
-        ];
-
-        Assert.All(shared, extension => Assert.DoesNotContain(extension, claimed));
+        Assert.All(GameDevSchema.SharedExtensions, extension => Assert.Contains(extension, claimed));
     }
 
     [Fact]

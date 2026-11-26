@@ -707,6 +707,95 @@ public sealed class MediaCacheLifecycleIntegrationTests : IDisposable
     }
 
     [Fact]
+    public async Task FormatProbeRejection_StoresOnlyTheAcceptingProvider()
+    {
+        using var database = OpenDatabase();
+        var catalog = CreateCatalogRepository(database);
+        var (_, entry) = SeedCatalog(catalog);
+        using var store = MediaCacheStore.Create(database);
+        var scheduler = CreateScheduler(
+            store,
+            Provider("plugin.unity", "1.0.0", new ProbeAudioCapability { Accept = false, SchemaId = "fake.unity" }),
+            Provider("plugin.o3de", "1.0.0", new ProbeAudioCapability { Accept = true, SchemaId = "fake.o3de" }));
+
+        var outcome = await ExtractAsync(scheduler, entry, catalog.GetAll());
+
+        var record = Assert.Single(outcome.Records);
+        Assert.Equal("plugin.o3de", record.PluginId);
+        Assert.Equal(MediaCacheRecordState.Captured, record.State);
+        var stored = Assert.Single(store.GetRecordsForEntry(EntryId));
+        Assert.Equal("plugin.o3de", stored.PluginId);
+        Assert.DoesNotContain(store.GetRecordsForEntry(EntryId), record => record.State == MediaCacheRecordState.Failed);
+    }
+
+    [Fact]
+    public async Task FormatProbes_SwapWhichProviderCapturesOnReExtraction()
+    {
+        using var database = OpenDatabase();
+        var catalog = CreateCatalogRepository(database);
+        var (_, entry) = SeedCatalog(catalog);
+        using var store = MediaCacheStore.Create(database);
+        var first = new ProbeAudioCapability { Accept = true, SchemaId = "fake.first", Comment = "first" };
+        var scheduler = CreateScheduler(store,
+            Provider("plugin.first", "1.0.0", first),
+            Provider("plugin.second", "1.0.0", new ProbeAudioCapability { Accept = false, SchemaId = "fake.second" }));
+
+        var initially = await ExtractAsync(scheduler, entry, catalog.GetAll());
+        Assert.Equal("plugin.first", Assert.Single(initially.Records).PluginId);
+
+        var swapped = CreateScheduler(store,
+            Provider("plugin.first", "1.0.0", new ProbeAudioCapability { Accept = false, SchemaId = "fake.first" }),
+            Provider("plugin.second", "1.0.0",
+                new ProbeAudioCapability { Accept = true, SchemaId = "fake.second", Comment = "second" }));
+        var outcome = await ExtractAsync(swapped, entry, catalog.GetAll(), forceRefresh: true);
+
+        var record = Assert.Single(outcome.Records);
+        Assert.Equal("plugin.second", record.PluginId);
+        Assert.Equal("second", Assert.Single(record.Metadata).Text);
+    }
+
+    [Fact]
+    public async Task CacheReuse_DoesNotInvokeFormatProbes()
+    {
+        using var database = OpenDatabase();
+        var catalog = CreateCatalogRepository(database);
+        var (_, entry) = SeedCatalog(catalog);
+        using var store = MediaCacheStore.Create(database);
+        var capability = new ProbeAudioCapability { Accept = true };
+        var scheduler = CreateScheduler(store, Provider("plugin.probe", "1.0.0", capability));
+
+        await ExtractAsync(scheduler, entry, catalog.GetAll());
+        Assert.Equal(1, capability.ProbeCount);
+
+        var reused = await ExtractAsync(scheduler, entry, catalog.GetAll());
+
+        Assert.True(reused.Reused);
+        Assert.Equal(1, capability.ProbeCount);
+    }
+
+    [Fact]
+    public async Task FormatProbeRejection_LeavesAnOlderVersionRecordToNormalSupersedeLogic()
+    {
+        using var database = OpenDatabase();
+        var catalog = CreateCatalogRepository(database);
+        var (_, entry) = SeedCatalog(catalog);
+        using var store = MediaCacheStore.Create(database);
+        var capturing = CreateScheduler(store, Provider("plugin.audio", "1.0.0", new FakeAudioMetadataCapability()));
+        await ExtractAsync(capturing, entry, catalog.GetAll());
+        var captured = Assert.Single(store.GetRecordsForEntry(EntryId));
+
+        var upgraded = CreateScheduler(store,
+            Provider("plugin.audio", "2.0.0", new ProbeAudioCapability { Accept = false }));
+        var outcome = await ExtractAsync(upgraded, entry, catalog.GetAll(), forceRefresh: true);
+
+        var stale = Assert.Single(store.GetRecordsForEntry(EntryId));
+        Assert.Equal(captured.Id, stale.Id);
+        Assert.Equal(MediaCacheRecordState.Stale, stale.State);
+        Assert.Contains(captured.Id, outcome.SupersededRecords.Select(record => record.Id));
+        Assert.DoesNotContain(store.GetRecordsForEntry(EntryId), record => record.State == MediaCacheRecordState.Failed);
+    }
+
+    [Fact]
     public void StoreFactory_ResolvesTheCatalogDatabase_FromTheRepositoryManager()
     {
         using var container = new Container();
@@ -940,6 +1029,34 @@ public sealed class MediaCacheLifecycleIntegrationTests : IDisposable
                 new("Bitrate", MediaMetadataType.Integer, Integer: 320)
             ]));
         }
+    }
+
+    private sealed class ProbeAudioCapability : IMediaMetadataCapability, IMediaFormatProbe
+    {
+        public bool Accept { get; init; }
+        public string SchemaId { get; init; } = "fake.audio";
+        public string Comment { get; init; } = "captured comment";
+        public int ProbeCount { get; private set; }
+
+        public MediaDescriptor Descriptor => new(
+            [".mp3"],
+            ["audio/mpeg"],
+            new MediaMetadataSchema(SchemaId, 1, [new("Comments", MediaMetadataType.Text)]));
+
+        public ValueTask<bool> CanHandleAsync(MediaItem item, IMediaSource source,
+            CancellationToken cancellationToken)
+        {
+            ProbeCount++;
+            return ValueTask.FromResult(Accept);
+        }
+
+        public Task<MediaExtractionResult> ExtractAsync(
+            MediaItem item,
+            IMediaSource source,
+            IProgress<MediaProgress>? progress,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new MediaExtractionResult(
+                [new MediaMetadataValue("Comments", MediaMetadataType.Text, Text: Comment)]));
     }
 
     private sealed class FakeFlacMetadataCapability : IMediaMetadataCapability

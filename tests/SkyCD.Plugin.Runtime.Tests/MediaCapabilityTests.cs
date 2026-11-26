@@ -1,9 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using SkyCD.SDK;
 using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Runtime.Collections;
@@ -226,6 +228,311 @@ public sealed class MediaCapabilityTests
         Assert.False(manager.HasMetadataProviders);
     }
 
+    [Fact]
+    public async Task FormatProbeRejection_SkipsOnlyThatProviderWithoutFailure()
+    {
+        var rejecting = new ScriptedProbeCapability((_, _, _) => ValueTask.FromResult(false));
+        var accepting = new ScriptedProbeCapability((_, _, _) => ValueTask.FromResult(true));
+        using var failures = new FailureCapture();
+        var manager = new MediaExtensionManager([
+            new MediaProvider("a", "1", rejecting),
+            new MediaProvider("b", "1", accepting)]);
+
+        var result = Assert.Single(await manager.ProcessAsync(ProbeItem(), OpenProbeSource));
+
+        Assert.Equal("b", result.PluginId);
+        Assert.False(result.Failed);
+        Assert.Equal(1, rejecting.ProbeCalls);
+        Assert.Equal(0, rejecting.ExtractCalls);
+        Assert.Equal(1, accepting.ExtractCalls);
+        Assert.Empty(failures.Failures);
+    }
+
+    [Fact]
+    public async Task FormatProbeRejection_DoesNotMaskAnotherProvidersRealFailure()
+    {
+        var rejecting = new ScriptedProbeCapability((_, _, _) => ValueTask.FromResult(false));
+        var failing = new ScriptedProbeCapability(failExtraction: true);
+        using var failures = new FailureCapture();
+        var manager = new MediaExtensionManager([
+            new MediaProvider("a", "1", rejecting),
+            new MediaProvider("b", "1", failing)]);
+
+        var result = Assert.Single(await manager.ProcessAsync(ProbeItem(), OpenProbeSource));
+
+        Assert.Equal("b", result.PluginId);
+        Assert.True(result.Failed);
+        Assert.Equal(0, rejecting.ExtractCalls);
+        Assert.Single(failures.Failures);
+    }
+
+    [Fact]
+    public async Task FormatProbeThrowBudgetOverrunAndTimeout_AreRejectionsNotFailures()
+    {
+        using var failures = new FailureCapture();
+        var throwing = new ScriptedProbeCapability((_, _, _) => throw new IOException("probe broke"));
+        var overrunning = new ScriptedProbeCapability(async ValueTask<bool> (_, source, token) =>
+        {
+            await source.ReadAsync(0, 3, token);
+            return true;
+        });
+        var timingOut = new ScriptedProbeCapability(async ValueTask<bool> (_, _, token) =>
+        {
+            await Task.Delay(Timeout.Infinite, token);
+            return true;
+        });
+        var limits = new MediaExecutionLimits(ProbeBytes: 2, ProbeTimeoutMilliseconds: 50);
+
+        Assert.Empty(await Create(throwing, limits).ProcessAsync(ProbeItem(), OpenProbeSource));
+        Assert.Empty(await Create(overrunning, limits).ProcessAsync(ProbeItem(), OpenProbeSource));
+        Assert.Empty(await Create(timingOut, limits).ProcessAsync(ProbeItem(), OpenProbeSource));
+
+        Assert.Equal(0, throwing.ExtractCalls);
+        Assert.Equal(0, overrunning.ExtractCalls);
+        Assert.Equal(0, timingOut.ExtractCalls);
+        Assert.Empty(failures.Failures);
+    }
+
+    [Fact]
+    public async Task FormatProbe_ThatOutlivesItsBudgetKeepsTheStreamUntilItExits()
+    {
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var disposed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var capability = new ScriptedProbeCapability(async ValueTask<bool> (_, _, _) =>
+        {
+            entered.TrySetResult();
+            await release.Task;
+            return true;
+        });
+        var manager = Create(capability, new MediaExecutionLimits(ProbeTimeoutMilliseconds: 50));
+
+        var results = await manager.ProcessAsync(ProbeItem(), _ => Task.FromResult<Stream>(new DisposalStream(disposed)));
+        Assert.Empty(results);
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(30));
+        Assert.False(disposed.Task.IsCompleted);
+
+        release.TrySetResult();
+        await disposed.Task.WaitAsync(TimeSpan.FromSeconds(30));
+    }
+
+    [Fact]
+    public async Task FormatProbe_IsNotInvokedByIdentityResolutionOrUnselectedProviders()
+    {
+        var probe = new ScriptedProbeCapability(optIn: true);
+        var manager = Create(probe);
+        var item = ProbeItem();
+
+        Assert.Single(manager.ResolveProviders(item));
+        Assert.Single(manager.ResolveProviders(item, MediaProviderSelection.OptInOnly));
+        Assert.Equal(0, probe.ProbeCalls);
+
+        Assert.Empty(await manager.ProcessAsync(item, OpenProbeSource));
+        Assert.Equal(0, probe.ProbeCalls);
+
+        Assert.Single(await manager.ProcessAsync(item, OpenProbeSource, selection: MediaProviderSelection.OptInOnly));
+        Assert.Equal(1, probe.ProbeCalls);
+    }
+
+    [Fact]
+    public async Task FormatProbe_HeaderReplayKeepsTheFullExtractionBudget()
+    {
+        static async ValueTask<bool> ProbeHeader(MediaItem item, IMediaSource source, CancellationToken token)
+        {
+            await source.ReadAsync(0, 4, token);
+            return true;
+        }
+
+        static async Task<MediaExtractionResult> ReadAll(MediaItem item, IMediaSource source, CancellationToken token)
+        {
+            var head = await source.ReadAsync(0, 4, token);
+            var tail = await source.ReadAsync(4, 4, token);
+            return new MediaExtractionResult([new("value", MediaMetadataType.Integer, Integer: head.Span[0] * 100 + tail.Span[3])]);
+        }
+
+        var limits = new MediaExecutionLimits(SourceBytes: 8, ProbeBytes: 4);
+        byte[] data = [1, 2, 3, 4, 5, 6, 7, 8];
+        var seekable = new ScriptedProbeCapability(ProbeHeader, ReadAll);
+        var nonSeekable = new ScriptedProbeCapability(ProbeHeader, ReadAll);
+
+        var seekableResult = Assert.Single(await Create(seekable, limits).ProcessAsync(
+            new MediaItem(".script", null, 8), _ => Task.FromResult<Stream>(new MemoryStream(data))));
+        var nonSeekableResult = Assert.Single(await Create(nonSeekable, limits).ProcessAsync(
+            new MediaItem(".script", null, 8), _ => Task.FromResult<Stream>(new NonSeekableStream(data))));
+
+        Assert.False(seekableResult.Failed);
+        Assert.Equal(108, Assert.Single(seekableResult.Metadata!.Values).Integer);
+        Assert.False(nonSeekableResult.Failed);
+        Assert.Equal(108, Assert.Single(nonSeekableResult.Metadata!.Values).Integer);
+    }
+
+    [Fact]
+    public async Task DiscoveredProbeCapabilities_RouteByHeaderOnASharedExtension()
+    {
+        var plugin = new DiscoveredPluginFactory().BuildFromAssembly(Assembly.GetExecutingAssembly());
+        var manager = new MediaExtensionManager(plugin.Capabilities
+            .Where(capability => capability is ProbeAcceptingMetadataCapability or ProbeRejectingMetadataCapability)
+            .Select(capability => new MediaProvider(plugin.Id, plugin.Version.ToString(), capability)));
+
+        var result = Assert.Single(await manager.ProcessAsync(new MediaItem(".probe", null, 8), OpenProbeSource));
+
+        Assert.Equal(typeof(ProbeAcceptingMetadataCapability).FullName, result.Capability);
+        Assert.Equal("accept", Assert.Single(result.Metadata!.Values).Text);
+    }
+
+    [Fact]
+    public async Task FormatProbeAcceptance_StillRunsEverySupportingProvider()
+    {
+        var first = new ScriptedProbeCapability((_, _, _) => ValueTask.FromResult(true));
+        var second = new ScriptedProbeCapability((_, _, _) => ValueTask.FromResult(true));
+        var manager = new MediaExtensionManager([
+            new MediaProvider("a", "1", first),
+            new MediaProvider("b", "1", second)]);
+
+        var results = await manager.ProcessAsync(ProbeItem(), OpenProbeSource);
+
+        Assert.Equal(new[] { "a", "b" }, results.Select(result => result.PluginId));
+        Assert.All(results, result => Assert.False(result.Failed));
+    }
+
+    [Fact]
+    public async Task LocalFormatProbe_IsSkippedWithoutAPathAndRejectsOrAcceptsWithOne()
+    {
+        using var workspace = new TestWorkspace();
+        var accepting = new ProbeLocalMetadataCapability { Accept = true };
+        var rejecting = new ProbeLocalMetadataCapability { Accept = false };
+        var item = ProbeItem();
+
+        var withoutPath = await Create(accepting).ProcessAsync(item, OpenProbeSource,
+            selection: MediaProviderSelection.StandardMetadata);
+        Assert.Empty(withoutPath);
+        Assert.Equal(0, accepting.ProbeCalls);
+        Assert.Equal(0, accepting.ExtractCalls);
+
+        var rejected = await Create(rejecting).ProcessAsync(item, OpenProbeSource,
+            selection: MediaProviderSelection.StandardMetadata, sourcePath: workspace.GetPath("shared.probe"));
+        Assert.Empty(rejected);
+        Assert.Equal(1, rejecting.ProbeCalls);
+        Assert.Equal(0, rejecting.ExtractCalls);
+
+        var accepted = await Create(accepting).ProcessAsync(item, OpenProbeSource,
+            selection: MediaProviderSelection.StandardMetadata, sourcePath: workspace.GetPath("shared.probe"));
+        Assert.Single(accepted);
+        Assert.Equal(1, accepting.ProbeCalls);
+        Assert.Equal(1, accepting.ExtractCalls);
+    }
+
+    private static MediaItem ProbeItem() => new(".script", null, 8);
+
+    private static Task<Stream> OpenProbeSource(CancellationToken token) =>
+        Task.FromResult<Stream>(new MemoryStream([1, 2, 3, 4, 5, 6, 7, 8]));
+
+    private sealed class ScriptedProbeCapability : IMediaMetadataCapability, IMediaFormatProbe
+    {
+        private readonly Func<MediaItem, IMediaSource, CancellationToken, ValueTask<bool>>? probe;
+        private readonly Func<MediaItem, IMediaSource, CancellationToken, Task<MediaExtractionResult>>? extract;
+
+        public ScriptedProbeCapability(
+            Func<MediaItem, IMediaSource, CancellationToken, ValueTask<bool>>? probe = null,
+            Func<MediaItem, IMediaSource, CancellationToken, Task<MediaExtractionResult>>? extract = null,
+            bool failExtraction = false, bool optIn = false)
+        {
+            this.probe = probe;
+            this.extract = extract;
+            FailExtraction = failExtraction;
+            OptIn = optIn;
+        }
+
+        public bool FailExtraction { get; }
+        public bool OptIn { get; }
+        public int ProbeCalls { get; private set; }
+        public int ExtractCalls { get; private set; }
+
+        public MediaDescriptor Descriptor => new([".script"], [],
+            new MediaMetadataSchema("script", 1, [new("value", MediaMetadataType.Integer)]), IsOptIn: OptIn);
+
+        public ValueTask<bool> CanHandleAsync(MediaItem item, IMediaSource source, CancellationToken cancellationToken)
+        {
+            ProbeCalls++;
+            return probe is null ? ValueTask.FromResult(true) : probe(item, source, cancellationToken);
+        }
+
+        public Task<MediaExtractionResult> ExtractAsync(MediaItem item, IMediaSource source,
+            IProgress<MediaProgress>? progress, CancellationToken cancellationToken)
+        {
+            ExtractCalls++;
+            if (FailExtraction) throw new IOException("Private plugin failure");
+            return extract is null
+                ? Task.FromResult(new MediaExtractionResult([]))
+                : extract(item, source, cancellationToken);
+        }
+    }
+
+    private sealed class ProbeLocalMetadataCapability : ILocalMediaMetadataCapability, ILocalMediaFormatProbe
+    {
+        public bool Accept { get; init; }
+        public int ProbeCalls { get; private set; }
+        public int ExtractCalls { get; private set; }
+
+        public MediaDescriptor Descriptor => new([".script"], [],
+            new MediaMetadataSchema("local-probe", 1, [new("evidence", MediaMetadataType.Text)]));
+
+        public ValueTask<bool> CanHandleAsync(LocalMediaContext context, CancellationToken cancellationToken)
+        {
+            ProbeCalls++;
+            return ValueTask.FromResult(Accept);
+        }
+
+        public Task<MediaExtractionResult> ExtractAsync(LocalMediaContext source,
+            IProgress<MediaProgress>? progress, CancellationToken cancellationToken)
+        {
+            ExtractCalls++;
+            return Task.FromResult(new MediaExtractionResult(
+                [new MediaMetadataValue("evidence", MediaMetadataType.Text, Text: source.Path)]));
+        }
+    }
+
+    private sealed class FailureCapture : IDisposable
+    {
+        private readonly Action<PluginFailure> handler;
+
+        public FailureCapture()
+        {
+            handler = failure =>
+            {
+                if (failure.Operation == "media") Failures.Add(failure);
+            };
+            PluginFailure.Reported += handler;
+        }
+
+        public List<PluginFailure> Failures { get; } = [];
+
+        public void Dispose() => PluginFailure.Reported -= handler;
+    }
+
+    private sealed class NonSeekableStream(byte[] data) : Stream
+    {
+        private readonly MemoryStream inner = new(data);
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => inner.Length;
+        public override long Position
+        {
+            get => inner.Position;
+            set => throw new NotSupportedException();
+        }
+
+        public override int Read(byte[] buffer, int offset, int count) => inner.Read(buffer, offset, count);
+        public override void Flush()
+        {
+        }
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    }
+
     private sealed class BlockedMediaCapability(TaskCompletionSource entered, TaskCompletionSource release) : IMediaMetadataCapability
     {
         public MediaDescriptor Descriptor => new([".fake"], [], new MediaMetadataSchema("blocked", 1, []));
@@ -316,4 +623,39 @@ public sealed class FakeLocalPreviewCapability : ILocalMediaPreviewCapability
         Context = source;
         return Task.FromResult(new MediaPreviewResult([new MediaPreviewArtifact("image/png", Bytes)]));
     }
+}
+
+public sealed class ProbeAcceptingMetadataCapability : IMediaMetadataCapability, IMediaFormatProbe
+{
+    public MediaDescriptor Descriptor => new([".probe"], [],
+        new MediaMetadataSchema("probe-accept", 1, [new("format", MediaMetadataType.Text)]));
+
+    public async ValueTask<bool> CanHandleAsync(MediaItem item, IMediaSource source,
+        CancellationToken cancellationToken)
+    {
+        await source.ReadAsync(0, 4, cancellationToken);
+        return true;
+    }
+
+    public Task<MediaExtractionResult> ExtractAsync(MediaItem item, IMediaSource source,
+        IProgress<MediaProgress>? progress, CancellationToken cancellationToken) =>
+        Task.FromResult(new MediaExtractionResult(
+            [new MediaMetadataValue("format", MediaMetadataType.Text, Text: "accept")]));
+}
+
+public sealed class ProbeRejectingMetadataCapability : IMediaMetadataCapability, IMediaFormatProbe
+{
+    public MediaDescriptor Descriptor => new([".probe"], [],
+        new MediaMetadataSchema("probe-reject", 1, [new("format", MediaMetadataType.Text)]));
+
+    public async ValueTask<bool> CanHandleAsync(MediaItem item, IMediaSource source,
+        CancellationToken cancellationToken)
+    {
+        await source.ReadAsync(0, 4, cancellationToken);
+        return false;
+    }
+
+    public Task<MediaExtractionResult> ExtractAsync(MediaItem item, IMediaSource source,
+        IProgress<MediaProgress>? progress, CancellationToken cancellationToken) =>
+        throw new InvalidOperationException("A rejected provider must not be extracted.");
 }

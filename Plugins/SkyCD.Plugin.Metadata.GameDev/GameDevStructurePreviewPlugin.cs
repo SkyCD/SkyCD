@@ -17,7 +17,7 @@ namespace SkyCD.Plugin.Metadata.GameDev;
 /// stores; it is drawn only when a caller asks for a larger view. A file that does not match its extension
 /// yields no artifact.
 /// </remarks>
-public sealed class GameDevStructurePreviewPlugin : IMediaPreviewCapability
+public sealed class GameDevStructurePreviewPlugin : IMediaPreviewCapability, IMediaFormatProbe
 {
     internal const string ThumbnailContentType = "image/png";
 
@@ -28,6 +28,10 @@ public sealed class GameDevStructurePreviewPlugin : IMediaPreviewCapability
     public MediaDescriptor Descriptor =>
         new(GameDevSchema.StructureExtensions, GameDevSchema.ContentTypes, GameDevSchema.Preview,
             Priority: PreviewPriority);
+
+    public ValueTask<bool> CanHandleAsync(MediaItem item, IMediaSource source,
+        CancellationToken cancellationToken) =>
+        GameDevProbe.AcceptsAsync(item, source, cancellationToken);
 
     public async Task<MediaPreviewResult> GeneratePreviewAsync(
         MediaItem item,

@@ -24,47 +24,57 @@ Discovery uses assembly metadata and implemented capability types only; there is
 | Engine / tool | Extensions | Family | Facts read |
 |---|---|---|---|
 | Aseprite | `.aseprite`, `.ase` | Aseprite | canvas, frames, layers, tags with loop flag, slices, tilesets, frame duration, color depth; frame 0 thumbnail |
-| Godot | `.tscn`, `.escn`, `.tres`, `.import`, `.gdextension`, `.godot`, `.res`, `.pck` | Godot | project name/version/renderer, scene format/uid, node and class counts, scripts, resources, connections, binary header version |
-| Unity | `.unity`, `.asset`, `.controller`, `.overrideController`, `.physicMaterial`, `.unitypackage` | Unity | YAML class anchors, GameObjects, transforms, script and GUID counts, `m_Name` samples; package asset and preview counts |
+| Godot | `.tscn`, `.escn`, `.tres`, `.import`, `.gdextension`, `.godot`, `.res`, `.pck`, `.scn` | Godot | project name/version/renderer, scene format/uid, node and class counts, scripts, resources, connections, binary header version |
+| Unity | `.unity`, `.prefab`, `.asset`, `.mat`, `.anim`, `.controller`, `.overrideController`, `.physicMaterial`, `.meta`, `.unitypackage` | Unity | YAML class anchors, GameObjects, transforms, script and GUID counts, `m_Name` samples; meta guid and importer; package asset and preview counts |
 | Unreal Engine / UEFN | `.uproject`, `.uplugin`, `.uasset`, `.umap`, `.verse` | Unreal | project modules/plugins/platforms, package version words, cooked flag, name/import/export counts, stored thumbnail; Verse file/function/class counts |
 | Roblox Studio | `.rbxl`, `.rbxm`, `.rbxlx`, `.rbxmx` | Roblox | binary class/instance counts and version; XML item/class histogram and place name |
 | GameMaker | `.yyp`, `.yy`, `.yyz` | GameMaker | project name, IDE and resource versions, resource/room/folder/audio/texture group counts; archive entry count merged with the embedded project |
 | RPG Maker MV/MZ, XP/VX/VX Ace | `.rpgproject`, `.rmmzproject`, `.rxdata`, `.rvdata`, `.rvdata2` | RPG Maker | project marker and version; bounded Ruby Marshal symbol/string/object counts |
 | Construct 3 | `.c3p` | Construct | `project.c3proj` format version, release, layout/event-sheet/script counts |
-| Cocos | `.fire`, `.csd` | Cocos | Creator `__type__` tree and `_name` samples; Studio XML version and node names |
-| Defold | `.collection`, `.gui`, `.tilemap`, `.atlas`, `.sprite` | Defold | protobuf-text resource ids and type histogram |
-| CRYENGINE | `.cryproject`, `.cryproj`, `.chrparams` | CRYENGINE | project name/version/required modules; character-parameter bone names |
-| O3DE | `.slice`, `.azasset` | O3DE | slice root/version and class instances; asset `$type` and serialization version |
-| Flax | `.flaxproj` | Flax | name, version, target, default scene |
+| Cocos | `.fire`, `.csd`, `.scene`, `.mtl` | Cocos | Creator `__type__` tree and `_name` samples (object or array root); meta uuid, importer and file list; Studio XML version and node names |
+| Defold | `.collection`, `.gui`, `.tilemap`, `.atlas`, `.sprite`, `.go`, `.material`, `.project` | Defold | protobuf-text resource ids and type histogram; material name and program/sampler counts; project title, version and dependencies |
+| CRYENGINE | `.cryproject`, `.cryproj`, `.chrparams`, `.mtl` | CRYENGINE | project name/version/required modules; character-parameter bone names; material name, shader and sub-material names |
+| O3DE | `.slice`, `.azasset`, `.prefab`, `.material` | O3DE | slice root/version and class instances; asset `$type` and serialization version; prefab entity/component counts; material type version and property groups |
+| Flax | `.flaxproj`, `.scene`, `.prefab`, `.material` | Flax | name, version, target, default scene; asset `TypeName`, engine build and object count |
 | Stride | `.sdscene`, `.sdprefab`, `.sdmat`, `.sdtex` | Stride | first type tag, serializer version, id, tagged class and entity names |
 | Wicked Engine | `.wiscene` | Wicked Engine | header version and embedded JPEG thumbnail flag |
 | Ren'Py | `.rpy`, `.rpym`, `.rpyc`, `.rpa` | Ren'Py | label/character/line counts; compiled-script slot table; archive version and index offset |
-| s&box | `.sbproj` | s&box | title, project type, startup scene, resource and code counts |
+| s&box | `.sbproj`, `.scene`, `.prefab` | s&box | title, project type, startup scene, resource and code counts; scene/prefab game-object and component counts |
 | MonoGame / FNA | `.mgcb`, `.xnb` | MonoGame | content directives and platform/profile; XNB platform, version, reader, texture surface |
 | LÖVE | `.love` | LÖVE | archive entry count, `main.lua`/`conf.lua` presence, `t.version` |
 | libGDX / Phaser | `.atlas` | libGDX | pages, regions, key block format/filter/size; a Defold-style atlas stays with Defold |
-| Tiled | `.tmx`, `.tmj`, `.tsj`, `.world` | Tiled | map/tile sizes, layer and object-group counts, objects, tilesets, properties, world map list |
+| Tiled | `.tmx`, `.tmj`, `.tsj`, `.world`, `.tsx` | Tiled | map/tile sizes, layer and object-group counts, objects, tilesets, properties, world map list; tileset name, tile count and image size |
 | LDtk | `.ldtk`, `.ldtkl` | LDtk | JSON/app versions, project name, levels, worlds, entity/tileset definitions, layer instances |
 
 Extensions are matched exactly and case-insensitively; every provider whose descriptor matches runs. A file
 whose bytes do not match the extension's signature publishes nothing (or `Valid=false` when the family is
 recognized but damaged), so a renamed file never inherits another engine's facts.
 
-### Probe-blocked rows (shared extensions, #1258)
+### Shared extensions (probe-guarded, #1258)
 
-Until the shared media-format probe lands, this plugin does **not** claim extensions that another provider
-already claims or that several engines share without a reliable byte signature:
+Extensions that another provider already claims or that several engines share need byte-level
+disambiguation. The plugin claims them and implements `IMediaFormatProbe`: the host reads at most 64 KiB
+first and runs extraction only when the content carries the marker below. Foreign content (TypeScript in
+`.tsx`, Go source in `.go`, an Eclipse `.project`, a Wavefront `.mtl`, a random `.scene`) is rejected before
+any record is written, so a text file is never counted as a game asset.
 
-| Extension | Other claim | Revisit |
+| Extension | Accepted marker | Read as |
 |---|---|---|
-| `.prefab`, `.scene`, `.material`, `.mat`, `.scn`, `.anim`, `.meta` | Unity/Cocos/Flax/O3DE/Godot variants | needs probe (#1258) |
-| `.mtl` | Wavefront material (archives/metadata) | needs probe |
-| `.tsx` | TypeScript source in `SkyCD.Plugin.Metadata.Text` | needs probe |
-| `.go` | Go source in `SkyCD.Plugin.Metadata.Text` | needs probe |
-| `.project` | various IDE/project containers | needs probe |
+| `.prefab` | Unity YAML header, Cocos `__type__`, O3DE `ContainerEntity`, Flax `TypeName`+`EngineBuild`, s&box `__class`+`__guid` | that engine's prefab |
+| `.scene` | same families (O3DE uses `.prefab` only) | that engine's scene |
+| `.material` | Unity YAML header, O3DE `materialType`+`propertyValues`, Flax `TypeName`+`EngineBuild`, Defold `fragment_program:`/`vertex_program:` | that engine's material |
+| `.mat` | Unity YAML header | Unity material |
+| `.anim` | Unity YAML header or Cocos `__type__` | Unity animation or Cocos animation |
+| `.meta` | Unity `fileFormatVersion` first line or Cocos `uuid`+`importer` | guid and importer |
+| `.mtl` | XML root `Material` (CRYENGINE) or Cocos `__type__` JSON | material |
+| `.scn` | Godot `RSRC`/`RSCC` binary magic | Godot binary scene |
+| `.tsx` | XML root `tileset` | Tiled tileset |
+| `.go` | Defold blocks (`components {`, `embedded_instances {`, `embedded_components {`) | Defold game object |
+| `.project` | INI with `[project]` plus a standard Defold section | Defold project |
 
-Claiming these without a probe would either steal files from another provider or publish empty records for
-foreign content, so they stay unclaimed and are covered here instead.
+A prefix that is too short to parse is still checked against the same markers in a bounded window, because a
+truncated prefix is not proof that the file belongs to another format. `SkyCD.Plugin.Metadata.Text` keeps its
+`.tsx` and `.go` claims; both providers may run, and only the one whose probe accepts writes a record.
 
 Unclaimable today (no stable signature or no public format): PlayCanvas, GDevelop, Solar2D, Heaps,
 HaxeFlixel and UPBGE. Their projects remain plain files or archives.
@@ -102,7 +112,7 @@ bound cut the document.
 ## Bounds and safety
 
 - Text families read a 4 MiB prefix; whole-document formats (Aseprite, Unity package, UPackage, XNB,
-  wiscene) are capped at 16 MiB; binary headers read only what they need (Godot `.res`/`.pck` 64 KiB,
+  wiscene) are capped at 16 MiB; binary headers read only what they need (Godot `.res`/`.pck`/`.scn` 64 KiB,
   Roblox 64 bytes, RPA 192 bytes).
 - ZIP and tar containers are walked from their directory with at most 4 096 entries; one entry is capped at
   8 MiB and the total inflated bytes at 8 MiB. Nothing is extracted, imported or written, and compressed

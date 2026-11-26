@@ -102,6 +102,65 @@ internal static class TiledReader
         }
     }
 
+    internal static GameDevFacts? ReadTileset(string text, bool truncated)
+    {
+        try
+        {
+            using var reader = GameDevDocuments.CreateXml(text);
+            if (!GameDevDocuments.ReadRootElement(reader) || reader.LocalName != "tileset")
+            {
+                return null;
+            }
+
+            var facts = new GameDevFacts
+            {
+                Family = "Tiled",
+                Format = "Tiled tileset",
+                Application = "Tiled",
+                FormatVersion = reader.GetAttribute("tiledversion") ?? reader.GetAttribute("version"),
+                ItemName = reader.GetAttribute("name"),
+                TileWidth = ParseLong(reader.GetAttribute("tilewidth")),
+                TileHeight = ParseLong(reader.GetAttribute("tileheight")),
+                ResourceCount = ParseLong(reader.GetAttribute("tilecount")),
+                ScanIncomplete = truncated
+            };
+
+            facts.AddTilesetName(facts.ItemName);
+            var depth = reader.Depth;
+            while (reader.Read())
+            {
+                if (reader.NodeType == XmlNodeType.EndElement && reader.Depth == depth)
+                {
+                    break;
+                }
+
+                if (reader.NodeType != XmlNodeType.Element)
+                {
+                    continue;
+                }
+
+                switch (reader.LocalName)
+                {
+                    case "image":
+                        facts.ImageWidth = ParseLong(reader.GetAttribute("width"));
+                        facts.ImageHeight = ParseLong(reader.GetAttribute("height"));
+                        facts.AddPreviewRow("Image: " + reader.GetAttribute("source"));
+                        break;
+                    case "tile":
+                        facts.ObjectCount = (facts.ObjectCount ?? 0) + 1;
+                        break;
+                }
+            }
+
+            facts.AddPreviewRow("Tileset: " + (facts.ItemName ?? "unknown"));
+            return facts;
+        }
+        catch (XmlException)
+        {
+            return null;
+        }
+    }
+
     internal static GameDevFacts? ReadJson(string extension, string text, bool truncated)
     {
         if (!GameDevDocuments.TryParseJson(text, out var document))

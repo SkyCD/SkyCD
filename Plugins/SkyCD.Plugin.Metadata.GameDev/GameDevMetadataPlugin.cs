@@ -18,13 +18,17 @@ namespace SkyCD.Plugin.Metadata.GameDev;
 /// content that does not match the extension at all yields no result. Both cases leave the rest of the
 /// cataloguing pass untouched.
 /// </remarks>
-public sealed class GameDevMetadataPlugin : IMediaMetadataCapability
+public sealed class GameDevMetadataPlugin : IMediaMetadataCapability, IMediaFormatProbe
 {
     private const int ProviderPriority = 10;
 
     public MediaDescriptor Descriptor =>
         new(GameDevSchema.Extensions, GameDevSchema.ContentTypes, GameDevSchema.Metadata,
             Priority: ProviderPriority);
+
+    public ValueTask<bool> CanHandleAsync(MediaItem item, IMediaSource source,
+        CancellationToken cancellationToken) =>
+        GameDevProbe.AcceptsAsync(item, source, cancellationToken);
 
     public async Task<MediaExtractionResult> ExtractAsync(
         MediaItem item,

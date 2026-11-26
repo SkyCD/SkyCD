@@ -100,3 +100,47 @@ public interface IMediaPreviewCapability : IPluginCapability
     Task<MediaPreviewResult> GeneratePreviewAsync(MediaItem item, IMediaSource source,
         IProgress<MediaProgress>? progress, CancellationToken cancellationToken);
 }
+
+/// <summary>
+/// Optional format probe for a byte-addressed metadata or preview capability. Claiming an extension is not
+/// ownership: several providers may support the same extension, and a source that only shares it (Unity YAML
+/// next to JSON under <c>.prefab</c>, a Quake model next to a tracker module under <c>.mdl</c>) should not make
+/// every matching provider parse it. A capability that implements this interface is asked, before extraction,
+/// whether the bounded header really is its format; <see langword="false"/> skips only that provider for the
+/// item, with no result, cache record or failure.
+/// </summary>
+/// <remarks>
+/// Probes are conservative by contract: return <see langword="false"/> only when the header is conclusive that
+/// the source is not this format. When unsure, return <see langword="true"/> and let extraction decide, because
+/// a wrong <see langword="false"/> silently loses metadata. A probe is read-only and side-effect free: no
+/// writes, no referenced or sibling files, no state that outlives the call and no persisted paths. It is also
+/// cheap by contract: header-sized reads only, within the host's probe byte budget, which is separate from and
+/// does not reduce the extraction source budget. A probe may be implemented alongside
+/// <see cref="IMediaMetadataCapability"/> and/or <see cref="IMediaPreviewCapability"/>; when a plugin has both,
+/// a shared parse helper should own the logic.
+/// </remarks>
+public interface IMediaFormatProbe
+{
+    /// <summary>
+    /// Returns <see langword="false"/> only when the bounded header is conclusive that the source is not this
+    /// format; <see langword="true"/> runs extraction as usual. A probe that throws or exceeds its budget is
+    /// treated by the host as a rejection, not as a provider failure.
+    /// </summary>
+    ValueTask<bool> CanHandleAsync(MediaItem item, IMediaSource source, CancellationToken cancellationToken);
+}
+
+/// <summary>
+/// Optional format probe for a capability addressed through <see cref="LocalMediaContext"/>. The path-addressed
+/// counterpart of <see cref="IMediaFormatProbe"/> follows the same conservative, read-only and side-effect-free
+/// rules, and is only asked while a validated local source path exists. It must not write, must not persist the
+/// path, and must read only the source file's own header; referenced or sibling files are never probed.
+/// </summary>
+public interface ILocalMediaFormatProbe
+{
+    /// <summary>
+    /// Returns <see langword="false"/> only when the header is conclusive that the source is not this format;
+    /// <see langword="true"/> runs extraction as usual. A probe that throws or exceeds its budget is treated by
+    /// the host as a rejection, not as a provider failure.
+    /// </summary>
+    ValueTask<bool> CanHandleAsync(LocalMediaContext context, CancellationToken cancellationToken);
+}

@@ -44,7 +44,10 @@ public sealed class PluginManagerLoadingTests : IDisposable
         Assert.Single(pluginManager.GetCapabilities<IAccountConnector>());
         Assert.Single(pluginManager.GetCapabilities<IActionProvider>());
         Assert.NotEmpty(pluginManager.GetCapabilities<IFileFormatPluginCapability>());
-        Assert.Single(pluginManager.GetCapabilities<IMediaMetadataCapability>());
+        var metadataCapabilities = pluginManager.GetCapabilities<IMediaMetadataCapability>();
+        Assert.Contains(metadataCapabilities, capability => capability is FakeMediaCapability);
+        Assert.Contains(metadataCapabilities, capability => capability is ProbeAcceptingMetadataCapability);
+        Assert.Contains(metadataCapabilities, capability => capability is ProbeRejectingMetadataCapability);
         Assert.Single(pluginManager.GetCapabilities<IMediaPreviewCapability>());
         Assert.DoesNotContain(assembliesLogger.Entries, entry => entry.LogLevel >= LogLevel.Error);
 

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using SkyCD.SDK.Capabilities.Media;
 
@@ -9,11 +10,11 @@ namespace SkyCD.Plugin.Metadata.GameDev.Models;
 /// requires a new schema version, because the host keys stored results by schema id and version.
 /// </summary>
 /// <remarks>
-/// Extensions that another plugin also claims are deliberately absent until the shared format probe
-/// (#1258) exists. Claiming <c>.prefab</c>, <c>.scene</c>, <c>.material</c>, <c>.mat</c>, <c>.mtl</c>,
-/// <c>.scn</c>, <c>.meta</c>, <c>.anim</c>, <c>.tsx</c>, <c>.go</c> or <c>.project</c> without a byte-level
-/// probe would either steal files from another provider or publish empty records for foreign content, so
-/// those rows stay unclaimed and are documented in <c>docs/plugins/gamedev.md</c>.
+/// Extensions that another provider or engine family also claims are guarded by the shared media format probe
+/// (#1258): the probe reads a bounded header and rejects foreign content, so <c>.prefab</c>, <c>.scene</c>,
+/// <c>.material</c>, <c>.mat</c>, <c>.mtl</c>, <c>.scn</c>, <c>.meta</c>, <c>.anim</c>, <c>.tsx</c>, <c>.go</c>
+/// and <c>.project</c> can be claimed without stealing files from the text provider or publishing empty
+/// records. The markers are documented in <c>docs/plugins/gamedev.md</c>.
 /// </remarks>
 public static class GameDevSchema
 {
@@ -30,6 +31,8 @@ public static class GameDevSchema
     public const string Application = "Application";
     public const string ProjectName = "ProjectName";
     public const string ItemName = "ItemName";
+    public const string MetaGuid = "MetaGuid";
+    public const string ImporterType = "ImporterType";
     public const string Compiled = "Compiled";
     public const string Cooked = "Cooked";
     public const string Valid = "Valid";
@@ -73,17 +76,20 @@ public static class GameDevSchema
     public const string NameSamples = "NameSamples";
     public const string TilesetNames = "TilesetNames";
 
-    /// <summary>Extensions this plugin claims today. See the remarks for the probe-blocked rows.</summary>
+    /// <summary>Extensions this plugin claims. Shared rows are guarded by <see cref="Parsing.GameDevProbe"/>.</summary>
     public static readonly IReadOnlyList<string> Extensions =
     [
         // Aseprite
         ".aseprite", ".ase",
         // Godot text and binary resources
         ".tscn", ".escn", ".tres", ".import", ".gdextension", ".godot", ".res", ".pck",
-        // Unity (the shared .prefab/.mat/.anim/.meta rows wait for #1258)
-        ".unity", ".asset", ".controller", ".overrideController", ".physicMaterial", ".unitypackage",
-        // Tiled and LDtk (.tsx waits for #1258 because Metadata.Text claims it for TypeScript)
-        ".tmx", ".tmj", ".tsj", ".world", ".ldtk", ".ldtkl",
+        // Godot binary scenes use the same .scn extension as no other claimed format
+        ".scn",
+        // Unity (shared .prefab/.mat/.anim/.meta rows are separated from engine JSON by the probe)
+        ".unity", ".prefab", ".asset", ".mat", ".controller", ".anim", ".overrideController",
+        ".physicMaterial", ".meta", ".unitypackage",
+        // Tiled and LDtk (.tsx is shared with TypeScript in Metadata.Text)
+        ".tmx", ".tmj", ".tsx", ".tsj", ".world", ".ldtk", ".ldtkl",
         // Unreal and UEFN
         ".uproject", ".uplugin", ".uasset", ".umap", ".verse",
         // Roblox Studio
@@ -94,15 +100,15 @@ public static class GameDevSchema
         ".rpgproject", ".rmmzproject", ".rxdata", ".rvdata", ".rvdata2",
         // Construct 3
         ".c3p",
-        // Cocos (the shared .scene/.prefab/.anim/.meta rows wait for #1258)
-        ".fire", ".csd",
-        // Defold (the shared .project/.go/.material rows wait for #1258)
-        ".collection", ".gui", ".tilemap", ".atlas", ".sprite",
-        // CRYENGINE (the shared .mtl row waits for #1258)
-        ".cryproject", ".cryproj", ".chrparams",
-        // O3DE (the shared .prefab/.material rows wait for #1258)
+        // Cocos (.scene is shared with Flax and s&box)
+        ".fire", ".scene", ".csd",
+        // Defold (.project and .go are shared with Eclipse projects and Go source; .material with O3DE/Flax)
+        ".project", ".collection", ".go", ".gui", ".tilemap", ".atlas", ".material", ".sprite",
+        // CRYENGINE (.mtl is shared with Wavefront material text and Cocos JSON)
+        ".cryproject", ".cryproj", ".mtl", ".chrparams",
+        // O3DE
         ".slice", ".azasset",
-        // Flax (the shared .scene/.prefab/.material rows wait for #1258)
+        // Flax
         ".flaxproj",
         // Stride
         ".sdscene", ".sdprefab", ".sdmat", ".sdtex",
@@ -110,7 +116,7 @@ public static class GameDevSchema
         ".wiscene",
         // Ren'Py
         ".rpy", ".rpym", ".rpyc", ".rpa",
-        // s&box (the shared .scene/.prefab rows wait for #1258)
+        // s&box
         ".sbproj",
         // MonoGame and FNA
         ".mgcb", ".xnb",
@@ -118,13 +124,25 @@ public static class GameDevSchema
         ".love"
     ];
 
+    /// <summary>Extensions another provider or engine family also uses; the format probe must accept them.</summary>
+    public static readonly IReadOnlyList<string> SharedExtensions =
+    [
+        ".prefab", ".scene", ".material", ".mat", ".anim", ".meta", ".mtl", ".tsx", ".go", ".project", ".scn"
+    ];
+
+    private static readonly HashSet<string> SharedExtensionSet =
+        new(SharedExtensions, StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>True when the extension is claimed by another provider or by several families.</summary>
+    public static bool IsSharedExtension(string extension) => SharedExtensionSet.Contains(extension);
+
     /// <summary>None of these project containers has a registered media type; selection is by extension.</summary>
     public static readonly IReadOnlyList<string> ContentTypes = [];
 
     /// <summary>Sources with these extension roots produce an on-demand structure page.</summary>
     public static readonly IReadOnlyList<string> StructureExtensions =
     [
-        ".tscn", ".escn", ".tres", ".godot", ".unity",
+        ".tscn", ".escn", ".tres", ".godot", ".unity", ".prefab", ".scene",
         ".tmx", ".tmj", ".ldtk", ".rbxlx", ".rbxmx",
         ".slice", ".sdscene", ".sdprefab", ".csd",
         ".collection", ".gui", ".rpy", ".yyp", ".c3p", ".uproject"
@@ -145,6 +163,8 @@ public static class GameDevSchema
         new(GameDevSchema.Application, MediaMetadataType.Text),
         new(GameDevSchema.ProjectName, MediaMetadataType.Text),
         new(GameDevSchema.ItemName, MediaMetadataType.Text),
+        new(GameDevSchema.MetaGuid, MediaMetadataType.Text),
+        new(GameDevSchema.ImporterType, MediaMetadataType.Text),
         new(GameDevSchema.Compiled, MediaMetadataType.Boolean),
         new(GameDevSchema.Cooked, MediaMetadataType.Boolean),
         new(GameDevSchema.Valid, MediaMetadataType.Boolean),
