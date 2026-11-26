@@ -214,30 +214,6 @@ public sealed class CatalogLoanService(
             }, StringComparer.Ordinal);
     }
 
-    internal BorrowerDocument AddBorrower(string name)
-    {
-        BorrowerDocument? result = null;
-        DatabaseGate.InBatch(borrowers.Collection.Database, () => result = FindOrCreateBorrower(name));
-        return result!;
-    }
-
-    internal void RenameBorrower(string id, string name)
-    {
-        DatabaseGate.InBatch(borrowers.Collection.Database, () =>
-        {
-            var contact = borrowers.Get(id) ?? throw new LoanEditException();
-            var trimmed = name.Trim();
-            if (trimmed.Length == 0 || GetBorrowers().Any(other => other.Id != id &&
-                string.Equals(other.Name, trimmed, StringComparison.OrdinalIgnoreCase)))
-            {
-                throw new LoanEditException();
-            }
-
-            contact.Name = trimmed;
-            borrowers.Save(id, contact);
-        });
-    }
-
     internal void Lend(string entryId, string borrowerId, DateOnly date, DateOnly? due, string? note)
     {
         DatabaseGate.InBatch(loans.Collection.Database, () =>
@@ -261,21 +237,58 @@ public sealed class CatalogLoanService(
         });
     }
 
-    internal void Return(string entryId, string loanId, DateOnly date)
+    internal void Edit(string entryId, string loanId, string borrowerId, DateOnly date, DateOnly? due, string? note)
     {
         DatabaseGate.InBatch(loans.Collection.Database, () =>
         {
-            var loan = loans.Get(loanId);
-            if (loan is null || loan.EntryId != entryId || !IsInCatalog(loan) || !loan.IsActive ||
-                (LoanDocument.TryReadDate(loan.LoanDate, out var lent) && date < lent))
+            var loan = GetEditableLoan(entryId, loanId);
+            if (borrowers.Get(borrowerId) is null || due < date)
             {
                 throw new LoanEditException();
             }
 
-            loan.ReturnDate = FormatDate(date);
-            Save(loan);
+            Save(new LoanDocument
+            {
+                Id = loan.Id,
+                CatalogPath = loan.CatalogPath,
+                EntryId = loan.EntryId,
+                BorrowerId = borrowerId,
+                LoanDate = FormatDate(date),
+                DueDate = due is { } dueDate ? FormatDate(dueDate) : null,
+                Note = note?.Trim(),
+                SourceId = loan.SourceId
+            });
         });
     }
+
+    internal void Return(string entryId, string loanId, DateOnly date) =>
+        Return([(entryId, loanId)], date);
+
+    internal void Return(IReadOnlyList<LoanDocument> selection, DateOnly date) =>
+        Return(selection.Select(loan => (loan.EntryId, loan.Id)).ToArray(), date);
+
+    private void Return(IReadOnlyList<(string EntryId, string LoanId)> selection, DateOnly date)
+    {
+        DatabaseGate.InBatch(loans.Collection.Database, () =>
+        {
+            var active = selection.Select(loan => GetEditableLoan(loan.EntryId, loan.LoanId)).ToArray();
+            if (active.Any(loan => LoanDocument.TryReadDate(loan.LoanDate, out var lent) && date < lent))
+            {
+                throw new LoanEditException();
+            }
+
+            foreach (var loan in active)
+            {
+                loan.ReturnDate = FormatDate(date);
+                Save(loan);
+            }
+        });
+    }
+
+    private LoanDocument GetEditableLoan(string entryId, string loanId) =>
+        loans.Get(loanId) is { IsActive: true } loan && loan.EntryId == entryId && IsInCatalog(loan)
+            ? loan
+            : throw new LoanEditException();
 
     internal void Save(LoanDocument loan) => loans.Save(loan.Id, loan);
 

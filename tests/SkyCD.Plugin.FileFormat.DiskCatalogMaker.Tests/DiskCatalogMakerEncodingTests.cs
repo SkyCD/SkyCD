@@ -3,8 +3,8 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using SkyCD.TestSupport;
 using SkyCD.SDK.Capabilities.FileFormats;
+using SkyCD.TestSupport;
 using Xunit;
 using SkyCD.Plugin.FileFormat.DiskCatalogMaker.Models;
 
@@ -73,12 +73,13 @@ public sealed class DiskCatalogMakerEncodingTests
         }
     }
 
+    /// <summary>
+    /// A payload whose bytes do not decode under the detected encoding is rejected by recognition and by
+    /// the import, so a report is never imported with replacement characters.
+    /// </summary>
     [Theory]
     [InlineData(new byte[] { 0xEF, 0xBB, 0xBF, 0xE9 })]
-    [InlineData(new byte[] { 0xFF, 0xFE, 0x00, 0x00 })]
-    [InlineData(new byte[] { 0xFF, 0xFE, 0x41 })]
-    [InlineData(new byte[] { 0x81, 0xFF })]
-    public async Task InvalidEncoding_IsRejectedConsistently(byte[] suffix)
+    public async Task UndecodableEncoding_IsRejectedConsistently(byte[] suffix)
     {
         var data = suffix.Concat(Encoding.ASCII.GetBytes(Report)).ToArray();
         using var stream = new MemoryStream(data);
@@ -86,6 +87,44 @@ public sealed class DiskCatalogMakerEncodingTests
         Assert.False(plugin.CanHandleContent(stream));
         var result = await plugin.ReadAsync(new FileFormatReadRequest { FormatId = "diskcatalogmaker-text", Source = stream });
         Assert.False(result.Success);
+    }
+
+    /// <summary>
+    /// A payload that decodes but does not carry a recognisable report header is rejected as well.
+    /// </summary>
+    [Theory]
+    [InlineData(new byte[] { 0xFF, 0xFE, 0x00, 0x00 })]
+    [InlineData(new byte[] { 0xFF, 0xFE, 0x41 })]
+    public async Task UnrecognisableHeader_IsRejectedConsistently(byte[] suffix)
+    {
+        var data = suffix.Concat(Encoding.ASCII.GetBytes(Report)).ToArray();
+        using var stream = new MemoryStream(data);
+        var plugin = new DiskCatalogMakerPlugin();
+        Assert.False(plugin.CanHandleContent(stream));
+        var result = await plugin.ReadAsync(new FileFormatReadRequest { FormatId = "diskcatalogmaker-text", Source = stream });
+        Assert.False(result.Success);
+    }
+
+    /// <summary>
+    /// Bytes the previous Windows-1252 heuristic refused are now resolved to the code page they belong to,
+    /// so the export is decoded instead of failing, and the rows are still recovered. Recognition keeps
+    /// rejecting the export, because the mangled first header field is no longer the Name column the
+    /// DiskCatalogMaker layout starts with.
+    /// </summary>
+    [Fact]
+    public async Task LegacyCodePageBytes_AreDecodedInsteadOfFailing()
+    {
+        var data = new byte[] { 0x81, 0xFF }.Concat(Encoding.ASCII.GetBytes(Report)).ToArray();
+        using var stream = new MemoryStream(data);
+        var plugin = new DiskCatalogMakerPlugin();
+        Assert.False(plugin.CanHandleContent(stream));
+        var result = await plugin.ReadAsync(new FileFormatReadRequest { FormatId = "diskcatalogmaker-text", Source = stream });
+        Assert.True(result.Success, result.Error);
+        var document = Assert.IsType<DiskCatalogMakerReportDocument>(result.Payload);
+        Assert.Equal("ibm850", document.Summary.DetectedEncoding);
+        Assert.Equal(3, document.Rows.Count);
+        Assert.Contains(document.Rows, row => Equals(row["name"], "caf?.txt"));
+        Assert.DoesNotContain(document.Rows, row => row.Values.Any(value => value?.ToString()?.Contains('\uFFFD') == true));
     }
 
     [Fact]
@@ -99,7 +138,7 @@ public sealed class DiskCatalogMakerEncodingTests
 
         Assert.False(result.Success);
         Assert.Contains("UTF-8", result.Error);
-        Assert.Contains("not imported", result.Error);
+        Assert.Contains("not decoded with a lossy fallback", result.Error);
     }
 
     [Theory]

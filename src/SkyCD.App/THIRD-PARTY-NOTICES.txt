@@ -1,3 +1,56 @@
+OfficeIMO.Email, OfficeIMO.Core, and OfficeIMO.Rtf
+Copyright (c) 2022 Evotec
+https://github.com/EvotecIT/OfficeIMO
+
+MIT License
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+AI provider picker artwork
+
+Colibrì desktop icon
+Copyright 2026 Vincenzo Fornaro
+Source: https://github.com/JustVugg/colibri/tree/main/desktop/src-tauri/icons
+License: Apache License 2.0
+https://www.apache.org/licenses/LICENSE-2.0
+
+Jan desktop icon (resized)
+Copyright 2025 Menlo Research
+Source: https://github.com/janhq/jan/blob/main/src-tauri/icons/icon.png
+License: Apache License 2.0
+https://www.apache.org/licenses/LICENSE-2.0
+
+llama.cpp brand icon (resized)
+Source: https://github.com/ggml-org/llama-brand
+License: Creative Commons Attribution-NonCommercial 4.0 International with
+additional permission for redistribution to identify llama.cpp.
+https://github.com/ggml-org/llama-brand/blob/master/BRAND-USAGE.md
+
+LM Studio color app icon (resized)
+Source and brand-use terms: https://lmstudio.ai/brand
+
+Ollama documentation favicon
+Source: https://github.com/ollama/ollama/blob/main/docs/images/favicon.png
+
+vLLM compact logo (resized)
+Source and usage guidelines: https://github.com/vllm-project/media-kit
+
 Twemoji artwork
 Copyright Twitter, Inc. and other contributors.
 Source: https://github.com/jdecked/twemoji
@@ -36,16 +89,6 @@ Copyright (c) 2008-2026 shimat
 Source: https://github.com/shimat/opencvsharp
 License: Apache License 2.0
 https://www.apache.org/licenses/LICENSE-2.0
-
-UTF.Unknown
-Copyright Julian Verdurmen, Rustam Sayfutdinov, Rudi Pettazzi and Shy Shalom
-Source: https://github.com/CharsetDetector/UTF-unknown
-Version: 2.8.0
-License: Mozilla Public License 1.1 (MPL-1.1)
-https://www.mozilla.org/MPL/1.1/
-
-UTF.Unknown is based on Ude and uchardet, ports of the Mozilla Universal Charset Detector.
-The package is distributed as a separate, unmodified NuGet dependency.
 
 The video metadata plugin decodes poster frames in-process and the motion detector plugin runs its
 detectors and capture loops in-process with OpenCvSharp4 4.13.0.20261107 and the runtime package for
@@ -122,6 +165,20 @@ https://opensource.org/licenses/MIT
 
 TextMateSharp 2.0.3 evaluates grammars through the Onigwrap 1.0.10 native regex wrapper:
 https://www.nuget.org/packages/Onigwrap/1.0.10
+
+UTF.Unknown
+Copyright (c) Julian Verdurmen, Rustam Sayfutdinov, Rudi Pettazzi, Shy Shalom
+Source: https://github.com/CharsetDetector/UTF-unknown
+License: Mozilla Public License 1.1
+https://www.mozilla.org/en-US/MPL/1.1/
+
+The WinCatalog, DiskCatalogMaker and abeMeda catalog importers detect the character encoding of a report
+with UTF.Unknown 2.8.0:
+https://www.nuget.org/packages/UTF.Unknown/2.8.0
+
+The package is shipped unmodified as a separate assembly next to the plugins that use it. Its own license
+terms apply to it.
+
 Svg.Skia and related SVG packages
 Source: https://github.com/wieslawsoltes/Svg.Skia
 Licenses: MIT and Microsoft Public License (Svg.Custom)
@@ -159,3 +216,27 @@ The audio metadata plugin reads tags and stream facts with TagLibSharp 2.3.0:
 https://www.nuget.org/packages/TagLibSharp/2.3.0
 TagLibSharp is distributed as a separate, unmodified assembly loaded from the plugin folder,
 is not statically linked into SkyCD, and can be replaced by the operator.
+
+SharpGLTF.Core
+Copyright (c) 2026 Vicente Penades
+Source: https://github.com/vpenades/SharpGLTF
+
+MIT License
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

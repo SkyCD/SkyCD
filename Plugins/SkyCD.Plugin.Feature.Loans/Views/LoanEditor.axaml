@@ -17,11 +17,8 @@
                     </DataTemplate>
                 </ComboBox.ItemTemplate>
             </ComboBox>
-            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="{DynamicResource SkySpaceXs}">
-                <TextBox Text="{Binding ContactName}" PlaceholderText="{i18n:Translate {x:Static loans:LoansKeys.BorrowerName}}" />
-                <Button Grid.Column="1" Content="{i18n:Translate {x:Static loans:LoansKeys.AddBorrower}}" Command="{Binding AddBorrowerCommand}" />
-                <Button Grid.Column="2" Content="{i18n:Translate {x:Static loans:LoansKeys.RenameBorrower}}" Command="{Binding RenameBorrowerCommand}" />
-            </Grid>
+            <Button Content="{i18n:Translate {x:Static loans:LoansKeys.ManageBorrowers}}"
+                    Command="{Binding ManageBorrowersCommand}" />
             <Grid ColumnDefinitions="*,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
                 <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
                     <TextBlock Text="{i18n:Translate {x:Static loans:LoansKeys.LoanDateLabel}}" />
@@ -36,13 +33,13 @@
             </Grid>
             <TextBox Text="{Binding Note}" PlaceholderText="{i18n:Translate {x:Static loans:LoansKeys.LoanNote}}" />
             <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceXs}">
-                <Button Content="{i18n:Translate {x:Static loans:LoansKeys.MarkLent}}" Command="{Binding MarkLentCommand}" />
-                <Button Content="{i18n:Translate {x:Static loans:LoansKeys.MarkReturned}}" Command="{Binding MarkReturnedCommand}" />
+                <Button Content="{Binding SaveLabel}" Command="{Binding MarkLentCommand}" />
+                <Button Content="{i18n:Translate {x:Static loans:LoansKeys.MarkReturned}}" Command="{Binding MarkReturnedCommand}" IsVisible="{Binding !IsPopup}" />
             </StackPanel>
-            <TextBlock Text="{Binding Error}" Foreground="Firebrick" TextWrapping="Wrap" />
-            <TextBlock Text="{i18n:Translate {x:Static loans:LoansKeys.LoanHistory}}" />
+            <TextBlock Text="{Binding Error}" Foreground="{DynamicResource SkyErrorForeground}" TextWrapping="Wrap" />
+            <TextBlock Text="{i18n:Translate {x:Static loans:LoansKeys.LoanHistory}}" IsVisible="{Binding !IsPopup}" />
         </StackPanel>
-        <ListBox Grid.Row="1" ItemsSource="{Binding History}" SelectedItem="{Binding SelectedLoan}" MinHeight="160"
+        <ListBox Grid.Row="1" IsVisible="{Binding !IsPopup}" ItemsSource="{Binding History}" SelectedItem="{Binding SelectedLoan}" MinHeight="160"
                  AutomationProperties.Name="{i18n:Translate {x:Static loans:LoansKeys.LoanHistory}}">
             <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="loans:LoanHistoryRow">
@@ -50,6 +47,6 @@
                 </DataTemplate>
             </ListBox.ItemTemplate>
         </ListBox>
-        <TextBlock Grid.Row="2" Text="{i18n:Translate {x:Static loans:LoansKeys.LoanChangesSave}}" TextWrapping="Wrap" />
+        <TextBlock Grid.Row="2" IsVisible="{Binding !IsPopup}" Text="{i18n:Translate {x:Static loans:LoansKeys.LoanChangesSave}}" TextWrapping="Wrap" />
     </Grid>
 </UserControl>

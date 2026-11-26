@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
+using Avalonia.Threading;
 using DryIoc;
 using Microsoft.Extensions.Logging;
 using SkyCD.App.Icons;
@@ -27,6 +28,7 @@ using SkyCD.SDK;
 using SkyCD.SDK.Capabilities.Capture;
 using SkyCD.SDK.Capabilities.Catalog;
 using SkyCD.SDK.Capabilities.GenDesc;
+using SkyCD.SDK.Capabilities.Options;
 using SkyCD.SDK.Capabilities.Storage;
 using SkyCD.SDK.Capabilities.Ui;
 using SkyCD.Core.DependencyInjection.Registrators;
@@ -291,6 +293,12 @@ public partial class App : Avalonia.Application
                 catch (Exception exception) { PluginFailure.Publish(consumer.GetType(), "modal", exception); }
             }
 
+            foreach (var consumer in plugin.Capabilities.OfType<IOptionsNavigationConsumer>())
+            {
+                try { consumer.InitializeOptionsNavigation(pageId => OpenPluginOptionsAsync(plugin.Id, pageId)); }
+                catch (Exception exception) { PluginFailure.Publish(consumer.GetType(), "options", exception); }
+            }
+
             foreach (var consumer in plugin.Capabilities.OfType<IHostFileDialogConsumer>())
             {
                 try { consumer.InitializeFileDialogApi(fileDialogApi); }
@@ -321,6 +329,21 @@ public partial class App : Avalonia.Application
                 catch (Exception exception) { PluginFailure.Publish(consumer.GetType(), "media", exception); }
             }
         }
+    }
+
+    private async Task OpenPluginOptionsAsync(string pluginId, string pageId)
+    {
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop ||
+                desktop.MainWindow is not MainWindow mainWindow)
+            {
+                return Task.CompletedTask;
+            }
+
+            var owner = desktop.Windows.FirstOrDefault(window => window.IsActive) ?? mainWindow;
+            return mainWindow.ShowContributedOptionsAsync(OptionsContributedPage.GetCategoryId(pluginId, pageId), owner);
+        }).ConfigureAwait(false);
     }
 
     private static void InitializeDefaultStatuses(RepositoryManager repositoryManager)

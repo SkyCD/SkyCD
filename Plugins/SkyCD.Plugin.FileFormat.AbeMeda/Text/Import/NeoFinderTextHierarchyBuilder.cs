@@ -23,6 +23,9 @@ public static class NeoFinderTextHierarchyBuilder
 {
     private const int CancelCheckEveryRows = 500;
 
+    /// <summary>The label reported when no encoding was resolved for the export.</summary>
+    private const string UnknownEncoding = "Unknown";
+
     public static NeoFinderTextReportDocument Build(
         List<List<string>> rawRows,
         char delimiter,
@@ -117,7 +120,7 @@ public static class NeoFinderTextHierarchyBuilder
             UnsupportedFields: unsupportedFields,
             DetectedDelimiter: delimiter,
             DetectedColumns: headerRow,
-            DetectedEncoding: detectedEncoding ?? "Unknown");
+            DetectedEncoding: detectedEncoding ?? UnknownEncoding);
 
         return new NeoFinderTextReportDocument(nodesById.Values.ToList(), summary);
     }

@@ -156,9 +156,9 @@ public sealed class WordPerfectHostIntegrationTests
     {
         var document = WordPerfectFixtures.DocumentWithBody(
             WordPerfectFixtures.Body(
-                WordPerfectFixtures.Text("Body preview text"),
-                [0xC7],
-                WordPerfectFixtures.Text("Second line")),
+                WordPerfectFixtures.Wp6Text("Body preview text"),
+                [0xCA],
+                WordPerfectFixtures.Wp6Text("Second line")),
             WordPerfectFixtures.TextGroup(17, null, "Integration"));
         var manager = CreateManager();
 
@@ -179,13 +179,10 @@ public sealed class WordPerfectHostIntegrationTests
     }
 
     [Fact]
-    public async Task UnsupportedVariant_PreviewIsEmptyButMetadataStillSucceeds()
+    public async Task WordPerfectFiveDocument_PublishesMetadataAndAPreview()
     {
-        var document = WordPerfectFixtures.WithSummary(
-            [],
-            majorVersion: 0,
-            minorVersion: 0,
-            body: WordPerfectFixtures.Text("Body of a WP5 document"));
+        var document = WordPerfectFixtures.Wp5DocumentWithBody(
+            WordPerfectFixtures.Text("Body of a WP5 document"));
         var manager = CreateManager();
 
         var results = await manager.ProcessAsync(
@@ -198,7 +195,7 @@ public sealed class WordPerfectHostIntegrationTests
 
         Assert.False(metadata.Failed);
         Assert.False(preview.Failed);
-        Assert.Empty(preview.Preview!.Artifacts);
+        Assert.Equal(RenderedThumbnail, Assert.Single(preview.Preview!.Artifacts).Data.ToArray());
         Assert.Equal("5", metadata.Metadata!.Values
             .Single(value => value.Key == WordPerfectSchema.FormatVersion).Text);
     }
@@ -221,7 +218,7 @@ public sealed class WordPerfectHostIntegrationTests
     }
 
     [Fact]
-    public async Task MalformedBody_StillPublishesMetadataAndAPartialPreview()
+    public async Task MalformedBody_PublishesMetadataAndFailsThePreview()
     {
         var corrupt = WordPerfectFixtures.VariableGroup(0xD3, 0, WordPerfectFixtures.Text("hidden"));
         corrupt[2] = 0xFF;
@@ -236,19 +233,21 @@ public sealed class WordPerfectHostIntegrationTests
             Open(document));
 
         var metadata = results.Single(result => result.Metadata is not null);
-        var preview = results.Single(result => result.Preview is not null);
+        var preview = results.Single(result => result.Capability.Contains(
+            nameof(WordPerfectPreviewPlugin), StringComparison.Ordinal));
 
         Assert.False(metadata.Failed);
-        Assert.False(preview.Failed);
+        Assert.True(preview.Failed);
+        Assert.False(preview.TimedOut);
+        Assert.Null(preview.Preview);
         Assert.Equal("Damaged", metadata.Metadata!.Values.Single(value => value.Key == WordPerfectSchema.Title).Text);
-        Assert.Equal(RenderedThumbnail, Assert.Single(preview.Preview!.Artifacts).Data.ToArray());
     }
 
     [Fact]
     public async Task NoRenderer_StillStoresMetadataWithNoArtifact()
     {
         var document = WordPerfectFixtures.DocumentWithBody(
-            WordPerfectFixtures.Text("Body text"),
+            WordPerfectFixtures.Wp6Text("Body text"),
             WordPerfectFixtures.TextGroup(17, null, "Metadata only"));
         var manager = CreateManager(rendererAvailable: false);
 

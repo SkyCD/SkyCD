@@ -297,3 +297,67 @@ References: [iWork package format notes](https://github.com/obriensp/iWorkFileFo
 [OpenDocument.core iWork reader](https://github.com/opendocument-app/OpenDocument.core),
 [OfficeIMO.IWork](https://www.nuget.org/packages/OfficeIMO.IWork),
 [.NET runtime license](https://github.com/dotnet/runtime/blob/main/LICENSE.TXT).
+
+## Video project metadata (Premiere Pro, After Effects, Resolve, VEGAS Pro)
+
+`SkyCD.Plugin.Metadata.VideoProjects` implements `IMediaMetadataCapability` at priority 10 and is
+discovered from assembly metadata, without `plugin.json`. It reports the shape of an editing project —
+application and version, timeline names and counts, tracks, clips, items, referenced-media count, frame
+rate, duration and resolution — and never opens the referenced media. There is no preview capability and
+no artwork pass-through.
+
+### Supported input and fields
+
+The container is identified from its bytes, not its extension, so a renamed or unrelated file publishes
+nothing.
+
+| Source | Container | Facts read |
+| --- | --- | --- |
+| Premiere Pro `.prproj` | XML, plain or gzip (sniffed), root `<PremiereData>` | `Project` version, `Sequence` names, video/audio `Track` counts, first `FrameRate`/`FrameRect`, clip `Start`/`End` ticks, project-item counts, distinct file-system `Media` paths |
+| After Effects `.aep` | big-endian RIFX `Egg!` chunk tree | `head`/`svap` version word, first `Fold` item tree (`idta` type), first composition `cdta` size, rate and duration |
+| After Effects `.aepx` | XML root `<AfterEffectsProject>` | the same facts from the hexadecimal `bdata` chunk bodies and the item `string` names |
+| DaVinci Resolve `.drp` / `.drt` | ZIP: `project.xml`, `MediaPool/Master/MpFolder.xml`, `SeqContainer/*.xml` | `DbAppVer`, timeline clip names, track vectors, clip start/duration frames and `MediaFrameRate`; `.drt` is flagged as a template |
+| VEGAS Pro `.veg` | Sonic Foundry RIFF header: `riff` magic, VEGAS project and project-settings GUIDs | the stored application version (offset 70, little-endian 16-bit) |
+
+Schema `skycd.videoprojects.metadata`, version 1: `Kind` (Premiere, AfterEffects, Resolve, Vegas), `Format`
+(prproj, aep, aepx, drp, drt, veg), `Application`, `ApplicationVersion`, `ProjectTitle`, `TimelineCount`,
+`TimelineNames`, `TrackCount`, `ClipCount`, `ItemCount`, `MediaFileCount`, `FrameRate` (`fps`),
+`Duration` (`s`), `Resolution`, `IsTemplate`, `Truncated`. Absent or blank values are omitted, and
+`IsTemplate`/`Truncated` are published only when true.
+
+### Safety and limitations
+
+- Premiere's tick clock is 254 016 000 000 ticks per second; clip ends become `Duration`. Built-in
+  generators such as Black Video store an internal id instead of a path, so only path-shaped `Media`
+  values count as referenced files, deduplicated case-insensitively.
+- Gzip output is read through a counting stream with a 64 MiB decompressed bound, so a small file
+  cannot expand without limit. The ZIP readers never extract: entries are located by expected name,
+  and each entry and the total inflated bytes are bounded before inflation, so a declared-size bomb
+  is refused rather than read.
+- The RIFX walk validates every chunk size against its parent, visits at most 100,000 chunks and reads
+  only the prefix of a body it needs. An overrunning or over-declared size stops the walk, keeps the
+  facts recovered so far and publishes `Truncated = true`; the file is not failed.
+- XML is parsed with `DtdProcessing.Prohibit`, a null resolver, a document character cap and a depth
+  limit, so a DTD or external entity is never resolved. A DTD-bearing or malformed "project" publishes
+  no values instead of failing the scan, like an unrecognized container.
+- Fixed plugin defaults: 64 MiB project XML, 32 MiB archive entry, 64 MiB total inflated archive,
+  10,000 archive entries, 1,024 timeline documents, 100,000 chunks, 32 published timeline names and
+  256-character names. The host's source and output budgets still apply; a source that exceeds them
+  fails only this provider.
+- VEGAS Pro `.veg` is read only after a real project confirmed the container: the 72-byte header must carry
+  the `riff`, VEGAS project and project-settings GUIDs with a form size equal to the file length, and a
+  settings chunk that fits inside it; anything else publishes no values. Only the stored version is mapped —
+  timelines, tracks and events stay unread until their layout is confirmed (#1285). Movie Studio `.vf` is not
+  claimed: no genuine sample proved its application signature yet (#1285).
+
+### Dependency evaluation (2026-11-26)
+
+The implementation uses only the .NET 10 base class library — `System.Xml.XmlReader`,
+`System.IO.Compression.GZipStream` and `System.IO.Compression.ZipArchive` (MIT-licensed .NET runtime) —
+plus the plugin abstraction project. No NuGet package provides these four private project formats, so
+adding one would not replace the parsers, and no new direct or transitive license is introduced. The
+Trivy classification gate in [dependency-policy.md](../legal/dependency-policy.md) is unchanged.
+
+References: [Premiere project XML](https://github.com/Adobe-CEP/CEP-Resources),
+[After Effects project structure](https://github.com/boltframe/aftereffects-aep-parser),
+[.NET runtime license](https://github.com/dotnet/runtime/blob/main/LICENSE.TXT).

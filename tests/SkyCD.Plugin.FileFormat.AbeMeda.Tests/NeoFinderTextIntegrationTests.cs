@@ -83,7 +83,7 @@ public sealed class NeoFinderTextIntegrationTests
 
         Assert.False(result.Success);
         Assert.Contains("UTF-8", result.Error);
-        Assert.Contains("not imported", result.Error);
+        Assert.Contains("not decoded with a lossy fallback", result.Error);
     }
 
     private static IReadOnlyList<CatalogDocument> Extract(object payload)

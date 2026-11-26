@@ -26,6 +26,26 @@ internal static class WordPerfectFixtures
     public static byte[] DocumentWithBody(byte[] body, params byte[][] groups) =>
         WithSummary(Summary(groups), body: body);
 
+    /// <summary>
+    /// Builds a WordPerfect 5 document whose body starts immediately after the 16-byte header, the layout the
+    /// legacy importer accepts without a prefix directory.
+    /// </summary>
+    public static byte[] Wp5DocumentWithBody(byte[] body)
+    {
+        var data = new byte[16 + body.Length];
+        data[0] = 0xFF;
+        data[1] = (byte)'W';
+        data[2] = (byte)'P';
+        data[3] = (byte)'C';
+        WriteU32(data, 4, 16);
+        data[8] = 1;
+        data[9] = 0x0A;
+        data[10] = 0;
+        data[11] = 0;
+        body.CopyTo(data, 16);
+        return data;
+    }
+
     public static byte[] WithoutSummary() => WithSummary([], includeSummary: false);
 
     public static byte[] WithoutSummaryButBody(byte[] body) =>
@@ -52,6 +72,7 @@ internal static class WordPerfectFixtures
         data[11] = minorVersion;
         WriteU16(data, 12, encryption);
         WriteU16(data, 14, IndexHeaderOffset);
+        WriteU32(data, 20, (uint)length);
 
         data[IndexHeaderOffset] = 2;
         WriteU16(data, IndexHeaderOffset + 2, (ushort)(includeSummary ? 2 : 1));
@@ -102,6 +123,21 @@ internal static class WordPerfectFixtures
     public static byte[] Body(params byte[][] tokens) => Summary(tokens);
 
     public static byte[] Text(string value) => Encoding.ASCII.GetBytes(value);
+
+    /// <summary>
+    /// WP6 body text where each ASCII space becomes the soft-space function (0x80); WordPerfect 6 stores a
+    /// literal 0x20 as a multinational character, not a space.
+    /// </summary>
+    public static byte[] Wp6Text(string value)
+    {
+        var data = new byte[value.Length];
+        for (var index = 0; index < value.Length; index++)
+        {
+            data[index] = value[index] == ' ' ? (byte)0x80 : checked((byte)value[index]);
+        }
+
+        return data;
+    }
 
     public static byte[] VariableGroup(byte id, byte subgroup, byte[] content, byte flags = 0)
     {

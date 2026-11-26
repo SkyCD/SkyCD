@@ -15,6 +15,9 @@ namespace SkyCD.Plugin.FileFormat.WinCatalog.Csv.Import;
 /// </summary>
 public static class WinCatalogHierarchyBuilder
 {
+    /// <summary>The label reported when no encoding was resolved for the report.</summary>
+    private const string UnknownEncoding = "Unknown";
+
     public static WinCatalogCsvReportDocument Build(
         List<List<string>> rawRows,
         char delimiter,
@@ -105,7 +108,7 @@ public static class WinCatalogHierarchyBuilder
             UnsupportedFields: unsupportedFields,
             DetectedDelimiter: delimiter,
             DetectedColumns: headerRow,
-            DetectedEncoding: detectedEncoding ?? "Unknown");
+            DetectedEncoding: detectedEncoding ?? UnknownEncoding);
 
         var rowsList = nodesById.Values.ToList();
         return new WinCatalogCsvReportDocument(rowsList, summary);

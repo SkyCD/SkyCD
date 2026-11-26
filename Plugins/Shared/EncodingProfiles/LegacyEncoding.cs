@@ -31,6 +31,11 @@ internal static class LegacyEncoding
         System.Text.Encoding.GetEncoding(codePage, System.Text.EncoderFallback.ExceptionFallback,
             System.Text.DecoderFallback.ExceptionFallback);
 
+    /// <summary>Returns the encoding named by <paramref name="name"/> with exception fallbacks for encoding and decoding.</summary>
+    internal static System.Text.Encoding GetStrict(string name) =>
+        System.Text.Encoding.GetEncoding(name, System.Text.EncoderFallback.ExceptionFallback,
+            System.Text.DecoderFallback.ExceptionFallback);
+
     /// <summary>Lenient Windows-1252 (ANSI) encoding that replaces unrepresentable characters.</summary>
     internal static System.Text.Encoding Windows1252 { get; }
 
