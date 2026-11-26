@@ -1,0 +1,46 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:i18n="clr-namespace:SkyCD.UI.Localization;assembly=SkyCD.UI"
+        xmlns:l="clr-namespace:SkyCD.Plugin.Feature.GenDesc.Localization"
+        xmlns:vm="clr-namespace:SkyCD.Plugin.Feature.GenDesc.ViewModels"
+        x:Class="SkyCD.Plugin.Feature.GenDesc.Views.DescriptionDialogView"
+        x:DataType="vm:DescriptionDialogViewModel"
+        Title="{Binding Title}"
+        Width="640"
+        Height="520"
+        MinWidth="420"
+        MinHeight="320"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False">
+    <Grid RowDefinitions="*,Auto"
+          Margin="{DynamicResource SkyInsetMd}"
+          RowSpacing="{DynamicResource SkySpaceMd}">
+        <TextBox Grid.Row="0"
+                 Text="{Binding Text}"
+                 IsReadOnly="True"
+                 AcceptsReturn="True"
+                 TextWrapping="Wrap"
+                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                 FontFamily="{DynamicResource SkyFontFamilyMono}" />
+
+        <Grid Grid.Row="1"
+              ColumnDefinitions="*,Auto,Auto"
+              ColumnSpacing="{DynamicResource SkySpaceSm}">
+            <TextBlock Grid.Column="0"
+                       Text="{Binding StatusText}"
+                       Foreground="{DynamicResource ThemeForegroundLowBrush}"
+                       VerticalAlignment="Center"
+                       TextWrapping="Wrap" />
+            <Button Grid.Column="1"
+                    Content="{i18n:Translate {x:Static l:GenDescKeys.Copy}}"
+                    Command="{Binding CopyCommand}"
+                    IsDefault="True"
+                    MinWidth="88" />
+            <Button Grid.Column="2"
+                    Content="{i18n:Translate {x:Static l:GenDescKeys.Close}}"
+                    Click="OnCloseClick"
+                    IsCancel="True"
+                    MinWidth="88" />
+        </Grid>
+    </Grid>
+</Window>

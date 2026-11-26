@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net10.0": {
+      "Avalonia": {
+        "type": "Direct",
+        "requested": "[12.1.6, )",
+        "resolved": "12.1.6",
+        "contentHash": "juogZu7ASS2KMtSqOMa8nGJ5I1Ile/3PG3JR+tD73liDr30qgilEsqNVQw3KIXJvuFc9m3Mf9NzGWc3sQvnlXA==",
+        "dependencies": {
+          "Avalonia.BuildServices": "11.3.2",
+          "Avalonia.Remote.Protocol": "12.1.6",
+          "MicroCom.Runtime": "0.11.6"
+        }
+      },
+      "CommandDotNet": {
+        "type": "Direct",
+        "requested": "[8.1.1, )",
+        "resolved": "8.1.1",
+        "contentHash": "9zdaVX7yKK6yFCP/9/hLBPv0KYuI4wy2wcFLtSAmBJNnqae8Pg5qWSm1XXtHp8Y/2+omC7OqDlZc26Jnntam4g==",
+        "dependencies": {
+          "JetBrains.Annotations": "2024.3.0"
+        }
+      },
+      "CommunityToolkit.Mvvm": {
+        "type": "Direct",
+        "requested": "[8.4.2, )",
+        "resolved": "8.4.2",
+        "contentHash": "WadCzGEc2U+3e20avRLng4qNtt4zoOGWrdUISqJWrHe3/FSnrYjuM5Sb4yQb09LhkBXrrI4Zt3dLKgRMbItsrg=="
+      },
+      "Avalonia.BuildServices": {
+        "type": "Transitive",
+        "resolved": "11.3.2",
+        "contentHash": "qHDToxto1e3hci5YqbG9n0Ty8mlp3zBUN5wT66wKqaDVzXyQ0do3EnRILd4Ke9jpvsktaPpgE0YjEk7hornryQ=="
+      },
+      "Avalonia.Remote.Protocol": {
+        "type": "Transitive",
+        "resolved": "12.1.6",
+        "contentHash": "55fcjPpzkzPaSSMczUjpKHKWcuJo6dJHHkLXgT8nMP80ijYASzdPdf86173R7CqPitw8E8nJ229Jqpu/EyUVow=="
+      },
+      "Humanizer.Core": {
+        "type": "Transitive",
+        "resolved": "3.0.10",
+        "contentHash": "yZIhtw8sYuvsONzQbZxWpR60tMWYHXoo0DL6nyOqSFiU5POjBTSEyWFpTQtJEZuy+oqiYTXKXY/Mjx7KnqIQFw=="
+      },
+      "JetBrains.Annotations": {
+        "type": "Transitive",
+        "resolved": "2024.3.0",
+        "contentHash": "ox5pkeLQXjvJdyAB4b2sBYAlqZGLh3PjSnP1bQNVx72ONuTJ9+34/+Rq91Fc0dG29XG9RgZur9+NcP4riihTug=="
+      },
+      "MicroCom.Runtime": {
+        "type": "Transitive",
+        "resolved": "0.11.6",
+        "contentHash": "NdNWGDiZ6eS/Mf/9+QHR91cj1K7Hy+PX9yrHI/zM7xFYuj9IWT2uxtB6sCHjrnxAeLV9fut1R6zHDUGKX6f9lQ=="
+      },
+      "SmartFormat": {
+        "type": "Transitive",
+        "resolved": "3.6.2",
+        "contentHash": "LMgV9QqRhYn+mBkGurpAf7U5LOJJ1MviD9s0MjN/DXn7BdUNWRzhgNmqzjDdrEQBoYaKjS2VkEYlcJQx560BaQ==",
+        "dependencies": {
+          "ZString": "2.6.0"
+        }
+      },
+      "YamlDotNet": {
+        "type": "Transitive",
+        "resolved": "18.1.0",
+        "contentHash": "5K+9KFg2TdTl7VXv88Qzi/0lqK6JFoNP3lRuImPYGRV7K/QYklDyTrj4+A+KAki1JsQi6qKY+hDyY7d6WRqjrw=="
+      },
+      "ZString": {
+        "type": "Transitive",
+        "resolved": "2.6.0",
+        "contentHash": "XE8a+11nZg0LRaf+RGABEWaHIf8yGd5w8v/Ra1iWxMBmAVzwuKbW7G21mS0U7w7sh1lYcgckInWGgnz4qyET8A=="
+      },
+      "skycd.formatting": {
+        "type": "Project",
+        "dependencies": {
+          "Humanizer.Core": "[3.0.10, )"
+        }
+      },
+      "skycd.sdk": {
+        "type": "Project"
+      },
+      "skycd.ui": {
+        "type": "Project",
+        "dependencies": {
+          "Avalonia": "[12.1.6, )",
+          "SkyCD.Formatting": "[1.0.0, )",
+          "SkyCD.SDK": "[3.0.0, )",
+          "SmartFormat": "[3.6.2, )",
+          "YamlDotNet": "[18.1.0, )"
+        }
+      }
+    }
+  }
+}

@@ -48,7 +48,13 @@ plugins, so they are not a runtime dependency and not duplicated as a packaged a
 
 ## Consumer settings
 
-GenDesc templates keep the per-generation settings: which source ids to run and in what
-priority order (`sources`), language, template selection and the per-source timeout.
-Disabling a source plugin removes its id from the host aggregate, so generation continues
-with the remaining sources and records which ones succeeded in the description's origin.
+GenDesc no longer configures online sources itself. The facts are captured with the entry by
+the AI description flow and stored with the catalog entry and the media cache, and the host
+implements `IGenDescHostApi` to turn one local file into a `GenDescEntryContext`: its file
+name, extension, MIME type and every captured fact. GenDesc templates then choose a template
+by kind, MIME type, extension, category and language, so the plugin reads no generation
+settings of its own beyond the user template directory.
+
+Because facts are captured before generation, disabling a source plugin changes what the
+cache can contain but never affects an `.nfo` or description rendered from facts that are
+already stored; generation runs offline from local data.

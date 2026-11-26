@@ -4231,6 +4231,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                         IsEnabled = IsSaveAsEnabled
                     },
                     Separator(),
+                    ..GetFilePluginMenuItems(),
                     new MainMenuItemViewModel
                         { Header = LocalizationService.Current.Get(TextKeys.Properties), HotKey = "Alt+Enter", InputGesture = "Alt+Enter", Command = OpenPropertiesCommand },
                     Separator(),
@@ -4315,6 +4316,32 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         return menuItems;
     }
 
+    private IReadOnlyList<MainMenuItemViewModel> GetFilePluginMenuItems()
+    {
+        var contributions = menuExtensionManager.GetMenuContributions("File");
+        if (contributions.Count == 0)
+        {
+            return [];
+        }
+
+        var items = new List<MainMenuItemViewModel>();
+        foreach (var contribution in contributions)
+        {
+            var commandId = contribution.CommandId;
+            items.Add(new MainMenuItemViewModel
+            {
+                Key = FilePluginMenuKey(commandId),
+                Header = contribution.Title,
+                Command = new RelayCommand(() => _ = ExecutePluginMenuCommandAsync(commandId))
+            });
+        }
+
+        items.Add(Separator());
+        return items;
+    }
+
+    private static string FilePluginMenuKey(string commandId) => "file_plugin_" + commandId;
+
     private IReadOnlyList<MainMenuItemViewModel> GetToolsMenuItems()
     {
         var toolsMenuItems = new List<MainMenuItemViewModel>
@@ -4359,7 +4386,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private static readonly HashSet<string> InteractivePluginCommands = new(StringComparer.OrdinalIgnoreCase)
     {
         "motion-detector.capture",
-        "skycd.split"
+        "skycd.split",
+        "skycd.gendesc.nfo",
+        "skycd.gendesc.description"
     };
 
     internal async Task ExecutePluginMenuCommandAsync(string commandId)
@@ -4551,6 +4580,17 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         SetMenuEnabled(byKey, "edit_status", IsDeleteEnabled);
         SetMenuEnabled(byKey, "file_open", IsOpenEnabled);
         SetMenuEnabled(byKey, "file_save_as", IsSaveAsEnabled);
+        var localFileCommands = menuExtensionManager.GetMenuContributions("File")
+            .Where(contribution => contribution.RequiresLocalFile)
+            .ToArray();
+        if (localFileCommands.Length > 0)
+        {
+            var selectedLocalFile = IsSelectedLocalFile();
+            foreach (var contribution in localFileCommands)
+            {
+                SetMenuEnabled(byKey, FilePluginMenuKey(contribution.CommandId), selectedLocalFile);
+            }
+        }
         SetMenuItems(byKey, "edit_status", BuildStatusMenuItems());
     }
 
@@ -4703,6 +4743,27 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         ]);
     }
 
+    /// <summary>True when exactly one local file is selected, which is what file-scoped plugin commands require.</summary>
+    private bool IsSelectedLocalFile()
+    {
+        var document = SelectedBrowserItem;
+        if (document is null && ActivePane == ActivePane.Tree && SelectedTreeNode?.Key is { Length: > 0 } key)
+        {
+            document = (catalogRepository is not null ? catalogRepository.GetAll() : inMemoryCatalogEntries ?? [])
+                .FirstOrDefault(entry => entry.Id == key);
+        }
+
+        if (document is null)
+        {
+            return false;
+        }
+
+        var catalog = (catalogRepository is not null ? catalogRepository.GetAll() : inMemoryCatalogEntries ?? [])
+            .GroupBy(entry => entry.Id, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+        return HasLocalSource(document, catalog);
+    }
+
     private CatalogEntry? GetSelectedCatalogEntry()
     {
         var document = SelectedBrowserItem;
@@ -4774,10 +4835,14 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
     }
 
+    private static bool IsHostMenuLocation(string location) =>
+        string.Equals(location, "Tools", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(location, "File", StringComparison.OrdinalIgnoreCase);
+
     private IReadOnlyList<MainMenuItemViewModel> BuildFeatureMenuGroups()
     {
         var groups = menuExtensionManager.GetMenuContributions()
-            .Where(contribution => !string.Equals(contribution.Location, "Tools", StringComparison.OrdinalIgnoreCase))
+            .Where(contribution => !IsHostMenuLocation(contribution.Location))
             .GroupBy(contribution => contribution.Location, StringComparer.OrdinalIgnoreCase)
             .Where(group => !string.IsNullOrWhiteSpace(group.Key))
             .ToArray();

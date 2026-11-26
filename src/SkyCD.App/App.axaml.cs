@@ -24,11 +24,13 @@ using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.Runtime.Marketplace.Services;
 using SkyCD.SDK;
 using SkyCD.SDK.Capabilities.Catalog;
+using SkyCD.SDK.Capabilities.GenDesc;
 using SkyCD.SDK.Capabilities.Storage;
 using SkyCD.SDK.Capabilities.Ui;
 using SkyCD.Core.DependencyInjection.Registrators;
 using SkyCD.Core.Versioning;
 using SkyCD.Presentation.Catalog;
+using SkyCD.Presentation.GenDesc;
 using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.Plugin.Host.Catalog;
@@ -203,6 +205,11 @@ public partial class App : Avalonia.Application
         var storageFactory = appServiceProvider.Resolve<PluginStorageApiFactory>();
         var dialogApi = new AvaloniaHostDialogApi(() =>
             (Avalonia.Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow);
+        var fileDialogApi = new AvaloniaHostFileDialogApi(() =>
+            (Avalonia.Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow);
+        var clipboard = new AvaloniaClipboardApi(() =>
+            (Avalonia.Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow);
+        var genDescHost = appServiceProvider.Resolve<GenDescHostApi>();
         var onlineMetadata = ServiceProvider.Resolve<OnlineMetadataExtensionManager>();
 
         foreach (var plugin in pluginManager.Plugins)
@@ -235,6 +242,24 @@ public partial class App : Avalonia.Application
             {
                 try { consumer.InitializeDialogApi(dialogApi); }
                 catch (Exception exception) { PluginFailure.Publish(consumer.GetType(), "modal", exception); }
+            }
+
+            foreach (var consumer in plugin.Capabilities.OfType<IHostFileDialogConsumer>())
+            {
+                try { consumer.InitializeFileDialogApi(fileDialogApi); }
+                catch (Exception exception) { PluginFailure.Publish(consumer.GetType(), "modal", exception); }
+            }
+
+            foreach (var consumer in plugin.Capabilities.OfType<IClipboardConsumer>())
+            {
+                try { consumer.InitializeClipboard(clipboard); }
+                catch (Exception exception) { PluginFailure.Publish(consumer.GetType(), "modal", exception); }
+            }
+
+            foreach (var consumer in plugin.Capabilities.OfType<IGenDescHostConsumer>())
+            {
+                try { consumer.InitializeGenDescHost(genDescHost); }
+                catch (Exception exception) { PluginFailure.Publish(consumer.GetType(), "catalog", exception); }
             }
 
             foreach (var consumer in plugin.Capabilities.OfType<IOnlineMetadataConsumer>())
@@ -280,6 +305,7 @@ public partial class App : Avalonia.Application
             registrator.Register<PluginMarketplaceService>(Reuse.Singleton);
             registrator.Register<OpenCatalogState>(Reuse.Singleton);
             registrator.Register<CatalogApiAdapter>(Reuse.Singleton);
+            registrator.Register<GenDescHostApi>(Reuse.Singleton);
             registrator.Register<LocationApiAdapter>(Reuse.Singleton);
             registrator.Register<PluginStorageApiFactory>(Reuse.Singleton);
             registrator.Register<PluginRuntimeSynchronizer>(Reuse.Singleton);

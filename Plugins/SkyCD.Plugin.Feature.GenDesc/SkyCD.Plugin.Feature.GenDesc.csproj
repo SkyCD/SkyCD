@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>disable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <Company>SkyCD</Company>
+        <Authors>SkyCD</Authors>
+        <AssemblyTitle>GenDesc</AssemblyTitle>
+        <Description>Generates .nfo files and formatted descriptions from editable templates for torrent and file-sharing sites.</Description>
+    </PropertyGroup>
+    <ItemGroup>
+        <ProjectReference Include="../../src/SkyCD.SDK/SkyCD.SDK.csproj" />
+        <ProjectReference Include="../../src/SkyCD.UI/SkyCD.UI.csproj" />
+    </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Avalonia" Version="12.1.6" />
+        <PackageReference Include="CommandDotNet" Version="8.1.1" />
+        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    </ItemGroup>
+    <ItemGroup>
+        <Compile Include="..\Shared\OnlineMetadata\Models\DescriptionFacts.cs" Link="Shared\OnlineMetadata\Models\DescriptionFacts.cs" />
+    </ItemGroup>
+    <ItemGroup>
+        <InternalsVisibleTo Include="SkyCD.Plugin.Feature.GenDesc.Tests" />
+    </ItemGroup>
+</Project>
