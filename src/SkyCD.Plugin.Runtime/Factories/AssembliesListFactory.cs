@@ -71,8 +71,21 @@ public sealed class AssembliesListFactory(ILogger<AssembliesListFactory> logger)
                 seenNamesByFolder.Add(folder, seenNames);
             }
 
-            if (!seenNames.Add(Path.GetFileNameWithoutExtension(entryPath)))
+            var assemblyName = Path.GetFileNameWithoutExtension(entryPath);
+            if (!seenNames.Add(assemblyName))
             {
+                continue;
+            }
+
+            // A test host has already loaded this assembly into the default context. Reuse that
+            // instance so static test seams stay attached to the types the host invokes. A second
+            // copy in a collectible context would have its own statics and would hide injected
+            // failures. Installed plugins are not already loaded, so they still get their own context.
+            var alreadyLoaded = AssemblyLoadContext.Default.Assemblies.FirstOrDefault(assembly =>
+                string.Equals(assembly.GetName().Name, assemblyName, StringComparison.OrdinalIgnoreCase));
+            if (alreadyLoaded is not null)
+            {
+                assemblies.Add(alreadyLoaded);
                 continue;
             }
 
