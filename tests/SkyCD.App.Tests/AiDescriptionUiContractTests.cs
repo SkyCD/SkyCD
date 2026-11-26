@@ -151,7 +151,9 @@ public sealed class AiDescriptionUiContractTests
         var xaml = ReadRepoFile("src", "SkyCD.App", "Views", "OptionsWindow.axaml");
 
         Assert.Contains("IsVisible=\"{Binding ShowAiProviderSection}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains(
+        // Issue #1213: the in-page title duplicated the breadcrumb, so the section
+        // keeps the settings while the heading is gone.
+        Assert.DoesNotContain(
             "Text=\"{i18n:Translate {x:Static i18n:UiKeys.AiProviderCategory}}\"", xaml, StringComparison.Ordinal);
 
         foreach (var language in new[] { "en", "lt" })
