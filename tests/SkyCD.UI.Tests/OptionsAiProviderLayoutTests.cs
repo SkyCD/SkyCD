@@ -116,17 +116,18 @@ public sealed class OptionsAiProviderLayoutTests : IDisposable
     }
 
     [AvaloniaFact]
-    public void ProviderSection_HasOneHeaderAndNoInCardHeading()
+    public void ProviderSection_HasNoInPageTitleRepeatingTheBreadcrumb()
     {
+        // Issue #1213: the in-page "AI provider" title duplicated the breadcrumb header.
         var window = ShowAiWindow(out _, "ai-provider");
         try
         {
             var header = LocalizationService.Current.Get(UiKeys.AiProviderCategory);
-            var headers = window.GetVisualDescendants().OfType<TextBlock>()
+            var duplicates = window.GetVisualDescendants().OfType<TextBlock>()
                 .Where(text => text.IsEffectivelyVisible && text.Text == header)
                 .ToArray();
 
-            Assert.Single(headers);
+            Assert.Empty(duplicates);
         }
         finally
         {
