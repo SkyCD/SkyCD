@@ -63,6 +63,11 @@ The MIME types cover the transitional, macro-enabled and legacy forms of every a
 extension. `DocumentType` always comes from the container contents, except for the three families above, where
 it follows the confirmed extension hint.
 
+`.mdb` and `application/x-msaccess` are also claimed by the Access and MyCatalogue **file-format** plugins, which
+import such a database as a catalog. That is not a competing media claim: those plugins answer "what catalog is
+inside this file" and this plugin answers "what describes this file", and no media metadata or preview plugin
+claims an Office source.
+
 ## Metadata schema
 
 | Key | Type | Meaning |
