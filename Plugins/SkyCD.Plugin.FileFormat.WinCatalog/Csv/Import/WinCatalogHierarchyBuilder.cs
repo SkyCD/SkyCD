@@ -18,7 +18,7 @@ public static class WinCatalogHierarchyBuilder
     public static WinCatalogCsvReportDocument Build(
         List<List<string>> rawRows,
         char delimiter,
-        WinCatalogCsvEncodingProfile? encodingProfile = null)
+        string? detectedEncoding = null)
     {
         if (rawRows.Count == 0)
         {
@@ -105,7 +105,7 @@ public static class WinCatalogHierarchyBuilder
             UnsupportedFields: unsupportedFields,
             DetectedDelimiter: delimiter,
             DetectedColumns: headerRow,
-            DetectedEncoding: encodingProfile?.DisplayName ?? WinCatalogCsvEncodingProfile.Unknown.DisplayName);
+            DetectedEncoding: detectedEncoding ?? "Unknown");
 
         var rowsList = nodesById.Values.ToList();
         return new WinCatalogCsvReportDocument(rowsList, summary);

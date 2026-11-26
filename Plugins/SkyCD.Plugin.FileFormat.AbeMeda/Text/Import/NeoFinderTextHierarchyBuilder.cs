@@ -26,7 +26,7 @@ public static class NeoFinderTextHierarchyBuilder
     public static NeoFinderTextReportDocument Build(
         List<List<string>> rawRows,
         char delimiter,
-        NeoFinderTextEncodingProfile? encodingProfile = null,
+        string? detectedEncoding = null,
         string? fileStem = null,
         CancellationToken cancellationToken = default)
     {
@@ -117,7 +117,7 @@ public static class NeoFinderTextHierarchyBuilder
             UnsupportedFields: unsupportedFields,
             DetectedDelimiter: delimiter,
             DetectedColumns: headerRow,
-            DetectedEncoding: encodingProfile?.DisplayName ?? NeoFinderTextEncodingProfile.Unknown.DisplayName);
+            DetectedEncoding: detectedEncoding ?? "Unknown");
 
         return new NeoFinderTextReportDocument(nodesById.Values.ToList(), summary);
     }

@@ -37,6 +37,16 @@ Source: https://github.com/shimat/opencvsharp
 License: Apache License 2.0
 https://www.apache.org/licenses/LICENSE-2.0
 
+UTF.Unknown
+Copyright Julian Verdurmen, Rustam Sayfutdinov, Rudi Pettazzi and Shy Shalom
+Source: https://github.com/CharsetDetector/UTF-unknown
+Version: 2.8.0
+License: Mozilla Public License 1.1 (MPL-1.1)
+https://www.mozilla.org/MPL/1.1/
+
+UTF.Unknown is based on Ude and uchardet, ports of the Mozilla Universal Charset Detector.
+The package is distributed as a separate, unmodified NuGet dependency.
+
 The video metadata plugin decodes poster frames in-process and the motion detector plugin runs its
 detectors and capture loops in-process with OpenCvSharp4 4.13.0.20261107 and the runtime package for
 the target platform:
@@ -112,8 +122,6 @@ https://opensource.org/licenses/MIT
 
 TextMateSharp 2.0.3 evaluates grammars through the Onigwrap 1.0.10 native regex wrapper:
 https://www.nuget.org/packages/Onigwrap/1.0.10
-
-
 Svg.Skia and related SVG packages
 Source: https://github.com/wieslawsoltes/Svg.Skia
 Licenses: MIT and Microsoft Public License (Svg.Custom)

@@ -1129,6 +1129,11 @@
         "resolved": "0.95.2",
         "contentHash": "4zlJSYYZGCKnF5xE1L5VEm5YsfjLTz5jlWBgvBxHA7yk8Lnys/6WWpeD+CWmNm4QmawR+x0xIbGGZNcMxcy8nQ=="
       },
+      "UTF.Unknown": {
+        "type": "Transitive",
+        "resolved": "2.8.0",
+        "contentHash": "bpDbg9Hjuenm/vMhxavOb/cLivRBQxhU4Dc6iRPPoEUM80qlAnRQ7c2niLQJPxLV/XBEGGhda5cNLkcQuHxULA=="
+      },
       "vCardLib.dll": {
         "type": "Transitive",
         "resolved": "6.3.2",
@@ -1312,7 +1317,8 @@
           "Microsoft.Data.Sqlite": "[11.0.0, )",
           "SQLitePCLRaw.lib.e_sqlite3": "[2.1.14, )",
           "SkyCD.Plugin.FileFormat.Csv": "[1.0.0, )",
-          "SkyCD.SDK": "[3.0.0, )"
+          "SkyCD.SDK": "[3.0.0, )",
+          "UTF.Unknown": "[2.8.0, )"
         }
       },
       "skycd.plugin.fileformat.xml": {

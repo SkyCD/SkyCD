@@ -17,7 +17,7 @@ public static class DiskCatalogMakerHierarchyBuilder
     public static DiskCatalogMakerReportDocument Build(
         List<List<string>> rawRows,
         char delimiter,
-        DiskCatalogMakerEncodingProfile? encodingProfile = null)
+        string? detectedEncoding = null)
     {
         if (rawRows.Count == 0)
         {
@@ -105,7 +105,7 @@ public static class DiskCatalogMakerHierarchyBuilder
             UnsupportedFields: unsupportedFields,
             DetectedDelimiter: delimiter,
             DetectedColumns: headerRow,
-            DetectedEncoding: encodingProfile?.DisplayName ?? DiskCatalogMakerEncodingProfile.Unknown.DisplayName);
+            DetectedEncoding: detectedEncoding ?? "Unknown");
 
         var rowsList = nodesById.Values.ToList();
         return new DiskCatalogMakerReportDocument(rowsList, summary);

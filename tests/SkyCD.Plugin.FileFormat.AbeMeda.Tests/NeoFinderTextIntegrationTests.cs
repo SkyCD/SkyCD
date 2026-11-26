@@ -12,6 +12,8 @@ using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.FileFormat.AbeMeda.Text;
+using SkyCD.Plugin.FileFormat.AbeMeda.Text.Models;
+using SkyCD.TestSupport;
 using SkyCD.Presentation.ViewModels;
 using Xunit;
 
@@ -49,6 +51,39 @@ public sealed class NeoFinderTextIntegrationTests
         Assert.Equal(2, dupes.Count);
         Assert.Equal(2, dupes.Select(d => d.ParentId).Distinct().Count());
         Persist(documents);
+    }
+
+    [Theory]
+    [MemberData(nameof(LegacyEncodingSamples.Cases), MemberType = typeof(LegacyEncodingSamples))]
+    public async Task ReadAsync_DetectsAndPreservesLegacyEncodings(
+        string encodingName,
+        bool includeByteOrderMark,
+        string expectedComment)
+    {
+        var report = $"Name\tKind\tSize\tWhere\tVolume\tComments\r\nfile.txt\tPlain Text\t1\t/Media/file.txt\tMedia\t{expectedComment}\r\n";
+        using var stream = new MemoryStream(LegacyEncodingSamples.Encode(encodingName, includeByteOrderMark, report));
+        var plugin = new NeoFinderTextPlugin();
+
+        var result = await plugin.ReadAsync(NeoFinderTextFixture.ReadRequest(stream));
+
+        Assert.True(result.Success, result.Error);
+        var document = Assert.IsType<NeoFinderTextReportDocument>(result.Payload);
+        var file = Assert.Single(document.Rows, row => Equals(row["name"], "file.txt"));
+        var properties = Assert.IsType<Dictionary<string, object?>>(file["properties"]);
+        Assert.Equal(expectedComment, properties["Comments"]);
+    }
+
+    [Fact]
+    public async Task ReadAsync_EmptyInput_ReportsActionableEncodingError()
+    {
+        var plugin = new NeoFinderTextPlugin();
+        using var stream = new MemoryStream();
+
+        var result = await plugin.ReadAsync(NeoFinderTextFixture.ReadRequest(stream));
+
+        Assert.False(result.Success);
+        Assert.Contains("UTF-8", result.Error);
+        Assert.Contains("not imported", result.Error);
     }
 
     private static IReadOnlyList<CatalogDocument> Extract(object payload)
