@@ -67,6 +67,7 @@
         <Project Path="Plugins/SkyCD.Plugin.Metadata.OpenOffice/SkyCD.Plugin.Metadata.OpenOffice.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Metadata.Pdf/SkyCD.Plugin.Metadata.Pdf.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Metadata.Rtf/SkyCD.Plugin.Metadata.Rtf.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.Metadata.Sequencer/SkyCD.Plugin.Metadata.Sequencer.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Metadata.Text/SkyCD.Plugin.Metadata.Text.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Metadata.TvCom/SkyCD.Plugin.Metadata.TvCom.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Metadata.Video/SkyCD.Plugin.Metadata.Video.csproj"/>
@@ -165,6 +166,7 @@
         <Project Path="tests/SkyCD.Plugin.Metadata.OpenOffice.Tests/SkyCD.Plugin.Metadata.OpenOffice.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Metadata.Pdf.Tests/SkyCD.Plugin.Metadata.Pdf.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Metadata.Rtf.Tests/SkyCD.Plugin.Metadata.Rtf.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Metadata.Sequencer.Tests/SkyCD.Plugin.Metadata.Sequencer.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Metadata.Text.Tests/SkyCD.Plugin.Metadata.Text.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Metadata.TvCom.Tests/SkyCD.Plugin.Metadata.TvCom.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Metadata.Video.Tests/SkyCD.Plugin.Metadata.Video.Tests.csproj"/>
