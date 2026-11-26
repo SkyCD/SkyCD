@@ -53,6 +53,7 @@ using SkyCD.Core.Versioning;
 using SkyCD.Presentation.Accounts;
 using SkyCD.Presentation.Operations;
 using SkyCD.Presentation.Catalog;
+using SkyCD.Presentation.Catalog.Export;
 using SkyCD.Presentation.Catalog.Split;
 using SkyCD.Presentation.MediaCache;
 using SkyCD.Presentation.Plugins;
@@ -208,6 +209,7 @@ public partial class MainWindow : Window
             subscribedViewModel.SaveCatalogAsRequested -= OnSaveCatalogAsRequested;
             subscribedViewModel.SaveCatalogRequested -= OnSaveCatalogRequested;
             subscribedViewModel.SplitCatalogRequested -= OnSplitCatalogRequested;
+            subscribedViewModel.ExportCatalogRequested -= OnExportCatalogRequested;
             subscribedViewModel.AboutRequested -= OnAboutRequested;
             subscribedViewModel.FindCatalogRequested -= OnFindCatalogRequested;
             subscribedViewModel.AdvancedFindRequested -= OnAdvancedFindRequested;
@@ -236,6 +238,7 @@ public partial class MainWindow : Window
             subscribedViewModel.SaveCatalogAsRequested += OnSaveCatalogAsRequested;
             subscribedViewModel.SaveCatalogRequested += OnSaveCatalogRequested;
             subscribedViewModel.SplitCatalogRequested += OnSplitCatalogRequested;
+            subscribedViewModel.ExportCatalogRequested += OnExportCatalogRequested;
             subscribedViewModel.AboutRequested += OnAboutRequested;
             subscribedViewModel.FindCatalogRequested += OnFindCatalogRequested;
             subscribedViewModel.AdvancedFindRequested += OnAdvancedFindRequested;
@@ -1783,6 +1786,92 @@ public partial class MainWindow : Window
         if (viewModel.OutcomeMessage is { } outcome)
         {
             vm.StatusText = outcome;
+        }
+    }
+
+    private async void OnExportCatalogRequested(object? sender, EventArgs e)
+    {
+        if (DataContext is MainWindowViewModel vm)
+        {
+            await ExportCatalogAsync(vm);
+        }
+    }
+
+    private async Task ExportCatalogAsync(MainWindowViewModel vm)
+    {
+        EnsureFileFormatProvidersLoaded();
+        var formats = fileFormatManager.GetExportFormats()
+            .Select(static format => new ExportFormatOption(
+                format.FormatId,
+                format.DisplayName,
+                format.Extensions.Select(static extension => extension.Trim().TrimStart('.'))
+                    .FirstOrDefault(static extension => !string.IsNullOrWhiteSpace(extension)) ?? "dat",
+                format.Extensions.ToArray()))
+            .ToList();
+        if (formats.Count == 0)
+        {
+            vm.StatusText = LocalizationService.Current.Get(
+                TextKeys.FailedToExportCatalogNoExportFormatCheckPluginSettings);
+            return;
+        }
+
+        var dialogViewModel = new ExportDialogViewModel(formats);
+        var dialog = new ExportWindow { DataContext = dialogViewModel };
+        await dialog.ShowDialog(this);
+        if (dialogViewModel.AcceptedFormat is not { } selected)
+        {
+            return;
+        }
+
+        var options = new FilePickerSaveOptions
+        {
+            Title = LocalizationService.Current.Get(TextKeys.ExportCatalog),
+            SuggestedFileName = $"catalog.{selected.DefaultExtension}",
+            DefaultExtension = selected.DefaultExtension,
+            FileTypeChoices = fileFormatManager.GetExportFiltersFor(selected.FormatId)
+                .ToFilePickerTypes(allSupportedFilesLabel: null, allFilesLabel: PickerLocalizer["AllFiles"].Value)
+        };
+        var file = await StorageProvider.SaveFilePickerAsync(options);
+        var targetPath = file?.TryGetLocalPath();
+        if (string.IsNullOrWhiteSpace(targetPath))
+        {
+            return;
+        }
+
+        try
+        {
+            var scopeItems = CatalogScopeDataService.Collect(
+                virtualCollectionRepository.GetOrdered(),
+                statusVariantRepository.GetOrdered(),
+                scanExclusionRuleRepository.GetOrdered(),
+                aiScanExclusionRepository.GetOrdered(),
+                pluginManager.GetCapabilities<ICatalogAuxiliaryDataProvider>());
+            var saved = await new CatalogSaveService(fileFormatManager).SaveAsync(
+                targetPath,
+                vm.GetAllCatalogEntries(),
+                scopeItems,
+                async preview =>
+                {
+                    var lossDialog = new SaveDataLossWindow(preview.FormatDisplayName,
+                        CatalogDataLossText.BuildLines(preview.Items));
+                    return await lossDialog.ShowDialog<bool>(this);
+                });
+            if (!saved)
+            {
+                return;
+            }
+
+            vm.StatusText = LocalizationService.Current.Format(TextKeys.ExportedCatalogTo,
+                Path.GetFileName(targetPath));
+        }
+        catch (CatalogSaveIOException ex)
+        {
+            vm.StatusText = LocalizationService.Current.Format(TextKeys.FailedToExportCatalogAccessDenied,
+                ex.DirectoryPath);
+        }
+        catch (Exception ex)
+        {
+            vm.StatusText = LocalizationService.Current.Format(TextKeys.FailedToExportCatalog, ex.Message);
         }
     }
 

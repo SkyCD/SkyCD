@@ -1680,6 +1680,55 @@ public class MainWindowViewModelTests
         Assert.True(vm.SaveCatalogCommand.CanExecute(null));
     }
 
+    [Fact]
+    public void ExportCatalog_IsEnabledByDefault_AndPlacedRightAfterSaveAs()
+    {
+        var vm = CreateViewModel();
+
+        var exportItem = FileMenuItem(vm, vm.ExportCatalogCommand);
+        var fileItems = vm.FileMenuItems.ToList();
+        Assert.Equal("file_export", exportItem.Key);
+        Assert.Equal(LocalizationService.Current.Get(TextKeys.ExportFileMenu), exportItem.Header);
+        Assert.Equal(
+            fileItems.IndexOf(FileMenuItem(vm, vm.SaveCatalogAsCommand)) + 1,
+            fileItems.IndexOf(exportItem));
+        Assert.True(vm.ExportCatalogCommand.CanExecute(null));
+        Assert.True(exportItem.IsEnabled);
+    }
+
+    [Fact]
+    public void SetExportAvailability_TogglesExportCommandAndFileMenuItem()
+    {
+        var vm = CreateViewModel();
+        vm.SetFileFormatAvailability(hasReadable: false, hasWritable: false);
+
+        Assert.True(vm.ExportCatalogCommand.CanExecute(null));
+        Assert.True(FileMenuItem(vm, vm.ExportCatalogCommand).IsEnabled);
+
+        vm.SetExportAvailability(hasExportable: false);
+
+        Assert.False(vm.ExportCatalogCommand.CanExecute(null));
+        Assert.False(FileMenuItem(vm, vm.ExportCatalogCommand).IsEnabled);
+
+        vm.SetExportAvailability(hasExportable: true);
+
+        Assert.True(vm.ExportCatalogCommand.CanExecute(null));
+        Assert.True(FileMenuItem(vm, vm.ExportCatalogCommand).IsEnabled);
+    }
+
+    [Fact]
+    public void ExportCatalogCommand_WithSubscriber_OnlyRaisesRequest()
+    {
+        var vm = CreateViewModel();
+        var raised = false;
+        vm.ExportCatalogRequested += (_, _) => raised = true;
+
+        vm.ExportCatalogCommand.Execute(null);
+
+        Assert.True(raised);
+        Assert.Null(vm.CurrentCatalogPath);
+    }
+
     private static MainMenuItemViewModel FileMenuItem(MainWindowViewModel vm, ICommand command)
     {
         return Assert.Single(vm.FileMenuItems, item => ReferenceEquals(item.Command, command));

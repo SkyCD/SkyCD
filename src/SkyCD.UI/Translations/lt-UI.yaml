@@ -575,3 +575,7 @@ ui.SplitOutcome: "Katalogas '{0}' ({1} elementų) išskaidytas į {2} dalies fai
 ui.SplitCancelled: "Skaidymas atšauktas. Jokie dalies failai nebuvo palikti."
 ui.SplitFailed: "Skaidymas nepavyko. Jokie dalies failai nebuvo palikti."
 ui.SplitAction: "Skaidyti"
+ui.ExportDialogTitle: "Eksportuoti katalogą"
+ui.ExportFormat: "Eksporto formatas"
+ui.ExportAction: "Eksportuoti"
+ui.ExportNoFormat: "Pasirinkite eksporto formatą."
