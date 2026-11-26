@@ -119,6 +119,7 @@ internal static class GameDevReader
 
             case ".res":
             case ".pck":
+            case ".scn":
                 {
                     var (data, truncated) = await ReadPrefixAsync(source, 64 * 1024, cancellationToken).ConfigureAwait(false);
                     return GodotReader.ReadBinary(extension, data, truncated);
@@ -159,9 +160,50 @@ internal static class GameDevReader
                     return RpgMakerReader.ReadProjectText(GameDevSource.DecodeText(data));
                 }
 
+            case ".prefab":
+            case ".scene":
+            case ".material":
+            case ".mat":
+            case ".anim":
+            case ".meta":
+            case ".mtl":
+            case ".tsx":
+            case ".go":
+            case ".project":
+                return await ReadSharedAsync(extension, source, cancellationToken).ConfigureAwait(false);
+
             default:
                 return await ReadTextFamilyAsync(extension, source, cancellationToken).ConfigureAwait(false);
         }
+    }
+
+    /// <summary>
+    /// Dispatches a shared extension by its content, using the same classifier as the format probe, so a
+    /// foreign file never reaches an engine reader and two engines can claim one extension.
+    /// </summary>
+    private static async Task<GameDevFacts?> ReadSharedAsync(string extension, IMediaSource source,
+        CancellationToken cancellationToken)
+    {
+        var (data, truncated) = await ReadPrefixAsync(source, GameDevLimits.MaxTextBytes, cancellationToken)
+            .ConfigureAwait(false);
+        var text = GameDevSource.DecodeText(data);
+
+        return GameDevProbe.Classify(extension, data, text) switch
+        {
+            GameDevFormatKind.UnityYaml => UnityReader.Read(extension, text, truncated),
+            GameDevFormatKind.UnityMeta => UnityReader.ReadMeta(text, truncated),
+            GameDevFormatKind.CocosJson => CocosReader.ReadCreatorAsset(extension, text, truncated),
+            GameDevFormatKind.CocosMeta => CocosReader.ReadMeta(text, truncated),
+            GameDevFormatKind.O3dePrefab => O3deReader.ReadPrefab(text, truncated),
+            GameDevFormatKind.O3deMaterial => O3deReader.ReadMaterial(text, truncated),
+            GameDevFormatKind.FlaxAsset => FlaxReader.ReadAsset(extension, text, truncated),
+            GameDevFormatKind.SandboxAsset => SandboxReader.ReadAsset(extension, text, truncated),
+            GameDevFormatKind.DefoldResource => DefoldReader.Read(extension, text, truncated),
+            GameDevFormatKind.DefoldProject => DefoldReader.ReadProject(text, truncated),
+            GameDevFormatKind.CryMaterial => CryEngineReader.ReadMaterial(text, truncated),
+            GameDevFormatKind.TiledTileset => TiledReader.ReadTileset(text, truncated),
+            _ => null
+        };
     }
 
     private static async Task<GameDevFacts?> ReadTextFamilyAsync(string extension, IMediaSource source,

@@ -44,6 +44,63 @@ internal static class CryEngineReader
         }
     }
 
+    internal static GameDevFacts? ReadMaterial(string text, bool truncated)
+    {
+        try
+        {
+            using var reader = GameDevDocuments.CreateXml(text);
+            if (!GameDevDocuments.ReadRootElement(reader) || reader.LocalName != "Material")
+            {
+                return null;
+            }
+
+            var shader = reader.GetAttribute("Shader");
+            var facts = new GameDevFacts
+            {
+                Family = "CRYENGINE",
+                Format = "CRYENGINE material",
+                Application = string.IsNullOrWhiteSpace(shader) ? "CRYENGINE" : "CRYENGINE " + shader,
+                ItemName = reader.GetAttribute("Name") ?? reader.GetAttribute("MtlName"),
+                FormatVersion = reader.GetAttribute("Version"),
+                ScanIncomplete = truncated
+            };
+
+            var depth = reader.Depth;
+            long subMaterials = 0;
+            while (reader.Read())
+            {
+                if (reader.NodeType == XmlNodeType.EndElement && reader.Depth == depth)
+                {
+                    break;
+                }
+
+                if (reader.NodeType != XmlNodeType.Element)
+                {
+                    continue;
+                }
+
+                if (reader.LocalName is "SubMaterial" or "Material")
+                {
+                    subMaterials++;
+                }
+
+                if (reader.GetAttribute("Name") is { Length: > 0 } name && name != facts.ItemName)
+                {
+                    facts.AddNameSample(name);
+                    facts.AddPreviewRow("Material: " + name);
+                }
+            }
+
+            facts.ResourceCount = subMaterials;
+            facts.AddPreviewRow("Shader: " + (shader ?? "unknown"));
+            return facts;
+        }
+        catch (XmlException)
+        {
+            return null;
+        }
+    }
+
     internal static GameDevFacts? ReadCharacterParams(string text, bool truncated)
     {
         try

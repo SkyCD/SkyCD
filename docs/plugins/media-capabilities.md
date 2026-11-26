@@ -423,7 +423,8 @@ pixel previews and one on-demand structure preview, all discovered from assembly
 family, format, versions, sizes, counts and bounded name samples for 22 engine families and never opens a
 referenced tileset, script, GUID target or media file. Extensions that several engines or the text plugin
 share (`.prefab`, `.scene`, `.material`, `.mat`, `.mtl`, `.scn`, `.meta`, `.anim`, `.tsx`, `.go`,
-`.project`) are deliberately unclaimed until the shared format probe (#1258) exists.
+`.project`) are claimed behind the shared format probe (#1258): the host reads a 64 KiB header and rejects
+TypeScript, Go source, Eclipse projects, Wavefront materials and other foreign content before extraction.
 
 Preview providers are marked `IndexTimePreview` only for artwork the catalog list shows: Aseprite frame 0,
 Unity package `preview.png`, the Unreal package thumbnail, the Wicked Engine scene JPEG and uncompressed XNB

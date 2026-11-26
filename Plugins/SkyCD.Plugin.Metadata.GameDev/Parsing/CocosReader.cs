@@ -10,6 +10,87 @@ namespace SkyCD.Plugin.Metadata.GameDev.Parsing;
 /// <summary>Reads Cocos Creator flat JSON scenes and Cocos Studio XML scenes.</summary>
 internal static class CocosReader
 {
+    internal static GameDevFacts? ReadCreatorAsset(string extension, string text, bool truncated)
+    {
+        if (!GameDevDocuments.TryParseJson(text, out var document))
+        {
+            return null;
+        }
+
+        using (document)
+        {
+            var root = document.RootElement;
+            if (!HasCreatorType(root))
+            {
+                return null;
+            }
+
+            var facts = new GameDevFacts
+            {
+                Family = "Cocos",
+                Format = FormatName(extension),
+                Application = "Cocos Creator",
+                ItemName = GameDevDocuments.GetString(root, "_name"),
+                ScanIncomplete = truncated
+            };
+
+            var types = new HashSet<string>(StringComparer.Ordinal);
+            var names = 0;
+            CountNodes(root, facts, types, ref names, 0);
+            facts.ClassCount = types.Count;
+            if (facts.ItemName is null && facts.NameSamples.Count > 0)
+            {
+                facts.ItemName = facts.NameSamples[0];
+            }
+
+            facts.AddPreviewRow("Format: " + facts.Format);
+            return facts;
+        }
+    }
+
+    internal static GameDevFacts? ReadMeta(string text, bool truncated)
+    {
+        if (!GameDevDocuments.TryParseJson(text, out var document))
+        {
+            return null;
+        }
+
+        using (document)
+        {
+            var root = document.RootElement;
+            if (!HasProperty(root, "uuid") || !HasProperty(root, "importer"))
+            {
+                return null;
+            }
+
+            var facts = new GameDevFacts
+            {
+                Family = "Cocos",
+                Format = "Cocos meta",
+                Application = "Cocos Creator",
+                FormatVersion = GameDevDocuments.GetString(root, "ver"),
+                MetaGuid = GameDevDocuments.GetString(root, "uuid"),
+                ImporterType = GameDevDocuments.GetString(root, "importer"),
+                FileCount = GameDevDocuments.CountArray(root, "files"),
+                ScanIncomplete = truncated
+            };
+
+            if (root.TryGetProperty("subMetas", out var subMetas) && subMetas.ValueKind == JsonValueKind.Object)
+            {
+                var count = 0;
+                foreach (var _ in subMetas.EnumerateObject())
+                {
+                    count++;
+                }
+
+                facts.ResourceCount = count;
+            }
+
+            facts.AddPreviewRow("Importer: " + (facts.ImporterType ?? "unknown"));
+            return facts;
+        }
+    }
+
     internal static GameDevFacts? ReadCreator(string text, bool truncated)
     {
         if (!GameDevDocuments.TryParseJson(text, out var document))
@@ -93,6 +174,42 @@ internal static class CocosReader
             return null;
         }
     }
+
+    private static bool HasProperty(JsonElement element, string property) =>
+        element.ValueKind == JsonValueKind.Object && element.TryGetProperty(property, out _);
+
+    /// <summary>Cocos Creator 2.x stores an object root; 3.x scenes and prefabs are arrays of typed objects.</summary>
+    private static bool HasCreatorType(JsonElement root)
+    {
+        if (HasProperty(root, "__type__"))
+        {
+            return true;
+        }
+
+        if (root.ValueKind != JsonValueKind.Array)
+        {
+            return false;
+        }
+
+        foreach (var item in root.EnumerateArray())
+        {
+            if (HasProperty(item, "__type__"))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static string FormatName(string extension) => extension.ToLowerInvariant() switch
+    {
+        ".scene" => "Cocos scene",
+        ".prefab" => "Cocos prefab",
+        ".anim" => "Cocos animation",
+        ".mtl" => "Cocos material",
+        _ => "Cocos Creator asset"
+    };
 
     private static void CountNodes(JsonElement element, GameDevFacts facts, HashSet<string> types,
         ref int names, int depth)

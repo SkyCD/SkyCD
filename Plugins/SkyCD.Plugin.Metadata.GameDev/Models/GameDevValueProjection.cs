@@ -24,6 +24,8 @@ internal static class GameDevValueProjection
         AddText(values, GameDevSchema.Application, facts.Application);
         AddText(values, GameDevSchema.ProjectName, facts.ProjectName);
         AddText(values, GameDevSchema.ItemName, facts.ItemName);
+        AddText(values, GameDevSchema.MetaGuid, facts.MetaGuid);
+        AddText(values, GameDevSchema.ImporterType, facts.ImporterType);
         AddBoolean(values, GameDevSchema.Compiled, facts.Compiled);
         AddBoolean(values, GameDevSchema.Cooked, facts.Cooked);
 

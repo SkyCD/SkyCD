@@ -23,6 +23,12 @@ internal sealed class GameDevFacts
 
     public string? ItemName { get; set; }
 
+    /// <summary>Asset guid published by a Unity or Cocos <c>.meta</c> document.</summary>
+    public string? MetaGuid { get; set; }
+
+    /// <summary>Importer name published by a Unity or Cocos <c>.meta</c> document.</summary>
+    public string? ImporterType { get; set; }
+
     public bool? Compiled { get; set; }
 
     public bool? Cooked { get; set; }
@@ -146,6 +152,9 @@ internal static class GameDevLimits
 {
     /// <summary>Maximum text or header bytes read for one provider run.</summary>
     internal const int MaxTextBytes = 4 * 1024 * 1024;
+
+    /// <summary>Maximum bytes inspected by the shared-extension probe.</summary>
+    internal const int MaxProbeBytes = 64 * 1024;
 
     /// <summary>Maximum bytes buffered for tools that need the whole document (Aseprite, ZIP previews).</summary>
     internal const int MaxWholeSourceBytes = 16 * 1024 * 1024;

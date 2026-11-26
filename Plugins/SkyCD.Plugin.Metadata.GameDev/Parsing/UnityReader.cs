@@ -88,10 +88,43 @@ internal static partial class UnityReader
         return facts;
     }
 
+    internal static GameDevFacts ReadMeta(string text, bool truncated)
+    {
+        var facts = new GameDevFacts
+        {
+            Family = "Unity",
+            Format = "Unity meta",
+            Application = "Unity",
+            FormatVersion = FileFormatVersionLine().Match(text) is { Success: true } version
+                ? version.Groups["Version"].Value
+                : null,
+            MetaGuid = GuidLine().Match(text) is { Success: true } guid ? guid.Groups["Guid"].Value : null,
+            ScanIncomplete = truncated
+        };
+
+        var importer = ImporterLine().Match(text);
+        if (importer.Success)
+        {
+            facts.ImporterType = importer.Groups["Importer"].Value;
+            facts.AddPreviewRow("Importer: " + facts.ImporterType);
+        }
+
+        foreach (Match setting in ImporterSetting().Matches(text))
+        {
+            facts.AddPreviewRow(setting.Groups["Key"].Value + ": " + setting.Groups["Value"].Value.Trim());
+        }
+
+        return facts;
+    }
+
     private static string FormatName(string extension) => extension switch
     {
         ".unity" => "Unity scene",
+        ".prefab" => "Unity prefab",
+        ".scene" => "Unity scene",
         ".asset" => "Unity asset",
+        ".mat" => "Unity material",
+        ".anim" => "Unity animation",
         ".controller" => "Unity animator controller",
         ".overrideController" => "Unity override controller",
         ".physicMaterial" => "Unity physics material",
@@ -110,4 +143,14 @@ internal static partial class UnityReader
 
     [GeneratedRegex(@"guid:\s*(?<Guid>[0-9a-fA-F]{32})", RegexOptions.CultureInvariant)]
     private static partial Regex GuidLine();
+
+    [GeneratedRegex(@"^fileFormatVersion:\s*(?<Version>\d+)", RegexOptions.Multiline | RegexOptions.CultureInvariant)]
+    private static partial Regex FileFormatVersionLine();
+
+    [GeneratedRegex(@"^(?<Importer>[A-Za-z]+Importer):\s*$", RegexOptions.Multiline | RegexOptions.CultureInvariant)]
+    private static partial Regex ImporterLine();
+
+    [GeneratedRegex(@"^\s{2}(?<Key>(?:maxTextureSize|textureType|spriteMode|spritePixelsToUnits|modelScaleFactor|audioLoadType)):\s*(?<Value>\S+)",
+        RegexOptions.Multiline | RegexOptions.CultureInvariant)]
+    private static partial Regex ImporterSetting();
 }

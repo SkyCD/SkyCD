@@ -48,7 +48,7 @@ internal static partial class GodotReader
         var facts = new GameDevFacts
         {
             Family = "Godot",
-            Format = compressed ? "Godot compressed resource" : "Godot binary resource",
+            Format = BinaryFormat(extension, compressed),
             FormatVersion = format.ToString(CultureInfo.InvariantCulture),
             Compiled = true,
             ScanIncomplete = truncated
@@ -277,6 +277,14 @@ internal static partial class GodotReader
 
         return facts;
     }
+
+    private static string BinaryFormat(string extension, bool compressed) => (extension, compressed) switch
+    {
+        (".scn", true) => "Godot compressed scene",
+        (".scn", false) => "Godot binary scene",
+        (_, true) => "Godot compressed resource",
+        _ => "Godot binary resource"
+    };
 
     private static uint ReadUInt32(byte[] data, int offset, bool bigEndian) =>
         bigEndian
