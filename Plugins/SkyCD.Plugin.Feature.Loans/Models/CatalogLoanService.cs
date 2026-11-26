@@ -214,30 +214,6 @@ public sealed class CatalogLoanService(
             }, StringComparer.Ordinal);
     }
 
-    internal BorrowerDocument AddBorrower(string name)
-    {
-        BorrowerDocument? result = null;
-        DatabaseGate.InBatch(borrowers.Collection.Database, () => result = FindOrCreateBorrower(name));
-        return result!;
-    }
-
-    internal void RenameBorrower(string id, string name)
-    {
-        DatabaseGate.InBatch(borrowers.Collection.Database, () =>
-        {
-            var contact = borrowers.Get(id) ?? throw new LoanEditException();
-            var trimmed = name.Trim();
-            if (trimmed.Length == 0 || GetBorrowers().Any(other => other.Id != id &&
-                string.Equals(other.Name, trimmed, StringComparison.OrdinalIgnoreCase)))
-            {
-                throw new LoanEditException();
-            }
-
-            contact.Name = trimmed;
-            borrowers.Save(id, contact);
-        });
-    }
-
     internal void Lend(string entryId, string borrowerId, DateOnly date, DateOnly? due, string? note)
     {
         DatabaseGate.InBatch(loans.Collection.Database, () =>

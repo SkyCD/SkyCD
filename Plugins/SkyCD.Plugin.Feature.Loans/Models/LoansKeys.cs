@@ -7,9 +7,8 @@ public static class LoansKeys
 
     public const string Loans = Prefix + "Loans";
     public const string Borrower = Prefix + "Borrower";
-    public const string BorrowerName = Prefix + "BorrowerName";
-    public const string AddBorrower = Prefix + "AddBorrower";
-    public const string RenameBorrower = Prefix + "RenameBorrower";
+    public const string ManageBorrowers = Prefix + "ManageBorrowers";
+    public const string ContactsRequireCatalog = Prefix + "ContactsRequireCatalog";
     public const string LoanDateLabel = Prefix + "LoanDateLabel";
     public const string LoanDueLabel = Prefix + "LoanDueLabel";
     public const string LoanNote = Prefix + "LoanNote";

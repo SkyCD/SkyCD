@@ -21,6 +21,7 @@
         <ProjectReference Include="..\..\src\SkyCD.UI\SkyCD.UI.csproj"/>
         <ProjectReference Include="..\..\src\SkyCD.Presentation\SkyCD.Presentation.csproj"/>
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Sample.Config\SkyCD.Plugin.Sample.Config.csproj"/>
+        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Feature.Loans\SkyCD.Plugin.Feature.Loans.csproj"/>
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Metadata.AudioCD\SkyCD.Plugin.Metadata.AudioCD.csproj"/>
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Metadata.EBook\SkyCD.Plugin.Metadata.EBook.csproj"/>
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Metadata.EComic\SkyCD.Plugin.Metadata.EComic.csproj"/>
