@@ -122,10 +122,12 @@ examples are AudioCd, EBook, EComic and Fonts. Discovery remains assembly/capabi
 instead of opening its own window. It is for operational surfaces such as managing catalog locations;
 settings drafts stay on `IPluginConfigurationCapability`.
 
-- `OptionsPageDescriptor(PageId, Title, Order)` identifies the page. Keep `PageId` stable: the host
-  persists the selection as plugin ID plus page ID, not the translated title. `Title` is read whenever
-  the navigation is rebuilt, so a language change inside Options retranslates the entry. `Order` sorts
-  contributed pages, which are placed next to Collections.
+- `OptionsPageDescriptor(PageId, Title, Order, Group)` identifies the page. Keep `PageId` stable: the host
+  persists the selection as plugin ID plus page ID, not the translated title. `Title` and `Group` are read
+  whenever the navigation is rebuilt, so a language change inside Options retranslates them. `Order` sorts
+  contributed pages, which are placed next to Collections. An optional `Group` renders the page under a
+  non-selectable sidebar header shared with the other pages of that plugin; keep grouped pages' orders
+  contiguous so the group stays together.
 - `CreateOptionsPage()` returns an embeddable Avalonia `Control`, never a `Window`, and is called once
   per Options session on the UI thread. The host keeps the page across navigation/search and disposes
   the content when Options closes.

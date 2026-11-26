@@ -13,22 +13,11 @@
     <Grid RowDefinitions="Auto,Auto,*,Auto,Auto"
           Margin="{DynamicResource SkyInsetMd}"
           RowSpacing="{DynamicResource SkySpaceSm}">
-        <Grid Grid.Row="0" ColumnDefinitions="Auto,220,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
             <TextBlock Grid.Column="0"
                        Text="{i18n:Translate {x:Static l:GenDescKeys.TemplateList}}"
                        VerticalAlignment="Center" />
-            <ComboBox Grid.Column="1"
-                      ItemsSource="{Binding KindOptions}"
-                      SelectedItem="{Binding SelectedKindOption, Mode=TwoWay}"
-                      Padding="{DynamicResource SkyComboBoxContentPadding}"
-                      HorizontalAlignment="Stretch">
-                <ComboBox.ItemTemplate>
-                    <DataTemplate x:DataType="vm:KindOption">
-                        <TextBlock Text="{Binding Label}" />
-                    </DataTemplate>
-                </ComboBox.ItemTemplate>
-            </ComboBox>
-            <TextBlock Grid.Column="2"
+            <TextBlock Grid.Column="1"
                        Text="{i18n:Translate {x:Static l:GenDescKeys.OptionsHint}}"
                        Foreground="{DynamicResource ThemeForegroundLowBrush}"
                        TextWrapping="Wrap"

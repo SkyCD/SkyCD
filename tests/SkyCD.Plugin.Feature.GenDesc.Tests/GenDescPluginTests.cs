@@ -55,14 +55,42 @@ public class GenDescPluginTests
     }
 
     [Fact]
-    public void OptionsPageAndTranslationsAreExposed()
+    public void PageCapabilitiesExposeSplitPagesInOneGroup()
     {
-        var plugin = new GenDescPlugin();
+        var group = LocalizationService.Current.Get(GenDescKeys.OptionsGroup);
+        var info = new GenDescInfoFilesOptionsPage();
+        var descriptions = new GenDescPostDescriptionsOptionsPage();
 
-        Assert.Equal("gendesc-templates", plugin.OptionsPage.PageId);
-        Assert.Equal(LocalizationService.Current.Get(GenDescKeys.OptionsTitle), plugin.OptionsPage.Title);
-        Assert.Equal(50, plugin.OptionsPage.Order);
-        var translations = plugin.GetTranslations();
+        Assert.Equal("gendesc-info-files", info.OptionsPage.PageId);
+        Assert.Equal(LocalizationService.Current.Get(GenDescKeys.InfoFilesTitle), info.OptionsPage.Title);
+        Assert.Equal(50, info.OptionsPage.Order);
+        Assert.Equal(group, info.OptionsPage.Group);
+
+        Assert.Equal("gendesc-post-descriptions", descriptions.OptionsPage.PageId);
+        Assert.Equal(LocalizationService.Current.Get(GenDescKeys.PostDescriptionsTitle),
+            descriptions.OptionsPage.Title);
+        Assert.Equal(51, descriptions.OptionsPage.Order);
+        Assert.Equal(group, descriptions.OptionsPage.Group);
+    }
+
+    [Fact]
+    public void PageCapabilitiesEditOnlyTheirOwnTemplateKind()
+    {
+        using var workspace = new TestWorkspace();
+        var info = new GenDescInfoFilesOptionsPage { TemplateDirectory = workspace.Root };
+        var descriptions = new GenDescPostDescriptionsOptionsPage { TemplateDirectory = workspace.Root };
+
+        Assert.All(info.CreateTemplatesViewModel().Templates,
+            template => Assert.Equal(TemplateInfo.NfoKind, template.Kind));
+        Assert.All(descriptions.CreateTemplatesViewModel().Templates,
+            template => Assert.Equal(TemplateInfo.DescriptionKind, template.Kind));
+    }
+
+    [Fact]
+    public void TranslationsCoverBothLanguages()
+    {
+        var translations = new GenDescPlugin().GetTranslations();
+
         Assert.Contains("en", translations.Keys);
         Assert.Contains("lt", translations.Keys);
     }

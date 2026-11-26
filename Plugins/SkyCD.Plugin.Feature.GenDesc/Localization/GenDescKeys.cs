@@ -19,11 +19,11 @@ public static class GenDescKeys
     public const string GenerationFailed = Prefix + "GenerationFailed";
     public const string SyntaxFailed = Prefix + "SyntaxFailed";
 
-    public const string OptionsTitle = Prefix + "OptionsTitle";
+    public const string OptionsGroup = Prefix + "OptionsGroup";
+    public const string InfoFilesTitle = Prefix + "InfoFilesTitle";
+    public const string PostDescriptionsTitle = Prefix + "PostDescriptionsTitle";
     public const string OptionsHint = Prefix + "OptionsHint";
     public const string CategoriesHint = Prefix + "CategoriesHint";
-    public const string NfoKind = Prefix + "NfoKind";
-    public const string DescriptionKind = Prefix + "DescriptionKind";
     public const string TemplateList = Prefix + "TemplateList";
     public const string Id = Prefix + "Id";
     public const string Category = Prefix + "Category";
