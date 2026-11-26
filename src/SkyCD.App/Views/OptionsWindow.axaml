@@ -6,6 +6,7 @@
         xmlns:media="clr-namespace:SkyCD.SDK.Capabilities.Media;assembly=SkyCD.SDK"
         xmlns:hostmedia="clr-namespace:SkyCD.Plugin.Host.Media;assembly=SkyCD.Plugin.Host"
         xmlns:converters="clr-namespace:SkyCD.App.Converters"
+        xmlns:bindingConverters="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
         xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
         xmlns:lucide="clr-namespace:IconPacks.Avalonia.Lucide;assembly=IconPacks.Avalonia.Lucide"
         xmlns:multiSelect="clr-namespace:SkyCD.UI.Controls.Selectors.MultiSelectDropdown;assembly=SkyCD.UI"
@@ -23,6 +24,34 @@
         CanMinimize="False"
         Icon="/Assets/skycd.ico"
         Title="{i18n:Translate {x:Static i18n:UiKeys.Options}}">
+
+    <Window.Resources>
+        <!-- Issue #1207: dropdown rows share the closed field's inset, as the source picker does. -->
+        <ControlTheme x:Key="AiProviderComboBoxItemTheme"
+                      TargetType="ComboBoxItem"
+                      BasedOn="{StaticResource {x:Type ComboBoxItem}}">
+            <Setter Property="Padding" Value="{DynamicResource SkyComboBoxContentPadding}" />
+        </ControlTheme>
+        <DataTemplate x:Key="AiProviderChoiceTemplate" x:DataType="media:AiProviderChoice">
+            <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceXs}">
+                <Panel Width="{DynamicResource SkyIconSize}"
+                       Height="{DynamicResource SkyIconSize}">
+                    <Border Background="{DynamicResource ThemeAccentBrush}"
+                            IsVisible="{Binding #ProviderIcon.Source, Converter={x:Static bindingConverters:ObjectConverters.IsNull}}"
+                            CornerRadius="{DynamicResource SkyCornerRadius}">
+                        <Viewbox Margin="{DynamicResource SkyInsetXxs}">
+                            <TextBlock Text="{Binding Monogram}"
+                                       Foreground="{DynamicResource ThemeForegroundBrush}" />
+                        </Viewbox>
+                    </Border>
+                    <Image x:Name="ProviderIcon"
+                           Source="{Binding Converter={x:Static converters:AiProviderIconConverter.Instance}}"
+                           Stretch="Uniform" />
+                </Panel>
+                <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+            </StackPanel>
+        </DataTemplate>
+    </Window.Resources>
 
     <Design.DataContext>
         <vm:OptionsDialogViewModel />
@@ -2141,14 +2170,14 @@
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiProvider}}"
                                                    VerticalAlignment="Center" />
-                                        <ComboBox Grid.Column="1"
+                                        <ComboBox x:Name="AiProviderComboBox"
+                                                  Grid.Column="1"
+                                                  Padding="{DynamicResource SkyComboBoxContentPadding}"
+                                                  ItemContainerTheme="{StaticResource AiProviderComboBoxItemTheme}"
                                                   ItemsSource="{Binding AiProviders}"
-                                                  SelectedItem="{Binding SelectedAiProvider}">
-                                            <ComboBox.ItemTemplate>
-                                                <DataTemplate x:DataType="media:AiProviderChoice">
-                                                    <TextBlock Text="{Binding Name}" />
-                                                </DataTemplate>
-                                            </ComboBox.ItemTemplate>
+                                                  SelectedItem="{Binding SelectedAiProvider}"
+                                                  ItemTemplate="{StaticResource AiProviderChoiceTemplate}"
+                                                  SelectionBoxItemTemplate="{StaticResource AiProviderChoiceTemplate}">
                                         </ComboBox>
                                     </Grid>
                                     <Grid ColumnSpacing="{DynamicResource SkySpaceSm}">
