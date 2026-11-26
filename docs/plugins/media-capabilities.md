@@ -361,3 +361,17 @@ Trivy classification gate in [dependency-policy.md](../legal/dependency-policy.m
 References: [Premiere project XML](https://github.com/Adobe-CEP/CEP-Resources),
 [After Effects project structure](https://github.com/boltframe/aftereffects-aep-parser),
 [.NET runtime license](https://github.com/dotnet/runtime/blob/main/LICENSE.TXT).
+
+## Game engine project and asset metadata (Godot, Unity, Unreal, Aseprite, Tiled, LDtk)
+
+`SkyCD.Plugin.Metadata.GameDev` implements `IMediaMetadataCapability` at priority 10 plus five index-time
+pixel previews and one on-demand structure preview, all discovered from assembly metadata. It publishes
+family, format, versions, sizes, counts and bounded name samples for 22 engine families and never opens a
+referenced tileset, script, GUID target or media file. Extensions that several engines or the text plugin
+share (`.prefab`, `.scene`, `.material`, `.mat`, `.mtl`, `.scn`, `.meta`, `.anim`, `.tsx`, `.go`,
+`.project`) are deliberately unclaimed until the shared format probe (#1258) exists.
+
+Preview providers are marked `IndexTimePreview` only for artwork the catalog list shows: Aseprite frame 0,
+Unity package `preview.png`, the Unreal package thumbnail, the Wicked Engine scene JPEG and uncompressed XNB
+textures. Structure pages run on demand. See [gamedev.md](gamedev.md) for the coverage table, schema,
+bounds and dependency evaluation (AsepriteDotNet 1.9.1 and SkiaSharp 3.119.4, both MIT).

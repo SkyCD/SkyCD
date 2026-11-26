@@ -58,6 +58,7 @@
         <Project Path="Plugins/SkyCD.Plugin.Metadata.Executable/SkyCD.Plugin.Metadata.Executable.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Metadata.FileMetadata/SkyCD.Plugin.Metadata.FileMetadata.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Metadata.Fonts/SkyCD.Plugin.Metadata.Fonts.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.Metadata.GameDev/SkyCD.Plugin.Metadata.GameDev.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Metadata.Hash/SkyCD.Plugin.Metadata.Hash.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Metadata.Html/SkyCD.Plugin.Metadata.Html.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Metadata.Image/SkyCD.Plugin.Metadata.Image.csproj"/>
@@ -160,6 +161,7 @@
         <Project Path="tests/SkyCD.Plugin.Metadata.Executable.Tests/SkyCD.Plugin.Metadata.Executable.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Metadata.FileMetadata.Tests/SkyCD.Plugin.Metadata.FileMetadata.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Metadata.Fonts.Tests/SkyCD.Plugin.Metadata.Fonts.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Metadata.GameDev.Tests/SkyCD.Plugin.Metadata.GameDev.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Metadata.Hash.Tests/SkyCD.Plugin.Metadata.Hash.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Metadata.Html.Tests/SkyCD.Plugin.Metadata.Html.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Metadata.Image.Tests/SkyCD.Plugin.Metadata.Image.Tests.csproj"/>
