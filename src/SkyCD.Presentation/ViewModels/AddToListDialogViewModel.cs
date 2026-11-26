@@ -730,8 +730,18 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
     private void RecomputeValidation()
     {
         ValidationMessage = GetValidationMessage();
+        OnPropertyChanged(nameof(DisplayedValidationMessage));
         ConfirmCommand.NotifyCanExecuteChanged();
     }
+
+    /// <summary>
+    /// Footer text; the folder branch stays silent while the folder field is empty because the
+    /// disabled OK button already communicates it, while <see cref="ValidationMessage"/> still gates confirm.
+    /// </summary>
+    public string? DisplayedValidationMessage =>
+        SourceMode == AddToListSourceMode.Folder && string.IsNullOrWhiteSpace(SourceValue)
+            ? null
+            : ValidationMessage;
 
     private string? GetValidationMessage()
     {

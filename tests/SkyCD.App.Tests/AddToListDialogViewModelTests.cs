@@ -361,6 +361,30 @@ public class AddToListDialogViewModelTests
 
         Assert.False(vm.CanConfirm);
         Assert.Equal("Folder path is required for folder source.", vm.ValidationMessage);
+        Assert.True(string.IsNullOrEmpty(vm.DisplayedValidationMessage));
+    }
+
+    [Fact]
+    public void DisplayedValidationMessage_MirrorsGateExceptForEmptyFolder()
+    {
+        var folder = new AddToListDialogViewModel
+        {
+            SourceMode = AddToListSourceMode.Folder,
+            SourceValue = ""
+        };
+        Assert.NotNull(folder.ValidationMessage);
+        Assert.True(string.IsNullOrEmpty(folder.DisplayedValidationMessage));
+
+        folder.SourceValue = @"C:\Music";
+        Assert.Null(folder.ValidationMessage);
+        Assert.Null(folder.DisplayedValidationMessage);
+
+        var internet = new AddToListDialogViewModel
+        {
+            SourceMode = AddToListSourceMode.Internet,
+            SourceValue = ""
+        };
+        Assert.Equal(internet.ValidationMessage, internet.DisplayedValidationMessage);
     }
 
     [Fact]

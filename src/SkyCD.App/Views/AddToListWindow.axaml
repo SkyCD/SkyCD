@@ -528,7 +528,7 @@
                    Grid.ColumnSpan="2"
                    MinHeight="14"
                    Foreground="#B00000"
-                   Text="{Binding ValidationMessage}"
+                   Text="{Binding DisplayedValidationMessage}"
                    TextWrapping="Wrap" />
     </Grid>
 </Window>
