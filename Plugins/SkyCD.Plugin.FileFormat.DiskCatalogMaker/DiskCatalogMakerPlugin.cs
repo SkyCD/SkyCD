@@ -5,12 +5,12 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.SDK.Capabilities.FileFormats;
+using SkyCD.Plugin.EncodingProfiles;
 using SkyCD.Plugin.FileFormat.Csv;
 using SkyCD.Plugin.FileFormat.DiskCatalogMaker.Exceptions;
 using SkyCD.Plugin.FileFormat.Csv.Parsing;
 using SkyCD.Plugin.FileFormat.DiskCatalogMaker.Import;
 using SkyCD.Plugin.FileFormat.DiskCatalogMaker.Models;
-using SkyCD.Plugin.FileFormat.DiskCatalogMaker.Parsing;
 
 namespace SkyCD.Plugin.FileFormat.DiskCatalogMaker;
 
@@ -51,13 +51,13 @@ public sealed class DiskCatalogMakerPlugin : IFileFormatPluginCapability, IConte
         try
         {
             var data = ReadAllBytes(stream);
-            var profile = DiskCatalogMakerEncodingDetector.Detect(data);
-            if (profile.Kind == DiskCatalogMakerEncodingKind.Unknown)
+            var encoding = LegacyEncodingDetector.Detect(data);
+            if (encoding is null)
             {
                 return false;
             }
 
-            var text = profile.Decode(data);
+            var text = encoding.Decode(data);
             var headerLine = ReadFirstNonEmptyLine(text);
             if (headerLine is null)
             {
@@ -140,15 +140,15 @@ public sealed class DiskCatalogMakerPlugin : IFileFormatPluginCapability, IConte
         try
         {
             var data = await ReadAllBytesAsync(request.Source, cancellationToken);
-            var profile = DiskCatalogMakerEncodingDetector.Detect(data);
-            if (profile.Kind == DiskCatalogMakerEncodingKind.Unknown)
+            var encoding = LegacyEncodingDetector.Detect(data);
+            if (encoding is null)
             {
                 throw new DiskCatalogMakerUnsupportedEncodingException();
             }
 
             request.Progress?.Report(10);
 
-            var text = profile.Decode(data);
+            var text = encoding.Decode(data);
 
             using var reader = new StringReader(text);
             var parseResult = await CsvParser.ReadCsvAsync(reader, null, cancellationToken);
@@ -160,7 +160,7 @@ public sealed class DiskCatalogMakerPlugin : IFileFormatPluginCapability, IConte
                 throw new DiskCatalogMakerCorruptHeaderException();
             }
 
-            var document = DiskCatalogMakerHierarchyBuilder.Build(parseResult.Rows, parseResult.Delimiter, profile);
+            var document = DiskCatalogMakerHierarchyBuilder.Build(parseResult.Rows, parseResult.Delimiter, encoding.DisplayName);
             request.Progress?.Report(100);
 
             return new FileFormatReadResult
