@@ -7,6 +7,7 @@ using SkyCD.Plugin.OnlineMetadata.Models;
 using SkyCD.Plugin.Feature.GenDesc.Exceptions;
 using SkyCD.Plugin.Feature.GenDesc.Models;
 using SkyCD.Plugin.Feature.GenDesc.Parsing;
+using SkyCD.Formatting;
 using SkyCD.SDK.Capabilities.GenDesc;
 
 namespace SkyCD.Plugin.Feature.GenDesc.Rendering;
@@ -83,25 +84,11 @@ public static class GenDescRenderer
             ["Extension"] = extension,
             ["MimeType"] = GenDescCategory.MimeFromExtension(extension),
             ["SizeBytes"] = file.Length.ToString(CultureInfo.InvariantCulture),
-            ["Size"] = FormatSize(file.Length),
+            ["Size"] = SizeFormatting.FormatInvariantBytes(file.Length),
             ["Path"] = file.FullName,
             ["Directory"] = file.DirectoryName ?? string.Empty,
             ["LastWriteTime"] = file.LastWriteTimeUtc.ToString("O", CultureInfo.InvariantCulture)
         };
         return new GenDescEntryContext(file.Name, extension, facts["MimeType"], facts);
-    }
-
-    private static string FormatSize(long bytes)
-    {
-        string[] units = ["B", "KB", "MB", "GB", "TB"];
-        var value = (double)Math.Max(0, bytes);
-        var unit = 0;
-        while (value >= 1024 && unit < units.Length - 1)
-        {
-            value /= 1024;
-            unit++;
-        }
-
-        return value.ToString(unit == 0 ? "0" : "0.#", CultureInfo.InvariantCulture) + " " + units[unit];
     }
 }

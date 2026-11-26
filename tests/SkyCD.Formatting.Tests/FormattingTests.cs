@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using SkyCD.Formatting;
 using Xunit;
 
@@ -14,6 +15,32 @@ public class FormattingTests
 
         Assert.Equal("1.5 KB", withSpace);
         Assert.Equal("1.5KB", withoutSpace);
+    }
+
+    [Fact]
+    public void FormatInvariantBytes_StaysCultureStable_UnderCommaDecimalCulture()
+    {
+        var previousCulture = CultureInfo.CurrentCulture;
+        var previousUiCulture = CultureInfo.CurrentUICulture;
+        try
+        {
+            var commaDecimal = new CultureInfo("de-DE");
+            CultureInfo.CurrentCulture = commaDecimal;
+            CultureInfo.CurrentUICulture = commaDecimal;
+
+            Assert.Equal("0 B", SizeFormatting.FormatInvariantBytes(0));
+            Assert.Equal("512 B", SizeFormatting.FormatInvariantBytes(512));
+            Assert.Equal("1.5 KB", SizeFormatting.FormatInvariantBytes(1536));
+            Assert.Equal("2 KB", SizeFormatting.FormatInvariantBytes(2048));
+            Assert.Equal("117.7 MB", SizeFormatting.FormatInvariantBytes(123456789L));
+            Assert.Equal("1.5 KB", SizeFormatting.FormatInvariantBytes(1536.0));
+            Assert.Equal("0 B", SizeFormatting.FormatInvariantBytes(0UL));
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = previousCulture;
+            CultureInfo.CurrentUICulture = previousUiCulture;
+        }
     }
 
     [Fact]
