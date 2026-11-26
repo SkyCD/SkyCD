@@ -1,7 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using MetadataExtractor;
+using MetadataExtractor.Formats.Ico;
 using SkyCD.Plugin.Metadata.Executable.Exceptions;
 using SkyCD.Plugin.Metadata.Executable.Export;
 using SkyCD.Plugin.Metadata.Executable.Models;
@@ -132,7 +136,12 @@ internal static class ExecutableIconExtractor
         return IconExtraction.None(imageCount, largestWidth, largestHeight);
     }
 
-    /// <summary>Reads an icon group: a reserved word, the type, the count, then one 14-byte entry per image.</summary>
+    /// <summary>
+    /// Reads an icon group through MetadataExtractor: the 14-byte group records are reassembled
+    /// into a payload-free ICO directory (declared sizes move over verbatim), so candidate
+    /// selection costs no pixel reads. An entry the reader reports with no bytes is skipped the
+    /// same way a zero-length group entry used to be; pixel decoding itself stays in SkiaSharp.
+    /// </summary>
     internal static List<IconCandidate>? ParseGroup(ReadOnlySpan<byte> directory)
     {
         if (directory.Length < 6)
@@ -146,23 +155,62 @@ internal static class ExecutableIconExtractor
             return null;
         }
 
-        var candidates = new List<IconCandidate>(count);
+        var ico = new byte[6 + (count * 16)];
+        directory[..6].CopyTo(ico);
         for (var index = 0; index < count; index++)
         {
             var entry = directory.Slice(6 + (index * 14), 14);
-            var width = entry[0] == 0 ? LargestDeclaredSize : entry[0];
-            var height = entry[1] == 0 ? LargestDeclaredSize : entry[1];
-            var bitCount = BitConverter.ToUInt16(entry.Slice(6, 2));
-            var bytes = BitConverter.ToUInt32(entry.Slice(8, 4));
-            if (bytes == 0)
+            var target = ico.AsSpan(6 + (index * 16), 16);
+            entry[..8].CopyTo(target);
+            entry.Slice(8, 4).CopyTo(target[8..]);
+        }
+
+        IReadOnlyList<MetadataExtractor.Directory> directories;
+        try
+        {
+            directories = IcoMetadataReader.ReadMetadata(new MemoryStream(ico));
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            return null;
+        }
+
+        var candidates = new List<IconCandidate>(directories.Count);
+        var imageIndex = 0;
+        foreach (var image in directories.OfType<IcoDirectory>())
+        {
+            imageIndex++;
+            if (!TryToInt(image.GetObject(IcoDirectory.TagImageSizeBytes), out var size) || size == 0)
             {
                 continue;
             }
 
-            candidates.Add(new IconCandidate(index + 1, width, height, bitCount));
+            candidates.Add(new IconCandidate(
+                imageIndex,
+                TryToInt(image.GetObject(IcoDirectory.TagImageWidth), out var width) && width > 0 ? width : LargestDeclaredSize,
+                TryToInt(image.GetObject(IcoDirectory.TagImageHeight), out var height) && height > 0 ? height : LargestDeclaredSize,
+                TryToInt(image.GetObject(IcoDirectory.TagBitsPerPixel), out var bits) ? bits : 0));
         }
 
         return candidates;
+    }
+
+    private static bool TryToInt(object? value, out int result)
+    {
+        result = value switch
+        {
+            int i => i,
+            uint u when u <= int.MaxValue => (int)u,
+            long l when l is >= int.MinValue and <= int.MaxValue => (int)l,
+            ulong ul when ul <= int.MaxValue => (int)ul,
+            short s => s,
+            ushort us => us,
+            byte b => b,
+            sbyte sb => sb,
+            _ => 0,
+        };
+
+        return value is int or uint or long or ulong or short or ushort or byte or sbyte;
     }
 
     private static byte[]? TryDecode(byte[] data, ExecutablePluginOptions options)
