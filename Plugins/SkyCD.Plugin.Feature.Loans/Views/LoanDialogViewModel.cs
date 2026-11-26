@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SkyCD.Plugin.Feature.Loans.Exceptions;
@@ -15,12 +16,15 @@ public sealed partial class LoanDialogViewModel : ObservableObject
     private readonly CatalogLoanService service;
     private readonly string entryId;
     private readonly Action onChanged;
+    private readonly Func<Task>? openContactsAsync;
 
-    public LoanDialogViewModel(CatalogLoanService service, string entryId, Action onChanged)
+    public LoanDialogViewModel(CatalogLoanService service, string entryId, Action onChanged,
+        Func<Task>? openContactsAsync = null)
     {
         this.service = service;
         this.entryId = entryId;
         this.onChanged = onChanged;
+        this.openContactsAsync = openContactsAsync;
         Reload();
     }
 
@@ -28,18 +32,22 @@ public sealed partial class LoanDialogViewModel : ObservableObject
     [ObservableProperty] private IReadOnlyList<LoanHistoryRow> history = [];
     [ObservableProperty] private BorrowerDocument? selectedBorrower;
     [ObservableProperty] private LoanHistoryRow? selectedLoan;
-    [ObservableProperty] private string contactName = string.Empty;
     [ObservableProperty] private string loanDate = DateTime.Today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
     [ObservableProperty] private string dueDate = string.Empty;
     [ObservableProperty] private string note = string.Empty;
     [ObservableProperty] private string error = string.Empty;
 
-    [RelayCommand]
-    private void AddBorrower() => Apply(() => SelectedBorrower = service.AddBorrower(ContactName));
+    [RelayCommand(CanExecute = nameof(CanManageBorrowers))]
+    private async Task ManageBorrowersAsync()
+    {
+        if (openContactsAsync is not null)
+        {
+            await openContactsAsync();
+            Reload();
+        }
+    }
 
-    [RelayCommand]
-    private void RenameBorrower() => Apply(() =>
-        service.RenameBorrower(SelectedBorrower?.Id ?? throw new LoanEditException(), ContactName));
+    private bool CanManageBorrowers() => openContactsAsync is not null;
 
     [RelayCommand]
     private void MarkLent() => Apply(() =>

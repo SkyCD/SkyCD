@@ -1,11 +1,23 @@
 using System.Linq;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using Couchbase.Lite;
 using SkyCD.App.Views;
+using SkyCD.Documents;
+using SkyCD.Documents.Collections;
+using SkyCD.Documents.Repository;
+using SkyCD.Plugin.Feature.Loans;
+using SkyCD.Plugin.Feature.Loans.Models;
+using SkyCD.Plugin.Feature.Loans.Views;
+using SkyCD.Presentation.Catalog;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.SDK.Capabilities.Menu;
 using SkyCD.SDK.Capabilities.Options;
+using SkyCD.TestSupport;
+using SkyCD.UI.Localization;
 using Xunit;
 
 namespace SkyCD.UI.Tests;
@@ -47,6 +59,58 @@ public sealed class OptionsContributedPageLayoutTests
             Assert.NotNull(section);
             Assert.DoesNotContain(section!.GetVisualDescendants().OfType<TextBlock>(),
                 text => text.IsEffectivelyVisible && text.Text == "Locations");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task LoansContactsMenuSelectsTheEmbeddedManager()
+    {
+        const string pluginId = "skycd.loans";
+        using var workspace = new TestWorkspace();
+        using var database = new Database("options-contacts", new DatabaseConfiguration { Directory = workspace.Root });
+        var collection = database.GetDefaultCollection();
+        var repository = new CatalogDocumentRepository();
+        repository.Initialize(typeof(CatalogDocument), collection.Name, collection);
+        var catalog = new OpenCatalogState { Path = "test-catalog" };
+        catalog.Attach(repository);
+
+        var plugin = new LoansPlugin();
+        plugin.InitializeCatalogRepository(catalog);
+        var capability = Assert.IsAssignableFrom<IOptionsPageCapability>(plugin);
+        Assert.Equal("contacts", capability.OptionsPage.PageId);
+        Assert.Equal(LocalizationService.Current.Get(LoansKeys.Contacts), capability.OptionsPage.Title);
+        Assert.IsType<ContactsView>(capability.CreateOptionsPage());
+
+        var viewModel = new OptionsDialogViewModel(["English"]);
+        viewModel.SetPlugins([new OptionsPluginItem("Loans", "test", "test", id: pluginId, isEnabled: true)]);
+        viewModel.SetPluginOptionsPages([new OptionsPageProvider(pluginId, "Loans", capability)]);
+        var category = Assert.Single(viewModel.SettingCategories, item => item.Id == "options:skycd.loans/contacts");
+        plugin.InitializeOptionsNavigation(pageId =>
+        {
+            var categoryId = OptionsContributedPage.GetCategoryId(pluginId, pageId);
+            viewModel.SelectedSettingCategory = viewModel.SettingCategories.Single(item => item.Id == categoryId);
+            return Task.CompletedTask;
+        });
+
+        await plugin.ExecuteMenuCommandAsync("skycd.loans.contacts", new MenuCommandContext());
+        Assert.Equal(category.Id, viewModel.SelectedSettingCategory?.Id);
+        Dispatcher.UIThread.RunJobs();
+
+        var window = new OptionsWindow { DataContext = viewModel };
+        window.Show();
+        try
+        {
+            Dispatcher.UIThread.RunJobs();
+            var view = Assert.Single(window.GetVisualDescendants().OfType<ContactsView>());
+            Assert.True(view.IsEffectivelyVisible);
+            var contacts = Assert.IsType<ContactsDialogViewModel>(view.DataContext);
+            contacts.AddContactCommand.Execute(null);
+            Assert.Empty(contacts.Error);
+            Assert.Single(contacts.Contacts);
         }
         finally
         {

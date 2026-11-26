@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using DryIoc;
@@ -31,7 +32,12 @@ public partial class MainWindow
     private void OnOptionsRequested(object? sender, OptionsDialogRequestedEventArgs e) =>
         _ = RunUiActionAsync(() => OptionsRequestedAsync(e));
 
-    private async Task OptionsRequestedAsync(OptionsDialogRequestedEventArgs e)
+    internal Task ShowContributedOptionsAsync(string categoryId, Window owner) =>
+        DataContext is MainWindowViewModel viewModel
+            ? RunUiActionAsync(() => OptionsRequestedAsync(viewModel.CreateOptionsRequest(categoryId), owner))
+            : Task.CompletedTask;
+
+    private async Task OptionsRequestedAsync(OptionsDialogRequestedEventArgs e, Window? owner = null)
     {
         var options = LoadAppOptions();
         var pluginPath = options.PluginPath;
@@ -104,7 +110,7 @@ public partial class MainWindow
             bool? accepted = false;
             try
             {
-                accepted = await dialog.ShowDialog<bool?>(this);
+                accepted = await dialog.ShowDialog<bool?>(owner ?? this);
             }
             finally
             {

@@ -4,6 +4,8 @@ using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Controls;
+using Avalonia.Media;
 using Couchbase.Lite;
 using SkyCD.Couchbase.Attributes;
 using SkyCD.Documents;
@@ -15,7 +17,7 @@ using SkyCD.SDK.Capabilities.Catalog;
 using SkyCD.SDK.Capabilities.FileFormats;
 using SkyCD.SDK.Capabilities.Import;
 using SkyCD.SDK.Capabilities.Menu;
-using SkyCD.SDK.Capabilities.Ui;
+using SkyCD.SDK.Capabilities.Options;
 using SkyCD.SDK.Localization;
 using SkyCD.Plugin.Feature.Loans.Import;
 using SkyCD.Plugin.Feature.Loans.Models;
@@ -32,18 +34,19 @@ namespace SkyCD.Plugin.Feature.Loans;
 /// </summary>
 public sealed class LoansPlugin : IPluginCapability, ICatalogRepositoryConsumer, ICatalogFeaturePluginCapability,
     ICatalogAuxiliaryDataProvider, ICatalogImportPluginCapability, ICatalogLifecyclePluginCapability,
-    IMenuPluginCapability, IHostDialogConsumer, ILocalizationPluginCapability
+    IMenuPluginCapability, IOptionsPageCapability, IOptionsNavigationConsumer, ILocalizationPluginCapability
 {
     private const string LendCommandId = "skycd.loans.lend";
     private const string ReturnCommandId = "skycd.loans.return";
     private const string HistoryCommandId = "skycd.loans.history";
     private const string ContactsCommandId = "skycd.loans.contacts";
+    private const string ContactsPageId = "contacts";
     private const string DetailsTabKey = "skycd.loans.details";
     private const string EntryIdProperty = "EntryId";
 
     private readonly Dictionary<string, (string Borrower, bool Overdue)> activeLoans = new(StringComparer.Ordinal);
     private ICatalogRepositoryProvider? provider;
-    private IHostDialogApi? dialogApi;
+    private Func<string, Task>? openOptionsPageAsync;
     private CatalogDocumentRepository? cachedRepository;
     private CatalogLoanService? cachedService;
 
@@ -62,10 +65,24 @@ public sealed class LoansPlugin : IPluginCapability, ICatalogRepositoryConsumer,
     }
 
     /// <inheritdoc />
-    public void InitializeDialogApi(IHostDialogApi hostDialogApi)
-    {
-        dialogApi = hostDialogApi;
-    }
+    public void InitializeOptionsNavigation(Func<string, Task> openPageAsync) =>
+        openOptionsPageAsync = openPageAsync;
+
+    /// <inheritdoc />
+    public OptionsPageDescriptor OptionsPage =>
+        new(ContactsPageId, LocalizationService.Current.Get(LoansKeys.Contacts));
+
+    /// <inheritdoc />
+    public object CreateOptionsPage() =>
+        Service() is { } service
+            ? new ContactsView { DataContext = new ContactsDialogViewModel(service, Invalidate) }
+            : new TextBlock
+            {
+                Text = LocalizationService.Current.Get(LoansKeys.ContactsRequireCatalog),
+                TextWrapping = TextWrapping.Wrap
+            };
+
+    private Task OpenContactsAsync() => openOptionsPageAsync?.Invoke(ContactsPageId) ?? Task.CompletedTask;
 
     /// <inheritdoc />
     public void OnCatalogLifecycle(CatalogLifecycle lifecycle, string? catalogPath)
@@ -154,7 +171,7 @@ public sealed class LoansPlugin : IPluginCapability, ICatalogRepositoryConsumer,
                 10,
                 () => new EntryDetailsTab(() =>
                 {
-                    var editor = new LoanDialogViewModel(service, entry.Id, Invalidate);
+                    var editor = new LoanDialogViewModel(service, entry.Id, Invalidate, OpenContactsAsync);
                     return new LoanEditor { DataContext = editor };
                 }))
         ];
@@ -188,14 +205,9 @@ public sealed class LoansPlugin : IPluginCapability, ICatalogRepositoryConsumer,
     public async Task ExecuteMenuCommandAsync(string commandId, MenuCommandContext context,
         CancellationToken cancellationToken = default)
     {
-        if (Service() is not { } service)
-        {
-            return;
-        }
-
         if (commandId == ContactsCommandId)
         {
-            await ShowContactsAsync(new ContactsDialogViewModel(service, Invalidate)).ConfigureAwait(false);
+            await OpenContactsAsync().ConfigureAwait(false);
             return;
         }
 
@@ -297,9 +309,8 @@ public sealed class LoansPlugin : IPluginCapability, ICatalogRepositoryConsumer,
     {
         ["ui.Loans"] = "Loans",
         ["ui.Borrower"] = "Borrower",
-        ["ui.BorrowerName"] = "Borrower name",
-        ["ui.AddBorrower"] = "Add borrower",
-        ["ui.RenameBorrower"] = "Rename borrower",
+        ["ui.ManageBorrowers"] = "Manage borrowers…",
+        ["ui.ContactsRequireCatalog"] = "Open a catalog to manage its contacts.",
         ["ui.LoanDateLabel"] = "Loan date",
         ["ui.LoanDueLabel"] = "Due date (optional)",
         ["ui.LoanNote"] = "Loan note (optional)",
@@ -352,9 +363,8 @@ public sealed class LoansPlugin : IPluginCapability, ICatalogRepositoryConsumer,
     {
         ["ui.Loans"] = "Paskolos",
         ["ui.Borrower"] = "Skolininkas",
-        ["ui.BorrowerName"] = "Skolininko vardas",
-        ["ui.AddBorrower"] = "Pridėti skolininką",
-        ["ui.RenameBorrower"] = "Pervadinti skolininką",
+        ["ui.ManageBorrowers"] = "Tvarkyti skolininkus…",
+        ["ui.ContactsRequireCatalog"] = "Atidarykite katalogą, kad galėtumėte tvarkyti jo kontaktus.",
         ["ui.LoanDateLabel"] = "Paskolinimo data",
         ["ui.LoanDueLabel"] = "Grąžinimo data (neprivaloma)",
         ["ui.LoanNote"] = "Paskolos pastaba (neprivaloma)",
@@ -452,21 +462,6 @@ public sealed class LoansPlugin : IPluginCapability, ICatalogRepositoryConsumer,
         {
             activeLoans[entryId] = state;
         }
-    }
-
-    private async Task ShowContactsAsync(ContactsDialogViewModel contacts)
-    {
-        if (dialogApi is null)
-        {
-            return;
-        }
-
-        await dialogApi.ShowAsync(new HostWindowRequest(
-            LocalizationService.Current.Get(LoansKeys.Contacts),
-            640,
-            520,
-            () => new ContactsWindow { DataContext = contacts })).ConfigureAwait(false);
-        Invalidate();
     }
 
     private void SeedStatusVariant()

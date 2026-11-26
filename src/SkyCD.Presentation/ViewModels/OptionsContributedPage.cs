@@ -35,7 +35,9 @@ public sealed partial class OptionsContributedPage : ObservableObject, IDisposab
         fallbackGroup = descriptor.Group;
     }
 
-    public string Id => $"options:{provider.PluginId}/{pageId}";
+    public string Id => GetCategoryId(provider.PluginId, pageId);
+
+    public static string GetCategoryId(string pluginId, string pageId) => $"options:{pluginId}/{pageId}";
 
     public string PluginId => provider.PluginId;
 

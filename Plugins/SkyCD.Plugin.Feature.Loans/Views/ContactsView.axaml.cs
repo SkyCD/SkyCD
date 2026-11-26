@@ -9,7 +9,7 @@ using SkyCD.UI.Localization;
 
 namespace SkyCD.Plugin.Feature.Loans.Views;
 
-public partial class ContactsWindow : Window
+public partial class ContactsView : UserControl
 {
     private static FilePickerFileType VCardFileType => new(LocalizationService.Current.Get(LoansKeys.VCardFiles))
     {
@@ -17,18 +17,17 @@ public partial class ContactsWindow : Window
         MimeTypes = ["text/vcard", "text/x-vcard"]
     };
 
-    public ContactsWindow() => InitializeComponent();
-
-    private void CloseClicked(object? sender, RoutedEventArgs args) => Close();
+    public ContactsView() => InitializeComponent();
 
     private async void ImportClicked(object? sender, RoutedEventArgs args)
     {
-        if (DataContext is not ContactsDialogViewModel viewModel)
+        if (DataContext is not ContactsDialogViewModel viewModel ||
+            TopLevel.GetTopLevel(this)?.StorageProvider is not { } storageProvider)
         {
             return;
         }
 
-        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        var files = await storageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
             Title = LocalizationService.Current.Get(LoansKeys.ImportContacts),
             AllowMultiple = true,
@@ -60,12 +59,13 @@ public partial class ContactsWindow : Window
 
     private async void ExportClicked(object? sender, RoutedEventArgs args)
     {
-        if (DataContext is not ContactsDialogViewModel viewModel)
+        if (DataContext is not ContactsDialogViewModel viewModel ||
+            TopLevel.GetTopLevel(this)?.StorageProvider is not { } storageProvider)
         {
             return;
         }
 
-        var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        var file = await storageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             Title = LocalizationService.Current.Get(LoansKeys.ExportContacts),
             SuggestedFileName = "contacts.vcf",

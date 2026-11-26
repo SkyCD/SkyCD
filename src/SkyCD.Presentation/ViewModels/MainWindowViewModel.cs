@@ -3391,6 +3391,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             return;
         }
 
+        OptionsRequested.Invoke(this, CreateOptionsRequest(preselectCategoryId, selectCollectionId));
+    }
+
+    public OptionsDialogRequestedEventArgs CreateOptionsRequest(string? preselectCategoryId, string? selectCollectionId = null)
+    {
         var dialog = new OptionsDialogViewModel();
         if (CreateCollectionsViewModel() is { } collections)
         {
@@ -3401,7 +3406,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             }
         }
 
-        OptionsRequested.Invoke(this, new OptionsDialogRequestedEventArgs
+        return new OptionsDialogRequestedEventArgs
         {
             Dialog = dialog,
             PreselectCategoryId = preselectCategoryId,
@@ -3414,7 +3419,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
                 StatusText = LocalizationService.Current.Format(TextKeys.OptionsSavedLanguage, language);
             }
-        });
+        };
     }
 
     [RelayCommand]

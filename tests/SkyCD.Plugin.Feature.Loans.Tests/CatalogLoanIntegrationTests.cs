@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Couchbase.Lite;
 using SkyCD.Documents;
 using SkyCD.Documents.Collections;
@@ -76,7 +77,7 @@ public sealed class CatalogLoanIntegrationTests
     }
 
     [Fact]
-    public void SyncRemapsScannedIdsAndPreservesLoansAndRenamedBorrowerReferences()
+    public async Task SyncRemapsScannedIdsAndPreservesLoansAndRenamedBorrowerReferences()
     {
         using var workspace = new TestWorkspace();
         using var database = OpenDatabase(workspace.Root);
@@ -84,19 +85,30 @@ public sealed class CatalogLoanIntegrationTests
         var original = new CatalogDocument { Id = "existing", Name = "Disk" };
         catalog.Save(original.Id, original);
         var service = CatalogLoanService.Open(catalog);
-        var editor = new LoanDialogViewModel(service, original.Id, () => { })
+        var contacts = new ContactsDialogViewModel(service);
+        var editor = new LoanDialogViewModel(service, original.Id, () => { }, () =>
         {
-            ContactName = "Alice",
+            contacts.AddContactCommand.Execute(null);
+            contacts.ContactName = "Alice";
+            contacts.SaveContactCommand.Execute(null);
+            return Task.CompletedTask;
+        })
+        {
             LoanDate = "2024-04-01",
             DueDate = "2024-04-02",
             Note = "Box included"
         };
-        editor.AddBorrowerCommand.Execute(null);
-        var borrowerId = Assert.Single(service.GetBorrowers()).Id;
+        Assert.Empty(editor.Borrowers);
+        await editor.ManageBorrowersCommand.ExecuteAsync(null);
+        Assert.Empty(contacts.Error);
+        var borrower = Assert.Single(editor.Borrowers);
+        Assert.Equal("Alice", borrower.Name);
+        editor.SelectedBorrower = borrower;
         editor.MarkLentCommand.Execute(null);
-        editor.ContactName = "Alex";
-        editor.RenameBorrowerCommand.Execute(null);
         Assert.Empty(editor.Error);
+        contacts.ContactName = "Alex";
+        contacts.SaveContactCommand.Execute(null);
+        Assert.Empty(contacts.Error);
 
         var scan = new CatalogDocument { Id = "scan", Name = original.Name, Size = 100 };
         var merged = Assert.Single(new CatalogEntryMerger().Merge([scan], [original]));
@@ -104,7 +116,7 @@ public sealed class CatalogLoanIntegrationTests
         var active = service.GetActiveLoans(new DateOnly(2024, 4, 3));
         Assert.Equal(("Alex", true), active[merged.Id]);
         var history = Assert.Single(service.GetHistory(merged.Id));
-        Assert.Equal(borrowerId, history.BorrowerId);
+        Assert.Equal(borrower.Id, history.BorrowerId);
         Assert.Equal("Box included", history.Note);
         Assert.False(history.IsOverdue(new DateOnly(2024, 4, 2)));
         Assert.Equal(100, catalog.Get(merged.Id)!.Size);

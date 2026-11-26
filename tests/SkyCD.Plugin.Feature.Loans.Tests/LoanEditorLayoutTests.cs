@@ -49,6 +49,18 @@ public sealed class LoanEditorLayoutTests
     }
 
     [Fact]
+    public void BorrowerRow_OffersSelectionAndOptionsNavigation()
+    {
+        var form = GetFormStack();
+        Assert.Single(form.Elements(Avalonia + "ComboBox"));
+        Assert.Contains(form.Elements(Avalonia + "Button"),
+            button => (string?)button.Attribute("Command") == "{Binding ManageBorrowersCommand}");
+        Assert.DoesNotContain(form.Descendants(),
+            control => control.Attributes().Any(attribute => attribute.Value is
+                "{Binding ContactName}" or "{Binding AddBorrowerCommand}" or "{Binding RenameBorrowerCommand}"));
+    }
+
+    [Fact]
     public void SaveCaption_StaysPinnedBelowTheList()
     {
         var caption = GetSaveCaption();
