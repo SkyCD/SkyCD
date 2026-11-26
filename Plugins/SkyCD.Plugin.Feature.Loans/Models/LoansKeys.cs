@@ -12,6 +12,9 @@ public static class LoansKeys
     public const string LoanDateLabel = Prefix + "LoanDateLabel";
     public const string LoanDueLabel = Prefix + "LoanDueLabel";
     public const string LoanNote = Prefix + "LoanNote";
+    public const string Lending = Prefix + "Lending";
+    public const string EditLending = Prefix + "EditLending";
+    public const string ConfirmReturn = Prefix + "ConfirmReturn";
     public const string MarkLent = Prefix + "MarkLent";
     public const string MarkReturned = Prefix + "MarkReturned";
     public const string LoanHistory = Prefix + "LoanHistory";

@@ -33,6 +33,11 @@ public sealed class CouchbasePersistenceTests : IDisposable
         var optionsRepository = (AppOptionsDocumentRepository)repositories.For<AppOptionsDocument>();
         var options = optionsRepository.GetOrCreateAppOptions();
         Assert.Null(options.Toolbar);
+        options.ActiveToolbarId = "test.plugin.toolbar";
+        options.PluginToolbarLayouts =
+        [
+            new() { ToolbarId = "test.plugin.toolbar", Items = [ToolbarItemDocument.Command("test.plugin.command")] }
+        ];
         options.Toolbar =
         [
             ToolbarItemDocument.Command(ToolbarCommandIds.Refresh),
@@ -43,6 +48,10 @@ public sealed class CouchbasePersistenceTests : IDisposable
 
         var restored = optionsRepository.GetOrCreateAppOptions();
 
+        Assert.Equal("test.plugin.toolbar", restored.ActiveToolbarId);
+        var pluginLayout = Assert.Single(restored.PluginToolbarLayouts);
+        Assert.Equal("test.plugin.toolbar", pluginLayout.ToolbarId);
+        Assert.Equal("test.plugin.command", Assert.Single(pluginLayout.Items).CommandId);
         Assert.Collection(restored.Toolbar!,
             entry => Assert.Equal(ToolbarCommandIds.Refresh, entry.CommandId),
             entry => Assert.Equal(ToolbarItemDocument.SeparatorKind, entry.Kind),

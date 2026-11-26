@@ -86,6 +86,22 @@ public sealed class CatalogFeatureExtensionManager
         static command => command.CommandId,
         static command => command.Order);
 
+    public IReadOnlyList<ToolbarContribution> GetToolbars() => Aggregate(
+        capability =>
+        {
+            var ids = capability.GetEntryCommands().Select(command => command.CommandId)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            return capability.GetToolbars().Select(toolbar => toolbar with
+            {
+                Buttons = toolbar.Buttons.Where(button => ids.Contains(button.CommandId)).ToArray()
+            }).ToArray();
+        },
+        static toolbar => toolbar.Id,
+        static toolbar => toolbar.Order);
+
+    public static bool CanExecute(EntryCommandContribution command, IReadOnlyList<CatalogEntry> entries) =>
+        entries.Count > 0 && (command.AppliesTo is not { } predicate || entries.All(predicate));
+
     /// <summary>Gets every contributed Properties tab for the entry, de-duplicated by key and ordered.</summary>
     public IReadOnlyList<EntryDetailsTabContribution> GetEntryDetailsTabs(CatalogEntry entry) => Aggregate(
         capability => capability.GetEntryDetailsTabs(entry),
@@ -93,34 +109,39 @@ public sealed class CatalogFeatureExtensionManager
         static tab => tab.Order);
 
     /// <summary>Runs a contributed command on the owning plugin and reports whether the host should refresh.</summary>
-    public async Task<bool> ExecuteEntryCommandAsync(
+    public Task<bool> ExecuteEntryCommandAsync(
         string commandId,
         CatalogEntry entry,
+        CancellationToken cancellationToken = default) =>
+        ExecuteEntryCommandAsync(commandId, [entry], cancellationToken);
+
+    public async Task<bool> ExecuteEntryCommandAsync(string commandId, IReadOnlyList<CatalogEntry> entries,
         CancellationToken cancellationToken = default)
     {
-        var capability = _capabilities.FirstOrDefault(candidate =>
-            candidate.GetEntryCommands().Any(contribution =>
-                contribution.CommandId.Equals(commandId, StringComparison.OrdinalIgnoreCase)));
-
-        if (capability is null)
+        foreach (var capability in _capabilities)
         {
-            return false;
+            try
+            {
+                var command = capability.GetEntryCommands().FirstOrDefault(contribution =>
+                    contribution.CommandId.Equals(commandId, StringComparison.OrdinalIgnoreCase));
+                if (command is not null)
+                {
+                    return CanExecute(command, entries)
+                        && await capability.ExecuteEntryCommandAsync(commandId, entries, cancellationToken)
+                            .ConfigureAwait(false);
+                }
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                PluginFailure.Publish(capability.GetType(), "catalog", exception);
+            }
         }
 
-        try
-        {
-            return await capability.ExecuteEntryCommandAsync(commandId, entry, cancellationToken)
-                .ConfigureAwait(false);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception exception)
-        {
-            PluginFailure.Publish(capability.GetType(), "catalog", exception);
-            return false;
-        }
+        return false;
     }
 
     private IReadOnlyList<T> Aggregate<T>(

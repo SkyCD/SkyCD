@@ -727,6 +727,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         catalogFeatures = manager;
         manager.DataChanged += OnCatalogFeatureDataChanged;
         manager.DetailsTabRequested += OnCatalogFeatureDetailsTabRequested;
+        RefreshToolbarMenu();
+        RefreshTopMenuState();
+        RaiseToolbarItemsChanged();
         DetailsColumnsCatalog.SetContributedColumns(manager.GetDetailsColumns().Select(contribution =>
             new DetailsColumnDefinition
             {
@@ -753,7 +756,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             document.Type switch
             {
                 CatalogDocumentType.Folder or CatalogDocumentType.NetworkFolder => CatalogEntryKind.Folder,
-                CatalogDocumentType.File or CatalogDocumentType.Media => CatalogEntryKind.File,
+                CatalogDocumentType.File => CatalogEntryKind.File,
+                CatalogDocumentType.Media => CatalogEntryKind.Media,
                 _ => CatalogEntryKind.Other
             },
             document.Size,
@@ -1063,7 +1067,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         RefreshPluginMenuServices(menuExtensionManager);
         OnPropertyChanged(nameof(BrowserDetailsColumns));
         RefreshDetailsHeaderMenuItems();
-        ToolbarItemsChanged?.Invoke(this, EventArgs.Empty);
+        RaiseToolbarItemsChanged();
         StatusText = DefaultStatusText;
         entryPreview.RefreshLocalization();
         RefreshBrowserItemsForSelection();
@@ -1415,6 +1419,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     partial void OnActivePaneChanged(ActivePane value)
     {
+        RefreshTopMenuState();
         OnPropertyChanged(nameof(IsDeleteEnabled));
         DeleteItemCommand.NotifyCanExecuteChanged();
         RenameItemCommand.NotifyCanExecuteChanged();
@@ -4781,6 +4786,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 Header = LocalizationService.Current.Get(TextKeys.View),
                 Items =
                 [
+                    new MainMenuItemViewModel
+                    {
+                        Key = "view_toolbars",
+                        Header = LocalizationService.Current.Get(UiKeys.Toolbars),
+                        Items = BuildToolbarMenuItems()
+                    },
                     CheckedMenuItem(IsStatusBarVisible, LocalizationService.Current.Get(TextKeys.StatusBar), ToggleStatusBarCommand, key: "statusbar"),
                     CheckedMenuItem(IsPreviewPaneVisible, LocalizationService.Current.Get(PreviewKeys.PreviewPane), TogglePreviewPaneCommand,
                         key: "previewpane"),
@@ -4879,6 +4890,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             {
                 toolsMenuItems.Add(new MainMenuItemViewModel
                 {
+                    Key = contribution.CommandId,
                     Header = contribution.Title,
                     Command = new RelayCommand(() => _ = ExecutePluginMenuCommandAsync(contribution.CommandId))
                 });
@@ -4899,6 +4911,14 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     internal async Task ExecutePluginMenuCommandAsync(string commandId)
     {
+        if (catalogFeatures?.GetEntryCommands().Any(command => command.AppliesTo is not null
+            && command.CommandId.Equals(commandId, StringComparison.OrdinalIgnoreCase)) == true)
+        {
+            await ExecuteFeatureEntryCommandAsync(commandId);
+            return;
+        }
+
+
         if (pluginCommandCancellation is not null) { pluginCommandCancellation.Cancel(); return; }
         using var cancellation = new CancellationTokenSource();
         pluginCommandCancellation = cancellation;
@@ -5021,6 +5041,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private void RefreshTopMenuState()
     {
+        RefreshToolbarCommandState();
         lock (viewRefreshLock)
         {
             ApplyMenuState(topMenuItems);
@@ -5063,6 +5084,17 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 SetMenuEnabled(byKey, FilePluginMenuKey(contribution.CommandId), selectedLocalFile);
             }
         }
+        foreach (var command in catalogFeatures?.GetEntryCommands() ?? [])
+        {
+            var enabled = CanExecuteFeatureCommand(command);
+            SetMenuEnabled(byKey, command.CommandId, enabled);
+            if (command.AppliesTo is not null)
+            {
+                SetMenuEnabled(byKey, FilePluginMenuKey(command.CommandId),
+                    enabled && (!localFileCommands.Any(item => item.CommandId == command.CommandId) || IsSelectedLocalFile()));
+            }
+        }
+
         SetMenuItems(byKey, "edit_status", BuildStatusMenuItems());
     }
 
@@ -5218,8 +5250,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     /// <summary>True when exactly one local file is selected, which is what file-scoped plugin commands require.</summary>
     private bool IsSelectedLocalFile()
     {
-        var document = SelectedBrowserItem;
-        if (document is null && ActivePane == ActivePane.Tree && SelectedTreeNode?.Key is { Length: > 0 } key)
+        var document = ActivePane == ActivePane.Tree ? null : SelectedBrowserItem;
+        if (ActivePane == ActivePane.Tree && SelectedTreeNode?.Key is { Length: > 0 } key)
         {
             document = (catalogRepository is not null ? catalogRepository.GetAll() : inMemoryCatalogEntries ?? [])
                 .FirstOrDefault(entry => entry.Id == key);
@@ -5248,6 +5280,14 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         return document is null ? null : ToCatalogEntry(document);
     }
 
+    private IReadOnlyList<CatalogEntry> GetFeatureSelection() =>
+        ActivePane == ActivePane.Tree
+            ? GetSelectedCatalogEntry() is { } entry ? [entry] : []
+            : GetSelectedBrowserItems().Select(ToCatalogEntry).ToArray();
+
+    private bool CanExecuteFeatureCommand(EntryCommandContribution command) =>
+        CatalogFeatureExtensionManager.CanExecute(command, GetFeatureSelection());
+
     private IReadOnlyList<MainMenuItemViewModel> BuildFeatureEntryCommandItems()
     {
         // A plugin that already exposes a command through its own menu group keeps it there, so the
@@ -5271,6 +5311,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             {
                 Key = commandId,
                 Header = command.Title,
+                IsEnabled = CanExecuteFeatureCommand(command),
                 Command = new AsyncRelayCommand(() => ExecuteFeatureEntryCommandAsync(commandId))
             });
         }
@@ -5280,15 +5321,15 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private async Task ExecuteFeatureEntryCommandAsync(string commandId)
     {
-        var entry = GetSelectedCatalogEntry();
-        if (catalogFeatures is null || entry is null)
+        var selection = GetFeatureSelection();
+        if (catalogFeatures is null || selection.Count == 0)
         {
             return;
         }
 
         try
         {
-            await catalogFeatures.ExecuteEntryCommandAsync(commandId, entry);
+            await catalogFeatures.ExecuteEntryCommandAsync(commandId, selection);
         }
         catch (Exception exception)
         {
@@ -5334,7 +5375,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 [
                     .. group.Select(contribution => new MainMenuItemViewModel
                     {
+                        Key = contribution.CommandId,
                         Header = contribution.Title,
+                        IsEnabled = catalogFeatures?.GetEntryCommands().FirstOrDefault(command =>
+                            command.CommandId.Equals(contribution.CommandId, StringComparison.OrdinalIgnoreCase)) is not { AppliesTo: not null } command
+                            || CanExecuteFeatureCommand(command),
                         Command = new RelayCommand(() => _ = ExecutePluginMenuCommandAsync(contribution.CommandId))
                     })
                 ]

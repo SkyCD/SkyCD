@@ -117,7 +117,7 @@ public sealed class LoansPluginGatingTests
 
         var column = Assert.Single(features.GetDetailsColumns());
         Assert.Equal("Alice", column.SelectValue(Entry));
-        Assert.Equal(3, features.GetEntryCommands().Count);
+        Assert.Equal(4, features.GetEntryCommands().Count);
 
         var loansTab = Assert.Single(features.GetEntryDetailsTabs(Entry));
         Assert.Equal("skycd.loans.details", loansTab.Key);
@@ -143,6 +143,8 @@ public sealed class LoansPluginGatingTests
         features.DetailsTabRequested += (_, args) => tabRequest = args;
 
         Assert.False(await features.ExecuteEntryCommandAsync("skycd.loans.return", Entry));
+        Assert.Null(tabRequest);
+        Assert.False(await features.ExecuteEntryCommandAsync("skycd.loans.history", Entry));
         Assert.NotNull(tabRequest);
         Assert.Equal("book", tabRequest.EntryId);
         Assert.Equal("skycd.loans.details", tabRequest.TabKey);
@@ -150,12 +152,41 @@ public sealed class LoansPluginGatingTests
         var service = CatalogLoanService.Open(repository);
         service.CatalogPath = provider.CatalogPath!;
         var active = Assert.Single(service.GetHistory("book"));
-        service.Return("book", active.Id, DateOnly.FromDateTime(DateTime.Today));
+        var media = Entry with { Kind = CatalogEntryKind.Media };
+        Assert.False(await plugin.ReturnSelectedAsync(service, [media], () => Task.FromResult(false)));
+        Assert.True(Assert.Single(service.GetHistory("book")).IsActive);
+
+        service.Edit("book", active.Id, active.BorrowerId, new DateOnly(2024, 3, 2), null, "Updated");
+        var updated = Assert.Single(service.GetHistory("book"));
+        Assert.Equal(active.Id, updated.Id);
+        Assert.Equal("2024-03-02", updated.LoanDate);
+        Assert.Equal("Updated", updated.Note);
+        Assert.True(await plugin.ReturnSelectedAsync(service, [media], () => Task.FromResult(true)));
         Assert.Empty(features.GetDecorations([Entry]));
         Assert.Null(column.SelectValue(Entry));
 
         var history = Assert.Single(service.GetHistory("book"));
         Assert.False(history.IsActive);
+    }
+
+    [Theory]
+    [InlineData(CatalogEntryKind.File, false)]
+    [InlineData(CatalogEntryKind.Folder, false)]
+    [InlineData(CatalogEntryKind.Other, false)]
+    [InlineData(CatalogEntryKind.Media, true)]
+    [InlineData(CatalogEntryKind.Volume, true)]
+    public void LendingToolbarCommandsRequireEverySelectedEntryToBeLendable(CatalogEntryKind kind, bool expected)
+    {
+        var manager = new CatalogFeatureExtensionManager([new LoansPlugin()]);
+        var toolbar = Assert.Single(manager.GetToolbars());
+        Assert.Equal(3, toolbar.Buttons.Count);
+        foreach (var button in toolbar.Buttons)
+        {
+            var command = Assert.Single(manager.GetEntryCommands(), item => item.CommandId == button.CommandId);
+            var selection = new[] { Entry with { Kind = CatalogEntryKind.Media }, Entry with { Kind = kind } };
+            Assert.Equal(expected, CatalogFeatureExtensionManager.CanExecute(command, selection));
+            Assert.False(CatalogFeatureExtensionManager.CanExecute(command, []));
+        }
     }
 
     private static Database OpenDatabase(string directory) =>

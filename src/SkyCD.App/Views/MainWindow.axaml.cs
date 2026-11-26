@@ -208,7 +208,7 @@ public partial class MainWindow : Window
             subscribedViewModel.SetStatusVariants(statusVariantRepository.GetOrdered());
             var appOptions = LoadAppOptions();
             subscribedViewModel.IsBackgroundMediaSyncEnabled = appOptions.IsBackgroundMediaSyncEnabled;
-            subscribedViewModel.LoadToolbarLayout(appOptions.Toolbar);
+            subscribedViewModel.LoadToolbarLayout(appOptions.Toolbar, appOptions.ActiveToolbarId, appOptions.PluginToolbarLayouts);
             PushFileFormatAvailability();
             UpdateWindowTitle();
         }

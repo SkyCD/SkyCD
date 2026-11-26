@@ -122,19 +122,17 @@ public static class ToolbarLayout
     /// </summary>
     public static IReadOnlyList<ToolbarItemDocument> Normalize(
         IEnumerable<ToolbarItemDocument>? layout,
-        IReadOnlyCollection<string> knownCommandIds)
+        IReadOnlyCollection<string> knownCommandIds,
+        IReadOnlyList<ToolbarItemDocument>? defaultLayout = null)
     {
         ArgumentNullException.ThrowIfNull(knownCommandIds);
-        if (layout is null)
-        {
-            return Normalize(CreateDefault(), knownCommandIds);
-        }
+        defaultLayout ??= CreateDefault();
 
         var known = new HashSet<string>(knownCommandIds, StringComparer.OrdinalIgnoreCase);
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var normalized = new List<ToolbarItemDocument>();
         var hadEntries = false;
-        foreach (var entry in layout)
+        foreach (var entry in layout ?? defaultLayout)
         {
             if (entry is null)
             {
@@ -171,8 +169,8 @@ public static class ToolbarLayout
             normalized.RemoveAt(normalized.Count - 1);
         }
 
-        return normalized.Count == 0 && hadEntries
-            ? Normalize(CreateDefault(), knownCommandIds)
+        return normalized.Count == 0 && hadEntries && layout is not null
+            ? Normalize(null, knownCommandIds, defaultLayout)
             : normalized;
     }
 

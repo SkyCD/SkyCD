@@ -4,7 +4,9 @@ using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media;
 using Couchbase.Lite;
 using SkyCD.Couchbase.Attributes;
@@ -23,6 +25,8 @@ using SkyCD.Plugin.Feature.Loans.Import;
 using SkyCD.Plugin.Feature.Loans.Models;
 using SkyCD.Plugin.Feature.Loans.Views;
 using SkyCD.Presentation.Catalog;
+using SkyCD.Presentation.ViewModels;
+using SkyCD.UI.Controls.Dialogs;
 using SkyCD.UI.Localization;
 using YamlDotNet.Serialization;
 
@@ -38,6 +42,7 @@ public sealed class LoansPlugin : IPluginCapability, ICatalogRepositoryConsumer,
 {
     private const string LendCommandId = "skycd.loans.lend";
     private const string ReturnCommandId = "skycd.loans.return";
+    private const string EditCommandId = "skycd.loans.edit";
     private const string HistoryCommandId = "skycd.loans.history";
     private const string ContactsCommandId = "skycd.loans.contacts";
     private const string ContactsPageId = "contacts";
@@ -150,10 +155,23 @@ public sealed class LoansPlugin : IPluginCapability, ICatalogRepositoryConsumer,
     /// <inheritdoc />
     public IReadOnlyList<EntryCommandContribution> GetEntryCommands() =>
     [
-        new(LendCommandId, LocalizationService.Current.Get(LoansKeys.MarkLent), 50),
-        new(ReturnCommandId, LocalizationService.Current.Get(LoansKeys.MarkReturned), 51),
-        new(HistoryCommandId, LocalizationService.Current.Get(LoansKeys.LoanHistory), 52)
+        new(LendCommandId, LocalizationService.Current.Get(LoansKeys.MarkLent), 50) { AppliesTo = IsLendable },
+        new(ReturnCommandId, LocalizationService.Current.Get(LoansKeys.MarkReturned), 51) { AppliesTo = IsLendable },
+        new(EditCommandId, LocalizationService.Current.Get(LoansKeys.EditLending), 52) { AppliesTo = IsLendable },
+        new(HistoryCommandId, LocalizationService.Current.Get(LoansKeys.LoanHistory), 53)
     ];
+
+    public IReadOnlyList<ToolbarContribution> GetToolbars() =>
+    [
+        new("skycd.loans.lending", LocalizationService.Current.Get(LoansKeys.Lending), 50,
+        [
+            new(LendCommandId, ToolbarIconKeys.AddItem),
+            new(ReturnCommandId, ToolbarIconKeys.Undo),
+            new(EditCommandId, ToolbarIconKeys.Properties)
+        ])
+    ];
+
+    private static bool IsLendable(CatalogEntry entry) => entry.Kind is CatalogEntryKind.Media or CatalogEntryKind.Volume;
 
     /// <inheritdoc />
     public IReadOnlyList<EntryDetailsTabContribution> GetEntryDetailsTabs(CatalogEntry entry)
@@ -179,17 +197,85 @@ public sealed class LoansPlugin : IPluginCapability, ICatalogRepositoryConsumer,
 
     /// <inheritdoc />
     public Task<bool> ExecuteEntryCommandAsync(string commandId, CatalogEntry entry,
+        CancellationToken cancellationToken = default) =>
+        ExecuteEntryCommandAsync(commandId, [entry], cancellationToken);
+
+    public async Task<bool> ExecuteEntryCommandAsync(string commandId, IReadOnlyList<CatalogEntry> entries,
         CancellationToken cancellationToken = default)
     {
-        if (Service() is null ||
-            commandId is not (LendCommandId or ReturnCommandId or HistoryCommandId))
+        if (entries.Count == 0 || Service() is not { } service)
         {
-            return Task.FromResult(false);
+            return false;
         }
 
-        // The host opens the Properties dialog on the Loans tab; edits persist and refresh from there.
-        DetailsTabRequested?.Invoke(this, new EntryDetailsTabRequestEventArgs(entry.Id, DetailsTabKey));
-        return Task.FromResult(false);
+        if (commandId == HistoryCommandId)
+        {
+            DetailsTabRequested?.Invoke(this, new EntryDetailsTabRequestEventArgs(entries[0].Id, DetailsTabKey));
+            return false;
+        }
+
+        if (commandId is not (LendCommandId or ReturnCommandId or EditCommandId)
+            || !entries.All(IsLendable)
+            || Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime { MainWindow: { } owner })
+        {
+            return false;
+        }
+
+        var localization = LocalizationService.Current;
+        if (commandId == ReturnCommandId)
+        {
+            return await ReturnSelectedAsync(service, entries, () => QuestionDialog.ShowAsync(
+                owner, localization.Get(LoansKeys.MarkReturned), localization.Get(LoansKeys.ConfirmReturn)),
+                cancellationToken);
+        }
+
+        var isEdit = commandId == EditCommandId;
+        foreach (var entry in entries)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var active = service.GetHistory(entry.Id).FirstOrDefault(loan => loan.IsActive);
+            var title = localization.Get(isEdit ? LoansKeys.EditLending : LoansKeys.MarkLent);
+            if (isEdit && active is null)
+            {
+                continue;
+            }
+
+            var window = new Window
+            {
+                Title = $"{title} — {entry.Name}",
+                SizeToContent = SizeToContent.WidthAndHeight,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                CanResize = false
+            };
+            var editor = new LoanDialogViewModel(service, entry.Id, () =>
+            {
+                Invalidate();
+                window.Close(true);
+            }, OpenContactsAsync, isPopup: true, editLoan: isEdit ? active : null);
+            window.Content = new LoanEditor { DataContext = editor };
+            if (!await window.ShowDialog<bool>(owner))
+            {
+                break;
+            }
+        }
+
+        return false;
+    }
+
+    internal async Task<bool> ReturnSelectedAsync(CatalogLoanService service, IReadOnlyList<CatalogEntry> entries,
+        Func<Task<bool>> confirmAsync, CancellationToken cancellationToken = default)
+    {
+        var active = entries.Select(entry => service.GetHistory(entry.Id).FirstOrDefault(loan => loan.IsActive))
+            .OfType<LoanDocument>().ToArray();
+        if (!await confirmAsync() || active.Length == 0)
+        {
+            return false;
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        service.Return(active, DateOnly.FromDateTime(DateTime.Today));
+        Invalidate();
+        return true;
     }
 
     /// <inheritdoc />
@@ -197,6 +283,7 @@ public sealed class LoansPlugin : IPluginCapability, ICatalogRepositoryConsumer,
     [
         new(LendCommandId, LocalizationService.Current.Get(LoansKeys.MarkLent), "Loans", 10),
         new(ReturnCommandId, LocalizationService.Current.Get(LoansKeys.MarkReturned), "Loans", 20),
+        new(EditCommandId, LocalizationService.Current.Get(LoansKeys.EditLending), "Loans", 25),
         new(HistoryCommandId, LocalizationService.Current.Get(LoansKeys.LoanHistory), "Loans", 30),
         new(ContactsCommandId, LocalizationService.Current.Get(LoansKeys.ManageContacts), "Loans", 40)
     ];
@@ -307,6 +394,9 @@ public sealed class LoansPlugin : IPluginCapability, ICatalogRepositoryConsumer,
 
     private static readonly Dictionary<string, string> English = new()
     {
+        ["ui.Lending"] = "Lending",
+        ["ui.EditLending"] = "Edit lending info",
+        ["ui.ConfirmReturn"] = "Mark the selected loans as returned?",
         ["ui.Loans"] = "Loans",
         ["ui.Borrower"] = "Borrower",
         ["ui.ManageBorrowers"] = "Manage borrowers…",
@@ -361,6 +451,9 @@ public sealed class LoansPlugin : IPluginCapability, ICatalogRepositoryConsumer,
 
     private static readonly Dictionary<string, string> Lithuanian = new()
     {
+        ["ui.Lending"] = "Skolinimas",
+        ["ui.EditLending"] = "Redaguoti skolinimo informaciją",
+        ["ui.ConfirmReturn"] = "Pažymėti pasirinktas paskolas kaip grąžintas?",
         ["ui.Loans"] = "Paskolos",
         ["ui.Borrower"] = "Skolininkas",
         ["ui.ManageBorrowers"] = "Tvarkyti skolininkus…",

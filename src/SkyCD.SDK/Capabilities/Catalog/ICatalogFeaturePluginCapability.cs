@@ -27,6 +27,14 @@ public interface ICatalogFeaturePluginCapability : IPluginCapability
     /// <summary>Gets the per-entry context-menu commands this plugin contributes.</summary>
     IReadOnlyList<EntryCommandContribution> GetEntryCommands();
 
+    /// <summary>Gets switchable toolbars that reference this feature's entry commands.</summary>
+    IReadOnlyList<ToolbarContribution> GetToolbars() => [];
+
+    /// <summary>Runs an entry command for a selection. By default only the primary entry is passed.</summary>
+    Task<bool> ExecuteEntryCommandAsync(string commandId, IReadOnlyList<CatalogEntry> entries,
+        CancellationToken cancellationToken = default) =>
+        entries.Count == 0 ? Task.FromResult(false) : ExecuteEntryCommandAsync(commandId, entries[0], cancellationToken);
+
     /// <summary>Runs one contributed entry command and returns whether the host should refresh its projection.</summary>
     Task<bool> ExecuteEntryCommandAsync(string commandId, CatalogEntry entry, CancellationToken cancellationToken = default);
 
