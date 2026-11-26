@@ -19,7 +19,7 @@ namespace SkyCD.Plugin.Metadata.Video;
 /// no artifact: the metadata result stands on its own and the browser shows the honest "no preview stored"
 /// state. Nothing is ever downloaded.
 /// </remarks>
-public sealed class VideoPosterPlugin : IMediaPreviewCapability
+public sealed class VideoPosterPlugin : IMediaPreviewCapability, IMediaPreviewAvailability
 {
     private const int PipeChunkBytes = 256 * 1024;
 
@@ -45,6 +45,12 @@ public sealed class VideoPosterPlugin : IMediaPreviewCapability
 
     public MediaDescriptor Descriptor =>
         new(VideoSchema.Extensions, VideoSchema.ContentTypes, VideoSchema.Preview, IndexTimePreview: true);
+
+    /// <summary>
+    /// Short, user-safe reason for the host log when no decoder can run. The per-file extraction
+    /// itself stays silent and metadata-only; the host warns once per plugin (issue #1202).
+    /// </summary>
+    public string? PreviewUnavailableReason => extractor.IsAvailable ? null : "poster decoder unavailable";
 
     public async Task<MediaPreviewResult> GeneratePreviewAsync(
         MediaItem item,

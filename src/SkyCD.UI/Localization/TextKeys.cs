@@ -88,6 +88,10 @@ public static class TextKeys
     public const string ExecutingPluginCommand = "core.text.ExecutingPluginCommand";
     public const string PluginCommandTimedOut = "core.text.PluginCommandTimedOut";
     public const string PluginCommandError = "core.text.PluginCommandError";
+    public const string PluginErrorDuringOperation = "core.text.PluginErrorDuringOperation";
+    public const string PluginErrorRepeatCount = "core.text.PluginErrorRepeatCount";
+    public const string PluginErrorRepeatCountFiles = "core.text.PluginErrorRepeatCountFiles";
+    public const string PluginPreviewUnavailable = "core.text.PluginPreviewUnavailable";
     public const string NavigatedToNode = "core.text.NavigatedToNode";
     public const string Expand = "core.text.Expand";
     public const string Collapse = "core.text.Collapse";
