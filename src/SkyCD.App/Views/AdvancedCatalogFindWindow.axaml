@@ -77,7 +77,14 @@
             </WrapPanel>
         </Grid>
 
-        <Grid Grid.Row="2" ColumnDefinitions="150,150,140,*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
+        <Grid Grid.Row="2" ColumnSpacing="{DynamicResource SkySpaceSm}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="{StaticResource SkyAdvancedFindLabelWidth}" />
+                <ColumnDefinition Width="{StaticResource SkyAdvancedFindLabelWidth}" />
+                <ColumnDefinition Width="140" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.FilterField}}" Opacity="0.7" />
             <TextBlock Grid.Column="1" Text="{i18n:Translate {x:Static i18n:UiKeys.FilterOperator}}" Opacity="0.7" />
             <TextBlock Grid.Column="2" Text="{i18n:Translate {x:Static i18n:UiKeys.FilterKey}}" Opacity="0.7" />
@@ -87,7 +94,14 @@
         <ListBox Grid.Row="3" ItemsSource="{Binding Filters}">
             <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:AdvancedCatalogFilterRowViewModel">
-                    <Grid ColumnDefinitions="150,150,140,*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                    <Grid ColumnSpacing="{DynamicResource SkySpaceSm}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="{StaticResource SkyAdvancedFindLabelWidth}" />
+                            <ColumnDefinition Width="{StaticResource SkyAdvancedFindLabelWidth}" />
+                            <ColumnDefinition Width="140" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
                         <ComboBox ItemsSource="{Binding Fields}"
                                   SelectedItem="{Binding SelectedField}"
                                   AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.FilterField}}">
