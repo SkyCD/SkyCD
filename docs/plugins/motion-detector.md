@@ -1,8 +1,15 @@
 # Motion Detector
 
-Build `Plugins/SkyCD.Plugin.Feature.MotionDetector` and install its assembly and the two native OpenCV
-DLLs (`OpenCvSharpExtern.dll`, `opencv_videoio_ffmpeg4130_64.dll`) through the normal plugin loader.
+Build `Plugins/SkyCD.Plugin.Feature.MotionDetector` and install its assembly and the platform native
+OpenCV library through the normal plugin loader: `OpenCvSharpExtern.dll` on Windows (the x64 build also
+needs `opencv_videoio_ffmpeg4130_64.dll`), `libOpenCvSharpExtern.so` on Linux and
+`libOpenCvSharpExtern.dylib` on macOS. The project copies the library that matches the build or publish
+runtime (`$(RuntimeIdentifier)` when set, otherwise the SDK host runtime) into the plugin folder.
 Discovery uses assembly capabilities; no `plugin.json` is required.
+
+The capture engine runs on Windows x64/arm64, Linux x64/arm64 and macOS x64/arm64. A runtime library that
+cannot load — for example on a Linux host without the GTK 3 stack OpenCV's highgui needs — degrades to
+the inline "OpenCV runtime could not be loaded" message instead of failing plugin discovery.
 
 ## Capture source
 

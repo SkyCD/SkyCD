@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using OpenCvSharp;
 using SkyCD.Plugin.Feature.MotionDetector.Configuration;
 using SkyCD.Plugin.Feature.MotionDetector.Detectors;
 using SkyCD.Plugin.Feature.MotionDetector.Models;
@@ -210,6 +212,16 @@ public sealed class MotionDetectorTests
         {
             Directory.Delete(destination, true);
         }
+    }
+
+    [Fact]
+    public void BundledOpenCvRuntime_LoadsOnTheCurrentPlatform()
+    {
+        Assert.True(NativeOpenCv.EnsureLoaded(),
+            $"the {NativeOpenCv.LibraryFileName} bundled for {RuntimeInformation.RuntimeIdentifier} did not load");
+
+        using var frame = new Mat(2, 2, MatType.CV_8UC1);
+        Assert.Equal(2, frame.Rows);
     }
 
     private static CaptureSourceConfiguration Source(string id) =>

@@ -37,10 +37,16 @@ Source: https://github.com/shimat/opencvsharp
 License: Apache License 2.0
 https://www.apache.org/licenses/LICENSE-2.0
 
-The video metadata plugin decodes poster frames in-process with OpenCvSharp4 4.13.0.20261107 and its
-Windows x64 runtime package:
+The video metadata plugin decodes poster frames in-process and the motion detector plugin runs its
+detectors and capture loops in-process with OpenCvSharp4 4.13.0.20261107 and the runtime package for
+the target platform:
 https://www.nuget.org/packages/OpenCvSharp4/4.13.0.20261107
 https://www.nuget.org/packages/OpenCvSharp4.runtime.win/4.13.0.20261107
+https://www.nuget.org/packages/OpenCvSharp4.runtime.win-arm64/4.13.0.20261107
+https://www.nuget.org/packages/OpenCvSharp4.official.runtime.linux-x64/4.13.0.20261107
+https://www.nuget.org/packages/OpenCvSharp4.runtime.linux-arm64/4.13.0.20261107
+https://www.nuget.org/packages/OpenCvSharp4.runtime.osx.x64/4.13.0.20261107
+https://www.nuget.org/packages/OpenCvSharp4.runtime.osx.arm64/4.13.0.20261107
 
 OpenCV
 Copyright (c) 2000-2026 Intel Corporation, 2009-2026 OpenCV contributors
@@ -48,16 +54,18 @@ Source: https://github.com/opencv/opencv
 License: Apache License 2.0
 https://www.apache.org/licenses/LICENSE-2.0
 
-OpenCvSharp4.runtime.win bundles the native OpenCV library (OpenCvSharpExtern.dll).
+The OpenCvSharp4 runtime packages bundle the native OpenCV library (OpenCvSharpExtern.dll on Windows,
+libOpenCvSharpExtern.so on Linux and libOpenCvSharpExtern.dylib on macOS).
 
-FFmpeg videoio backend (bundled inside OpenCvSharp4.runtime.win)
+FFmpeg videoio backend (bundled inside the OpenCvSharp4 runtime packages)
 Source: https://github.com/FFmpeg/FFmpeg
 License: GNU Lesser General Public License 2.1
 https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html
 
-The Windows runtime package also ships opencv_videoio_ffmpeg4130_64.dll, an LGPL-2.1 build of the
+The Windows x64 runtime package also ships opencv_videoio_ffmpeg4130_64.dll, an LGPL-2.1 build of the
 FFmpeg-based OpenCV video I/O backend. It is loaded dynamically by OpenCV at runtime from the plugin
-folder, is not statically linked into SkyCD, and can be replaced by the operator.
+folder, is not statically linked into SkyCD, and can be replaced by the operator. The Linux and macOS
+runtime packages include the same FFmpeg-backed video I/O backend inside the native OpenCV library.
 
 Scriban
 Copyright Alexandre Mutel

@@ -10,9 +10,10 @@ namespace SkyCD.Plugin.Feature.MotionDetector.Configuration;
 /// </summary>
 /// <remarks>
 /// Plugin assemblies are loaded with <c>Assembly.LoadFrom</c> rather than through the host's deps.json, so the
-/// default P/Invoke probing does not reach <c>OpenCvSharpExtern.dll</c>. The build places both native libraries
-/// next to <c>OpenCvSharp.dll</c>; preloading them by full path makes the later name-based P/Invoke and the
-/// videoio backend's dynamic FFmpeg load resolve to those exact files.
+/// default P/Invoke probing does not reach the platform library. The build places it next to
+/// <c>OpenCvSharp.dll</c>; preloading it by full path makes the later name-based P/Invoke resolve to that exact
+/// file. Linux packages also need their GTK stack for highgui, so a missing system library is reported as an
+/// unavailable runtime rather than an exception.
 /// </remarks>
 internal static class NativeOpenCv
 {
@@ -27,13 +28,14 @@ internal static class NativeOpenCv
         }
     }
 
+    /// <summary>The native library file name OpenCvSharp expects on the current platform.</summary>
+    internal static string LibraryFileName =>
+        OperatingSystem.IsWindows() ? "OpenCvSharpExtern.dll"
+        : OperatingSystem.IsMacOS() ? "libOpenCvSharpExtern.dylib"
+        : "libOpenCvSharpExtern.so";
+
     private static bool TryLoad()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return false;
-        }
-
         var directory = ResolveNativeDirectory();
         if (directory is null)
         {
@@ -42,12 +44,13 @@ internal static class NativeOpenCv
 
         try
         {
-            foreach (var ffmpeg in Directory.EnumerateFiles(directory, "opencv_videoio_ffmpeg*.dll"))
+            // Windows ships the FFmpeg videoio backend as a separate DLL; other platforms bundle it.
+            foreach (var dependency in Directory.EnumerateFiles(directory, "*opencv_videoio_ffmpeg*"))
             {
-                NativeLibrary.Load(ffmpeg);
+                NativeLibrary.Load(dependency);
             }
 
-            NativeLibrary.Load(Path.Combine(directory, "OpenCvSharpExtern.dll"));
+            NativeLibrary.Load(Path.Combine(directory, LibraryFileName));
             return true;
         }
         catch (Exception exception) when (exception is DllNotFoundException or BadImageFormatException
@@ -65,12 +68,34 @@ internal static class NativeOpenCv
             return null;
         }
 
-        if (File.Exists(Path.Combine(managedDirectory, "OpenCvSharpExtern.dll")))
+        if (File.Exists(Path.Combine(managedDirectory, LibraryFileName)))
         {
             return managedDirectory;
         }
 
-        var runtimeDirectory = Path.Combine(managedDirectory, "runtimes", "win-x64", "native");
-        return File.Exists(Path.Combine(runtimeDirectory, "OpenCvSharpExtern.dll")) ? runtimeDirectory : null;
+        // RID-less outputs keep package native assets under runtimes/<rid>/native.
+        var runtimeDirectory = Path.Combine(managedDirectory, "runtimes",
+            RuntimeInformation.RuntimeIdentifier, "native");
+        if (File.Exists(Path.Combine(runtimeDirectory, LibraryFileName)))
+        {
+            return runtimeDirectory;
+        }
+
+        var runtimesDirectory = Path.Combine(managedDirectory, "runtimes");
+        if (!Directory.Exists(runtimesDirectory))
+        {
+            return null;
+        }
+
+        foreach (var directory in Directory.EnumerateDirectories(runtimesDirectory, "native",
+                     SearchOption.AllDirectories))
+        {
+            if (File.Exists(Path.Combine(directory, LibraryFileName)))
+            {
+                return directory;
+            }
+        }
+
+        return null;
     }
 }

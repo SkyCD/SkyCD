@@ -16,20 +16,71 @@
         <PackageReference Include="Avalonia" Version="12.1.6"/>
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2"/>
         <PackageReference Include="OpenCvSharp4" Version="4.13.0.20261107"/>
-        <PackageReference Include="OpenCvSharp4.runtime.win" Version="4.13.0.20261107" GeneratePathProperty="true"/>
+        <!--
+            Every platform runtime is referenced unconditionally so packages.lock.json is identical on
+            every build host (CI restores in locked mode). ExcludeAssets keeps NuGet from copying all
+            of them; only the native library matching the build or publish runtime is linked below.
+        -->
+        <PackageReference Include="OpenCvSharp4.runtime.win" Version="4.13.0.20261107"
+                          GeneratePathProperty="true" ExcludeAssets="runtime"/>
+        <PackageReference Include="OpenCvSharp4.runtime.win-arm64" Version="4.13.0.20261107"
+                          GeneratePathProperty="true" ExcludeAssets="runtime"/>
+        <PackageReference Include="OpenCvSharp4.official.runtime.linux-x64" Version="4.13.0.20261107"
+                          GeneratePathProperty="true" ExcludeAssets="runtime"/>
+        <PackageReference Include="OpenCvSharp4.runtime.linux-arm64" Version="4.13.0.20261107"
+                          GeneratePathProperty="true" ExcludeAssets="runtime"/>
+        <PackageReference Include="OpenCvSharp4.runtime.osx.x64" Version="4.13.0.20261107"
+                          GeneratePathProperty="true" ExcludeAssets="runtime"/>
+        <PackageReference Include="OpenCvSharp4.runtime.osx.arm64" Version="4.13.0.20261107"
+                          GeneratePathProperty="true" ExcludeAssets="runtime"/>
     </ItemGroup>
-    <ItemGroup>
+    <PropertyGroup>
         <!--
             Plugin assemblies load through Assembly.LoadFrom into the host's default context, so the host's
-            deps.json never lists these native assets. OpenCvSharp probes the calling assembly's directory, so
-            both DLLs must sit next to OpenCvSharp.dll in the plugin output.
+            deps.json never lists these native assets. OpenCvSharp probes the calling assembly's directory,
+            so the platform library must sit next to OpenCvSharp.dll in the plugin output.
         -->
+        <OpenCvNativeRuntime Condition="'$(OpenCvNativeRuntime)' == '' and '$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</OpenCvNativeRuntime>
+        <OpenCvNativeRuntime Condition="'$(OpenCvNativeRuntime)' == '' and '$(NETCoreSdkRuntimeIdentifier)' != ''">$(NETCoreSdkRuntimeIdentifier)</OpenCvNativeRuntime>
+        <OpenCvNativeRuntime Condition="'$(OpenCvNativeRuntime)' == ''">win-x64</OpenCvNativeRuntime>
+    </PropertyGroup>
+    <ItemGroup Condition="'$(OpenCvNativeRuntime)' == 'win-x64'">
         <None Include="$(PkgOpenCvSharp4_runtime_win)/runtimes/win-x64/native/OpenCvSharpExtern.dll"
               Link="OpenCvSharpExtern.dll"
               CopyToOutputDirectory="PreserveNewest"
               CopyToPublishDirectory="PreserveNewest"/>
         <None Include="$(PkgOpenCvSharp4_runtime_win)/runtimes/win-x64/native/opencv_videoio_ffmpeg4130_64.dll"
               Link="opencv_videoio_ffmpeg4130_64.dll"
+              CopyToOutputDirectory="PreserveNewest"
+              CopyToPublishDirectory="PreserveNewest"/>
+    </ItemGroup>
+    <ItemGroup Condition="'$(OpenCvNativeRuntime)' == 'win-arm64'">
+        <None Include="$(PkgOpenCvSharp4_runtime_win-arm64)/runtimes/win-arm64/native/OpenCvSharpExtern.dll"
+              Link="OpenCvSharpExtern.dll"
+              CopyToOutputDirectory="PreserveNewest"
+              CopyToPublishDirectory="PreserveNewest"/>
+    </ItemGroup>
+    <ItemGroup Condition="'$(OpenCvNativeRuntime)' == 'linux-x64'">
+        <None Include="$(PkgOpenCvSharp4_official_runtime_linux-x64)/runtimes/linux-x64/native/libOpenCvSharpExtern.so"
+              Link="libOpenCvSharpExtern.so"
+              CopyToOutputDirectory="PreserveNewest"
+              CopyToPublishDirectory="PreserveNewest"/>
+    </ItemGroup>
+    <ItemGroup Condition="'$(OpenCvNativeRuntime)' == 'linux-arm64'">
+        <None Include="$(PkgOpenCvSharp4_runtime_linux-arm64)/runtimes/linux-arm64/native/libOpenCvSharpExtern.so"
+              Link="libOpenCvSharpExtern.so"
+              CopyToOutputDirectory="PreserveNewest"
+              CopyToPublishDirectory="PreserveNewest"/>
+    </ItemGroup>
+    <ItemGroup Condition="'$(OpenCvNativeRuntime)' == 'osx-x64'">
+        <None Include="$(PkgOpenCvSharp4_runtime_osx_x64)/runtimes/osx-x64/native/libOpenCvSharpExtern.dylib"
+              Link="libOpenCvSharpExtern.dylib"
+              CopyToOutputDirectory="PreserveNewest"
+              CopyToPublishDirectory="PreserveNewest"/>
+    </ItemGroup>
+    <ItemGroup Condition="'$(OpenCvNativeRuntime)' == 'osx-arm64'">
+        <None Include="$(PkgOpenCvSharp4_runtime_osx_arm64)/runtimes/osx-arm64/native/libOpenCvSharpExtern.dylib"
+              Link="libOpenCvSharpExtern.dylib"
               CopyToOutputDirectory="PreserveNewest"
               CopyToPublishDirectory="PreserveNewest"/>
     </ItemGroup>
