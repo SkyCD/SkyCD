@@ -10,22 +10,28 @@ public static class SizeFormatting
         "(?<number>\\d(?:[\\d.,]*\\d)?)(?<unit>[A-Za-z]+)$",
         RegexOptions.Compiled);
 
-    public static string FormatBytes(long bytes, string format = "0.##", bool removeSpace = false)
+    public static string FormatBytes(long bytes, string format = "0.##", bool removeSpace = false,
+        IFormatProvider? formatProvider = null)
     {
-        var text = bytes.Bytes().Humanize(format);
+        var text = formatProvider is null
+            ? bytes.Bytes().Humanize(format)
+            : bytes.Bytes().Humanize(format, formatProvider);
         return removeSpace
             ? text.Replace(" ", string.Empty, StringComparison.Ordinal)
             : text;
     }
 
-    public static string FormatBytes(ulong bytes, string format = "0.##", bool removeSpace = false)
+    public static string FormatBytes(ulong bytes, string format = "0.##", bool removeSpace = false,
+        IFormatProvider? formatProvider = null)
     {
         if (bytes <= long.MaxValue)
         {
-            return FormatBytes((long)bytes, format, removeSpace);
+            return FormatBytes((long)bytes, format, removeSpace, formatProvider);
         }
 
-        var text = ((double)bytes).Bytes().Humanize(format);
+        var text = formatProvider is null
+            ? ((double)bytes).Bytes().Humanize(format)
+            : ((double)bytes).Bytes().Humanize(format, formatProvider);
         return removeSpace
             ? text.Replace(" ", string.Empty, StringComparison.Ordinal)
             : text;

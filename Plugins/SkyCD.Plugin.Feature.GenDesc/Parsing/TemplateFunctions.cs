@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Scriban;
+using SkyCD.Formatting;
 
 namespace SkyCD.Plugin.Feature.GenDesc.Parsing;
 
@@ -125,16 +126,9 @@ internal static class TemplateFunctions
     {
         var bytes = Num(value);
         if (double.IsNaN(bytes) || double.IsInfinity(bytes) || bytes < 0) return string.Empty;
-        string[] units = ["B", "KB", "MB", "GB", "TB"];
-        var scaled = bytes;
-        var unit = 0;
-        while (scaled >= 1024 && unit < units.Length - 1)
-        {
-            scaled /= 1024;
-            unit++;
-        }
 
-        return scaled.ToString(unit == 0 ? "0" : "0.#", CultureInfo.InvariantCulture) + " " + units[unit];
+        var whole = bytes >= (double)long.MaxValue ? long.MaxValue : (long)bytes;
+        return SizeFormatting.FormatBytes(whole, "0.#", formatProvider: CultureInfo.InvariantCulture);
     }
 
     public static string Date(object? value, object? format)
