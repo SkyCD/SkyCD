@@ -350,6 +350,42 @@ public sealed class AddToListWindowLayoutTests
         }
     }
 
+    [AvaloniaTheory]
+    [InlineData(AddToListSourceMode.Media)]
+    [InlineData(AddToListSourceMode.Folder)]
+    [InlineData(AddToListSourceMode.Internet)]
+    [InlineData(AddToListSourceMode.TitleOnly)]
+    public void NameBlock_LeavesGapAboveSourceFields(AddToListSourceMode mode)
+    {
+        // Issue #1189: the name/Location block used to end exactly where the source panel begins.
+        using var fixture = ShowWindow(mode);
+        var nameBlock = fixture.Window.FindControl<StackPanel>("NameLocationBlock")!;
+        var viewer = fixture.Window.FindControl<ScrollViewer>("SourceFieldsScrollViewer")!;
+
+        var nameBounds = BoundsRelativeTo(nameBlock, fixture.Root);
+        var viewerBounds = BoundsRelativeTo(viewer, fixture.Root);
+
+        Assert.True(viewerBounds.Top - nameBounds.Bottom >= 3,
+            $"{mode}: source fields touch the name block (gap {viewerBounds.Top - nameBounds.Bottom}).");
+    }
+
+    [AvaloniaFact]
+    public void InternetProtocolRow_HasLabelAndSharedFieldHeight()
+    {
+        // Issue #1189: the protocol row had no field label and the Paste URL button did not share
+        // the 26 px field height of the ComboBox in the same row.
+        using var fixture = ShowWindow(AddToListSourceMode.Internet);
+        var combo = fixture.Window.FindControl<ComboBox>("InternetProtocolComboBox")!;
+        var paste = fixture.Window.FindControl<Button>("PasteInternetUrlButton")!;
+
+        Assert.Equal(26, combo.Bounds.Height, 1);
+        Assert.Equal(26, paste.Bounds.Height, 1);
+
+        var group = (StackPanel)((Grid)combo.Parent!).Parent!;
+        var label = Assert.IsType<TextBlock>(group.Children[0]);
+        Assert.Equal(LocalizationService.Current.Get(UiKeys.InternetProtocol), label.Text);
+    }
+
     private static double IconInset(PackIconControl icon, Control container) =>
         icon.TranslatePoint(default, container)!.Value.X;
 
