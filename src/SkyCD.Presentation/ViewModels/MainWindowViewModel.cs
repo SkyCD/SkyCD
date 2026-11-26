@@ -32,6 +32,7 @@ using SkyCD.SDK.Capabilities.Volume;
 using SkyCD.Presentation.Catalog;
 using SkyCD.Presentation.MediaCache;
 using SkyCD.Presentation.Operations;
+using SkyCD.Presentation.Plugins;
 using SkyCD.Presentation.Search;
 using SkyCD.Presentation.Staging;
 using SkyCD.Presentation.UndoRedo;
@@ -1556,6 +1557,127 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public IReadOnlyList<CatalogDocument> GetAllCatalogEntries() =>
         catalogRepository?.GetAll() ?? (IReadOnlyList<CatalogDocument>)(inMemoryCatalogEntries?.ToArray() ?? []);
+
+    /// <summary>
+    /// Re-publishes the account folders of this catalog from live connector snapshots. Connected
+    /// accounts refresh folder properties and entries; disconnected folders keep their entries and
+    /// are marked sign-in required. Folders never move and are never deleted here.
+    /// </summary>
+    public async Task SyncAccountFoldersToCatalogAsync(
+        IEnumerable<SDK.Capabilities.Accounts.IAccountSession> sessions,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(sessions);
+        var entries = GetAllCatalogEntries();
+        var folders = SkyCD.Presentation.Accounts.CatalogAccountReader.ReadAccountFolders(entries);
+        if (folders.Count == 0)
+        {
+            return;
+        }
+
+        var byDocumentId = entries.ToDictionary(static document => document.Id, StringComparer.Ordinal);
+        var changed = false;
+        foreach (var session in sessions)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            SDK.Capabilities.Accounts.AccountSessionStatus status;
+            try
+            {
+                status = await session.GetStatusAsync(cancellationToken);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                continue;
+            }
+
+            var folder = folders.FirstOrDefault(candidate =>
+                string.Equals(candidate.ProviderId, status.ProviderId, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(candidate.AccountKey, status.AccountId, StringComparison.OrdinalIgnoreCase));
+            if (folder is null || !byDocumentId.TryGetValue(folder.FolderId, out var document))
+            {
+                continue;
+            }
+
+            if (!status.IsConnected)
+            {
+                document.Properties.TryGetValue(SkyCD.Presentation.Accounts.CatalogAccountReader.ConnectedKey, out var connectedValue);
+                if (!Equals(connectedValue, false))
+                {
+                    document.Properties[SkyCD.Presentation.Accounts.CatalogAccountReader.ConnectedKey] = false;
+                    PersistAccountDocument(document);
+                    changed = true;
+                }
+
+                continue;
+            }
+
+            var plan = SkyCD.Presentation.Accounts.AccountCatalogBuilder.BuildPlan(status);
+            var rebuilt = SkyCD.Presentation.Accounts.AccountCatalogBuilder.BuildDocuments(plan, document.ParentId);
+            foreach (var rebuiltDocument in rebuilt)
+            {
+                PersistAccountDocument(rebuiltDocument);
+            }
+
+            changed = true;
+        }
+
+        if (changed)
+        {
+            RefreshTreeNodes();
+            RefreshBrowserItemsForSelection();
+            IsDirtyDocument = true;
+        }
+    }
+
+    /// <summary>Marks one account folder disconnected without deleting it or its entries.</summary>
+    public void MarkAccountFolderDisconnected(string providerId, string accountKey)
+    {
+        var folders = SkyCD.Presentation.Accounts.CatalogAccountReader.ReadAccountFolders(GetAllCatalogEntries());
+        var folder = folders.FirstOrDefault(candidate =>
+            string.Equals(candidate.ProviderId, providerId, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(candidate.AccountKey, accountKey, StringComparison.OrdinalIgnoreCase));
+        if (folder is null)
+        {
+            return;
+        }
+
+        var entries = GetAllCatalogEntries();
+        var document = entries.FirstOrDefault(candidate => string.Equals(candidate.Id, folder.FolderId, StringComparison.Ordinal));
+        if (document is null)
+        {
+            return;
+        }
+
+        document.Properties[SkyCD.Presentation.Accounts.CatalogAccountReader.ConnectedKey] = false;
+        PersistAccountDocument(document);
+        RefreshTreeNodes();
+        RefreshBrowserItemsForSelection();
+        IsDirtyDocument = true;
+    }
+
+    private void PersistAccountDocument(CatalogDocument document)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        if (catalogRepository is not null)
+        {
+            catalogRepository.Save(document.Id, document);
+            return;
+        }
+
+        if (inMemoryCatalogEntries is not null)
+        {
+            var index = inMemoryCatalogEntries.FindIndex(candidate =>
+                string.Equals(candidate.Id, document.Id, StringComparison.Ordinal));
+            if (index >= 0)
+            {
+                inMemoryCatalogEntries[index] = document;
+            }
+            else
+            {
+                inMemoryCatalogEntries.Add(document);
+            }
+        }
+    }
 
     private void NavigateToFindResult(CatalogFindResult result)
     {
@@ -3379,40 +3501,59 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         return false;
     }
 
+    public const string ProjectWebsiteUrl = "https://sourceforge.net/projects/skycd/";
+
+    public const string ProjectAreaUrl = "https://github.com/SkyCD/SkyCD";
+
+    /// <summary>Launches an external link through the shared validated path; replaceable in tests.</summary>
+    public Func<string?, Action<ProcessStartInfo>, bool> ExternalLinkOpener { get; set; } =
+        ExternalLinkLauncher.TryOpen;
+
+    /// <summary>Receives external-link failure details for the app log; wired by the host view.</summary>
+    public Action<string>? ExternalLinkFailureLog { get; set; }
+
     [RelayCommand]
     private void OpenProjectWebsite()
     {
-        try
-        {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = "https://sourceforge.net/projects/skycd/",
-                UseShellExecute = true
-            });
-            StatusText = LocalizationService.Current.Get(TextKeys.OpeningSourceForgeProjectWebsite);
-        }
-        catch (Exception ex)
-        {
-            StatusText = LocalizationService.Current.Format(TextKeys.FailedToOpenSourceForgeWebsite, ex.Message);
-        }
+        OpenExternalLink(
+            ProjectWebsiteUrl,
+            TextKeys.OpeningSourceForgeProjectWebsite,
+            TextKeys.FailedToOpenSourceForgeWebsite);
     }
 
     [RelayCommand]
     private void OpenGithubArea()
     {
+        OpenExternalLink(
+            ProjectAreaUrl,
+            TextKeys.OpeningGitHubProjectArea,
+            TextKeys.FailedToOpenGitHubArea);
+    }
+
+    private void OpenExternalLink(string url, string openingKey, string failureKey)
+    {
+        bool opened;
         try
         {
-            Process.Start(new ProcessStartInfo
+            opened = ExternalLinkOpener(url, static startInfo =>
             {
-                FileName = "https://github.com/SkyCD/SkyCD",
-                UseShellExecute = true
+                using var process = Process.Start(startInfo);
             });
-            StatusText = LocalizationService.Current.Get(TextKeys.OpeningGitHubProjectArea);
         }
         catch (Exception ex)
         {
-            StatusText = LocalizationService.Current.Format(TextKeys.FailedToOpenGitHubArea, ex.Message);
+            opened = false;
+            ExternalLinkFailureLog?.Invoke($"External link launcher threw for {url}: {ex.Message}");
         }
+
+        if (opened)
+        {
+            StatusText = LocalizationService.Current.Get(openingKey);
+            return;
+        }
+
+        ExternalLinkFailureLog?.Invoke($"Failed to open external link {url}.");
+        StatusText = LocalizationService.Current.Format(failureKey, url);
     }
 
     [RelayCommand]

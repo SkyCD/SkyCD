@@ -171,30 +171,53 @@ public class StarRatingControl : Control, IRangeValueProvider
         var geometry = new StreamGeometry();
         using (var context = geometry.Open())
         {
-            var numbers = StarGeometryData.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            // StarGeometryData is SVG path syntax: each whitespace-separated token starts with a
+            // command letter followed by a comma-separated coordinate pair ("M12,1", "L14.94,8.25",
+            // "Z"). A leading letter is the command for the coordinates that follow it; a token
+            // without one continues the previous command.
+            var figureOpen = false;
             var command = 'M';
-            for (var index = 0; index < numbers.Length; index++)
+            foreach (var token in StarGeometryData.Split(' ', StringSplitOptions.RemoveEmptyEntries))
             {
-                if (!char.IsAsciiDigit(numbers[index][0]) && numbers[index][0] != '-')
+                var coordinates = token;
+                if (coordinates.Length > 0 && char.IsAsciiLetter(coordinates[0]))
                 {
-                    command = numbers[index][0];
+                    command = coordinates[0];
+                    coordinates = coordinates.Substring(1);
+                    if ((command == 'Z' || command == 'z') && figureOpen)
+                    {
+                        context.EndFigure(true);
+                        figureOpen = false;
+                    }
+                }
+
+                if (coordinates.Length == 0)
+                {
                     continue;
                 }
 
-                var x = offsetX + (double.Parse(numbers[index], CultureInfo.InvariantCulture) * scale);
-                var y = offsetY + (double.Parse(numbers[++index], CultureInfo.InvariantCulture) * scale);
-                var point = new Point(x, y);
-                if (command == 'M')
+                var pair = coordinates.Split(',', StringSplitOptions.RemoveEmptyEntries);
+                for (var index = 0; index + 1 < pair.Length; index += 2)
                 {
-                    context.BeginFigure(point, isFilled: true);
-                }
-                else
-                {
-                    context.LineTo(point);
+                    var point = new Point(
+                        offsetX + (double.Parse(pair[index], CultureInfo.InvariantCulture) * scale),
+                        offsetY + (double.Parse(pair[index + 1], CultureInfo.InvariantCulture) * scale));
+                    if (!figureOpen)
+                    {
+                        context.BeginFigure(point, isFilled: true);
+                        figureOpen = true;
+                    }
+                    else
+                    {
+                        context.LineTo(point);
+                    }
                 }
             }
 
-            context.EndFigure(true);
+            if (figureOpen)
+            {
+                context.EndFigure(true);
+            }
         }
 
         return geometry;

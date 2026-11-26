@@ -1,3 +1,4 @@
+using SkyCD.Documents;
 using SkyCD.Presentation.Accounts;
 using SkyCD.Presentation.Scanning;
 using SkyCD.SDK.Capabilities.Accounts;
@@ -99,7 +100,22 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
     [ObservableProperty] private MediaDriveInfo? selectedDrive;
 
     public bool CanConfirm =>
-        string.IsNullOrWhiteSpace(ValidationMessage) && (!IsSourceFromAccount || SelectedAccount is not null);
+        string.IsNullOrWhiteSpace(ValidationMessage) && (!IsSourceFromAccount || SelectedAccount is { Status.IsConnected: true });
+
+    /// <summary>All discovered connectors for the inline add form in the empty state.</summary>
+    public ObservableCollection<AccountConnectorItemViewModel> AvailableAccountConnectors { get; } = [];
+
+    [ObservableProperty] private bool isAccountConnecting;
+
+    [ObservableProperty] private string? accountConnectError;
+
+    /// <summary>True when the dialog was given the open catalog's account folders.</summary>
+    public bool HasCatalogAccountFilter => catalogAccountFolders is not null;
+
+    /// <summary>True when the picked account folder exists but its token is missing.</summary>
+    public bool SelectedAccountNeedsSignIn => SelectedAccount is { Status.IsConnected: false };
+
+    private IReadOnlyList<CatalogDocument>? catalogAccountFolders;
 
     public bool IsSourceMedia => SourceMode == AddToListSourceMode.Media;
 
@@ -154,12 +170,12 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
 
     [ObservableProperty] private AddToListAccountChoice? selectedAccount;
 
-    public bool HasConnectedAccounts => AccountChoices.Count > 0;
+    public bool HasConnectedAccounts => AccountChoices.Any(choice => choice.Status.IsConnected);
 
-    /// <summary>"From account" with no connected account explains itself instead of validating.</summary>
-    public bool ShowAccountEmptyState => IsSourceFromAccount && !HasConnectedAccounts;
+    /// <summary>"From account" with no account folders explains itself and hosts the inline add form.</summary>
+    public bool ShowAccountEmptyState => IsSourceFromAccount && AccountChoices.Count == 0;
 
-    public bool ShowAccountPicker => IsSourceFromAccount && HasConnectedAccounts;
+    public bool ShowAccountPicker => IsSourceFromAccount && AccountChoices.Count > 0;
 
     public bool ShowAccountNoProducts => ShowAccountPicker && SelectedAccount is { Products.Count: 0 };
 
@@ -332,11 +348,33 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
+    /// <summary>
+    /// Gives the dialog the open catalog's documents. The account list is derived from the account
+    /// folders in this catalog, so a different catalog starts empty even when the machine holds
+    /// connected sessions elsewhere. Null clears the filter (legacy machine-wide behavior).
+    /// </summary>
+    public void SetCatalogAccountFolders(IReadOnlyList<CatalogDocument>? catalogDocuments)
+    {
+        catalogAccountFolders = catalogDocuments;
+        OnPropertyChanged(nameof(HasCatalogAccountFilter));
+    }
+
+    /// <summary>
     /// Reads the token-free snapshots of every discovered connector; only signed-in accounts become
     /// choices, so nothing connected shows the empty state instead of an unusable picker.
+    /// When catalog folders were provided, choices are scoped to this catalog: folders already in
+    /// the catalog appear (connected ones with live products, disconnected ones as sign-in
+    /// required), and a catalog without folders shows the empty inline add form.
     /// </summary>
     public async Task RefreshAccountsAsync(CancellationToken cancellationToken = default)
     {
+        if (catalogAccountFolders is not null)
+        {
+            await RefreshAccountsFromCatalogAsync(catalogAccountFolders, cancellationToken);
+            await RefreshAvailableConnectorsAsync(cancellationToken);
+            return;
+        }
+
         var choices = new List<AddToListAccountChoice>();
         foreach (var session in accountSessions)
         {
@@ -355,6 +393,71 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
             }
         }
 
+        ApplyAccountChoices(choices);
+        await RefreshAvailableConnectorsAsync(cancellationToken);
+    }
+
+    private async Task RefreshAccountsFromCatalogAsync(
+        IReadOnlyList<CatalogDocument> catalogDocuments,
+        CancellationToken cancellationToken)
+    {
+        var folders = CatalogAccountReader.ReadAccountFolders(catalogDocuments);
+        var liveByProvider = new Dictionary<string, (IAccountSession Session, AccountSessionStatus Status)>(
+            StringComparer.OrdinalIgnoreCase);
+        foreach (var session in accountSessions)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                var status = await session.GetStatusAsync(cancellationToken);
+                if (!liveByProvider.ContainsKey(status.ProviderId))
+                {
+                    liveByProvider[status.ProviderId] = (session, status);
+                }
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                // A broken connector snapshot must not block the other accounts or the dialog.
+            }
+        }
+
+        var choices = new List<AddToListAccountChoice>();
+        foreach (var folder in folders)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (liveByProvider.TryGetValue(folder.ProviderId, out var live) &&
+                string.Equals(live.Status.AccountId, folder.AccountKey, StringComparison.OrdinalIgnoreCase) &&
+                live.Status.IsConnected)
+            {
+                choices.Add(new AddToListAccountChoice(live.Session, live.Status, AccountCatalogBuilder.BuildPlan(live.Status)));
+            }
+            else
+            {
+                if (!liveByProvider.TryGetValue(folder.ProviderId, out var match))
+                {
+                    continue;
+                }
+
+                var disconnected = new AccountSessionStatus
+                {
+                    ProviderId = folder.ProviderId,
+                    DisplayName = string.IsNullOrWhiteSpace(folder.DisplayName) ? folder.ProviderId : folder.DisplayName,
+                    AccountId = folder.AccountKey,
+                    AccountEmail = folder.AccountEmail,
+                    IsConnected = false,
+                    LastSyncedUtc = folder.LastSyncedUtc,
+                    Products = [],
+                };
+                choices.Add(new AddToListAccountChoice(
+                    match.Session, disconnected, AccountCatalogBuilder.BuildPlan(disconnected)));
+            }
+        }
+
+        ApplyAccountChoices(choices);
+    }
+
+    private void ApplyAccountChoices(List<AddToListAccountChoice> choices)
+    {
         var previousFolderId = SelectedAccount?.Plan.FolderId;
         AccountChoices.Clear();
         foreach (var choice in choices.OrderBy(choice => choice.Name, StringComparer.CurrentCultureIgnoreCase))
@@ -363,11 +466,70 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
         }
 
         SelectedAccount = AccountChoices.FirstOrDefault(choice => choice.Plan.FolderId == previousFolderId)
+                          ?? AccountChoices.FirstOrDefault(choice => choice.Status.IsConnected)
                           ?? AccountChoices.FirstOrDefault();
         OnPropertyChanged(nameof(HasConnectedAccounts));
         OnPropertyChanged(nameof(ShowAccountEmptyState));
         OnPropertyChanged(nameof(ShowAccountPicker));
+        OnPropertyChanged(nameof(SelectedAccountNeedsSignIn));
         RecomputeValidation();
+    }
+
+    /// <summary>Refreshes the inline add form connectors (all discovered sessions).</summary>
+    public async Task RefreshAvailableConnectorsAsync(CancellationToken cancellationToken = default)
+    {
+        AvailableAccountConnectors.Clear();
+        foreach (var session in accountSessions)
+        {
+            var item = new AccountConnectorItemViewModel(session);
+            AvailableAccountConnectors.Add(item);
+            try
+            {
+                await item.RefreshAsync(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch
+            {
+                // A broken connector must not block the inline form.
+            }
+        }
+
+        OnPropertyChanged(nameof(AvailableAccountConnectors));
+    }
+
+    /// <summary>Connects inline from the From account empty state, then refreshes the picker.</summary>
+    [RelayCommand]
+    private async Task ConnectAccountAsync(IAccountSession? session)
+    {
+        if (session is null || IsAccountConnecting)
+        {
+            return;
+        }
+
+        IsAccountConnecting = true;
+        AccountConnectError = null;
+        try
+        {
+            var result = await session.ConnectAsync(CancellationToken.None);
+            if (!result.Success)
+            {
+                AccountConnectError = result.Error ?? LocalizationService.Current.Get(UiKeys.AccountSignInFailed);
+                return;
+            }
+
+            await RefreshAccountsAsync();
+        }
+        catch (Exception exception)
+        {
+            AccountConnectError = LocalizationService.Current.Format(UiKeys.AccountSignInFailed, exception.Message);
+        }
+        finally
+        {
+            IsAccountConnecting = false;
+        }
     }
 
     [RelayCommand]
@@ -540,6 +702,7 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
     partial void OnSelectedAccountChanged(AddToListAccountChoice? value)
     {
         OnPropertyChanged(nameof(ShowAccountNoProducts));
+        OnPropertyChanged(nameof(SelectedAccountNeedsSignIn));
         RecomputeValidation();
     }
 
@@ -765,9 +928,12 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
             AddToListSourceMode.TitleOnly => string.IsNullOrWhiteSpace(MediaName)
                 ? LocalizationService.Current.Get(TextKeys.MediaNameIsRequiredForTitleOnly)
                 : null,
-            AddToListSourceMode.FromAccount => HasConnectedAccounts && SelectedAccount is null
-                ? LocalizationService.Current.Get(UiKeys.AccountSelectPrompt)
-                : null,
+            AddToListSourceMode.FromAccount => SelectedAccount switch
+            {
+                null when HasConnectedAccounts => LocalizationService.Current.Get(UiKeys.AccountSelectPrompt),
+                { Status.IsConnected: false } => LocalizationService.Current.Get(UiKeys.AccountNotSignedIn),
+                _ => null,
+            },
             AddToListSourceMode.CaptureSource => GetCaptureValidationMessage(),
             _ => null
         };
