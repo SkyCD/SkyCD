@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>disable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <Company>SkyCD</Company>
+        <Authors>SkyCD</Authors>
+        <AssemblyTitle>Game Engine Project and Asset Metadata</AssemblyTitle>
+        <Description>Reads typed project and asset facts from Godot, Unity, Unreal, Roblox, GameMaker, RPG Maker, Construct 3, Cocos, Defold, CRYENGINE, O3DE, Flax, Stride, Wicked, Ren'Py, s&amp;box, MonoGame/FNA, LÖVE, libGDX atlases, Tiled, LDtk and Aseprite files, with bounded pixel and structure thumbnails. Referenced tilesets, GUID targets and media files are never opened.</Description>
+    </PropertyGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\SkyCD.SDK\SkyCD.SDK.csproj"/>
+    </ItemGroup>
+    <ItemGroup>
+        <!-- Shared with the other preview plugins: one page layout and one encode helper. -->
+        <Compile Include="..\Shared\Preview\Export\PreviewArtifactEncoder.cs" Link="Shared\Preview\Export\PreviewArtifactEncoder.cs"/>
+        <Compile Include="..\Shared\Preview\Export\SkiaPageRenderer.cs" Link="Shared\Preview\Export\SkiaPageRenderer.cs"/>
+        <Compile Include="..\Shared\Preview\Export\SkiaPageText.cs" Link="Shared\Preview\Export\SkiaPageText.cs"/>
+    </ItemGroup>
+    <ItemGroup>
+        <!-- MIT: decodes Aseprite frames and layers. -->
+        <PackageReference Include="AsepriteDotNet" Version="1.9.1"/>
+        <!-- MIT: draws and encodes pixel and structure thumbnails. -->
+        <PackageReference Include="SkiaSharp" Version="3.119.4"/>
+        <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.4"/>
+        <PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="3.119.4"/>
+        <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="3.119.4"/>
+    </ItemGroup>
+    <ItemGroup>
+        <AssemblyMetadata Include="AuthorUrl" Value="https://sourceforge.net/projects/skycd/"/>
+    </ItemGroup>
+    <ItemGroup>
+        <InternalsVisibleTo Include="SkyCD.Plugin.Metadata.GameDev.Tests"/>
+    </ItemGroup>
+</Project>
