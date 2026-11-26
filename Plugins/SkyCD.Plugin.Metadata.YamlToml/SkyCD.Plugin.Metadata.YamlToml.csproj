@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\SkyCD.SDK\SkyCD.SDK.csproj"/>
+    </ItemGroup>
+    <ItemGroup>
+        <!-- MIT: YAML 1.2 and TOML 1.1 structure readers. Same version as every other OfficeIMO package. -->
+        <PackageReference Include="OfficeIMO.Yaml" Version="3.6.2"/>
+        <PackageReference Include="OfficeIMO.Toml" Version="3.6.2"/>
+    </ItemGroup>
+    <ItemGroup>
+        <!-- Shared with the other preview plugins: one page layout and one encode helper. -->
+        <Compile Include="..\Shared\Preview\Export\PreviewArtifactEncoder.cs" Link="Shared\Preview\Export\PreviewArtifactEncoder.cs"/>
+        <Compile Include="..\Shared\Preview\Export\SkiaPageRenderer.cs" Link="Shared\Preview\Export\SkiaPageRenderer.cs"/>
+        <Compile Include="..\Shared\Preview\Export\SkiaPageText.cs" Link="Shared\Preview\Export\SkiaPageText.cs"/>
+    </ItemGroup>
+    <ItemGroup>
+        <!-- MIT: renders the leading document content to a page thumbnail. -->
+        <PackageReference Include="SkiaSharp" Version="3.119.4"/>
+        <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.4"/>
+        <PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="3.119.4"/>
+        <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="3.119.4"/>
+    </ItemGroup>
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>disable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <Company>SkyCD</Company>
+        <Authors>SkyCD</Authors>
+        <AssemblyTitle>YAML and TOML Document Metadata</AssemblyTitle>
+        <Description>Parses YAML and TOML documents, publishes their structure, and renders a structure-aware first page during indexing. The source is never modified, aliases stay within the library's bounds, and no schema or remote reference is fetched.</Description>
+    </PropertyGroup>
+    <ItemGroup>
+        <AssemblyMetadata Include="AuthorUrl" Value="https://sourceforge.net/projects/skycd/"/>
+    </ItemGroup>
+    <ItemGroup>
+        <InternalsVisibleTo Include="SkyCD.Plugin.Metadata.YamlToml.Tests"/>
+    </ItemGroup>
+</Project>
