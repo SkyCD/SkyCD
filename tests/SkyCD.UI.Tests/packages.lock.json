@@ -1301,6 +1301,16 @@
           "Microsoft.Extensions.Logging.EventLog": "[11.0.0, )"
         }
       },
+      "skycd.plugin.ai.provider": {
+        "type": "Project",
+        "dependencies": {
+          "SkiaSharp": "[3.119.4, )",
+          "SkiaSharp.NativeAssets.Linux": "[3.119.4, )",
+          "SkiaSharp.NativeAssets.Win32": "[3.119.4, )",
+          "SkiaSharp.NativeAssets.macOS": "[3.119.4, )",
+          "SkyCD.SDK": "[3.0.0, )"
+        }
+      },
       "skycd.plugin.feature.loans": {
         "type": "Project",
         "dependencies": {

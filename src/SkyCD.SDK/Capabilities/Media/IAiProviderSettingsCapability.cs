@@ -18,9 +18,14 @@ namespace SkyCD.SDK.Capabilities.Media;
 /// Page that explains authentication and how to obtain an API key for this provider;
 /// <c>null</c> when the provider has no key concept.
 /// </param>
+/// <param name="IconKey">
+/// Embedded-resource name of the preset icon shipped with the provider plugin.
+/// Empty when the preset has no artwork and the host should draw <paramref name="Monogram"/>.
+/// </param>
+/// <param name="Monogram">One to three letters drawn when <paramref name="IconKey"/> does not load.</param>
 public sealed record AiProviderChoice(string Id, string Name, string Protocol, string Address, int Port,
     string? DefaultModel, bool CanStartServer, IReadOnlyList<string>? SuggestedModels = null,
-    string? ApiKeyHelpUrl = null);
+    string? ApiKeyHelpUrl = null, string? IconKey = null, string Monogram = "");
 
 /// <summary>Persisted provider connection and generation settings.</summary>
 public sealed record AiProviderSettings

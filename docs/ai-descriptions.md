@@ -11,6 +11,16 @@ With the plugin enabled, choose **Use agent** for an installed agent in
 **Tools → Options → ACP agents** and save to activate it for generation.
 Description settings live in **Tools → Options → AI → Description**, and the
 provider connection settings in **AI → Provider**.
+The provider picker shows a 16 px icon before each preset name, in the closed
+field and in every dropdown row. Each preset ships that icon as an embedded PNG
+(`Assets/Providers/{id}.png`, named by `IconKey`) plus a one-to-three letter
+`Monogram`. Official logos are not redistributed: brand guidelines rarely allow
+an unrelated open-source app to ship the artwork, so the mark is a monogram tile
+with one accent per provider. A new preset always adds both. `custom` uses a
+generic provider glyph (a node, not a brand) and the monogram `AI`. If the
+resource is missing or fails to decode, the row draws the monogram on the theme
+accent instead of an empty box. The icon does not change keyboard selection,
+the saved `ProviderId`, or the connection.
 Opening Options on its own preserves the saved generation preference.
 The **AI description configuration** command shows the advanced settings file,
 normally `%APPDATA%/SkyCD/ai-descriptions.json`.
