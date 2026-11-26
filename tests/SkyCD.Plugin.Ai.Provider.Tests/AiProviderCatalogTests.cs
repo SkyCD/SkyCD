@@ -1,3 +1,4 @@
+using System;
 using Xunit;
 using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Ai.Provider.Models;
@@ -66,6 +67,19 @@ public sealed class AiProviderCatalogTests
         Assert.NotEmpty(AiProviderCatalog.Find("ollama")!.SuggestedModels!);
         Assert.Equal("llama3.2", AiProviderCatalog.Find("ollama")!.DefaultModel);
         Assert.NotEmpty(AiProviderCatalog.Find("colibri")!.SuggestedModels!);
+    }
+
+    [Fact]
+    public void PresetsWithSuggestedModels_IncludeTheirDefaultModel()
+    {
+        foreach (var provider in AiProviderCatalog.Providers)
+        {
+            if (provider.SuggestedModels is { Count: > 0 } suggested)
+            {
+                Assert.NotNull(provider.DefaultModel);
+                Assert.Contains(provider.DefaultModel!, suggested, StringComparer.OrdinalIgnoreCase);
+            }
+        }
     }
 
     [Fact]
