@@ -12,7 +12,7 @@
                 <TextBox x:Name="InlineSearchTextBox"
                          Background="Transparent"
                          BorderThickness="0"
-                         Padding="0"
+                         Padding="{DynamicResource SkyInputPadding}"
                          VerticalContentAlignment="Center"
                          KeyDown="OnInlineSearchTextBoxKeyDown"
                          TextChanged="OnInlineSearchTextChanged"

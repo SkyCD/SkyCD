@@ -321,7 +321,10 @@ public class OptionsWindowLayoutTests
             "{Binding CollectionsPage.ConfirmRemoveSelectedMemberCommand}",
             "{Binding CollectionsPage.CancelRemoveMemberCommand}"
         ], commands);
-        Assert.Equal(3, section.Descendants(Avalonia + "TextBox").Count());
+        Assert.Equal(2, section.Descendants(Avalonia + "TextBox").Count());
+        var memberFilter = Assert.Single(section.Descendants(),
+            element => element.Name.LocalName == "SearchTextBox");
+        Assert.Equal("{Binding CollectionsPage.MemberFilterText}", (string?)memberFilter.Attribute("Text"));
         Assert.Contains(section.Descendants(Avalonia + "TextBlock"),
             block => (string?)block.Attribute("Text") == "{i18n:Translate {x:Static i18n:UiKeys.NoCollections}}");
     }

@@ -6,6 +6,7 @@
         xmlns:cl="clr-namespace:SkyCD.UI.Controls.Lists;assembly=SkyCD.UI"
         xmlns:cs="clr-namespace:SkyCD.UI.Controls.StatusBar;assembly=SkyCD.UI"
         xmlns:pv="clr-namespace:SkyCD.UI.Controls.Preview;assembly=SkyCD.UI"
+        xmlns:search="clr-namespace:SkyCD.UI.Controls.SearchTextBox;assembly=SkyCD.UI"
         xmlns:converters="clr-namespace:SkyCD.App.Converters"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -133,9 +134,9 @@
                 <StackPanel DockPanel.Dock="Top" Margin="{DynamicResource SkyInsetSm}" Spacing="{DynamicResource SkySpaceXs}"
                             IsVisible="{Binding IsQuickFilterOpen}">
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                        <TextBox x:Name="QuickFindBox" Text="{Binding QuickFindQuery, Mode=TwoWay}"
-                                 PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.QuickFind}}"
-                                 AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.QuickFind}}" />
+                        <search:SearchTextBox x:Name="QuickFindBox" Text="{Binding QuickFindQuery, Mode=TwoWay}"
+                                                 PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.QuickFind}}"
+                                                 AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.QuickFind}}" />
                         <CheckBox Grid.Column="1" IsChecked="{Binding SearchWholeCatalog}"
                                   Content="{i18n:Translate {x:Static i18n:UiKeys.WholeCatalog}}" />
                     </Grid>

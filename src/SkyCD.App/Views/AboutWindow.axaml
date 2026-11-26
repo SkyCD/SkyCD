@@ -2,8 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:i18n="clr-namespace:SkyCD.UI.Localization;assembly=SkyCD.UI"
         xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
-        xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
-        xmlns:lucide="clr-namespace:IconPacks.Avalonia.Lucide;assembly=IconPacks.Avalonia.Lucide"
+        xmlns:search="clr-namespace:SkyCD.UI.Controls.SearchTextBox;assembly=SkyCD.UI"
         x:Class="SkyCD.App.Views.AboutWindow"
         x:DataType="vm:AboutDialogViewModel"
         Width="560"
@@ -221,17 +220,9 @@
                 </TabItem>
                 <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.LoadedAssemblies}}">
                     <Grid RowDefinitions="Auto,*" RowSpacing="{DynamicResource SkySpaceSm}">
-                        <TextBox Text="{Binding AssemblyFilterText, UpdateSourceTrigger=PropertyChanged}"
-                                 PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.FilterAssemblies}}"
-                                 AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.FilterAssemblies}}">
-                            <TextBox.InnerLeftContent>
-                                <iconPacks:PackIconControl Kind="{x:Static lucide:PackIconLucideKind.Search}"
-                                                           Width="14"
-                                                           Height="14"
-                                                           Margin="{DynamicResource SkyGapLeftSm}"
-                                                           Foreground="{DynamicResource ThemeForegroundLowBrush}" />
-                            </TextBox.InnerLeftContent>
-                        </TextBox>
+                        <search:SearchTextBox Text="{Binding AssemblyFilterText, UpdateSourceTrigger=PropertyChanged}"
+                                                 PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.FilterAssemblies}}"
+                                                 AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.FilterAssemblies}}" />
                         <Grid Grid.Row="1">
                             <ListBox ItemsSource="{Binding FilteredAssemblies}"
                                      IsVisible="{Binding !ShowAssembliesEmptyState}"

@@ -231,6 +231,443 @@
         "resolved": "3.0.10",
         "contentHash": "yZIhtw8sYuvsONzQbZxWpR60tMWYHXoo0DL6nyOqSFiU5POjBTSEyWFpTQtJEZuy+oqiYTXKXY/Mjx7KnqIQFw=="
       },
+      "IconPacks.Avalonia": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "oNHDrZLL6VNBgrUEuq+aBbqzSH1k+PhFAyn73bI9uCRIb1ho5VO75gGhv/ZDDHj5vNthf0cqlhG66crOnVQbsQ==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.BootstrapIcons": "2.0.0",
+          "IconPacks.Avalonia.BoxIcons": "2.0.0",
+          "IconPacks.Avalonia.BoxIcons2": "2.0.0",
+          "IconPacks.Avalonia.CircumIcons": "2.0.0",
+          "IconPacks.Avalonia.Codicons": "2.0.0",
+          "IconPacks.Avalonia.Coolicons": "2.0.0",
+          "IconPacks.Avalonia.Core": "2.0.0",
+          "IconPacks.Avalonia.Entypo": "2.0.0",
+          "IconPacks.Avalonia.EvaIcons": "2.0.0",
+          "IconPacks.Avalonia.FeatherIcons": "2.0.0",
+          "IconPacks.Avalonia.FileIcons": "2.0.0",
+          "IconPacks.Avalonia.FontAwesome": "2.0.0",
+          "IconPacks.Avalonia.FontAwesome5": "2.0.0",
+          "IconPacks.Avalonia.FontAwesome6": "2.0.0",
+          "IconPacks.Avalonia.Fontaudio": "2.0.0",
+          "IconPacks.Avalonia.Fontisto": "2.0.0",
+          "IconPacks.Avalonia.ForkAwesome": "2.0.0",
+          "IconPacks.Avalonia.GameIcons": "2.0.0",
+          "IconPacks.Avalonia.Ionicons": "2.0.0",
+          "IconPacks.Avalonia.JamIcons": "2.0.0",
+          "IconPacks.Avalonia.KeyruneIcons": "2.0.0",
+          "IconPacks.Avalonia.Lucide": "2.0.0",
+          "IconPacks.Avalonia.Material": "2.0.0",
+          "IconPacks.Avalonia.MaterialDesign": "2.0.0",
+          "IconPacks.Avalonia.MaterialLight": "2.0.0",
+          "IconPacks.Avalonia.MemoryIcons": "2.0.0",
+          "IconPacks.Avalonia.Microns": "2.0.0",
+          "IconPacks.Avalonia.MingCuteIcons": "2.0.0",
+          "IconPacks.Avalonia.Modern": "2.0.0",
+          "IconPacks.Avalonia.MynaUIIcons": "2.0.0",
+          "IconPacks.Avalonia.Octicons": "2.0.0",
+          "IconPacks.Avalonia.PhosphorIcons": "2.0.0",
+          "IconPacks.Avalonia.PicolIcons": "2.0.0",
+          "IconPacks.Avalonia.PixelartIcons": "2.0.0",
+          "IconPacks.Avalonia.RPGAwesome": "2.0.0",
+          "IconPacks.Avalonia.RadixIcons": "2.0.0",
+          "IconPacks.Avalonia.RemixIcon": "2.0.0",
+          "IconPacks.Avalonia.SimpleIcons": "2.0.0",
+          "IconPacks.Avalonia.Typicons": "2.0.0",
+          "IconPacks.Avalonia.Unicons": "2.0.0",
+          "IconPacks.Avalonia.VaadinIcons": "2.0.0",
+          "IconPacks.Avalonia.WeatherIcons": "2.0.0",
+          "IconPacks.Avalonia.Zondicons": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.BootstrapIcons": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "tmCua6J1ZcMhYSMkZ3nU8j3ST2eb6tfCbXUgRVXr/JITbsnuY6ojNVQQcs/8TmmkL+BNLJWog7PvV3y9ZkL0fA==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.BoxIcons": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "eJszcdDQk9THcbLSClCxYfVKxZ/vK4oVNEDMhVFkOPZti5OnAf9pD68gJbp2rZvt2U8gIGYd24ykyxpwYPyBZA==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.BoxIcons2": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "ofC0jzxoilWSSHBZVat50885HggoXrgSiAsOzak1tg9SJsAkcnyWSm8FCIx3EzPb3+ByiOU+7yPoQWAit720GA==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.CircumIcons": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "lvPPt9at8BvdANadx/me3HMYo4xqxlMszIwMSVzHnRG+p/zkAk4adQognkRZXqlMf8K3Pf11YPnFqUYdfVfeBQ==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.Codicons": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "tNkk3zQmyyxDrrIgb4WYMfCpFVWwixE0sYwDsl/R9WsU1P84yI7C5y/Nmp7LHWjklRJkZwd5SSSl59z4wC7tug==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.Coolicons": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "l34mH44Gf3FHSz18tDeVR3txcC+ad0qnSXwOGL+l8YK01Yfg87i+OgynMeJ54S3pQ9JltkQfpBWeN0va/GakjA==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.Core": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "pe8x+Tg5/GxkIAT4QW4ZfKI62dne0Aunm4/0zNCQ7vtiedCdJDd6+pGeEfUq0lQZY7yY1FflCW360A2I53A4Iw==",
+        "dependencies": {
+          "Avalonia": "11.0.13"
+        }
+      },
+      "IconPacks.Avalonia.Entypo": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "HSQH8s+UITCGU9czJIqr6TkaistLjpi47aCQXTjK9+NSuwler5ex0BP2URm/wxiY6IuayPe2xUvRMXq77kV5Ag==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.EvaIcons": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "jZ0AjiD5D0T34+fjZutyztuFlcuJ2HAaq2Zapg+VvY2/62+HW5bIG5kMwFzg40osY9bOtpDnN4XzzmeF7FQZFw==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.FeatherIcons": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "oeGhRaD8NJ0fD8I30dB2tjrj0/FKHrDkbayCMTqKTJLqSxVmoTLAM9mQyS0OzIO4pD0iY+bLSRyIh34oJOE6Lw==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.FileIcons": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "FB1o73F2lD04rvm1E8XqA3OYgN4trQmUUx8q+Da2m4xjgmN8QrqGcrw5vr5HM3Los4T/v2cgp6Cq0FYgP8U+dQ==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.Fontaudio": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "QWP5O4avvQcnRuCmDBQRvrnyeoQTMV4y1CyfeXNcNjGSjRWnjZYkp3YnKy0T5wJDeX1f7BxGJ66KaMvAdBJR2g==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.FontAwesome": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "5f8eoiQ5UBLmNsreUsexJEpz7CydQ1x/kJt1g5VID9uduZjzJ5NHM1hGPjehRe0Ip8p19jgIb2dIX5mxYhrb0w==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.FontAwesome5": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "B5qlyl+NLaZTaXdYE4UEkvBtTcfqNp43oGOjThniW/66HcsW4gmQhpXBeimkBD9aZO6h9y5+1A2tFnH7gNu/og==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.FontAwesome6": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "JPc5howuwDpSeSYLnlY27xaF4xOZveUYAM3HEUL1hSvy651icTSkZs1fr+1QcVtbD609FSDRZunj33pjCoUkGg==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.Fontisto": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "aFGiuLLsfqtDUkeR36Y5QRrjrf/91NU+Usn8hdnCccazIc3PLR1uvPwSpUJIqjPKYfLxFNPiQh5rpxIyd/ldgQ==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.ForkAwesome": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "clBRlscRFfMorrxRgYNnbnoHCI/YLg62CDsmBNcWE1sgnU7+AivNYp9gLC14gcUPdlr3IwYxBiq2RrfhRE/Qrw==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.GameIcons": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "TIMonXkGN2/yL4kEjeuuX4M+VkK0GBFIZdjOgUGLQTfnuD5lMfFDeZBhGwzKOg5mNl4IC6TeXcRIPaQjy4gRwg==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.Ionicons": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "Q6nwVOf9U584pmGAiLJTsMe56LTgOWPnHrFpqaEmtageayYAPGD/B9h0bsFaYdaJYjgvUwcbAfvDEhe/dIw9aw==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.JamIcons": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "lXZf6g5UcZY1xZM7MzErd6QZ/prqNozZOKphg8h26XFGuclLhL5Ax8YuHGeZ3Krqiz+bMXa2IiqmOvMpM17Gcw==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.KeyruneIcons": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "nNp5CPLXyxxu6Ac1B0Ld+QhqmMu9YbCA06tRGiaL5XUfcfgzCjJiYN6HoNHVEnUug3Mqcp0MA2fuRUEJisZNuQ==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.Lucide": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "cV4eaULcYYU1QAQ5vTVQPXW2ADcM0NUJ0qlQSfM99MpUX0cSFfsDvS7WpUNIXCvAOZDITTmxvzKYZLtnRNfUOw==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.Material": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "ijVjFp8Iind6rrq3hRdaaIbJHar/jskRbXraJe5YjL6GpX/L9ifxvNXnzjGDddu1VDe9YaQlmVFWxbrPgnViQA==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.MaterialDesign": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "nZ6hBFFrHl9eb5na3EO6+eDd+dgAwvffHAjBo+9tJw9oIfExQ+SBO095vy6QpG+/NTyDaP5ecwbrQbsv2ZnvvQ==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.MaterialLight": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "cJ4BWFOS4iZQIrLpGBFsVKMDw5hzDXTwyo/i94sZMU82nRHlHnSGfsePFPh8HA8ryDEaNrwU1g0GFC0wzhHMZg==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.MemoryIcons": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "JyNDCdPnHxoaF5ozlfHcNXnGrRaZsiW/uX7puCTyZdhj2F677oQFbk6xTxW9TYERoibsohABTsQbgp5jVHK+2Q==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.Microns": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "hbTaXZLV7zWfWLoE3nndoohjE7j/ipyA/1fy6zatFmDV5LsvhD1+0VZOWs1JwKDFKLcLzR9LmauucywofqEMlA==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.MingCuteIcons": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "o7nxbaYzZcXXLTPYU9wOC7TvYbOYGaYlz+cJwYvHVG+5btRBpc9APUpXqbwneSn4HThPBzUFsmx57UTDQDo/Hg==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.Modern": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "OKXrjDOfNhBPf4kRU2fENprDP02da81H5wQlv9lWjjcuDTduVfZkfh5Cax6GDZMaU7ZgBqLF4TxN5x/vGhpusg==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.MynaUIIcons": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "SbZ6jt63OI1dHcwTA7aZkLUhO4eN9VKXnRj/b5+D8IAtx86IXK53wpns3MfG9F31JdMA5IaIknFB3EyFsxt2cQ==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.Octicons": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "XixE4/ggisMWFFViABqvtZ6b41twm3Z6TPDcTpGXpuNtOVe1txYS2T4NX8th4OuMGb74ee3NbzrSmwxaZibhHQ==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.PhosphorIcons": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "O8CRalwVrFvPiK1IJZPpdOI7/nGfq2IK5J9rgDijmGNgVc9FK8g/ZGan8qCKL+ZlqdnfWZG7KZi1vk4boh7hkg==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.PicolIcons": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "bo85Xd7XPtrMxS+ASK7SCgbX6YIfVt+BTeYiN4KVl23ejaGZ2H0csJOW0W6Io2glcm6oaUsQjUK4k+6IJ/TNvw==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.PixelartIcons": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "g/kkNi5FLo9vaqoXVgG1T46WuxCFEpGVgabhjnGFwnUY8SZyBXrSHbvPD6m4ML9v2Pjrvkg/7OzsaYfX32KIcQ==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.RadixIcons": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "I4nYdCJUbrqtZiEhgINtYEHas0+MS5m5aaMNzmImnjkgBPiQ8K+D4QV8DPm/NxYM7zeSAPu3Dhhej+4j+9h7Vw==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.RemixIcon": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "MXE0xh0mp0Tj5RG9mRJUXrprdJGQflZDGbtKw6JlFPTVcpz5Bpl5/atHSRL89mGpOCi+Hk/YvJF1kwEnyzvYnQ==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.RPGAwesome": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "IfqLbigmUX+gZk+mu//7HibTluCj1AfR+TECKbe/iipWS/fJmtOuKFlqr3zsr03sDe2+4c6pSlKi3cNOtT3IOQ==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.SimpleIcons": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "Slcv0G4jl4Yj13H5TUFXALEq9yx6fdQRAyN9AqtRm9+tzKPlbpwYSLhtDW6DVcflxX5PlmRXUjD71aC1c0Al+Q==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.Typicons": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "/sDph+8udgwsIXgTlDk8yLC/BJAwtJU5GYhEv+5+USYVZiBBKlHQjnLmYc667/tHkkpPp6DElIkfXGEQM00TYA==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.Unicons": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "iteVyop0qojxZRZJrqxCPll7wLNmxmOHLma3hhh/BCelupHj0SvjzC9gSOwZe1t3jNEZr3W4ygn4qijocEc/yQ==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.VaadinIcons": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "C36/+0MVm2neTKrSxs0B5Xbo0gdhwJAwxZsrSqxNphgrvxEnHAR6edj1cx42knWJYyByOHpjmXJsYGdi93uUbA==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.WeatherIcons": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "0ANLGaFbdn3O4VCoXdhfBP5rqB1+7k65k24BtIzUK2UQtsdGFos0Xf+jsIxUxiTRJO5VTYYcEBtkuAxyl5soKw==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
+      "IconPacks.Avalonia.Zondicons": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "O4OHwZemECYgpVlZ0Z+Sbog5DUNE0VK2hRgpNV6CjS179k47AJJlOn1vykfv91rjdFjfV1xvllIB5yVfnMvpwQ==",
+        "dependencies": {
+          "Avalonia": "11.0.13",
+          "IconPacks.Avalonia.Core": "2.0.0"
+        }
+      },
       "MicroCom.Runtime": {
         "type": "Transitive",
         "resolved": "0.11.6",
@@ -663,6 +1100,8 @@
         "type": "Project",
         "dependencies": {
           "Avalonia": "[12.1.6, )",
+          "IconPacks.Avalonia": "[2.0.0, )",
+          "IconPacks.Avalonia.Lucide": "[2.0.0, )",
           "SkyCD.Formatting": "[1.0.0, )",
           "SkyCD.SDK": "[3.0.0, )",
           "SmartFormat": "[3.6.2, )",

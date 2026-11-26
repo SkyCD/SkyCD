@@ -1366,6 +1366,8 @@
         "type": "Project",
         "dependencies": {
           "Avalonia": "[12.1.6, )",
+          "IconPacks.Avalonia": "[2.0.0, )",
+          "IconPacks.Avalonia.Lucide": "[2.0.0, )",
           "SkyCD.Formatting": "[1.0.0, )",
           "SkyCD.SDK": "[3.0.0, )",
           "SmartFormat": "[3.6.2, )",
