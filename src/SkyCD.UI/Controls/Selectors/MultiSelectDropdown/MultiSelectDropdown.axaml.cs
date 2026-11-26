@@ -9,11 +9,11 @@ using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Templates;
+using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using Avalonia.Data;
 using SkyCD.UI.Localization;
 
 namespace SkyCD.UI.Controls.Selectors.MultiSelectDropdown;
@@ -32,6 +32,9 @@ public partial class MultiSelectDropdown : UserControl
     public static readonly StyledProperty<IDataTemplate?> ItemPreviewTemplateProperty =
         AvaloniaProperty.Register<MultiSelectDropdown, IDataTemplate?>(nameof(ItemPreviewTemplate));
 
+    public static readonly StyledProperty<IDataTemplate?> ItemTileTemplateProperty =
+        AvaloniaProperty.Register<MultiSelectDropdown, IDataTemplate?>(nameof(ItemTileTemplate));
+
     public static readonly StyledProperty<bool> ShowItemLabelsProperty =
         AvaloniaProperty.Register<MultiSelectDropdown, bool>(nameof(ShowItemLabels), defaultValue: true);
 
@@ -44,19 +47,29 @@ public partial class MultiSelectDropdown : UserControl
     public static readonly StyledProperty<string?> SelectedIconKeyProperty =
         AvaloniaProperty.Register<MultiSelectDropdown, string?>(nameof(SelectedIconKey), defaultBindingMode: BindingMode.TwoWay);
 
+    private static readonly string[] PreferredCategoryGlyphs =
+    [
+        "Star", "Heart", "Home", "House", "Smile", "Sun", "Sparkles", "Check", "Book", "Circle",
+        "LayoutGrid"
+    ];
+
+    private const int FallbackIconColumnCount = 10;
     private readonly ObservableCollection<MultiSelectOptionItem> filteredItems = [];
-    // Issue #1214: the tile grid cannot virtualize (a WrapPanel realizes every child), so the
-    // emoji-style grid pages through the catalog instead of materializing thousands of icons.
-    private const int IconTilePageSize = 120;
-    private readonly ObservableCollection<string> iconTiles = [];
-    private IReadOnlyList<string> iconTilePool = [];
+    private readonly ObservableCollection<IconCategoryItem> iconCategories = [];
+    private readonly ObservableCollection<IconTileRow> iconRows = [];
+    private IReadOnlyList<string>? iconCatalogSource;
+    private string[] iconCatalog = [];
+    private IconTileItem[] allIconTiles = [];
+    private IconTileItem[] visibleIconTiles = [];
+    private int iconColumnCount = FallbackIconColumnCount;
+    private IconTileItem? highlightedTile;
     private IEnumerable<MultiSelectOptionItem>? trackedItems;
     private bool suppressInlineTextProcessing;
     private bool suppressOpenOnInlineFocus;
-    private bool suppressIconSelection;
+    private bool suppressIconCategoryEvents;
+    private bool suppressCategorySync;
     private string searchText = string.Empty;
     private string iconSearchText = string.Empty;
-    private string activeIconCategory = string.Empty;
 
     public MultiSelectDropdown()
     {
@@ -67,12 +80,13 @@ public partial class MultiSelectDropdown : UserControl
             Priority = BindingPriority.Style
         });
         ItemsListBox.ItemsSource = filteredItems;
-        IconTilesListBox.ItemsSource = iconTiles;
+        IconCategoryList.ItemsSource = iconCategories;
+        IconTilesListBox.ItemsSource = iconRows;
         IconTilesListBox.AddHandler(ScrollViewer.ScrollChangedEvent, OnIconTilesScrollChanged, RoutingStrategies.Bubble);
-        IconTilesListBox.AddHandler(InputElement.PointerPressedEvent, OnIconTilesPointerPressed, RoutingStrategies.Tunnel);
-        // Tunnel navigation so the grid owns its arrow keys before the ListBox moves the selection.
+        // Tunnel navigation so the sheet owns its arrow keys before the ListBox moves row selection.
         IconTilesListBox.AddHandler(InputElement.KeyDownEvent, OnIconTilesKeyDown, RoutingStrategies.Tunnel);
-        // Tunneling keeps Down available for moving from the search field into the grid; a plain
+        IconTilesListBox.SizeChanged += OnIconTilesSizeChanged;
+        // Tunneling keeps Down available for moving from the search field into the sheet; a plain
         // TextBox handler would lose it to caret movement.
         IconSearchTextBox.AddHandler(InputElement.KeyDownEvent, OnIconSearchKeyDown, RoutingStrategies.Tunnel);
     }
@@ -99,6 +113,12 @@ public partial class MultiSelectDropdown : UserControl
     {
         get => GetValue(ItemPreviewTemplateProperty);
         set => SetValue(ItemPreviewTemplateProperty, value);
+    }
+
+    public IDataTemplate? ItemTileTemplate
+    {
+        get => GetValue(ItemTileTemplateProperty);
+        set => SetValue(ItemTileTemplateProperty, value);
     }
 
     public bool ShowItemLabels
@@ -149,7 +169,6 @@ public partial class MultiSelectDropdown : UserControl
 
         if (change.Property == IconKeysProperty || change.Property == IsIconPickerProperty)
         {
-            RebuildIconCategories();
             RefreshIconTiles();
             RefreshSelectedItemsView();
         }
@@ -231,11 +250,6 @@ public partial class MultiSelectDropdown : UserControl
         }
     }
 
-    private void OnToggleButtonClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        // Not used anymore.
-    }
-
     private void OnInlineSearchTextChanged(object? sender, TextChangedEventArgs e)
     {
         if (suppressInlineTextProcessing)
@@ -300,14 +314,21 @@ public partial class MultiSelectDropdown : UserControl
     {
         if (IsIconPicker)
         {
-            if (e.Key is Key.Down or Key.Space or Key.Enter)
+            if (e.Key == Key.Escape)
+            {
+                CloseIconPicker();
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Key is Key.Down or Key.Up or Key.Space or Key.Enter)
             {
                 if (!DropdownPopup.IsOpen)
                 {
                     DropdownPopup.IsOpen = true;
                 }
 
-                Dispatcher.UIThread.Post(() => FocusIconSearch(), DispatcherPriority.Input);
+                Dispatcher.UIThread.Post(FocusIconSearch, DispatcherPriority.Input);
                 e.Handled = true;
             }
 
@@ -384,8 +405,9 @@ public partial class MultiSelectDropdown : UserControl
         }
     }
 
-    // Issue #1214: the icon picker keeps its own search text and pack category, independent from
-    // the inline multi-select filter, and renders a wrapping tile grid instead of a checkbox list.
+    // Issue #1214: the sheet holds every pack in one scrolling list. Rows of tiles keep the sheet
+    // virtualized (a WrapPanel would realize thousands of icons and freeze the popup), the search
+    // field filters the same sheet, and the pack strip scrolls it rather than filtering it.
     private void RefreshIconTiles()
     {
         if (!IsIconPicker || !DropdownPopup.IsOpen)
@@ -393,77 +415,322 @@ public partial class MultiSelectDropdown : UserControl
             return;
         }
 
-        var keys = IconKeys ?? [];
-        iconTilePool = (string.IsNullOrWhiteSpace(iconSearchText)
-            ? FilterIconKeysByCategory(keys)
-            : keys.Where(key => key.Contains(iconSearchText, StringComparison.OrdinalIgnoreCase)))
-            .ToArray();
+        EnsureIconCatalog();
+        var query = iconSearchText;
+        visibleIconTiles = query.Length == 0
+            ? allIconTiles
+            : allIconTiles.Where(tile => tile.Key.Contains(query, StringComparison.OrdinalIgnoreCase)).ToArray();
 
-        iconTiles.Clear();
-        AppendIconTilePage();
-        ApplyIconTileSelection();
+        RebuildIconRows();
+        SetHighlightedTile(FindVisibleTile(SelectedIconKey));
+        ScrollIconSheetToStart();
     }
 
-    private void AppendIconTilePage()
+    private void EnsureIconCatalog()
     {
-        var start = iconTiles.Count;
-        if (start >= iconTilePool.Count)
+        var keys = IconKeys ?? [];
+        if (ReferenceEquals(iconCatalogSource, keys))
         {
             return;
         }
 
-        var end = Math.Min(iconTilePool.Count, start + IconTilePageSize);
-        for (var index = start; index < end; index++)
+        iconCatalogSource = keys;
+        iconCatalog = keys
+            .OrderBy(GetIconPackName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(static key => key, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        allIconTiles = iconCatalog.Select(static key => new IconTileItem(key)).ToArray();
+        RebuildIconCategories();
+    }
+
+    private void RebuildIconRows()
+    {
+        iconRows.Clear();
+        for (var start = 0; start < visibleIconTiles.Length; start += iconColumnCount)
         {
-            iconTiles.Add(iconTilePool[index]);
+            iconRows.Add(new IconTileRow(visibleIconTiles, start, Math.Min(iconColumnCount, visibleIconTiles.Length - start)));
         }
     }
 
-    private void EnsureIconTilesLoaded(int index)
+    private IconTileItem? FindVisibleTile(string? key)
     {
-        while (index >= iconTiles.Count && iconTiles.Count < iconTilePool.Count)
+        if (string.IsNullOrWhiteSpace(key))
         {
-            AppendIconTilePage();
+            return null;
+        }
+
+        return visibleIconTiles.FirstOrDefault(tile => string.Equals(tile.Key, key, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void SetHighlightedTile(IconTileItem? tile)
+    {
+        if (ReferenceEquals(highlightedTile, tile))
+        {
+            return;
+        }
+
+        if (highlightedTile is not null)
+        {
+            highlightedTile.IsHighlighted = false;
+        }
+
+        highlightedTile = tile;
+        if (tile is not null)
+        {
+            tile.IsHighlighted = true;
         }
     }
+
+    private void ScrollIconSheetToStart()
+    {
+        if (iconRows.Count > 0)
+        {
+            IconTilesListBox.ScrollIntoView(iconRows[0]);
+        }
+    }
+
+    private void OnIconTilesSizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        if (!IsIconPicker || !DropdownPopup.IsOpen)
+        {
+            return;
+        }
+
+        var columns = CalculateIconColumns();
+        if (columns == iconColumnCount)
+        {
+            return;
+        }
+
+        iconColumnCount = columns;
+        RebuildIconRows();
+    }
+
+    private int CalculateIconColumns()
+    {
+        var width = IconTilesListBox.Bounds.Width;
+        if (width <= 0)
+        {
+            return iconColumnCount;
+        }
+
+        var tileSize = GetResourceDouble("SkyIconTileSize", 32);
+        var spacing = GetResourceDouble("SkySpaceXxs", 2);
+        var step = tileSize + spacing;
+        return Math.Max(1, (int)((width + spacing) / step));
+    }
+
+    private double GetResourceDouble(string key, double fallback) =>
+        this.TryFindResource(key, out var value) && value is double number ? number : fallback;
 
     private void OnIconTilesScrollChanged(object? sender, ScrollChangedEventArgs e)
     {
-        // Avalonia 12 reports deltas only, so read the scroller's absolute values instead.
-        if (!IsIconPicker ||
-            !DropdownPopup.IsOpen ||
-            iconTiles.Count >= iconTilePool.Count ||
-            e.Source is not ScrollViewer scroller ||
-            scroller.Viewport.Height <= 0 ||
-            scroller.Extent.Height - (scroller.Offset.Y + scroller.Viewport.Height) > IconTilePageSize)
+        if (!IsIconPicker || !DropdownPopup.IsOpen)
         {
             return;
         }
 
-        AppendIconTilePage();
+        SyncCategoryWithScroll();
     }
 
-    private void ApplyIconTileSelection()
+    private void SyncCategoryWithScroll()
     {
-        suppressIconSelection = true;
-        IconTilesListBox.SelectedItem = SelectedIconKey is { } selected
-            ? iconTiles.FirstOrDefault(key => string.Equals(key, selected, StringComparison.OrdinalIgnoreCase))
-            : null;
-        suppressIconSelection = false;
-    }
-
-    private IEnumerable<string> FilterIconKeysByCategory(IReadOnlyList<string> keys)
-    {
-        if (string.IsNullOrWhiteSpace(activeIconCategory) || activeIconCategory == AllCategoryLabel)
+        if (suppressCategorySync || iconRows.Count == 0 || visibleIconTiles.Length == 0)
         {
-            return keys;
+            return;
         }
 
-        return keys.Where(key => string.Equals(GetIconPackName(key), activeIconCategory,
-            StringComparison.OrdinalIgnoreCase));
+        var firstRow = GetTopVisibleRow();
+        if (firstRow is null)
+        {
+            return;
+        }
+
+        var index = Math.Min(firstRow.StartIndex, visibleIconTiles.Length - 1);
+        var pack = GetIconPackName(visibleIconTiles[index].Key);
+        var category = iconCategories.FirstOrDefault(candidate =>
+            string.Equals(candidate.Label, pack, StringComparison.OrdinalIgnoreCase));
+        if (category is null || ReferenceEquals(IconCategoryList.SelectedItem, category))
+        {
+            return;
+        }
+
+        SelectCategoryItem(category);
     }
 
-    private string AllCategoryLabel => LocalizationService.Current.Get(UiKeys.AllIcons);
+    // Virtualizing panels keep rows realized just above the viewport, so the cached container with
+    // the lowest index can belong to the previous pack; only rows still touching the viewport count.
+    private IconTileRow? GetTopVisibleRow()
+    {
+        var viewer = GetSheetScrollViewer();
+        if (viewer is null)
+        {
+            return null;
+        }
+
+        IconTileRow? topRow = null;
+        var topStart = int.MaxValue;
+        foreach (var container in IconTilesListBox.GetVisualDescendants().OfType<ListBoxItem>())
+        {
+            if (container.DataContext is not IconTileRow row)
+            {
+                continue;
+            }
+
+            var position = container.TranslatePoint(default, viewer);
+            if (position is null || position.Value.Y + container.Bounds.Height <= 0.5)
+            {
+                continue;
+            }
+
+            if (row.StartIndex < topStart)
+            {
+                topStart = row.StartIndex;
+                topRow = row;
+            }
+        }
+
+        return topRow;
+    }
+
+    private ScrollViewer? GetSheetScrollViewer() =>
+        IconTilesListBox.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault();
+
+    private void SelectCategoryItem(IconCategoryItem? category)
+    {
+        suppressIconCategoryEvents = true;
+        try
+        {
+            IconCategoryList.SelectedItem = category;
+        }
+        finally
+        {
+            suppressIconCategoryEvents = false;
+        }
+
+        if (category is not null)
+        {
+            IconCategoryList.ScrollIntoView(category);
+        }
+    }
+
+    private void RebuildIconCategories()
+    {
+        iconCategories.Clear();
+
+        string? packName = null;
+        var startIndex = 0;
+        string? representative = null;
+        var representativeRank = int.MaxValue;
+
+        for (var index = 0; index < iconCatalog.Length; index++)
+        {
+            var key = iconCatalog[index];
+            var pack = GetIconPackName(key);
+            if (!string.Equals(pack, packName, StringComparison.OrdinalIgnoreCase))
+            {
+                if (packName is not null && representative is not null)
+                {
+                    iconCategories.Add(new IconCategoryItem(packName, representative, startIndex));
+                }
+
+                packName = pack;
+                startIndex = index;
+                representative = key;
+                representativeRank = GetCategoryGlyphRank(key);
+                continue;
+            }
+
+            var rank = GetCategoryGlyphRank(key);
+            if (rank < representativeRank)
+            {
+                representative = key;
+                representativeRank = rank;
+            }
+        }
+
+        if (packName is not null && representative is not null)
+        {
+            iconCategories.Add(new IconCategoryItem(packName, representative, startIndex));
+        }
+    }
+
+    private static int GetCategoryGlyphRank(string key)
+    {
+        var value = GetIconValueName(key);
+        for (var index = 0; index < PreferredCategoryGlyphs.Length; index++)
+        {
+            if (string.Equals(value, PreferredCategoryGlyphs[index], StringComparison.OrdinalIgnoreCase))
+            {
+                return index;
+            }
+        }
+
+        return int.MaxValue;
+    }
+
+    private void OnIconCategorySelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (suppressIconCategoryEvents || IconCategoryList.SelectedItem is not IconCategoryItem category)
+        {
+            return;
+        }
+
+        JumpToIconCategory(category);
+    }
+
+    private void JumpToIconCategory(IconCategoryItem category)
+    {
+        if (iconSearchText.Length > 0)
+        {
+            IconSearchTextBox.Text = string.Empty;
+        }
+
+        if (visibleIconTiles.Length == 0)
+        {
+            return;
+        }
+
+        var index = Math.Clamp(category.StartIndex, 0, visibleIconTiles.Length - 1);
+        var row = index / iconColumnCount;
+        if (row < iconRows.Count)
+        {
+            ScrollIconRowToTop(iconRows[row]);
+        }
+    }
+
+    // ScrollIntoView only guarantees the row is somewhere in the viewport, often at its bottom edge,
+    // which would leave the previous pack on top and hand the highlight back to it. After the scroll
+    // settles the row is nudged to the top edge; sync stays off until then so the jump is not undone.
+    private void ScrollIconRowToTop(IconTileRow row)
+    {
+        suppressCategorySync = true;
+        IconTilesListBox.ScrollIntoView(row);
+        Dispatcher.UIThread.Post(() => AlignIconRowToTop(row), DispatcherPriority.Background);
+        Dispatcher.UIThread.Post(() => suppressCategorySync = false, DispatcherPriority.Background);
+    }
+
+    private void AlignIconRowToTop(IconTileRow row)
+    {
+        if (!DropdownPopup.IsOpen)
+        {
+            return;
+        }
+
+        var viewer = GetSheetScrollViewer();
+        var container = IconTilesListBox.GetVisualDescendants().OfType<ListBoxItem>()
+            .FirstOrDefault(item => ReferenceEquals(item.DataContext, row));
+        if (viewer is null || container?.TranslatePoint(default, viewer) is not { } position)
+        {
+            return;
+        }
+
+        var offset = Math.Max(0, viewer.Offset.Y + position.Y);
+        if (Math.Abs(offset - viewer.Offset.Y) > 0.5)
+        {
+            viewer.Offset = new Vector(viewer.Offset.X, offset);
+        }
+    }
 
     private static string GetIconPackName(string key)
     {
@@ -471,43 +738,10 @@ public partial class MultiSelectDropdown : UserControl
         return separator > 0 ? key[..separator] : key;
     }
 
-    private void RebuildIconCategories()
+    private static string GetIconValueName(string key)
     {
-        if (!IsIconPicker)
-        {
-            return;
-        }
-
-        var packs = (IconKeys ?? [])
-            .Select(GetIconPackName)
-            .Where(static pack => !string.IsNullOrWhiteSpace(pack))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(static pack => pack, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-        var categories = new[] { AllCategoryLabel }.Concat(packs).ToArray();
-
-        var selected = categories.Contains(activeIconCategory, StringComparer.Ordinal)
-            ? activeIconCategory
-            : AllCategoryLabel;
-        activeIconCategory = selected;
-
-        suppressIconSelection = true;
-        IconCategoryList.ItemsSource = categories;
-        IconCategoryList.SelectedItem = selected;
-        suppressIconSelection = false;
-    }
-
-    private void OnIconCategorySelectionChanged(object? sender, SelectionChangedEventArgs e)
-    {
-        if (suppressIconSelection)
-        {
-            return;
-        }
-
-        activeIconCategory = IconCategoryList.SelectedItem is string category
-            ? category
-            : AllCategoryLabel;
-        RefreshIconTiles();
+        var separator = key.IndexOf(':');
+        return separator > 0 ? key[(separator + 1)..] : key;
     }
 
     private void RefreshSelectedItemsView()
@@ -557,8 +791,8 @@ public partial class MultiSelectDropdown : UserControl
         suppressInlineTextProcessing = true;
         IconSearchTextBox.Text = string.Empty;
         suppressInlineTextProcessing = false;
-        RebuildIconCategories();
         RefreshIconTiles();
+        SelectCategoryItem(iconCategories.FirstOrDefault());
         Dispatcher.UIThread.Post(FocusIconSearch, DispatcherPriority.Input);
     }
 
@@ -566,12 +800,16 @@ public partial class MultiSelectDropdown : UserControl
     {
         searchText = string.Empty;
         iconSearchText = string.Empty;
-        activeIconCategory = AllCategoryLabel;
-        iconTiles.Clear();
-        iconTilePool = [];
         suppressInlineTextProcessing = true;
         IconSearchTextBox.Text = string.Empty;
         suppressInlineTextProcessing = false;
+        SetHighlightedTile(null);
+        iconRows.Clear();
+        visibleIconTiles = [];
+        allIconTiles = [];
+        iconCatalog = [];
+        iconCatalogSource = null;
+        iconCategories.Clear();
         RefreshSelectedItemsView();
     }
 
@@ -585,25 +823,21 @@ public partial class MultiSelectDropdown : UserControl
 
     private void OnIconSearchTextChanged(object? sender, TextChangedEventArgs e)
     {
+        if (suppressInlineTextProcessing)
+        {
+            return;
+        }
+
         iconSearchText = IconSearchTextBox.Text?.Trim() ?? string.Empty;
         RefreshIconTiles();
     }
 
-    private void FocusSelectedIconTile()
+    private void FocusIconTiles()
     {
-        if (!DropdownPopup.IsOpen)
+        if (DropdownPopup.IsOpen)
         {
-            return;
+            IconTilesListBox.Focus();
         }
-
-        if (IconTilesListBox.SelectedIndex >= 0 &&
-            IconTilesListBox.ContainerFromIndex(IconTilesListBox.SelectedIndex) is { } tile)
-        {
-            tile.Focus();
-            return;
-        }
-
-        IconTilesListBox.Focus();
     }
 
     private void OnIconSearchKeyDown(object? sender, KeyEventArgs e)
@@ -614,20 +848,23 @@ public partial class MultiSelectDropdown : UserControl
                 CloseIconPicker();
                 e.Handled = true;
                 break;
-            case Key.Down when IconTilesListBox.ItemCount > 0:
-                if (IconTilesListBox.SelectedIndex < 0)
-                {
-                    IconTilesListBox.SelectedIndex = 0;
-                }
-
-                Dispatcher.UIThread.Post(FocusSelectedIconTile, DispatcherPriority.Input);
+            case Key.Down when visibleIconTiles.Length > 0:
+                EnterIconSheetFromSearch();
                 e.Handled = true;
                 break;
-            case Key.Enter when IconTilesListBox.SelectedItem is string key:
-                SelectIcon(key);
+            case Key.Enter when highlightedTile is { } tile:
+                SelectIcon(tile.Key);
                 e.Handled = true;
                 break;
         }
+    }
+
+    private void EnterIconSheetFromSearch()
+    {
+        var firstRow = GetTopVisibleRow();
+        var startIndex = Math.Clamp(firstRow?.StartIndex ?? 0, 0, visibleIconTiles.Length - 1);
+        SetHighlightedTile(visibleIconTiles[startIndex]);
+        FocusIconTiles();
     }
 
     private void OnIconTilesKeyDown(object? sender, KeyEventArgs e)
@@ -642,14 +879,14 @@ public partial class MultiSelectDropdown : UserControl
             case Key.Right:
             case Key.Up:
             case Key.Down:
-                MoveIconTileSelection(e.Key);
+                MoveIconTileHighlight(e.Key);
                 e.Handled = true;
                 return;
             case Key.Space:
             case Key.Enter:
-                if (IconTilesListBox.SelectedItem is string key)
+                if (highlightedTile is { } tile)
                 {
-                    SelectIcon(key);
+                    SelectIcon(tile.Key);
                 }
 
                 e.Handled = true;
@@ -657,58 +894,40 @@ public partial class MultiSelectDropdown : UserControl
         }
     }
 
-    private void MoveIconTileSelection(Key key)
+    private void MoveIconTileHighlight(Key key)
     {
-        var count = iconTilePool.Count;
-        if (count == 0)
+        if (visibleIconTiles.Length == 0)
         {
             return;
         }
 
-        var current = IconTilesListBox.SelectedIndex < 0 ? 0 : IconTilesListBox.SelectedIndex;
-        var columns = GetIconTileColumnCount();
+        var current = highlightedTile is null ? -1 : Array.IndexOf(visibleIconTiles, highlightedTile);
+        if (current < 0)
+        {
+            current = 0;
+        }
+
         var next = key switch
         {
             Key.Left => Math.Max(0, current - 1),
-            Key.Right => Math.Min(count - 1, current + 1),
-            Key.Up => Math.Max(0, current - columns),
-            Key.Down => Math.Min(count - 1, current + columns),
+            Key.Right => Math.Min(visibleIconTiles.Length - 1, current + 1),
+            Key.Up => Math.Max(0, current - iconColumnCount),
+            Key.Down => Math.Min(visibleIconTiles.Length - 1, current + iconColumnCount),
             _ => current
         };
 
-        EnsureIconTilesLoaded(next);
-        IconTilesListBox.SelectedIndex = Math.Min(next, iconTiles.Count - 1);
-        if (IconTilesListBox.SelectedItem is string selected)
+        SetHighlightedTile(visibleIconTiles[next]);
+        var row = next / iconColumnCount;
+        if (row < iconRows.Count)
         {
-            IconTilesListBox.ScrollIntoView(selected);
+            IconTilesListBox.ScrollIntoView(iconRows[row]);
         }
-    }
-
-    private int GetIconTileColumnCount()
-    {
-        if (IconTilesListBox.GetVisualDescendants().OfType<WrapPanel>().FirstOrDefault() is not { } panel ||
-            panel.GetVisualDescendants().OfType<ListBoxItem>().FirstOrDefault() is not { } firstTile)
-        {
-            return 1;
-        }
-
-        var spacing = panel.ItemSpacing;
-        var cellWidth = firstTile.Bounds.Width + spacing;
-        return cellWidth > 0
-            ? Math.Max(1, (int)((panel.Bounds.Width + spacing) / cellWidth))
-            : 1;
-    }
-
-    private void OnIconPickerCloseClick(object? sender, RoutedEventArgs e)
-    {
-        CloseIconPicker();
     }
 
     private void CloseIconPicker()
     {
         DropdownPopup.IsOpen = false;
         iconSearchText = string.Empty;
-        activeIconCategory = AllCategoryLabel;
         RefreshSelectedItemsView();
         FocusInlineField();
     }
@@ -769,17 +988,11 @@ public partial class MultiSelectDropdown : UserControl
         e.Handled = true;
     }
 
-    private void OnIconTilesPointerPressed(object? sender, PointerPressedEventArgs e)
+    private void OnIconTilePointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        var element = e.Source as Control;
-        while (element is not null && element is not ListBoxItem)
+        if (sender is Border { DataContext: IconTileItem tile })
         {
-            element = element.GetVisualParent() as Control;
-        }
-
-        if (element is ListBoxItem { DataContext: string key })
-        {
-            SelectIcon(key);
+            SelectIcon(tile.Key);
             e.Handled = true;
         }
     }

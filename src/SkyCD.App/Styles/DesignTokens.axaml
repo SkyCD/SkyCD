@@ -100,12 +100,12 @@
 
     <!--
         Status icon picker (issue #1214). The popup imitates the Windows emoji panel: a 360px
-        surface wide enough for a wrapping tile grid, 32px tiles that center the 16px glyph, and
-        a scroll cap that keeps the popup shorter than the Statuses page it opens over.
+        surface wide enough for a tile sheet, 32px tiles that center the 16px glyph, and a fixed
+        sheet height so switching packs never resizes the popup.
     -->
     <x:Double x:Key="SkyIconPickerWidth">360</x:Double>
     <x:Double x:Key="SkyIconTileSize">32</x:Double>
-    <x:Double x:Key="SkyIconGridMaxHeight">220</x:Double>
+    <x:Double x:Key="SkyIconGridHeight">220</x:Double>
     <Thickness x:Key="SkyIconCategoryPadding">6,2,6,4</Thickness>
 
     <!--
