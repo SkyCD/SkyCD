@@ -49,8 +49,11 @@ internal static class RtfInfoExtractor
 
         var properties = document.Properties;
         var settings = document.Settings;
-        var header = ScanHeaderWords(result.SyntaxTree?.Root);
+        var root = result.SyntaxTree?.Root;
+        var header = ScanHeaderWords(root);
 
+        // OfficeIMO reads {\nofwords12}. A space before the number, {\nofwords 12}, leaves the
+        // property empty, so take the following text from the same info group.
         return new RtfInfo(
             header.RtfVersion,
             settings.AnsiCodePage,
@@ -66,10 +69,10 @@ internal static class RtfInfoExtractor
             properties.Comments,
             header.RevisionNumber,
             properties.EditingMinutes,
-            properties.NumberOfPages,
-            properties.NumberOfWords,
-            properties.NumberOfCharacters,
-            properties.NumberOfCharactersWithSpaces,
+            properties.NumberOfPages ?? InfoCount(root, "nofpages"),
+            properties.NumberOfWords ?? InfoCount(root, "nofwords"),
+            properties.NumberOfCharacters ?? InfoCount(root, "nofchars"),
+            properties.NumberOfCharactersWithSpaces ?? InfoCount(root, "nofcharsws"),
             ToUtcTimestamp(properties.Created),
             ToUtcTimestamp(properties.Revised),
             ToUtcTimestamp(properties.Printed));
@@ -137,6 +140,57 @@ internal static class RtfInfoExtractor
                 Walk(nested, insideInfo, ref rtfVersion, ref revisionNumber, ref hasProtectionWord);
             }
         }
+    }
+
+    private static int? InfoCount(RtfGroup? root, string wordName)
+    {
+        if (root is null)
+        {
+            return null;
+        }
+
+        return FindInfoCount(root, inInfo: false, wordName);
+    }
+
+    private static int? FindInfoCount(RtfGroup group, bool inInfo, string wordName)
+    {
+        var insideInfo = inInfo || "info".Equals(group.Destination, StringComparison.OrdinalIgnoreCase);
+        var awaitingNumber = wordName.Equals(group.Destination, StringComparison.OrdinalIgnoreCase);
+
+        foreach (var child in group.Children)
+        {
+            if (child is RtfControlWord word)
+            {
+                if (insideInfo && word.Name.Equals(wordName, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (word.HasParameter)
+                    {
+                        return word.Parameter;
+                    }
+
+                    awaitingNumber = true;
+                }
+            }
+            else if (awaitingNumber && child is RtfText text &&
+                     int.TryParse(text.Text.Trim(), out var count))
+            {
+                return count;
+            }
+            else if (child is RtfGroup nested)
+            {
+                var nestedCount = FindInfoCount(nested, insideInfo, wordName);
+                if (nestedCount is not null)
+                {
+                    return nestedCount;
+                }
+            }
+            else
+            {
+                awaitingNumber = false;
+            }
+        }
+
+        return null;
     }
 
     private static bool IsProtectionWord(string name)
