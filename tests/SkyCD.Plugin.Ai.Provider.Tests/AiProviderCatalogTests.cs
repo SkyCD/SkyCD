@@ -86,6 +86,14 @@ public sealed class AiProviderCatalogTests
             }
 
             Assert.Equal(resourceName, provider.IconKey);
+            if (provider.Id is "colibri" or "jan" or "ollama")
+            {
+                Assert.Equal("llm-backend:" + provider.Id, provider.IconKey);
+                Assert.Null(assembly.GetManifestResourceStream(
+                    $"SkyCD.Plugin.Ai.Provider.Assets.Providers.{provider.Id}.png"));
+                return;
+            }
+
             using var stream = assembly.GetManifestResourceStream(provider.IconKey!);
             Assert.NotNull(stream);
             Assert.True(stream!.Length > 32, provider.Id);

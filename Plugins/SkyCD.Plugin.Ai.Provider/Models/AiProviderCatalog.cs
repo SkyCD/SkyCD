@@ -10,9 +10,12 @@ public static class AiProviderCatalog
 {
     public const string EndpointPath = "/v1";
 
-    /// <summary>Manifest name of <c>Assets/Providers/{id}.png</c>.</summary>
-    public static string IconResourceName(string providerId) =>
-        "SkyCD.Plugin.Ai.Provider.Assets.Providers." + providerId + ".png";
+    /// <summary>Icon key for the preset picker.</summary>
+    public static string IconResourceName(string providerId) => providerId switch
+    {
+        "colibri" or "jan" or "ollama" => "llm-backend:" + providerId,
+        _ => "SkyCD.Plugin.Ai.Provider.Assets.Providers." + providerId + ".png"
+    };
 
     public static IReadOnlyList<AiProviderChoice> Providers { get; } =
     [

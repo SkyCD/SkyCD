@@ -12,8 +12,9 @@ With the plugin enabled, choose **Use agent** for an installed agent in
 Description settings live in **Tools → Options → AI → Description**, and the
 provider connection settings in **AI → Provider**.
 The provider picker shows a 16 px icon before each preset name in the closed
-field and dropdown rows. An `IconKey` identifies an embedded PNG in
-`Assets/Providers/{id}.png`. If artwork is unavailable or fails to load, the
+field and dropdown rows. Colibrì, Jan, and Ollama use the 16 px frame from the
+multi-resolution ICOs in [SkyCD.Resource.Icons.LlmBackends](https://github.com/SkyCD/SkyCD.Resource.Icons.LlmBackends).
+The other branded presets load PNGs from the provider plugin. If artwork is unavailable or fails to load, the
 picker draws the preset's `Monogram` on the theme accent. KoboldCpp uses `KC`,
 LocalAI uses `LA`, and the unbranded custom preset uses `AI`.
 
@@ -21,11 +22,11 @@ Official artwork sources
 
 | Preset | Source |
 | --- | --- |
-| Colibrì | [Desktop icon](https://github.com/JustVugg/colibri/blob/main/desktop/src-tauri/icons/128x128.png), © 2026 Vincenzo Fornaro, [Apache 2.0 notice](https://github.com/JustVugg/colibri/blob/main/NOTICE) |
-| Jan | [Desktop icon](https://github.com/janhq/jan/blob/main/src-tauri/icons/icon.png), © 2025 Menlo Research, [Apache 2.0 terms](https://github.com/janhq/jan/blob/main/LICENSE) |
+| Colibrì | [Desktop icon](https://github.com/JustVugg/colibri/blob/e479104ae01bdc40ce81e675299b1d230891b321/desktop/src-tauri/icons/128x128.png), © 2026 Vincenzo Fornaro, Apache-2.0 |
+| Jan | [Desktop icon](https://github.com/janhq/jan/blob/49a84bdeaebdfc0f36c00f252eb638f516a48432/src-tauri/icons/icon.png), © 2025 Menlo Research, Apache-2.0 |
 | llama.cpp | [ggml-org llama-brand icon](https://github.com/ggml-org/llama-brand/blob/master/logo/png/icon/icon-light-bg.png), [brand-use terms](https://github.com/ggml-org/llama-brand/blob/master/BRAND-USAGE.md) |
 | LM Studio | [Color app icon](https://lmstudio.ai/brand) |
-| Ollama | [Documentation favicon](https://github.com/ollama/ollama/blob/main/docs/images/favicon.png) |
+| Ollama | [Documentation favicon](https://github.com/ollama/ollama/blob/8ae8acb81afba9c3c67adf08190964eb7d1207ef/docs/images/favicon.png), MIT |
 | vLLM | [Compact logo](https://github.com/vllm-project/media-kit/blob/main/vLLM-Logo.png) |
 
 Jan, llama.cpp, LM Studio, and vLLM artwork was resized proportionally for
