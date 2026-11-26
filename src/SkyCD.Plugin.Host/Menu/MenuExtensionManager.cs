@@ -16,7 +16,20 @@ public sealed class MenuExtensionManager(IEnumerable<IMenuPluginCapability> menu
     private readonly
         IReadOnlyList<(IMenuPluginCapability Capability, IReadOnlyCollection<MenuContribution> Contributions)>
         _bindings = menuCapabilities
-            .Select(static capability => (capability, capability.GetMenuContributions()))
+            .Select(static capability =>
+            {
+                try
+                {
+                    return (capability, capability.GetMenuContributions());
+                }
+                catch (Exception exception)
+                {
+                    // One stale or faulty plugin (for example an assembly built against an older SDK
+                    // contract) must not stop the host from starting; skip its contributions instead.
+                    PluginFailure.Publish(capability.GetType(), "menu", exception);
+                    return (capability, (IReadOnlyCollection<MenuContribution>)Array.Empty<MenuContribution>());
+                }
+            })
             .ToList();
 
     public IReadOnlyList<MenuContribution> GetMenuContributions(string? location = null)
