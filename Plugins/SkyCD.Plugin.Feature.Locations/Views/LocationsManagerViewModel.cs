@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -10,8 +11,9 @@ using SkyCD.UI.Localization;
 namespace SkyCD.Plugin.Feature.Locations.Views;
 
 /// <summary>
-/// Location manager dialog. Every action goes straight through the host location API, so the catalog is
-/// updated immediately and cancelling or closing the dialog never rolls anything back.
+/// Location manager page. Stored actions go straight through the host location API, so the catalog is
+/// updated immediately; a newly added row is the one exception and stays unstored until its inline
+/// editor commits.
 /// </summary>
 public sealed partial class LocationsManagerViewModel : ObservableObject
 {
@@ -27,12 +29,7 @@ public sealed partial class LocationsManagerViewModel : ObservableObject
 
     public ObservableCollection<LocationRow> Locations { get; } = [];
 
-    public ObservableCollection<LocationRow> MergeTargets { get; } = [];
-
     [ObservableProperty] private LocationRow? selectedLocation;
-    [ObservableProperty] private LocationRow? mergeTarget;
-    [ObservableProperty] private string newLocationName = string.Empty;
-    [ObservableProperty] private string locationName = string.Empty;
     [ObservableProperty] private string statusText = string.Empty;
     [ObservableProperty] private string errorText = string.Empty;
     [ObservableProperty] private bool hasLocations;
@@ -40,61 +37,39 @@ public sealed partial class LocationsManagerViewModel : ObservableObject
 
     public bool ShowCatalogUnavailable => !IsCatalogOpen;
 
-    partial void OnIsCatalogOpenChanged(bool value) => OnPropertyChanged(nameof(ShowCatalogUnavailable));
+    public bool HasStatus => !string.IsNullOrEmpty(StatusText);
 
-    partial void OnSelectedLocationChanged(LocationRow? value)
+    public bool HasError => !string.IsNullOrEmpty(ErrorText);
+
+    /// <summary>Raised when the merge action runs; the view answers by showing the destination picker.</summary>
+    public event EventHandler? MergeLocationsRequested;
+
+    partial void OnIsCatalogOpenChanged(bool value)
     {
-        LocationName = value?.Name ?? string.Empty;
-        RebuildMergeTargets();
+        OnPropertyChanged(nameof(ShowCatalogUnavailable));
         NotifyCommands();
     }
 
-    partial void OnMergeTargetChanged(LocationRow? value) => NotifyCommands();
+    partial void OnStatusTextChanged(string value) => OnPropertyChanged(nameof(HasStatus));
 
-    [RelayCommand]
-    private void CreateLocation()
+    partial void OnErrorTextChanged(string value) => OnPropertyChanged(nameof(HasError));
+
+    partial void OnSelectedLocationChanged(LocationRow? value) => NotifyCommands();
+
+    [RelayCommand(CanExecute = nameof(CanAddLocation))]
+    private void AddLocation()
     {
         ErrorText = string.Empty;
-        try
-        {
-            var created = api.CreateLocation(NewLocationName);
-            NewLocationName = string.Empty;
-            Reload(created.Id);
-            StatusText = LocalizationService.Current.Format(LocationsKeys.LocationCreated, created.Name);
-            onChanged?.Invoke();
-        }
-        catch (LocationApiException exception)
-        {
-            ErrorText = Describe(exception);
-        }
+        var draft = new LocationRow($"new:{Guid.NewGuid():N}", string.Empty, 0, isStored: false);
+        Locations.Add(draft);
+        SelectedLocation = draft;
+        BeginLocationEdit(draft);
+        NotifyCommands();
     }
 
-    [RelayCommand(CanExecute = nameof(CanEditSelected))]
-    private void RenameLocation()
-    {
-        ErrorText = string.Empty;
-        if (SelectedLocation is not { } selected)
-        {
-            return;
-        }
+    private bool CanAddLocation() => IsCatalogOpen;
 
-        var name = LocationName.Trim();
-        try
-        {
-            api.RenameLocation(selected.Id, name);
-            Reload(selected.Id);
-            StatusText = LocalizationService.Current.Format(LocationsKeys.LocationRenamed, name);
-            onChanged?.Invoke();
-        }
-        catch (LocationApiException exception)
-        {
-            ErrorText = Describe(exception);
-        }
-    }
-
-    private bool CanEditSelected() => SelectedLocation is not null;
-
-    [RelayCommand(CanExecute = nameof(CanEditSelected))]
+    [RelayCommand(CanExecute = nameof(CanDeleteLocation))]
     private void DeleteLocation()
     {
         ErrorText = string.Empty;
@@ -119,11 +94,111 @@ public sealed partial class LocationsManagerViewModel : ObservableObject
         }
     }
 
-    [RelayCommand(CanExecute = nameof(CanMerge))]
-    private void MergeLocations()
+    private bool CanDeleteLocation() => SelectedLocation is not null;
+
+    [RelayCommand(CanExecute = nameof(CanMergeLocations))]
+    private void MergeLocations() => MergeLocationsRequested?.Invoke(this, EventArgs.Empty);
+
+    private bool CanMergeLocations() =>
+        SelectedLocation is { IsStored: true } source &&
+        Locations.Any(location => location.IsStored && !ReferenceEquals(location, source));
+
+    /// <summary>Opens the inline name editor on <paramref name="row"/>; only one row edits at a time.</summary>
+    public void BeginLocationEdit(LocationRow row)
+    {
+        if (!Locations.Contains(row))
+        {
+            return;
+        }
+
+        foreach (var other in Locations.Where(location => location.IsEditing && !ReferenceEquals(location, row)).ToArray())
+        {
+            CancelLocationRename(other);
+        }
+
+        row.BeginEdit();
+        NotifyCommands();
+    }
+
+    /// <summary>
+    /// Commits the inline editor using the host API. Empty names and API validation failures keep the
+    /// editor open with the error text.
+    /// </summary>
+    public bool CommitLocationRename(LocationRow row)
+    {
+        if (!row.IsEditing)
+        {
+            return true;
+        }
+
+        var name = row.EditName.Trim();
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            ErrorText = LocalizationService.Current.Get(LocationsKeys.LocationNameRequired);
+            return false;
+        }
+
+        if (string.Equals(row.Name, name, StringComparison.Ordinal))
+        {
+            row.CancelEdit();
+            return true;
+        }
+
+        try
+        {
+            if (row.IsStored)
+            {
+                api.RenameLocation(row.Id, name);
+                Reload(row.Id);
+                StatusText = LocalizationService.Current.Format(LocationsKeys.LocationRenamed, name);
+            }
+            else
+            {
+                var created = api.CreateLocation(name);
+                Reload(created.Id);
+                StatusText = LocalizationService.Current.Format(LocationsKeys.LocationCreated, created.Name);
+            }
+
+            onChanged?.Invoke();
+            return true;
+        }
+        catch (LocationApiException exception)
+        {
+            ErrorText = Describe(exception);
+            return false;
+        }
+    }
+
+    /// <summary>Drops the draft. An unstored row that was never named is removed again.</summary>
+    public void CancelLocationRename(LocationRow row)
+    {
+        if (!row.IsStored)
+        {
+            Locations.Remove(row);
+            if (ReferenceEquals(SelectedLocation, row))
+            {
+                SelectedLocation = Locations.FirstOrDefault();
+            }
+        }
+        else
+        {
+            row.CancelEdit();
+        }
+
+        NotifyCommands();
+    }
+
+    /// <summary>Rows the merge dialog may offer as a destination: stored rows other than the source.</summary>
+    public IReadOnlyList<LocationRow> GetMergeDestinations(LocationRow source) =>
+        Locations.Where(location => location.IsStored && !ReferenceEquals(location, source)).ToArray();
+
+    /// <summary>Merges the source into the destination chosen in the merge dialog.</summary>
+    public void ConfirmMergeLocations(LocationRow source, LocationRow target)
     {
         ErrorText = string.Empty;
-        if (SelectedLocation is not { } source || MergeTarget is not { } target || source.Id == target.Id)
+        if (ReferenceEquals(source, target) ||
+            !Locations.Contains(source) ||
+            !Locations.Contains(target))
         {
             return;
         }
@@ -141,9 +216,6 @@ public sealed partial class LocationsManagerViewModel : ObservableObject
         }
     }
 
-    private bool CanMerge() =>
-        SelectedLocation is { } source && MergeTarget is { } target && source.Id != target.Id;
-
     private void Reload(string? selectId = null)
     {
         IsCatalogOpen = api.IsCatalogOpen;
@@ -159,27 +231,12 @@ public sealed partial class LocationsManagerViewModel : ObservableObject
 
         HasLocations = Locations.Count > 0;
         SelectedLocation = Locations.FirstOrDefault(location => location.Id == selectId) ?? Locations.FirstOrDefault();
-        RebuildMergeTargets();
         NotifyCommands();
-    }
-
-    private void RebuildMergeTargets()
-    {
-        MergeTargets.Clear();
-        foreach (var location in Locations.Where(location => location.Id != SelectedLocation?.Id))
-        {
-            MergeTargets.Add(location);
-        }
-
-        if (MergeTarget is null || MergeTargets.All(target => target.Id != MergeTarget.Id))
-        {
-            MergeTarget = MergeTargets.FirstOrDefault();
-        }
     }
 
     private void NotifyCommands()
     {
-        RenameLocationCommand.NotifyCanExecuteChanged();
+        AddLocationCommand.NotifyCanExecuteChanged();
         DeleteLocationCommand.NotifyCanExecuteChanged();
         MergeLocationsCommand.NotifyCanExecuteChanged();
     }
