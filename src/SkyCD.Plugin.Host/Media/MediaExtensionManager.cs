@@ -75,6 +75,18 @@ public sealed class MediaExtensionManager
                 continue;
             }
 
+            if (provider.Capability is IMediaPreviewAvailability { PreviewUnavailableReason: { } reason })
+            {
+                // The decoder is known to be missing before any work starts: one clearly named
+                // warning per plugin (collapsed by fingerprint in the dialog) and no per-file
+                // error spam, while the entry outcome stays stored (issue #1202).
+                var itemName = sourcePath is null ? null : Path.GetFileName(sourcePath);
+                PluginFailure.Publish(provider.Capability.GetType(), "media",
+                    new PreviewDecoderUnavailableException(reason), provider.PluginId, reason, itemName,
+                    isWarning: true);
+                continue;
+            }
+
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeout.CancelAfter(effective.TimeoutMilliseconds);
             var operation = RunAsync(provider, item, openSource, progress, timeout.Token, effective, selection,
@@ -93,7 +105,18 @@ public sealed class MediaExtensionManager
             catch (Exception exception)
             {
                 Observe(operation);
-                PluginFailure.Publish(provider.Capability.GetType(), "media", exception);
+                var itemName = sourcePath is null ? null : Path.GetFileName(sourcePath);
+                PluginFailure.Publish(provider.Capability.GetType(), "media", exception, provider.PluginId,
+                    FirstLine(exception.Message), itemName);
+                if (IsOptionalPreview(provider))
+                {
+                    // A failed preview must not turn the entry outcome into Failed: posters are
+                    // optional and the docs promise "no preview stored" in that case (issue #1202).
+                    // The published failure still reaches the log once per plugin (see the dialog's
+                    // fingerprint collapse), so triage is preserved without per-file error spam.
+                    continue;
+                }
+
                 results.Add((int.MinValue, Failure(provider, timeout.IsCancellationRequested)));
             }
         }
@@ -373,6 +396,25 @@ public sealed class MediaExtensionManager
 
     private static MediaProviderResult Failure(MediaProvider provider, bool timedOut) =>
         new(provider.PluginId, provider.PluginVersion, provider.Capability.GetType().FullName!, null, null, null, true, timedOut);
+
+    private static bool IsOptionalPreview(MediaProvider provider) =>
+        provider.Capability is IMediaPreviewCapability or ILocalMediaPreviewCapability;
+
+    private static string FirstLine(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var newline = value.IndexOf('\n');
+        if (newline >= 0)
+        {
+            value = value.Substring(0, newline);
+        }
+
+        return value.TrimEnd('\r').Trim();
+    }
 
     private static void Observe(Task task) => _ = task.ContinueWith(t => _ = t.Exception,
         CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);

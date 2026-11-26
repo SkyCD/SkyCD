@@ -3,6 +3,16 @@
     <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
 
     <!--
+      Every plugin loads through Assembly.LoadFrom, which probes the plugin folder for managed
+      dependencies (issue #1202). Copy the full NuGet closure next to every plugin so a managed
+      package assembly (e.g. OpenCvSharp) is actually deployed; without this a class library
+      output carries only native assets. One rule for every plugin, no per-project opt-ins.
+    -->
+    <PropertyGroup>
+        <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    </PropertyGroup>
+
+    <!--
       Every plugin library embeds one multiresolution ICO under the name read by PluginIconResolver.
     -->
     <ItemGroup Condition="Exists('Assets/icon.ico')">

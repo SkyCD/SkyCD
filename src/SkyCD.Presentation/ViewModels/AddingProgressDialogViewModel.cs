@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -447,6 +448,7 @@ public partial class AddingProgressDialogViewModel : ObservableObject, IOperatio
             {
                 pendingEntries.Clear();
                 LogEntries.Clear();
+                pluginFailureGroups.Clear();
             }
         });
     }
@@ -589,20 +591,150 @@ public partial class AddingProgressDialogViewModel : ObservableObject, IOperatio
     public void ReportSkipped(string itemPath, string reason, string? stage = null) =>
         ReportLog(OperationLogLevel.ItemSkipped, $"Skipped: {reason}", stage, itemPath, reason);
 
+    private readonly Dictionary<string, PluginFailureGroup> pluginFailureGroups = new(StringComparer.Ordinal);
+
+    private sealed class PluginFailureGroup
+    {
+        public required PluginFailure Failure;
+        public int Count;
+        public List<string> Files { get; } = [];
+        public OperationLogEntry? Entry;
+        public (OperationLogEntry Previous, OperationLogEntry Updated)? PendingSwap;
+    }
+
     /// <summary>
     /// Routes a plugin failure into the operation log while an add is running, so no global error
-    /// dialog interrupts the operation. The full fingerprint is kept in the log for later triage.
+    /// dialog interrupts the operation. The line names the plugin and the reason instead of only
+    /// a hash prefix, and repeats with the same fingerprint collapse into one line with a count
+    /// and the affected files instead of one line per item. Unavailable optional decoders render
+    /// as warnings; real failures stay errors. The full fingerprint is kept in the log for later
+    /// triage.
     /// </summary>
     public void ReportPluginFailure(PluginFailure failure)
     {
         ArgumentNullException.ThrowIfNull(failure);
 
-        var identity = failure.PluginIdentity;
-        var shortIdentity = identity.Length > 8 ? identity[..8] + "…" : identity;
-        ReportLog(
+        PluginFailureGroup group;
+        lock (gate)
+        {
+            if (!pluginFailureGroups.TryGetValue(failure.Fingerprint, out var existing))
+            {
+                existing = new PluginFailureGroup { Failure = failure };
+                pluginFailureGroups.Add(failure.Fingerprint, existing);
+            }
+
+            group = existing;
+            group.Count++;
+            var itemName = string.IsNullOrWhiteSpace(failure.ItemName) ? null : failure.ItemName.Trim();
+            if (itemName is not null && group.Files.Count < 5 &&
+                !group.Files.Any(file => file.Equals(itemName, StringComparison.OrdinalIgnoreCase)))
+            {
+                group.Files.Add(itemName);
+            }
+
+            var previous = group.Entry;
+            var updated = BuildPluginFailureEntry(group);
+            group.Entry = updated;
+
+            if (previous is null)
+            {
+                EnqueueEntryLocked(updated);
+            }
+            else if (TryReplacePendingEntryLocked(previous, updated))
+            {
+                group.PendingSwap = null;
+            }
+            else
+            {
+                group.PendingSwap = (previous, updated);
+            }
+        }
+
+        ScheduleFlush();
+
+        RunOnUi(() =>
+        {
+            lock (gate)
+            {
+                if (group.PendingSwap is not { } swap || !ReferenceEquals(swap.Updated, group.Entry))
+                {
+                    return;
+                }
+
+                group.PendingSwap = null;
+                var index = IndexOfLogEntry(swap.Previous);
+                if (index >= 0)
+                {
+                    LogEntries[index] = swap.Updated;
+                }
+                else
+                {
+                    EnqueueEntryLocked(swap.Updated);
+                }
+            }
+
+            ScheduleFlush();
+        });
+    }
+
+    private static OperationLogEntry BuildPluginFailureEntry(PluginFailureGroup group)
+    {
+        var failure = group.Failure;
+        var suffix = group.Count <= 1
+            ? string.Empty
+            : group.Files.Count == 0
+                ? LocalizationService.Current.Format(TextKeys.PluginErrorRepeatCount, group.Count)
+                : LocalizationService.Current.Format(TextKeys.PluginErrorRepeatCountFiles, group.Count,
+                    string.Join(", ", group.Files));
+
+        if (failure.IsWarning)
+        {
+            return new OperationLogEntry(
+                OperationLogLevel.Warning,
+                LocalizationService.Current.Format(TextKeys.PluginPreviewUnavailable,
+                    failure.PluginId, failure.Reason ?? failure.ExceptionType) + suffix,
+                details: $"fingerprint {failure.Fingerprint}");
+        }
+
+        return new OperationLogEntry(
             OperationLogLevel.Error,
-            $"Plugin error during '{failure.Operation}' (plugin {shortIdentity})",
-            details: $"fingerprint {failure.Fingerprint}");
+            LocalizationService.Current.Format(TextKeys.PluginErrorDuringOperation,
+                failure.Operation, failure.PluginName, failure.PluginId, failure.ExceptionType) + suffix,
+            details: failure.Reason is null
+                ? $"fingerprint {failure.Fingerprint}; {failure.ExceptionType}"
+                : $"fingerprint {failure.Fingerprint}; {failure.ExceptionType}: {failure.Reason}");
+    }
+
+    private bool TryReplacePendingEntryLocked(OperationLogEntry previous, OperationLogEntry updated)
+    {
+        var replaced = false;
+        var remaining = pendingEntries.Count;
+        while (remaining-- > 0)
+        {
+            var entry = pendingEntries.Dequeue();
+            if (!replaced && ReferenceEquals(entry, previous))
+            {
+                replaced = true;
+                entry = updated;
+            }
+
+            pendingEntries.Enqueue(entry);
+        }
+
+        return replaced;
+    }
+
+    private int IndexOfLogEntry(OperationLogEntry entry)
+    {
+        for (var index = 0; index < LogEntries.Count; index++)
+        {
+            if (ReferenceEquals(LogEntries[index], entry))
+            {
+                return index;
+            }
+        }
+
+        return -1;
     }
 
     /// <summary>
