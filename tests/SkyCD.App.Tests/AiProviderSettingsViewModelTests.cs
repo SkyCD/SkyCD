@@ -318,6 +318,55 @@ public class AiProviderSettingsViewModelTests
         Assert.Equal(["English (US)", "Lietuvių"], vm.AiProviderLanguages);
     }
 
+    [Fact]
+    public void SwitchingToProviderWithoutSuggestions_ClearsListAndModel()
+    {
+        var bare = new AiProviderChoice("bare", "Bare", "http", "127.0.0.1", 9999, null, false);
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.LoadAiProviderSettings(new FakeCapability([LmStudio, Ollama, bare]));
+
+        vm.SelectedAiProvider = vm.AiProviders.Single(provider => provider.Id == "bare");
+
+        Assert.Empty(vm.AiProviderModels);
+        Assert.Equal(string.Empty, vm.AiProviderModel);
+    }
+
+    [Fact]
+    public void SwitchingToProviderWithOnlyDefault_KeepsOnlyThatDefault()
+    {
+        var solo = new AiProviderChoice("solo", "Solo", "http", "127.0.0.1", 9999, "solo-model", false);
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.LoadAiProviderSettings(new FakeCapability([LmStudio, Ollama, solo]));
+
+        vm.SelectedAiProvider = vm.AiProviders.Single(provider => provider.Id == "ollama");
+        vm.SelectedAiProvider = vm.AiProviders.Single(provider => provider.Id == "solo");
+
+        Assert.Equal(["solo-model"], vm.AiProviderModels);
+        Assert.Equal("solo-model", vm.AiProviderModel);
+    }
+
+    [Fact]
+    public void Load_SeedsSavedProviderSuggestionsAlongsideSavedModel()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.LoadAiProviderSettings(new FakeCapability
+        {
+            Saved = new AiProviderSettings
+            {
+                ProviderId = "ollama",
+                Protocol = "http",
+                Address = "127.0.0.1",
+                Port = 11434,
+                Model = "custom-model",
+                Language = "English",
+                Enabled = true
+            }
+        });
+
+        Assert.Equal(["llama3.2", "qwen3", "custom-model"], vm.AiProviderModels);
+        Assert.Equal("custom-model", vm.AiProviderModel);
+    }
+
     private sealed class FakeCapability : IAiProviderSettingsCapability
     {
         public FakeCapability(IReadOnlyList<AiProviderChoice>? providers = null) =>
