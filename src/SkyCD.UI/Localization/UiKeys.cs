@@ -544,4 +544,26 @@ public static class UiKeys
     public const string Separator = "core.ui.Separator";
     public const string RemoveToolbarButton = "core.ui.RemoveToolbarButton";
     public const string ResetToolbar = "core.ui.ResetToolbar";
+    public const string SplitDialogTitle = "core.ui.SplitDialogTitle";
+    public const string SplitSourceCatalog = "core.ui.SplitSourceCatalog";
+    public const string SplitEntrySummary = "core.ui.SplitEntrySummary";
+    public const string SplitOutputFolder = "core.ui.SplitOutputFolder";
+    public const string SplitFileNamePattern = "core.ui.SplitFileNamePattern";
+    public const string SplitPatternHint = "core.ui.SplitPatternHint";
+    public const string SplitEntriesPerPart = "core.ui.SplitEntriesPerPart";
+    public const string SplitPartSize = "core.ui.SplitPartSize";
+    public const string SplitSavingFormat = "core.ui.SplitSavingFormat";
+    public const string SplitNoEntries = "core.ui.SplitNoEntries";
+    public const string SplitEntriesRequired = "core.ui.SplitEntriesRequired";
+    public const string SplitEntriesInvalid = "core.ui.SplitEntriesInvalid";
+    public const string SplitSizeInvalid = "core.ui.SplitSizeInvalid";
+    public const string SplitSizeUnitRequired = "core.ui.SplitSizeUnitRequired";
+    public const string SplitSizeTooLarge = "core.ui.SplitSizeTooLarge";
+    public const string SplitOutputFolderRequired = "core.ui.SplitOutputFolderRequired";
+    public const string SplitPatternExtensionMismatch = "core.ui.SplitPatternExtensionMismatch";
+    public const string SplitProgressStatus = "core.ui.SplitProgressStatus";
+    public const string SplitOutcome = "core.ui.SplitOutcome";
+    public const string SplitCancelled = "core.ui.SplitCancelled";
+    public const string SplitFailed = "core.ui.SplitFailed";
+    public const string SplitAction = "core.ui.SplitAction";
 }

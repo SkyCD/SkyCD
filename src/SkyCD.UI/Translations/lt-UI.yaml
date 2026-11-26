@@ -541,3 +541,25 @@ ui.AddToolbarButton: "Pridėti"
 ui.Separator: "Skirtukas"
 ui.RemoveToolbarButton: "Pašalinti"
 ui.ResetToolbar: "Atkurti"
+ui.SplitDialogTitle:
+ui.SplitSourceCatalog:
+ui.SplitEntrySummary:
+ui.SplitOutputFolder:
+ui.SplitFileNamePattern:
+ui.SplitPatternHint:
+ui.SplitEntriesPerPart:
+ui.SplitPartSize:
+ui.SplitSavingFormat:
+ui.SplitNoEntries:
+ui.SplitEntriesRequired:
+ui.SplitEntriesInvalid:
+ui.SplitSizeInvalid:
+ui.SplitSizeUnitRequired:
+ui.SplitSizeTooLarge:
+ui.SplitOutputFolderRequired:
+ui.SplitPatternExtensionMismatch:
+ui.SplitProgressStatus:
+ui.SplitOutcome:
+ui.SplitCancelled:
+ui.SplitFailed:
+ui.SplitAction:

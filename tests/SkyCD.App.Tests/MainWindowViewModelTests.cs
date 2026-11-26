@@ -1543,6 +1543,7 @@ public class MainWindowViewModelTests
             vm.OpenCatalogCommand,
             vm.SaveCatalogCommand,
             vm.SaveCatalogAsCommand,
+            vm.SplitCatalogCommand,
             vm.OpenPropertiesCommand,
             vm.ExitApplicationCommand
         ];
@@ -1558,6 +1559,7 @@ public class MainWindowViewModelTests
             localization.Get(TextKeys.Open),
             localization.Get(TextKeys.Save),
             localization.Get(TextKeys.SaveAs),
+            localization.Get(TextKeys.SplitFileMenu),
             localization.Get(TextKeys.Properties),
             localization.Get(TextKeys.Exit)
         ];
@@ -1623,6 +1625,34 @@ public class MainWindowViewModelTests
         Assert.True(vm.SaveCatalogAsCommand.CanExecute(null));
         Assert.True(FileMenuItem(vm, vm.OpenCatalogCommand).IsEnabled);
         Assert.True(FileMenuItem(vm, vm.SaveCatalogAsCommand).IsEnabled);
+    }
+
+    [Fact]
+    public void SplitCatalog_FollowsSaveAsAvailabilityInCommandAndFileMenu()
+    {
+        var vm = CreateViewModel();
+
+        Assert.True(vm.SplitCatalogCommand.CanExecute(null));
+        Assert.True(FileMenuItem(vm, vm.SplitCatalogCommand).IsEnabled);
+        Assert.Null(FileMenuItem(vm, vm.SplitCatalogCommand).HotKey);
+
+        vm.SetFileFormatAvailability(hasReadable: true, hasWritable: false);
+
+        Assert.False(vm.SplitCatalogCommand.CanExecute(null));
+        Assert.False(FileMenuItem(vm, vm.SplitCatalogCommand).IsEnabled);
+    }
+
+    [Fact]
+    public void SplitCatalogCommand_WithSubscriber_OnlyRaisesRequest()
+    {
+        var vm = CreateViewModel();
+        var raised = false;
+        vm.SplitCatalogRequested += (_, _) => raised = true;
+
+        vm.SplitCatalogCommand.Execute(null);
+
+        Assert.True(raised);
+        Assert.Null(vm.CurrentCatalogPath);
     }
 
     [Fact]
