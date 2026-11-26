@@ -30,7 +30,7 @@ public sealed class AiProviderPluginTests : IDisposable
 
         Assert.Equal(AiDescriptionImplementationIds.Provider, plugin.ImplementationId);
         Assert.Equal("AI provider", plugin.ImplementationName);
-        Assert.Contains(plugin.Providers, provider => provider.Id == "lmstudio");
+        Assert.Contains(plugin.Providers, provider => provider.Id == "ollama");
         Assert.Contains(plugin.Providers, provider => provider.Id == "colibri");
     }
 
@@ -55,9 +55,9 @@ public sealed class AiProviderPluginTests : IDisposable
         var plan = plugin.GetPlan();
 
         Assert.True(plan.IsEnabled);
-        Assert.Equal("LM Studio", plan.ProviderName);
+        Assert.Equal("Ollama", plan.ProviderName);
         Assert.Equal("local-inference", plan.ProcessingDestination);
-        Assert.Equal("google/gemma-4-e2b", plan.Model);
+        Assert.Equal("llama3.2", plan.Model);
         Assert.Null(plan.UnavailableReason);
         Assert.True(plan.ContextOptions.Filename);
         Assert.True(plan.ContextOptions.Images);
@@ -112,7 +112,7 @@ public sealed class AiProviderPluginTests : IDisposable
 
         var url = plugin.BuildEndpointUrl(new AiProviderSettings());
 
-        Assert.Equal("http://127.0.0.1:1234/v1", url);
+        Assert.Equal("http://127.0.0.1:11434/v1", url);
     }
 
     [Fact]

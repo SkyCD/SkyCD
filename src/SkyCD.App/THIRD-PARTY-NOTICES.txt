@@ -41,9 +41,6 @@ Copyright (c) 2023-2024 The ggml authors
 Source: https://github.com/ggml-org/llama.cpp/blob/296901983700f3c37449bcb555d85d27150a679d/examples/server/public_legacy/favicon.ico
 License: MIT
 
-LM Studio color app icon (resized)
-Source and brand-use terms: https://lmstudio.ai/brand
-
 Ollama documentation favicon
 Source: https://github.com/ollama/ollama/blob/main/docs/images/favicon.png
 

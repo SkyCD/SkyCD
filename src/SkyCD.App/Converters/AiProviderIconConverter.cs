@@ -2,7 +2,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using Avalonia.Data.Converters;
 using Avalonia.Media.Imaging;
 using SkyCD.Resource.Icons.LlmBackends;
@@ -21,27 +20,21 @@ public sealed class AiProviderIconConverter : IValueConverter
 
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        if (value is not AiProviderChoice { IconKey: { Length: > 0 } key }) return null;
-        return cache.GetOrAdd(key, Load);
+        if (value is not AiProviderChoice { IconKey: { Length: > 0 } key } ||
+            !key.StartsWith(PackagedIconPrefix, StringComparison.Ordinal)) return null;
+        return cache.GetOrAdd(key[PackagedIconPrefix.Length..], Load);
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
         throw new NotSupportedException();
 
-    private static Bitmap? Load(string key)
+    private static Bitmap? Load(string providerId)
     {
         try
         {
-            using var resource = key.StartsWith(PackagedIconPrefix, StringComparison.Ordinal)
-                ? BackendIcons.OpenPng(key[PackagedIconPrefix.Length..], 16)
-                : AppDomain.CurrentDomain.GetAssemblies()
-                    .FirstOrDefault(candidate => candidate.GetName().Name == "SkyCD.Plugin.Ai.Provider")
-                    ?.GetManifestResourceStream(key);
+            using var resource = BackendIcons.OpenPng(providerId, 16);
             if (resource is null) return null;
-            using var copy = new MemoryStream();
-            resource.CopyTo(copy);
-            copy.Position = 0;
-            return new Bitmap(copy);
+            return new Bitmap(resource);
         }
         catch (Exception exception) when (exception is IOException or ArgumentException or NotSupportedException
                                            or BadImageFormatException or InvalidOperationException)

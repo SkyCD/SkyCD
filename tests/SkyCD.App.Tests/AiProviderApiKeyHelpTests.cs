@@ -29,7 +29,6 @@ public sealed class AiProviderApiKeyHelpTests
     }
 
     [Theory]
-    [InlineData("lmstudio")]
     [InlineData("llamacpp")]
     [InlineData("koboldcpp")]
     [InlineData("localai")]

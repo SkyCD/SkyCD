@@ -27,10 +27,29 @@ public sealed class AiProviderSettingsStoreTests : IDisposable
 
         var settings = store.Read();
 
-        Assert.Equal("lmstudio", settings.ProviderId);
+        Assert.Equal("ollama", settings.ProviderId);
         Assert.False(settings.Enabled);
-        Assert.Equal("google/gemma-4-e2b", settings.Model);
+        Assert.Equal("llama3.2", settings.Model);
         Assert.True(settings.ResizeLargeImages);
+    }
+
+    [Theory]
+    [InlineData("", 1234, "google/gemma-4-e2b")]
+    [InlineData(""","PORT":4321,"Model":"saved-model" """, 4321, "saved-model")]
+    public void Read_WhenRetiredPreset_PreservesConnectionAsCustom(string fields, int port, string model)
+    {
+        Directory.CreateDirectory(directory);
+        var path = Path.Combine(directory, "provider.json");
+        File.WriteAllText(path, """{"providerId":"LMSTUDIO","address":"localhost","apiKey":"saved-key","enabled":true""" + fields + "}");
+
+        var settings = new AiProviderSettingsStore(path).Read();
+
+        Assert.Equal("custom", settings.ProviderId);
+        Assert.Equal("localhost", settings.Address);
+        Assert.Equal(port, settings.Port);
+        Assert.Equal(model, settings.Model);
+        Assert.Equal("saved-key", settings.ApiKey);
+        Assert.True(settings.Enabled);
     }
 
     [Fact]

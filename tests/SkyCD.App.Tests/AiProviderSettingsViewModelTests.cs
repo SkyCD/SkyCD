@@ -14,7 +14,7 @@ public class AiProviderSettingsViewModelTests
 {
     private static readonly string AiGroup = LocalizationService.Current.Get(UiKeys.AiGroup);
 
-    private static readonly AiProviderChoice LmStudio = new("lmstudio", "LM Studio", "http", "127.0.0.1", 1234,
+    private static readonly AiProviderChoice Colibri = new("colibri", "Colibri", "http", "127.0.0.1", 8000,
         "model-a", true, ["model-a", "model-b"]);
 
     private static readonly AiProviderChoice Ollama = new("ollama", "Ollama", "http", "127.0.0.1", 11434,
@@ -323,7 +323,7 @@ public class AiProviderSettingsViewModelTests
     {
         var bare = new AiProviderChoice("bare", "Bare", "http", "127.0.0.1", 9999, null, false);
         var vm = new OptionsDialogViewModel(["English"]);
-        vm.LoadAiProviderSettings(new FakeCapability([LmStudio, Ollama, bare]));
+        vm.LoadAiProviderSettings(new FakeCapability([Colibri, Ollama, bare]));
 
         vm.SelectedAiProvider = vm.AiProviders.Single(provider => provider.Id == "bare");
 
@@ -336,7 +336,7 @@ public class AiProviderSettingsViewModelTests
     {
         var solo = new AiProviderChoice("solo", "Solo", "http", "127.0.0.1", 9999, "solo-model", false);
         var vm = new OptionsDialogViewModel(["English"]);
-        vm.LoadAiProviderSettings(new FakeCapability([LmStudio, Ollama, solo]));
+        vm.LoadAiProviderSettings(new FakeCapability([Colibri, Ollama, solo]));
 
         vm.SelectedAiProvider = vm.AiProviders.Single(provider => provider.Id == "ollama");
         vm.SelectedAiProvider = vm.AiProviders.Single(provider => provider.Id == "solo");
@@ -370,11 +370,11 @@ public class AiProviderSettingsViewModelTests
     private sealed class FakeCapability : IAiProviderSettingsCapability
     {
         public FakeCapability(IReadOnlyList<AiProviderChoice>? providers = null) =>
-            Providers = providers ?? [LmStudio, Ollama];
+            Providers = providers ?? [Colibri, Ollama];
 
         public IReadOnlyList<AiProviderChoice> Providers { get; }
 
-        public AiProviderSettings Saved { get; set; } = new();
+        public AiProviderSettings Saved { get; set; } = new() { ProviderId = "colibri", Port = 8000, Model = "model-a" };
 
         public AiProviderSettings GetSettings() => Saved;
 
