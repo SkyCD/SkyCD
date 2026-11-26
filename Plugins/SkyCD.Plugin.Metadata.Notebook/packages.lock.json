@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net10.0": {
+      "OfficeIMO.Reader.Notebook": {
+        "type": "Direct",
+        "requested": "[3.6.2, )",
+        "resolved": "3.6.2",
+        "contentHash": "0OlUojm7GodRFMPE62/BPttEOTdu72AfdatSpv3t26iDwWbXlJOWNghm/TCp4dJrdHwwmw0npcZOJZuIwl2spQ==",
+        "dependencies": {
+          "OfficeIMO.Reader.Core": "3.6.2"
+        }
+      },
+      "OfficeIMO.Reader.Core": {
+        "type": "Transitive",
+        "resolved": "3.6.2",
+        "contentHash": "D7s7FIkwBofo2NvGWMIdr/nKvU48d88pl5HpAoDouHDqLCznKyHYkC9KY3p4xvVcFw/i+5kIUWvYOpAKZkDLIA=="
+      },
+      "skycd.sdk": {
+        "type": "Project"
+      }
+    }
+  }
+}
