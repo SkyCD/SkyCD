@@ -37,7 +37,7 @@ internal sealed class OpenOfficePackage : IDisposable
     private ZipArchive? legacyArchive;
     private Dictionary<string, ZipArchiveEntry>? legacyEntries;
 
-    private OpenOfficePackage(OdfDocument? officeImoDocument, bool isOfficeImo)
+    private OpenOfficePackage(OdfDocument officeImoDocument, bool isOfficeImo)
     {
         this.officeImoDocument = officeImoDocument;
         this.isOfficeImo = isOfficeImo;
@@ -87,7 +87,7 @@ internal sealed class OpenOfficePackage : IDisposable
     {
         if (isOfficeImo)
         {
-            var bytes = officeImoDocument.GetPackageEntryBytes(MimeTypeEntryName, maxBytes);
+            var bytes = officeImoDocument!.GetPackageEntryBytes(MimeTypeEntryName, maxBytes);
             if (bytes is null)
             {
                 return null;
@@ -104,7 +104,7 @@ internal sealed class OpenOfficePackage : IDisposable
     {
         if (isOfficeImo)
         {
-            return officeImoDocument.GetPackageEntryBytes(MetadataEntryName, maxBytes);
+            return officeImoDocument!.GetPackageEntryBytes(MetadataEntryName, maxBytes);
         }
 
         return legacyTryReadMetadata(maxBytes);
@@ -114,7 +114,7 @@ internal sealed class OpenOfficePackage : IDisposable
     {
         if (isOfficeImo)
         {
-            return officeImoDocument.GetPackageEntryBytes(ThumbnailEntryName, maxBytes);
+            return officeImoDocument!.GetPackageEntryBytes(ThumbnailEntryName, maxBytes);
         }
 
         return legacyTryReadThumbnail(maxBytes, cancellationToken);
@@ -124,7 +124,7 @@ internal sealed class OpenOfficePackage : IDisposable
     {
         if (isOfficeImo)
         {
-            return officeImoDocument.Security.SourceIsEncrypted;
+            return officeImoDocument!.Security.SourceIsEncrypted;
         }
 
         return legacyDeclaresEncryption(maxBytes);
@@ -132,9 +132,9 @@ internal sealed class OpenOfficePackage : IDisposable
 
     public void Dispose()
     {
-        if (isOfficeImo && officeImoDocument is not null)
+        if (isOfficeImo)
         {
-            officeImoDocument.Dispose();
+            officeImoDocument!.Dispose();
         }
 
         legacyArchive?.Dispose();
