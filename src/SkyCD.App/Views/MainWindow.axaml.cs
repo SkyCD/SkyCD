@@ -33,6 +33,7 @@ using SkyCD.SDK.Capabilities.Media;
 using SkyCD.SDK.Capabilities.Options;
 using SkyCD.Core.DependencyInjection;
 using SkyCD.Core.DependencyInjection.Registrators;
+using SkyCD.SDK.Capabilities.Accounts;
 using SkyCD.SDK.Capabilities.Catalog;
 using SkyCD.Plugin.Host.Catalog;
 using SkyCD.Plugin.Host.Indexing;
@@ -48,6 +49,7 @@ using SkyCD.Plugin.Runtime.Documents;
 using SkyCD.Plugin.Runtime.Installation;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Core.Versioning;
+using SkyCD.Presentation.Accounts;
 using SkyCD.Presentation.Operations;
 using SkyCD.Presentation.Catalog;
 using SkyCD.Presentation.MediaCache;
@@ -1101,12 +1103,18 @@ public partial class MainWindow : Window
         var targetParent = dropDestination ?? (vm.SelectedTreeNode is { } node
             ? DropDestination.FromTreeNode(node.Key, node.Title)
             : DropDestination.LibraryRoot);
-        var dialogVm = new AddToListDialogViewModel(mediaDriveProvider, locationOptions: vm.GetLocationChoices());
+        var dialogVm = new AddToListDialogViewModel(
+            mediaDriveProvider,
+            locationOptions: vm.GetLocationChoices(),
+            accountSessions: pluginManager.GetCapabilities<IAccountSession>());
         dialogVm.SetTargetParent(targetParent.ParentId, targetParent.DisplayName);
         if (droppedSources is { Count: > 0 })
         {
             dialogVm.ApplyDroppedSources(droppedSources);
         }
+
+        // Connector status comes from local token-free snapshots, so the picker is ready when the dialog opens.
+        await dialogVm.RefreshAccountsAsync();
 
         var dialog = new AddToListWindow
         {
@@ -1117,12 +1125,38 @@ public partial class MainWindow : Window
         if (accepted != true)
         {
             dialogVm.ClearInternetSecrets();
+            if (dialogVm.OpenAccountsRequested)
+            {
+                vm.ShowAccountSettings();
+            }
+
             return;
         }
 
         var targetParentId = dialogVm.TargetPlacement == AddToListTargetPlacement.NewMedia
             ? null
             : dialogVm.TargetParentId ?? DropDestination.LibraryRootId;
+
+        if (dialogVm.SourceMode == AddToListSourceMode.FromAccount)
+        {
+            if (dialogVm.SelectedAccount is not { } account)
+            {
+                return;
+            }
+
+            try
+            {
+                var documents = AccountCatalogBuilder.BuildDocuments(account.Plan, targetParentId);
+                await vm.AddImportedDocumentsAsync(documents, CancellationToken.None);
+                vm.StatusText = LocalizationService.Current.Format(TextKeys.Added, account.Plan.FolderName);
+            }
+            catch (Exception ex)
+            {
+                vm.StatusText = SecretSanitizer.Sanitize(ex.Message);
+            }
+
+            return;
+        }
 
         if (dialogVm.SourceMode == AddToListSourceMode.Internet)
         {
@@ -1694,6 +1728,7 @@ public partial class MainWindow : Window
             ServiceProvider.Resolve<DescriptionExtensionManager>().Implementations,
             options.AiDescriptionImplementation);
         e.Dialog.SetAiScanExclusions(aiScanExclusionRepository.GetOrdered());
+        e.Dialog.SetAccountSessions(pluginManager.GetCapabilities<IAccountSession>());
         e.Dialog.AiScanMaxFileSizeMegabytes = ToAiScanMaxFileSizeMegabytes(options.AiScanMaxFileSizeBytes);
         // Discovery must never block opening Options; an unreachable bridge keeps the stored selection intact.
         e.Dialog.InitializeMcpTools(options.ExposedMcpTools);

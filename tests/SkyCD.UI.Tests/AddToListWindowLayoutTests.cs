@@ -32,6 +32,7 @@ public sealed class AddToListWindowLayoutTests
         AddToListSourceMode.Folder,
         AddToListSourceMode.Internet,
         AddToListSourceMode.TitleOnly,
+        AddToListSourceMode.FromAccount,
     ];
 
     private const double WindowWidth = 445.0;
@@ -167,7 +168,7 @@ public sealed class AddToListWindowLayoutTests
 
             Assert.Equal(0, panelBounds.Top, 1);
             Assert.Equal(columnBounds.Bottom, panelBounds.Bottom, 1);
-            Assert.True(panelBounds.Height > 4 * 68,
+            Assert.True(panelBounds.Height > 5 * 68,
                 $"{cultureName}: source panel height {panelBounds.Height} does not extend past its buttons.");
         }
         finally
@@ -186,7 +187,7 @@ public sealed class AddToListWindowLayoutTests
             .Where(button => button.Classes.Contains("source"))
             .ToList();
 
-        Assert.Equal(4, buttons.Count);
+        Assert.Equal(5, buttons.Count);
         var previousBottom = panelBounds.Top;
         foreach (var button in buttons)
         {
@@ -244,6 +245,7 @@ public sealed class AddToListWindowLayoutTests
     [InlineData(AddToListSourceMode.Folder)]
     [InlineData(AddToListSourceMode.Internet)]
     [InlineData(AddToListSourceMode.TitleOnly)]
+    [InlineData(AddToListSourceMode.FromAccount)]
     public void ValidationRow_SpansBothColumnsBelowTheStretchedPanel(AddToListSourceMode mode)
     {
         using var fixture = ShowWindow(mode);
@@ -359,6 +361,7 @@ public sealed class AddToListWindowLayoutTests
     [InlineData(AddToListSourceMode.Folder)]
     [InlineData(AddToListSourceMode.Internet)]
     [InlineData(AddToListSourceMode.TitleOnly)]
+    [InlineData(AddToListSourceMode.FromAccount)]
     public void SourceContent_StaysBetweenTheLocationPickerAndTheActionBar(AddToListSourceMode mode)
     {
         // Issue #942: the source panel used to sit in a fixed 6 px row and drew over the name/Location block.

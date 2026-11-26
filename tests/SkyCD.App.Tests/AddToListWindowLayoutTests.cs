@@ -99,7 +99,8 @@ public class AddToListWindowLayoutTests
                      "{Binding IsSourceMedia}",
                      "{Binding IsSourceFolder}",
                      "{Binding IsSourceInternet}",
-                     "{Binding IsSourceTitleOnly}"
+                     "{Binding IsSourceTitleOnly}",
+                     "{Binding IsSourceFromAccount}"
                  })
         {
             Assert.Contains(details.Elements(),
@@ -143,7 +144,7 @@ public class AddToListWindowLayoutTests
                 .Contains("source"))
             .ToList();
 
-        Assert.Equal(4, buttons.Count);
+        Assert.Equal(5, buttons.Count);
         Assert.DoesNotContain(document.Descendants(IconPacks + "PackIconControl"),
             icon => icon.Ancestors(Avalonia + "Button")
                 .Any(button => ((string?)button.Attribute("Classes") ?? string.Empty).Contains("source")));
@@ -157,7 +158,8 @@ public class AddToListWindowLayoutTests
             ["{x:Static icons:SourceIcons.Media}",
              "{x:Static icons:SourceIcons.Folder}",
              "{x:Static icons:SourceIcons.Internet}",
-             "{x:Static icons:SourceIcons.TitleOnly}"],
+             "{x:Static icons:SourceIcons.TitleOnly}",
+             "{x:Static icons:SourceIcons.Account}"],
             sources);
         Assert.All(images, image =>
         {

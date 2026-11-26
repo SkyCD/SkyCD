@@ -2919,6 +2919,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         ShowOptions(OptionsDialogViewModel.DetailsColumnsCategoryId);
     }
 
+    /// <summary>Opens Options directly on the Accounts section.</summary>
+    public void ShowAccountSettings()
+    {
+        ShowOptions(OptionsDialogViewModel.AccountsCategoryId);
+    }
+
     private void ShowOptions(string? preselectCategoryId, string? selectCollectionId = null)
     {
         if (OptionsRequested is null)

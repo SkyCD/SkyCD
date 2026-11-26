@@ -213,4 +213,15 @@ public partial class AddToListWindow : Window
     {
         Close(false);
     }
+
+    private void OnOpenAccountSettingsClicked(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not AddToListDialogViewModel vm)
+        {
+            return;
+        }
+
+        vm.OpenAccountSettingsCommand.Execute(null);
+        Close(false);
+    }
 }

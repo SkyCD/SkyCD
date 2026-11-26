@@ -25,7 +25,7 @@ namespace SkyCD.Plugin.Accounts.JetBrains;
 /// ownership status and launch actions. Commands are exposed as <c>skycd jetbrains ...</c>.
 /// </summary>
 [Command("jetbrains")]
-public sealed class JetBrainsConnector : IOAuthClient, IAccountConnector, IOwnershipProvider, IActionProvider,
+public sealed class JetBrainsConnector : IOAuthClient, IAccountSession, IActionProvider,
     ICliPluginCapability, ISupportsJsonOutput
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -39,6 +39,7 @@ public sealed class JetBrainsConnector : IOAuthClient, IAccountConnector, IOwner
     private readonly TimeProvider clock;
     private readonly JetBrainsIdeDetector detector;
     private readonly Func<string, CancellationToken, Task> launchProcess;
+    private readonly string? storePath;
     private IOAuthService? oauth;
 
     public JetBrainsConnector()
@@ -52,7 +53,8 @@ public sealed class JetBrainsConnector : IOAuthClient, IAccountConnector, IOwner
         HttpClient? httpClient = null,
         TimeProvider? clock = null,
         JetBrainsIdeDetector? detector = null,
-        Func<string, CancellationToken, Task>? launchProcess = null)
+        Func<string, CancellationToken, Task>? launchProcess = null,
+        string? storePath = null)
     {
         this.oauth = oauth;
         this.settings = settings ?? JetBrainsSettings.FromEnvironment();
@@ -60,6 +62,7 @@ public sealed class JetBrainsConnector : IOAuthClient, IAccountConnector, IOwner
         this.clock = clock ?? TimeProvider.System;
         this.detector = detector ?? new JetBrainsIdeDetector();
         this.launchProcess = launchProcess ?? LaunchWithShellAsync;
+        this.storePath = string.IsNullOrWhiteSpace(storePath) ? null : storePath;
     }
 
     public bool JsonOutput { get; set; }
@@ -94,7 +97,34 @@ public sealed class JetBrainsConnector : IOAuthClient, IAccountConnector, IOwner
 
     async Task IOwnershipProvider.SyncAsync(CancellationToken cancellationToken)
     {
-        await SyncOwnershipAsync(JetBrainsSettings.DefaultAccountKey, null, cancellationToken);
+        await SyncOwnershipAsync(JetBrainsSettings.DefaultAccountKey, storePath, cancellationToken);
+    }
+
+    async Task<AccountSessionStatus> IAccountSession.GetStatusAsync(CancellationToken cancellationToken)
+    {
+        var snapshot = await GetStatusAsync(JetBrainsSettings.DefaultAccountKey, storePath, cancellationToken)
+            .ConfigureAwait(false);
+        return new AccountSessionStatus
+        {
+            ProviderId = JetBrainsSettings.ProviderId,
+            DisplayName = "JetBrains",
+            AccountId = JetBrainsSettings.DefaultAccountKey,
+            AccountEmail = snapshot.AccountEmail,
+            IsConnected = snapshot.Connected,
+            LastSyncedUtc = snapshot.LastSyncedUtc,
+            Products = BuildOwnedProducts(snapshot, clock.GetUtcNow())
+        };
+    }
+
+    async Task IAccountSession.SignOutAsync(CancellationToken cancellationToken)
+    {
+        if (oauth is null)
+        {
+            throw new OAuthException(OAuthFailure.LoginRequired);
+        }
+
+        await oauth.SignOutAsync(settings.CreateOAuthProvider(), JetBrainsSettings.DefaultAccountKey,
+            cancellationToken).ConfigureAwait(false);
     }
 
     IEnumerable<SkyAction> IActionProvider.GetActions(Item item)
@@ -153,7 +183,7 @@ public sealed class JetBrainsConnector : IOAuthClient, IAccountConnector, IOwner
 
         try
         {
-            var snapshot = await SyncOwnershipAsync(account, store, CancellationToken.None);
+            var snapshot = await SyncOwnershipAsync(account, store ?? storePath, CancellationToken.None);
             await WriteSnapshotAsync(Console.Out, snapshot, clock.GetUtcNow(), JsonOutput);
             return 0;
         }
@@ -196,7 +226,7 @@ public sealed class JetBrainsConnector : IOAuthClient, IAccountConnector, IOwner
     {
         try
         {
-            var snapshot = await SyncOwnershipAsync(account, store, CancellationToken.None);
+            var snapshot = await SyncOwnershipAsync(account, store ?? storePath, CancellationToken.None);
             await WriteSnapshotAsync(Console.Out, snapshot, clock.GetUtcNow(), JsonOutput);
             return 0;
         }
@@ -226,7 +256,7 @@ public sealed class JetBrainsConnector : IOAuthClient, IAccountConnector, IOwner
     {
         try
         {
-            var snapshot = await GetStatusAsync(account, store, CancellationToken.None);
+            var snapshot = await GetStatusAsync(account, store ?? storePath, CancellationToken.None);
             await WriteSnapshotAsync(Console.Out, snapshot, clock.GetUtcNow(), JsonOutput);
             return 0;
         }
@@ -328,6 +358,36 @@ public sealed class JetBrainsConnector : IOAuthClient, IAccountConnector, IOwner
 
         snapshot.AccountKey = string.IsNullOrWhiteSpace(snapshot.AccountKey) ? accountKey : snapshot.AccountKey;
         return snapshot;
+    }
+
+    private static IReadOnlyList<AccountOwnedProduct> BuildOwnedProducts(
+        JetBrainsOwnershipSnapshot snapshot,
+        DateTimeOffset asOf)
+    {
+        return snapshot.Licenses
+            .Select(license =>
+            {
+                var install = snapshot.InstalledIdes.FirstOrDefault(candidate =>
+                    JetBrainsProducts.MatchesInstalledIde(candidate.ProductCode, license.ProductCode));
+                return new AccountOwnedProduct
+                {
+                    Id = license.LicenseId,
+                    Product = string.IsNullOrWhiteSpace(license.ProductName)
+                        ? JetBrainsProducts.ResolveName(license.ProductCode)
+                        : license.ProductName,
+                    ProductCode = license.ProductCode,
+                    LicenseType = license.LicenseType,
+                    Seats = license.Seats,
+                    ExpiresUtc = license.ExpiresUtc,
+                    RenewsAutomatically = license.RenewsAutomatically,
+                    AssigneeEmail = license.AssigneeEmail,
+                    Status = license.EvaluateStatus(asOf),
+                    ExecutablePath = install?.ExecutablePath
+                };
+            })
+            .OrderBy(product => product.Product, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(product => product.Id, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     private static IReadOnlyList<JetBrainsProductOwnership> BuildProducts(

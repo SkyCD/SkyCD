@@ -192,6 +192,11 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
                     CollectionsCategoryIndex));
             }
 
+            // Account connectors live with the other catalog data pages and stay listed even when
+            // no account plugin is enabled, so the Add To List empty state can link here.
+            categories.Add(new(AccountsCategoryId, LocalizationService.Current.Get(UiKeys.Accounts),
+                AccountsCategoryIndex));
+
             // Plugin-contributed pages sit next to Collections so location-style management surfaces live
             // with the other catalog data pages rather than after the settings/plugin groups.
             categories.AddRange(contributedPages.Values
@@ -314,7 +319,7 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         ShowDetailsColumnsSection || ShowToolbarSection ||
         ShowAiDescriptionSection || ShowAiProviderSection || ShowMcpToolsSection ||
         ShowPluginSettingsSection || ShowPluginsSettingsSection ||
-        ShowCollectionsSection || ShowContributedOptionsPageSection;
+        ShowCollectionsSection || ShowAccountsSection || ShowContributedOptionsPageSection;
 
     public string McpBaseUrl => $"http://127.0.0.1:{McpPort}/mcp";
 
@@ -745,6 +750,7 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         NotifySelectedPluginDetailsChanged();
         NotifyMcpToolsLocalizationChanged();
         RefreshPluginRepositoryLocalization();
+        RelocalizeAccounts();
         NotifySettingsVisibilityChanged();
     }
 
@@ -838,6 +844,8 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(ShowCustomPropertiesSection));
         OnPropertyChanged(nameof(IsCollectionsCategorySelected));
         OnPropertyChanged(nameof(ShowCollectionsSection));
+        OnPropertyChanged(nameof(IsAccountsCategorySelected));
+        OnPropertyChanged(nameof(ShowAccountsSection));
         OnPropertyChanged(nameof(SelectedContributedPage));
         OnPropertyChanged(nameof(ShowContributedOptionsPageSection));
         OnPropertyChanged(nameof(IsDetailsColumnsCategorySelected));
