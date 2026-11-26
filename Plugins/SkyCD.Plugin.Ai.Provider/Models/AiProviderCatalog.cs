@@ -18,8 +18,6 @@ public static class AiProviderCatalog
     [
         Preset("lmstudio", "LM Studio", 1234, "google/gemma-4-e2b", true,
             ["google/gemma-4-e2b", "meta-llama-3.1-8b-instruct", "qwen2.5-7b-instruct"],
-        Preset("lmstudio", "LM Studio", 1234, "google/gemma-4-e2b", true,
-            ["google/gemma-4-e2b", "meta-llama-3.1-8b-instruct", "qwen2.5-7b-instruct"],
             "LM", "https://lmstudio.ai/docs/developer/core/authentication"),
         Preset("ollama", "Ollama", 11434, "llama3.2", true,
             ["llama3.2", "llama3.1", "qwen3", "gemma3", "mistral"], "OL"),
