@@ -8,6 +8,7 @@ using SkyCD.Documents;
 using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
 using SkyCD.Presentation.Collections;
+using SkyCD.Presentation.Search;
 using SkyCD.Presentation.UndoRedo;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.TestSupport;
@@ -65,8 +66,9 @@ public sealed class CollectionsDialogViewModelTests : IDisposable
 
         public CollectionsDialogViewModel CreateViewModel(
             Action? onChanged = null,
-            Action<CatalogDocument>? navigate = null) =>
-            new(Service, Undo, Catalog, Collections, onChanged, navigate);
+            Action<CatalogDocument>? navigate = null,
+            Func<IReadOnlyList<string>>? selectedEntryIdsProvider = null) =>
+            new(Service, Undo, Catalog, Collections, onChanged, navigate, selectedEntryIdsProvider);
 
         public VirtualCollectionDocument CreateCollection(string name, params string[] entryIds)
         {
@@ -152,10 +154,31 @@ public sealed class CollectionsDialogViewModelTests : IDisposable
         var viewModel = stack.CreateViewModel(onChanged: () => changes++);
 
         viewModel.DeleteCollectionCommand.Execute(null);
+        Assert.True(viewModel.IsDeleteCollectionConfirmationVisible);
+        Assert.Contains("Temporary", viewModel.DeleteCollectionConfirmationPrompt, StringComparison.Ordinal);
 
+        viewModel.ConfirmDeleteCollectionCommand.Execute(null);
+
+        Assert.False(viewModel.IsDeleteCollectionConfirmationVisible);
         Assert.Empty(viewModel.Collections);
         Assert.Empty(stack.Collections.GetOrdered());
         Assert.Equal(1, changes);
+        Assert.True(stack.Undo.CanUndo);
+    }
+
+    [Fact]
+    public void DeleteCollection_CancelKeepsTheCollection()
+    {
+        using var stack = new Stack();
+        stack.CreateCollection("Temporary");
+        var viewModel = stack.CreateViewModel();
+
+        viewModel.DeleteCollectionCommand.Execute(null);
+        viewModel.CancelDeleteCollectionCommand.Execute(null);
+
+        Assert.False(viewModel.IsDeleteCollectionConfirmationVisible);
+        Assert.Single(viewModel.Collections);
+        Assert.False(stack.Undo.CanUndo);
     }
 
     [Fact]
@@ -229,4 +252,238 @@ public sealed class CollectionsDialogViewModelTests : IDisposable
         Assert.NotNull(page);
         Assert.Equal(["From menu"], page!.Collections.Select(item => item.Name));
     }
+
+    [Fact]
+    public void InlineRename_CommitsEditedName()
+    {
+        using var stack = new Stack();
+        stack.CreateCollection("Old name", "file-a");
+        var viewModel = stack.CreateViewModel();
+        var item = Assert.Single(viewModel.Collections);
+
+        viewModel.BeginRenameCollectionCommand.Execute(item);
+        Assert.True(item.IsRenaming);
+        Assert.Equal("Old name", item.RenameDraft);
+
+        item.RenameDraft = "  New name  ";
+        viewModel.CommitRenameCollectionCommand.Execute(item);
+
+        Assert.False(item.IsRenaming);
+        Assert.Equal("New name", viewModel.Collections.Single().Name);
+        Assert.Equal("New name", stack.Collections.GetOrdered().Single().Name);
+        Assert.True(stack.Undo.CanUndo);
+    }
+
+    [Fact]
+    public void InlineRename_CancelDiscardsDraft()
+    {
+        using var stack = new Stack();
+        stack.CreateCollection("Old name");
+        var viewModel = stack.CreateViewModel();
+        var item = Assert.Single(viewModel.Collections);
+
+        viewModel.BeginRenameCollectionCommand.Execute(item);
+        item.RenameDraft = "Abandoned";
+        viewModel.CancelRenameCollectionCommand.Execute(item);
+
+        Assert.False(item.IsRenaming);
+        Assert.Equal("Old name", viewModel.Collections.Single().Name);
+        Assert.False(stack.Undo.CanUndo);
+    }
+
+    [Fact]
+    public void InlineRename_DuplicateKeepsEditOpen()
+    {
+        using var stack = new Stack();
+        stack.CreateCollection("Alpha");
+        stack.CreateCollection("Beta");
+        var viewModel = stack.CreateViewModel();
+        var beta = viewModel.Collections.Single(item => item.Name == "Beta");
+
+        viewModel.BeginRenameCollectionCommand.Execute(beta);
+        beta.RenameDraft = "Alpha";
+        viewModel.CommitRenameCollectionCommand.Execute(beta);
+
+        Assert.True(beta.IsRenaming);
+        Assert.Equal("Beta", stack.Collections.FindByName("Beta")!.Name);
+        Assert.False(string.IsNullOrWhiteSpace(viewModel.StatusText));
+    }
+
+    [Fact]
+    public void AddSelectedEntries_AddsBrowserSelection()
+    {
+        using var stack = new Stack();
+        stack.CreateCollection("Manual");
+        var viewModel = stack.CreateViewModel(selectedEntryIdsProvider: () => ["file-a"]);
+
+        Assert.True(viewModel.AddSelectedEntriesCommand.CanExecute(null));
+
+        viewModel.AddSelectedEntriesCommand.Execute(null);
+
+        Assert.Equal(["file-a"], stack.Service.GetEntryIds(viewModel.Collections.Single().Id));
+        Assert.Equal("file-a", Assert.Single(viewModel.Members).Id);
+        Assert.Contains("Manual", viewModel.StatusText, StringComparison.Ordinal);
+        Assert.True(stack.Undo.CanUndo);
+    }
+
+    [Fact]
+    public void AddSelectedEntries_WithoutSelectionExplains()
+    {
+        using var stack = new Stack();
+        stack.CreateCollection("Manual");
+        var viewModel = stack.CreateViewModel(selectedEntryIdsProvider: () => []);
+
+        viewModel.AddSelectedEntriesCommand.Execute(null);
+
+        Assert.Empty(stack.Service.GetEntryIds(viewModel.Collections.Single().Id));
+        Assert.False(string.IsNullOrWhiteSpace(viewModel.StatusText));
+    }
+
+    [Fact]
+    public void AddSelectedEntries_IsDisabledForDynamicCollections()
+    {
+        using var stack = new Stack();
+        stack.Service.CreateDynamicCollection("Live", NameContainsQuery("File"));
+        var viewModel = stack.CreateViewModel(selectedEntryIdsProvider: () => ["file-a"]);
+
+        Assert.False(viewModel.AddSelectedEntriesCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void RemoveMember_AsksForConfirmationThenRemoves()
+    {
+        using var stack = new Stack();
+        stack.CreateCollection("Mixed", "file-a");
+        var viewModel = stack.CreateViewModel();
+        viewModel.SelectedMember = Assert.Single(viewModel.Members);
+
+        Assert.True(viewModel.RequestRemoveSelectedMemberCommand.CanExecute(null));
+        Assert.False(viewModel.IsRemoveMemberConfirmationVisible);
+
+        viewModel.RequestRemoveSelectedMemberCommand.Execute(null);
+
+        Assert.True(viewModel.IsRemoveMemberConfirmationVisible);
+        Assert.Contains("File A", viewModel.RemoveMemberConfirmationPrompt, StringComparison.Ordinal);
+
+        viewModel.ConfirmRemoveSelectedMemberCommand.Execute(null);
+
+        Assert.False(viewModel.IsRemoveMemberConfirmationVisible);
+        Assert.Empty(viewModel.Members);
+        Assert.Empty(stack.Service.GetEntryIds(viewModel.Collections.Single().Id));
+        Assert.Contains("File A", viewModel.StatusText, StringComparison.Ordinal);
+        Assert.True(stack.Undo.CanUndo);
+    }
+
+    [Fact]
+    public void RemoveMember_CancelKeepsTheMember()
+    {
+        using var stack = new Stack();
+        stack.CreateCollection("Mixed", "file-a");
+        var viewModel = stack.CreateViewModel();
+        viewModel.SelectedMember = Assert.Single(viewModel.Members);
+
+        viewModel.RequestRemoveSelectedMemberCommand.Execute(null);
+        viewModel.CancelRemoveMemberCommand.Execute(null);
+
+        Assert.False(viewModel.IsRemoveMemberConfirmationVisible);
+        Assert.Single(viewModel.Members);
+    }
+
+    [Fact]
+    public void RemoveMember_IsDisabledForDynamicCollections()
+    {
+        using var stack = new Stack();
+        stack.Service.CreateDynamicCollection("Live", NameContainsQuery("File"));
+        var viewModel = stack.CreateViewModel();
+        viewModel.SelectedMember = Assert.Single(viewModel.Members);
+
+        Assert.False(viewModel.RequestRemoveSelectedMemberCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void OpenMemberFolder_NavigatesToTheParent()
+    {
+        using var stack = new Stack();
+        stack.CreateCollection("Mixed", "file-a");
+        CatalogDocument? navigated = null;
+        var viewModel = stack.CreateViewModel(navigate: document => navigated = document);
+        viewModel.SelectedMember = Assert.Single(viewModel.Members);
+
+        viewModel.OpenMemberFolderCommand.Execute(null);
+
+        Assert.Equal("root", navigated?.Id);
+    }
+
+    [Fact]
+    public void MemberFilter_NarrowsTheVisibleMembers()
+    {
+        using var stack = new Stack();
+        stack.Catalog.Save("file-b", new CatalogDocument
+        {
+            Id = "file-b",
+            Name = "File B",
+            ParentId = "root",
+            Type = CatalogDocumentType.File,
+            Size = 5,
+            ChildrenCount = 0
+        });
+        stack.CreateCollection("Mixed", "file-a", "file-b");
+        var viewModel = stack.CreateViewModel();
+        Assert.Equal(2, viewModel.FilteredMembers.Count);
+
+        viewModel.MemberFilterText = "file b";
+
+        var filtered = Assert.Single(viewModel.FilteredMembers);
+        Assert.Equal("file-b", filtered.Id);
+
+        viewModel.MemberFilterText = string.Empty;
+
+        Assert.Equal(2, viewModel.FilteredMembers.Count);
+    }
+
+    [Fact]
+    public void SavedQuery_SelectionShowsDescriptionAndCountsPredicates()
+    {
+        using var stack = new Stack();
+        stack.Service.CreateDynamicCollection("Live", NameContainsQuery("File"));
+        var viewModel = stack.CreateViewModel();
+
+        Assert.True(viewModel.IsDynamicSelected);
+        Assert.NotNull(viewModel.SavedQueryDescription);
+        Assert.Contains("1", viewModel.SavedQueryDescription, StringComparison.Ordinal);
+        Assert.False(viewModel.IsMissingSavedQuery);
+    }
+
+    [Fact]
+    public void SavedQuery_MissingQueryShowsDedicatedState()
+    {
+        using var stack = new Stack();
+        var collection = stack.Collections.CreateCollection("Broken");
+        collection.Kind = VirtualCollectionKind.Dynamic;
+        collection.SavedQueryJson = null;
+        stack.Collections.Save(collection.Id, collection);
+        var viewModel = stack.CreateViewModel();
+
+        Assert.True(viewModel.IsDynamicSelected);
+        Assert.True(viewModel.IsMissingSavedQuery);
+        Assert.Null(viewModel.SavedQueryDescription);
+        Assert.Empty(viewModel.FilteredMembers);
+    }
+
+    [Fact]
+    public void ManualCollection_ShowsEntryAndMissingSummary()
+    {
+        using var stack = new Stack();
+        stack.CreateCollection("Mixed", "file-a", "missing-entry");
+        var viewModel = stack.CreateViewModel();
+
+        Assert.True(viewModel.HasMissingMembers);
+        Assert.Equal(1, viewModel.UnavailableCount);
+        var item = Assert.Single(viewModel.Collections);
+        Assert.Contains("1", item.EntrySummary, StringComparison.Ordinal);
+        Assert.False(string.IsNullOrWhiteSpace(viewModel.MissingMembersNotice));
+    }
+
+    private static AdvancedCatalogQuery NameContainsQuery(string text) =>
+        MainWindowViewModel.BuildNameContainsQuery(text);
 }

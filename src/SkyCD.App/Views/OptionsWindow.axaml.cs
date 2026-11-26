@@ -132,6 +132,11 @@ public partial class OptionsWindow : Window
         }
     }
 
+    private void OnCreateFirstCollectionClicked(object? sender, RoutedEventArgs e)
+    {
+        NewCollectionNameBox.Focus();
+    }
+
     private void OnToolbarCommandDoubleTapped(object? sender, TappedEventArgs e)
     {
         if (DataContext is OptionsDialogViewModel { Toolbar: { AddCommand: var add } } && add.CanExecute(null))

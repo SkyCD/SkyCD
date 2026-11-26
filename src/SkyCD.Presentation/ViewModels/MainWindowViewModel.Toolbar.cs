@@ -85,7 +85,8 @@ public partial class MainWindowViewModel
             Descriptor(ToolbarCommandIds.AdvancedFind, tools, TextKeys.AdvancedFind, AdvancedFindCatalogCommand, icon: ToolbarIconKeys.AdvancedFind),
             Descriptor(ToolbarCommandIds.Options, tools, UiKeys.Options, OpenOptionsCommand, icon: ToolbarIconKeys.Options),
             Descriptor(ToolbarCommandIds.Tags, tools, UiKeys.ManageTags, OpenTagsDialogCommand, icon: ToolbarIconKeys.Tags),
-            Descriptor(ToolbarCommandIds.Collections, tools, UiKeys.ManageCollections, OpenCollectionsDialogCommand, icon: ToolbarIconKeys.Collections)
+            Descriptor(ToolbarCommandIds.Collections, tools, UiKeys.ManageCollections, OpenCollectionsDialogCommand, icon: ToolbarIconKeys.Collections),
+            Descriptor(ToolbarCommandIds.SaveSearchAsCollection, tools, TextKeys.SaveCurrentSearchAsCollection, SaveCurrentSearchAsCollectionCommand, icon: ToolbarIconKeys.SaveSearchAsCollection)
         ];
     }
 

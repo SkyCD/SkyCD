@@ -18,6 +18,7 @@ public partial class MainWindowViewModel
     private bool isQuickFilterOpen;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SaveCurrentSearchAsCollectionCommand))]
     private string quickFindQuery = string.Empty;
 
     [ObservableProperty]

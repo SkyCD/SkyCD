@@ -32,6 +32,7 @@ public static class ToolbarCommandIds
     public const string Options = "options";
     public const string Tags = "tags";
     public const string Collections = "collections";
+    public const string SaveSearchAsCollection = "save-search-as-collection";
 
     /// <summary>Every id a persisted layout may reference.</summary>
     public static IReadOnlyList<string> All { get; } =
@@ -57,7 +58,8 @@ public static class ToolbarCommandIds
         AdvancedFind,
         Options,
         Tags,
-        Collections
+        Collections,
+        SaveSearchAsCollection
     ];
 }
 
@@ -91,6 +93,7 @@ public static class ToolbarIconKeys
     public const string Options = "ToolbarIcon.Options";
     public const string Tags = "ToolbarIcon.Tags";
     public const string Collections = "ToolbarIcon.Collections";
+    public const string SaveSearchAsCollection = "ToolbarIcon.SaveSearchAsCollection";
 }
 
 /// <summary>
