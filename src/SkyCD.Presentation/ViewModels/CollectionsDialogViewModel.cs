@@ -436,6 +436,46 @@ public sealed partial class CollectionsDialogViewModel : ObservableObject
         }
     }
 
+    /// <summary>Creates a collection with a unique default name and opens the new row for inline editing.</summary>
+    [RelayCommand(CanExecute = nameof(CanManageCollections))]
+    private void AddCollection()
+    {
+        if (service is null || collectionRepository is null)
+        {
+            return;
+        }
+
+        var baseName = LocalizationService.Current.Get(UiKeys.NewCollection);
+        var existing = new HashSet<string>(Collections.Select(collection => collection.Name), StringComparer.OrdinalIgnoreCase);
+        var name = baseName;
+        var suffix = 2;
+        while (existing.Contains(name))
+        {
+            name = $"{baseName} {suffix++}";
+        }
+
+        try
+        {
+            var created = service.CreateCollection(name);
+            undoManager?.RecordCollectionCreated(collectionRepository, created.Id, created.Name);
+            StatusText = LocalizationService.Current.Format(TextKeys.CollectionCreated, created.Name);
+            RefreshCollections();
+            SelectCollection(created.Id);
+            if (SelectedCollection is not null)
+            {
+                SelectedCollection.RenameDraft = SelectedCollection.Name;
+                SelectedCollection.IsRenaming = true;
+            }
+
+            Changed();
+        }
+        catch (Exception exception) when (exception is CollectionNameRequiredException
+            || exception is CollectionDuplicateNameException)
+        {
+            StatusText = exception.Message;
+        }
+    }
+
     [RelayCommand(CanExecute = nameof(CanManageSelectedCollection))]
     private void RenameCollection()
     {
