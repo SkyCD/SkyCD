@@ -1,0 +1,47 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="SkyCD.UI.Dialogs.QuestionDialog"
+        Width="{DynamicResource SkyQuestionDialogWidth}"
+        SizeToContent="Height"
+        CanResize="False"
+        CanMinimize="False"
+        ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner"
+        Icon="avares://SkyCD.UI/Assets/skycd.ico">
+    <StackPanel Margin="{DynamicResource SkyQuestionDialogInset}"
+                Spacing="{DynamicResource SkySpaceMd}">
+        <TextBlock x:Name="QuestionText" TextWrapping="Wrap" />
+
+        <Border x:Name="DetailsBorder"
+                MaxHeight="{DynamicResource SkyQuestionDetailsHeight}"
+                BorderBrush="{DynamicResource ThemeBorderLowBrush}"
+                BorderThickness="1"
+                CornerRadius="{DynamicResource SkyCornerRadius}"
+                Padding="{DynamicResource SkyInsetSm}">
+            <ScrollViewer>
+                <ItemsControl x:Name="DetailsList">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}"
+                                       TextWrapping="Wrap"
+                                       Margin="{DynamicResource SkyGapYXxs}" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
+
+        <UniformGrid x:Name="Actions"
+                     Rows="1"
+                     HorizontalAlignment="Right"
+                     ColumnSpacing="{DynamicResource SkySpaceSm}">
+            <UniformGrid.Styles>
+                <Style Selector="Button">
+                    <Setter Property="MinWidth" Value="{DynamicResource SkyQuestionButtonMinWidth}" />
+                    <Setter Property="HorizontalAlignment" Value="Stretch" />
+                    <Setter Property="HorizontalContentAlignment" Value="Center" />
+                </Style>
+            </UniformGrid.Styles>
+        </UniformGrid>
+    </StackPanel>
+</Window>

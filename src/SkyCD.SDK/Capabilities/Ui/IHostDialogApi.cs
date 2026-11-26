@@ -19,4 +19,7 @@ public interface IHostDialogApi
 {
     /// <summary>Shows the plugin content modally in a host window and completes when the window closes.</summary>
     Task ShowAsync(HostWindowRequest request);
+
+    /// <summary>Shows a standard question. Returns Cancel when the host cannot show a dialog.</summary>
+    Task<QuestionResult> AskAsync(QuestionRequest request) => Task.FromResult(QuestionResult.Cancel);
 }

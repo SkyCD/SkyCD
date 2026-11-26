@@ -23,6 +23,8 @@ using SkyCD.Presentation.ViewModels;
 using SkyCD.SDK.Capabilities.Accounts;
 using SkyCD.SDK.Capabilities.Media;
 using SkyCD.SDK.Capabilities.Options;
+using SkyCD.SDK.Capabilities.Ui;
+using SkyCD.UI.Dialogs;
 using SkyCD.UI.Localization;
 
 namespace SkyCD.App.Views;
@@ -83,6 +85,22 @@ public partial class MainWindow
         e.Dialog.SetPluginMarketplace(pluginMarketplaceService);
         e.Dialog.SetPluginUninstaller(pluginUninstaller);
         e.Dialog.SetPluginPathBrowser(() => RunUiActionAsync(() => e.Dialog.BrowsePluginPathAsync(PickPluginFolderAsync)));
+        var dialog = new OptionsWindow
+        {
+            DataContext = e.Dialog,
+            AcpSettingsCapability = pluginManager.GetCapabilities<IAcpAgentSettingsCapability>().FirstOrDefault(),
+            AiProviderSettingsCapability = pluginManager.GetCapabilities<IAiProviderSettingsCapability>().FirstOrDefault()
+        };
+
+        void OnResetStatusVariantsRequested(object? sender, EventArgs args) =>
+            _ = RunUiActionAsync(() => ResetStatusVariantsRequestedAsync(sender, dialog));
+
+        void OnResetScanExclusionRulesRequested(object? sender, EventArgs args) =>
+            _ = RunUiActionAsync(() => ResetScanExclusionRulesRequestedAsync(sender, dialog));
+
+        void OnResetAiScanExclusionsRequested(object? sender, EventArgs args) =>
+            _ = RunUiActionAsync(() => ResetAiScanExclusionsRequestedAsync(sender, dialog));
+
         e.Dialog.RefreshPluginsRequested += OnRefreshPluginsRequested;
         e.Dialog.PluginPathScanRequested += OnPluginPathScanRequested;
         e.Dialog.ResetStatusVariantsRequested += OnResetStatusVariantsRequested;
@@ -99,13 +117,6 @@ public partial class MainWindow
                 e.Dialog.SelectedSettingCategory = e.Dialog.SettingCategories.FirstOrDefault(category =>
                     string.Equals(category.Id, e.PreselectCategoryId, StringComparison.Ordinal));
             }
-
-            var dialog = new OptionsWindow
-            {
-                DataContext = e.Dialog,
-                AcpSettingsCapability = pluginManager.GetCapabilities<IAcpAgentSettingsCapability>().FirstOrDefault(),
-                AiProviderSettingsCapability = pluginManager.GetCapabilities<IAiProviderSettingsCapability>().FirstOrDefault()
-            };
 
             bool? accepted = false;
             try
@@ -305,17 +316,14 @@ public partial class MainWindow
         Dispatcher.UIThread.Post(() => RefreshPlugins(dialogVm));
     }
 
-    private void OnResetStatusVariantsRequested(object? sender, EventArgs e) =>
-        _ = RunUiActionAsync(() => ResetStatusVariantsRequestedAsync(sender));
-
-    private async Task ResetStatusVariantsRequestedAsync(object? sender)
+    private async Task ResetStatusVariantsRequestedAsync(object? sender, Window owner)
     {
         if (sender is not OptionsDialogViewModel dialogVm)
         {
             return;
         }
 
-        var confirmed = await ShowResetStatusesPromptAsync();
+        var confirmed = await ShowResetPromptAsync(owner, UiKeys.ResetStatusesTitle, UiKeys.ResetStatusesConfirmation);
         if (!confirmed)
         {
             return;
@@ -325,17 +333,14 @@ public partial class MainWindow
         dialogVm.SetStatusVariants(statusVariantRepository.GetOrdered());
     }
 
-    private void OnResetScanExclusionRulesRequested(object? sender, EventArgs e) =>
-        _ = RunUiActionAsync(() => ResetScanExclusionRulesRequestedAsync(sender));
-
-    private async Task ResetScanExclusionRulesRequestedAsync(object? sender)
+    private async Task ResetScanExclusionRulesRequestedAsync(object? sender, Window owner)
     {
         if (sender is not OptionsDialogViewModel dialogVm)
         {
             return;
         }
 
-        var confirmed = await ShowResetScanRulesPromptAsync();
+        var confirmed = await ShowResetPromptAsync(owner, UiKeys.ResetRulesTitle, UiKeys.ResetRulesConfirmation);
         if (!confirmed)
         {
             return;
@@ -345,17 +350,14 @@ public partial class MainWindow
         dialogVm.SetScanExclusionRules(scanExclusionRuleRepository.GetOrdered());
     }
 
-    private void OnResetAiScanExclusionsRequested(object? sender, EventArgs e) =>
-        _ = RunUiActionAsync(() => ResetAiScanExclusionsRequestedAsync(sender));
-
-    private async Task ResetAiScanExclusionsRequestedAsync(object? sender)
+    private async Task ResetAiScanExclusionsRequestedAsync(object? sender, Window owner)
     {
         if (sender is not OptionsDialogViewModel dialogVm)
         {
             return;
         }
 
-        var confirmed = await ShowResetMimeExclusionsPromptAsync();
+        var confirmed = await ShowResetPromptAsync(owner, UiKeys.ResetMimeTypesTitle, UiKeys.ResetMimeTypesConfirmation);
         if (!confirmed)
         {
             return;
@@ -473,25 +475,11 @@ public partial class MainWindow
             : PluginUpdateSource.PluginFolder;
     }
 
-    private async Task<bool> ShowResetStatusesPromptAsync()
+    private static async Task<bool> ShowResetPromptAsync(Window owner, string titleKey, string questionKey)
     {
-        var dialog = new ResetStatusesConfirmWindow();
-        var result = await dialog.ShowDialog<bool?>(this);
-        return result == true;
-    }
-
-    private async Task<bool> ShowResetScanRulesPromptAsync()
-    {
-        var dialog = new ResetScanRulesConfirmWindow();
-        var result = await dialog.ShowDialog<bool?>(this);
-        return result == true;
-    }
-
-    private async Task<bool> ShowResetMimeExclusionsPromptAsync()
-    {
-        var dialog = new ResetMimeExclusionsConfirmWindow();
-        var result = await dialog.ShowDialog<bool?>(this);
-        return result == true;
+        var localization = LocalizationService.Current;
+        return await QuestionDialog.AskAsync(owner,
+            new QuestionRequest(localization.Get(titleKey), localization.Get(questionKey))) == QuestionResult.Yes;
     }
 
     private static int ToAiScanMaxFileSizeMegabytes(long maxFileSizeBytes)

@@ -8,6 +8,11 @@
     -->
     <x:Double x:Key="SkySpaceXxs">2</x:Double>
     <x:Double x:Key="SkySpaceXs">4</x:Double>
+    <x:Double x:Key="SkyQuestionDialogWidth">480</x:Double>
+    <x:Double x:Key="SkyQuestionDetailsHeight">240</x:Double>
+    <x:Double x:Key="SkyQuestionButtonMinWidth">110</x:Double>
+    <Thickness x:Key="SkyQuestionDialogInset">16</Thickness>
+
     <x:Double x:Key="SkySpaceSm">8</x:Double>
     <x:Double x:Key="SkySpaceMd">12</x:Double>
     <x:Double x:Key="SkySpaceLg">16</x:Double>

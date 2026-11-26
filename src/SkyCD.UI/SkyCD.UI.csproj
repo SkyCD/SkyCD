@@ -3,6 +3,8 @@
         <TargetFramework>net10.0</TargetFramework>
         <Nullable>enable</Nullable>
         <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
+        <!-- Dialogs take their request in the constructor, so the compiled XAML has no runtime-loader entry point. -->
+        <NoWarn>$(NoWarn);AVLN3001</NoWarn>
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="Avalonia" Version="12.1.6"/>
@@ -15,6 +17,7 @@
     <ItemGroup>
         <ProjectReference Include="..\SkyCD.SDK\SkyCD.SDK.csproj"/>
         <ProjectReference Include="..\SkyCD.Formatting\SkyCD.Formatting.csproj"/>
+        <AvaloniaResource Include="../SkyCD.App/Assets/skycd.ico" Link="Assets/skycd.ico"/>
         <EmbeddedResource Include="Translations\*.yaml"/>
         <Content Include="Translations\en-*.yaml" Link="Data\i18n\en\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"/>
         <Content Include="Translations\lt-*.yaml" Link="Data\i18n\lt\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"/>

@@ -94,7 +94,7 @@ public partial class MainWindow
         if (vm.IsDirtyDocument)
         {
             e.Cancel = true;
-            var decision = await catalogFiles.ShowUnsavedChangesPromptAsync();
+            var decision = await catalogFiles.ShowUnsavedChangesPromptAsync(UiKeys.SaveCatalogConfirmation);
             if (decision == UnsavedChangesDecision.Cancel)
             {
                 return;
