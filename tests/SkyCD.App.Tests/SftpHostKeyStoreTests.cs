@@ -1,17 +1,16 @@
 using System;
 using System.IO;
 using SkyCD.Presentation.Scanning;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.App.Tests;
 
 public sealed class SftpHostKeyStoreTests : IDisposable
 {
-    private readonly string storePath = Path.Combine(
-        Path.GetTempPath(),
-        "skycd-hostkey-tests",
-        Guid.NewGuid().ToString("N"),
-        "sftp-known-hosts.json");
+    private readonly TestWorkspace workspace = new();
+
+    private string storePath => workspace.GetPath("sftp-known-hosts.json");
 
     [Fact]
     public void Find_EmptyStore_ReturnsNull()
@@ -97,10 +96,6 @@ public sealed class SftpHostKeyStoreTests : IDisposable
 
     public void Dispose()
     {
-        var directory = Path.GetDirectoryName(storePath);
-        if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory))
-        {
-            Directory.Delete(directory, recursive: true);
-        }
+        workspace.Dispose();
     }
 }

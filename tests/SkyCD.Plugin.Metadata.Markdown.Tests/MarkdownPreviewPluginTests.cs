@@ -7,6 +7,7 @@ using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Metadata.Markdown.Export;
 using SkyCD.Plugin.Metadata.Markdown.Models;
 using Xunit;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.Metadata.Markdown.Tests;
 

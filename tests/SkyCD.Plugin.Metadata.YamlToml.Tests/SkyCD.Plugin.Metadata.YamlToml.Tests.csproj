@@ -17,5 +17,6 @@
         <ProjectReference Include="..\..\src\SkyCD.SDK\SkyCD.SDK.csproj"/>
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Metadata.Text\SkyCD.Plugin.Metadata.Text.csproj"/>
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Metadata.YamlToml\SkyCD.Plugin.Metadata.YamlToml.csproj"/>
+        <ProjectReference Include="../SkyCD.TestSupport/SkyCD.TestSupport.csproj"/>
     </ItemGroup>
 </Project>

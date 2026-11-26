@@ -13,18 +13,16 @@ using SkyCD.SDK.Capabilities.Actions;
 using SkyCD.SDK.Capabilities.Ownership;
 using SkyCD.SDK.Capabilities.FileFormats;
 using SkyCD.SDK.Capabilities.Media;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.Plugin.Runtime.Tests;
 
 public sealed class PluginManagerLoadingTests : IDisposable
 {
-    private readonly string _root = Path.Combine(Path.GetTempPath(), $"skycd-plugins-{Guid.NewGuid():N}");
+    private readonly TestWorkspace workspace = new();
 
-    public PluginManagerLoadingTests()
-    {
-        Directory.CreateDirectory(_root);
-    }
+    private string _root => workspace.Root;
 
     [Fact]
     public void LoadFromDirectories_LoadsPluginFromAssemblyWithoutManifest()
@@ -169,29 +167,19 @@ public sealed class PluginManagerLoadingTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(_root))
-        {
-            try
-            {
-                Directory.Delete(_root, recursive: true);
-            }
-            catch (IOException)
-            {
-            }
-        }
+        workspace.Dispose();
     }
 
-    private static PluginManager CreateManager() =>
+    private PluginManager CreateManager() =>
         new(new TestLogger<PluginManager>(),
             new AssembliesListFactory(new TestLogger<AssembliesListFactory>()),
             new DiscoveredPluginFactory(), CreatePluginRepository());
 
-    private static IRepository<PluginDocument> CreatePluginRepository()
+    private IRepository<PluginDocument> CreatePluginRepository()
     {
         var databaseManager = new DatabaseManager();
-        var directory = Path.Combine(Path.GetTempPath(), "SkyCD", "PluginRuntimeLoadingTests",
-            Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(directory);
+        var directory = workspace.CreateDirectory(Path.Combine("plugin-runtime-loading-db",
+            Guid.NewGuid().ToString("N")));
         databaseManager.Connect("default", directory);
         var repositoryManager = new RepositoryManager(databaseManager);
         return (IRepository<PluginDocument>)repositoryManager.For<PluginDocument>();

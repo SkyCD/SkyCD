@@ -14,6 +14,7 @@ using SkyCD.Plugin.FileFormat.Json;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Presentation.ViewModels;
 using Xunit;
+using SkyCD.TestSupport;
 
 namespace SkyCD.App.Tests;
 
@@ -22,7 +23,8 @@ public sealed class CatalogLoadServiceTests
     [Fact]
     public async Task LoadAsync_SynchronousPluginDoesNotBlockCallerAndProgressIsBounded()
     {
-        var path = Path.GetTempFileName();
+        using var workspace = new TestWorkspace();
+        var path = workspace.CreateEmptyFile("catalog.tmp");
         using var release = new ManualResetEventSlim();
         var reader = new BlockingReader(release);
         var progress = new RecordingProgress();
@@ -49,7 +51,6 @@ public sealed class CatalogLoadServiceTests
         finally
         {
             release.Set();
-            File.Delete(path);
         }
     }
 
@@ -83,7 +84,8 @@ public sealed class CatalogLoadServiceTests
         var original = await loader.LoadAsync(originalPath,
             (payload, _) => CatalogImportTests.Extract(payload!), new RecordingProgress());
 
-        var databaseDirectory = Path.Combine(Path.GetTempPath(), $"skycd-new-catalog-{Guid.NewGuid():N}");
+        using var workspace = new TestWorkspace();
+        var databaseDirectory = workspace.Root;
         var databaseManager = new DatabaseManager();
         global::Couchbase.Lite.Database? database = null;
         try
@@ -107,22 +109,15 @@ public sealed class CatalogLoadServiceTests
             Assert.Null(newCatalog.CurrentCatalogPath);
             Assert.False(newCatalog.IsDirtyDocument);
 
-            var newPath = Path.Combine(Path.GetTempPath(), $"skycd-new-catalog-{Guid.NewGuid():N}.json");
-            try
-            {
-                var added = newCatalog.AddTitleOnlyMedia("New disk", parentId: null);
-                await new CatalogSaveService(formats).SaveAsync(newPath, newCatalog.GetAllCatalogEntries(), [],
-                    _ => Task.FromResult(true));
-                newCatalog.CompleteSaveCatalog(newPath);
-                var saved = await loader.LoadAsync(newPath, (payload, _) => CatalogImportTests.Extract(payload!),
-                    new RecordingProgress());
-                Assert.Equal(added.Id, Assert.Single(saved).Id);
-                Assert.False(newCatalog.IsDirtyDocument);
-            }
-            finally
-            {
-                File.Delete(newPath);
-            }
+            var newPath = workspace.GetPath("new-catalog.json");
+            var added = newCatalog.AddTitleOnlyMedia("New disk", parentId: null);
+            await new CatalogSaveService(formats).SaveAsync(newPath, newCatalog.GetAllCatalogEntries(), [],
+                _ => Task.FromResult(true));
+            newCatalog.CompleteSaveCatalog(newPath);
+            var saved = await loader.LoadAsync(newPath, (payload, _) => CatalogImportTests.Extract(payload!),
+                new RecordingProgress());
+            Assert.Equal(added.Id, Assert.Single(saved).Id);
+            Assert.False(newCatalog.IsDirtyDocument);
 
             var reopened = await loader.LoadAsync(originalPath,
                 (payload, _) => CatalogImportTests.Extract(payload!), new RecordingProgress());
@@ -133,14 +128,14 @@ public sealed class CatalogLoadServiceTests
         {
             database?.Dispose();
             databaseManager.Dispose();
-            if (Directory.Exists(databaseDirectory)) Directory.Delete(databaseDirectory, recursive: true);
         }
     }
 
     [Fact]
     public void CreateNewCatalog_ClearsCatalogDocumentsOnTheSharedWorkingDatabase()
     {
-        var databaseDirectory = Path.Combine(Path.GetTempPath(), $"skycd-working-database-{Guid.NewGuid():N}");
+        using var workspace = new TestWorkspace();
+        var databaseDirectory = workspace.Root;
         var databaseManager = new DatabaseManager();
         global::Couchbase.Lite.Database? database = null;
         try
@@ -175,7 +170,6 @@ public sealed class CatalogLoadServiceTests
         {
             database?.Dispose();
             databaseManager.Dispose();
-            if (Directory.Exists(databaseDirectory)) Directory.Delete(databaseDirectory, recursive: true);
         }
     }
 

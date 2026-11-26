@@ -10,6 +10,7 @@ using SkyCD.Documents.Enum;
 using SkyCD.Presentation.MediaCache;
 using SkyCD.Presentation.MediaCache.Exceptions;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.TestSupport;
 using SkyCD.UI.Controls.Preview;
 using SkyCD.UI.Localization;
 using Xunit;
@@ -151,6 +152,7 @@ public sealed class MediaPreviewImageServiceTests
     public async Task ThumbnailProvider_AnswersWithoutTouchingTheOriginalSource()
     {
         using var store = MediaCacheStore.Create();
+        using var workspace = new TestWorkspace();
         var entry = ImageEntry();
         SaveArtifact(store, entry.Id, RepositoryPng());
 
@@ -161,7 +163,7 @@ public sealed class MediaPreviewImageServiceTests
             Name = entry.Name,
             Type = entry.Type,
             Size = entry.Size,
-            Properties = new PropertiesCollection { ["FullName"] = Path.Combine(Path.GetTempPath(), "gone", entry.Name) }
+            Properties = new PropertiesCollection { ["FullName"] = workspace.GetPath(Path.Combine("gone", entry.Name)) }
         };
         Assert.False(File.Exists(disconnected.Properties["FullName"]!.ToString()));
 

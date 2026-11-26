@@ -7,6 +7,7 @@ using Couchbase.Lite;
 using SkyCD.Couchbase.Mapping;
 using SkyCD.Documents;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.TestSupport;
 using SkyCD.UI.Localization;
 using Xunit;
 
@@ -14,11 +15,13 @@ namespace SkyCD.App.Tests;
 
 public sealed class LanguagePackTests : IDisposable
 {
-    private readonly string directory = Path.Combine(Path.GetTempPath(), "skycd-i18n-" + Guid.NewGuid());
+    private readonly TestWorkspace workspace = new();
     private readonly CultureInfo culture = CultureInfo.CurrentCulture;
     private readonly CultureInfo uiCulture = CultureInfo.CurrentUICulture;
     private readonly CultureInfo? defaultCulture = CultureInfo.DefaultThreadCurrentCulture;
     private readonly CultureInfo? defaultUiCulture = CultureInfo.DefaultThreadCurrentUICulture;
+
+    private string directory => workspace.GetPath("i18n");
 
     [Fact]
     public void Discovery_LoadsMetadataAndTranslationsFromDisk()
@@ -181,10 +184,7 @@ public sealed class LanguagePackTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(directory))
-        {
-            Directory.Delete(directory, true);
-        }
+        workspace.Dispose();
 
         CultureInfo.CurrentCulture = culture;
         CultureInfo.CurrentUICulture = uiCulture;

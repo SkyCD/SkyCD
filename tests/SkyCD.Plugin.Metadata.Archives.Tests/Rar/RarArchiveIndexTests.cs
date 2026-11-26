@@ -11,6 +11,7 @@ using SkyCD.Plugin.Metadata.Archives;
 using SkyCD.Plugin.Metadata.Archives.Rar;
 using SkyCD.Plugin.Metadata.Archives.Rar.Tests;
 using SkyCD.Plugin.Runtime.Factories;
+using SkyCD.TestSupport;
 using Xunit;
 using SkyCD.Plugin.Metadata.Archives.Models;
 
@@ -153,24 +154,19 @@ public sealed class RarArchiveIndexTests
     [Fact]
     public async Task GetWorkItemsAsync_CompanionVolumeNextToSource_ReturnsEmptySet()
     {
-        var directory = RarTestHelpers.CreateTemporaryDirectory();
-        try
-        {
-            using var archive = RarTestArchiveBuilder.CreateStored(("part.txt", "chunk"));
-            var first = Path.Combine(directory, "set.part1.rar");
-            await File.WriteAllBytesAsync(first, archive.ToArray());
-            await File.WriteAllBytesAsync(Path.Combine(directory, "set.part2.rar"), [1, 2, 3]);
+        using var workspace = new TestWorkspace();
+        var directory = workspace.Root;
 
-            var set = await new ArchivesIndexPlugin().GetWorkItemsAsync(
-                RarTestHelpers.RequestFor(archive, first, first));
+        using var archive = RarTestArchiveBuilder.CreateStored(("part.txt", "chunk"));
+        var first = Path.Combine(directory, "set.part1.rar");
+        await File.WriteAllBytesAsync(first, archive.ToArray());
+        await File.WriteAllBytesAsync(Path.Combine(directory, "set.part2.rar"), [1, 2, 3]);
 
-            Assert.Empty(set.Items);
-            await set.DisposeAsync();
-        }
-        finally
-        {
-            Directory.Delete(directory, recursive: true);
-        }
+        var set = await new ArchivesIndexPlugin().GetWorkItemsAsync(
+            RarTestHelpers.RequestFor(archive, first, first));
+
+        Assert.Empty(set.Items);
+        await set.DisposeAsync();
     }
 
     [Fact]

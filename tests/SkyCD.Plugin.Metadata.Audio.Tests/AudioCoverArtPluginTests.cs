@@ -5,6 +5,7 @@ using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Metadata.Audio.Exceptions;
 using Xunit;
 using SkyCD.Plugin.Metadata.Audio.Models;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.Metadata.Audio.Tests;
 

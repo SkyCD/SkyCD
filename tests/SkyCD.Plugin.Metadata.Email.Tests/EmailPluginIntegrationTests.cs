@@ -10,6 +10,7 @@ using OfficeIMO.Email.Store;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.SDK.Capabilities.Media;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.Plugin.Metadata.Email.Tests;
@@ -64,37 +65,32 @@ public sealed class EmailPluginIntegrationTests
     [Fact]
     public async Task HostCapturesPstMailboxFacts()
     {
-        var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".pst");
-        try
-        {
-            using (var writer = EmailStorePstWriter.Create(path))
-            {
-                var inbox = writer.AddFolder("Inbox");
-                var archive = writer.AddFolder("Archive");
-                var first = CreateMessage("First");
-                first.ReceivedDate = new DateTimeOffset(2026, 1, 3, 0, 0, 0, TimeSpan.Zero);
-                first.Attachments.Add(new EmailAttachment { FileName = "data.txt", Content = "data"u8.ToArray() });
-                var last = CreateMessage("Last");
-                last.ReceivedDate = first.ReceivedDate.Value.AddDays(7);
-                writer.AddItem(inbox, first);
-                writer.AddItem(archive, last);
-                writer.Complete();
-            }
+        using var workspace = new TestWorkspace();
+        var path = workspace.GetPath("mailbox.pst");
 
-            var values = await CaptureAsync(".pst", await File.ReadAllBytesAsync(path));
-            Assert.Equal("PST", values("StoreKind")?.Text);
-            Assert.True(values("FolderCount")?.Integer >= 2);
-            Assert.Equal(2, values("MessageCount")?.Integer);
-            Assert.False(values("ScanIncomplete")?.Boolean);
-            Assert.True(values("HasAttachments")?.Boolean);
-            Assert.Equal(new DateTimeOffset(2026, 1, 3, 0, 0, 0, TimeSpan.Zero), values("EarliestReceivedAt")?.Timestamp);
-            Assert.Equal(new DateTimeOffset(2026, 1, 10, 0, 0, 0, TimeSpan.Zero), values("LatestReceivedAt")?.Timestamp);
-            Assert.Null(values("Subject"));
-        }
-        finally
+        using (var writer = EmailStorePstWriter.Create(path))
         {
-            File.Delete(path);
+            var inbox = writer.AddFolder("Inbox");
+            var archive = writer.AddFolder("Archive");
+            var first = CreateMessage("First");
+            first.ReceivedDate = new DateTimeOffset(2026, 1, 3, 0, 0, 0, TimeSpan.Zero);
+            first.Attachments.Add(new EmailAttachment { FileName = "data.txt", Content = "data"u8.ToArray() });
+            var last = CreateMessage("Last");
+            last.ReceivedDate = first.ReceivedDate.Value.AddDays(7);
+            writer.AddItem(inbox, first);
+            writer.AddItem(archive, last);
+            writer.Complete();
         }
+
+        var values = await CaptureAsync(".pst", await File.ReadAllBytesAsync(path));
+        Assert.Equal("PST", values("StoreKind")?.Text);
+        Assert.True(values("FolderCount")?.Integer >= 2);
+        Assert.Equal(2, values("MessageCount")?.Integer);
+        Assert.False(values("ScanIncomplete")?.Boolean);
+        Assert.True(values("HasAttachments")?.Boolean);
+        Assert.Equal(new DateTimeOffset(2026, 1, 3, 0, 0, 0, TimeSpan.Zero), values("EarliestReceivedAt")?.Timestamp);
+        Assert.Equal(new DateTimeOffset(2026, 1, 10, 0, 0, 0, TimeSpan.Zero), values("LatestReceivedAt")?.Timestamp);
+        Assert.Null(values("Subject"));
     }
 
     [Theory]
@@ -154,31 +150,26 @@ public sealed class EmailPluginIntegrationTests
     [Fact]
     public async Task PstWithMoreThanTheScanLimitReportsPartialCounts()
     {
-        var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".pst");
-        try
-        {
-            using (var writer = EmailStorePstWriter.Create(path))
-            {
-                var inbox = writer.AddFolder("Inbox");
-                var document = CreateMessage("Synthetic message");
-                for (var index = 0; index < 2049; index++)
-                {
-                    writer.AddItem(inbox, document);
-                }
+        using var workspace = new TestWorkspace();
+        var path = workspace.GetPath("large.pst");
 
-                writer.Complete();
+        using (var writer = EmailStorePstWriter.Create(path))
+        {
+            var inbox = writer.AddFolder("Inbox");
+            var document = CreateMessage("Synthetic message");
+            for (var index = 0; index < 2049; index++)
+            {
+                writer.AddItem(inbox, document);
             }
 
-            var values = await CaptureAsync(".pst", await File.ReadAllBytesAsync(path));
-            Assert.Equal(2048, values("MessageCount")?.Integer);
-            Assert.True(values("ScanIncomplete")?.Boolean);
-            Assert.Equal("ItemScanLimit", values("StoreDiagnosticCode")?.Text);
-            Assert.Null(values("HasAttachments"));
+            writer.Complete();
         }
-        finally
-        {
-            File.Delete(path);
-        }
+
+        var values = await CaptureAsync(".pst", await File.ReadAllBytesAsync(path));
+        Assert.Equal(2048, values("MessageCount")?.Integer);
+        Assert.True(values("ScanIncomplete")?.Boolean);
+        Assert.Equal("ItemScanLimit", values("StoreDiagnosticCode")?.Text);
+        Assert.Null(values("HasAttachments"));
     }
 
     private static EmailDocument CreateMessage(string subject) => new()

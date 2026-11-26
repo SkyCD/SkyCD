@@ -5,32 +5,20 @@ using SkyCD.Documents.Enum;
 using SkyCD.Presentation.Operations;
 using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.App.Tests;
 
 public sealed class OperationProgressIntegrationTests : IDisposable
 {
-    private readonly string testDirectory;
+    private readonly TestWorkspace workspace = new();
 
-    public OperationProgressIntegrationTests()
-    {
-        testDirectory = Path.Combine(Path.GetTempPath(), $"skycd-progress-test-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(testDirectory);
-    }
+    private string testDirectory => workspace.Root;
 
     public void Dispose()
     {
-        if (Directory.Exists(testDirectory))
-        {
-            try
-            {
-                Directory.Delete(testDirectory, recursive: true);
-            }
-            catch
-            {
-            }
-        }
+        workspace.Dispose();
     }
 
     [Fact]

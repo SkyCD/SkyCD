@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading;
 using FxSsh;
 using SkyCD.Presentation.Scanning;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.App.Tests;
@@ -35,12 +36,11 @@ public sealed class SftpCatalogTransportTests
 
     private sealed class TempHostKeys : IDisposable
     {
-        private readonly string path;
+        private readonly TestWorkspace workspace = new();
 
         public TempHostKeys()
         {
-            path = Path.Combine(Path.GetTempPath(), "skycd-hostkeys-" + Guid.NewGuid().ToString("N") + ".json");
-            Store = new SftpHostKeyStore(path);
+            Store = new SftpHostKeyStore(workspace.GetPath("sftp-known-hosts.json"));
             Service = new SftpHostKeyService(Store);
         }
 
@@ -57,16 +57,7 @@ public sealed class SftpCatalogTransportTests
 
         public void Dispose()
         {
-            try
-            {
-                File.Delete(path);
-            }
-            catch (IOException)
-            {
-            }
-            catch (UnauthorizedAccessException)
-            {
-            }
+            workspace.Dispose();
         }
     }
 
@@ -120,24 +111,19 @@ public sealed class SftpCatalogTransportTests
         using var hostKeys = new TempHostKeys();
         hostKeys.Trust(server);
 
-        var keyPath = Path.Combine(Path.GetTempPath(), "skycd-key-" + Guid.NewGuid().ToString("N") + ".pem");
+        using var workspace = new TestWorkspace();
+        var keyPath = workspace.GetPath("id_rsa.pem");
         File.WriteAllText(keyPath, KeyGenerator.GenerateRsaKeyPem(2048));
-        try
-        {
-            var connector = new SftpCatalogConnector(hostKeys.Service);
-            using var session = connector.Connect(
-                Location(server.Port),
-                new RemoteCredentials(Username, null, anonymous: false, RemoteAuthMethod.PrivateKey, keyPath, null),
-                CancellationToken.None);
 
-            var nested = session.ListDirectory("/nested");
-            Assert.Contains(nested, entry => entry.Name == "top.txt");
-            Assert.True(server.SawPublicKeyAuth);
-        }
-        finally
-        {
-            File.Delete(keyPath);
-        }
+        var connector = new SftpCatalogConnector(hostKeys.Service);
+        using var session = connector.Connect(
+            Location(server.Port),
+            new RemoteCredentials(Username, null, anonymous: false, RemoteAuthMethod.PrivateKey, keyPath, null),
+            CancellationToken.None);
+
+        var nested = session.ListDirectory("/nested");
+        Assert.Contains(nested, entry => entry.Name == "top.txt");
+        Assert.True(server.SawPublicKeyAuth);
     }
 
     [Fact]

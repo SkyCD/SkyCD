@@ -153,6 +153,15 @@
           "DryIoc.dll": "[5.4.3, )",
           "Microsoft.Extensions.Logging.Abstractions": "[11.0.0, )"
         }
+      },
+      "skycd.sdk": {
+        "type": "Project"
+      },
+      "skycd.testsupport": {
+        "type": "Project",
+        "dependencies": {
+          "SkyCD.SDK": "[3.0.0, )"
+        }
       }
     }
   }

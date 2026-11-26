@@ -4,17 +4,16 @@ using System.IO;
 using System.Threading;
 using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.App.Tests;
 
 public sealed class SftpCatalogProviderTests : IDisposable
 {
-    private readonly string storePath = Path.Combine(
-        Path.GetTempPath(),
-        "skycd-sftp-provider-tests",
-        Guid.NewGuid().ToString("N"),
-        "sftp-known-hosts.json");
+    private readonly TestWorkspace workspace = new();
+
+    private string storePath => workspace.GetPath("sftp-known-hosts.json");
 
     [Fact]
     public void Defaults_AreRegisteredForTheSftpScheme()
@@ -227,11 +226,7 @@ public sealed class SftpCatalogProviderTests : IDisposable
 
     public void Dispose()
     {
-        var directory = Path.GetDirectoryName(storePath);
-        if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory))
-        {
-            Directory.Delete(directory, recursive: true);
-        }
+        workspace.Dispose();
     }
 
     private sealed class FakeSftpConnector : IRemoteCatalogConnector

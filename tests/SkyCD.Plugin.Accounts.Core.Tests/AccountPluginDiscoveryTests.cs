@@ -10,6 +10,7 @@ using SkyCD.Plugin.Accounts.JetBrains;
 using SkyCD.Plugin.Accounts.Microsoft365;
 using SkyCD.Plugin.Runtime.Collections;
 using SkyCD.Plugin.Runtime.Factories;
+using SkyCD.TestSupport;
 using Xunit;
 using SkyCD.Plugin.Accounts.Core.Models;
 
@@ -46,8 +47,8 @@ public sealed class AccountPluginDiscoveryTests
             JsonOutput = true,
             Providers = plugin.Capabilities.OfType<IAccountSyncProvider>().ToArray()
         };
-        var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(directory);
+        using var workspace = new TestWorkspace();
+        var directory = workspace.Root;
         var previousOut = Console.Out;
         using var output = new StringWriter();
         try
@@ -66,7 +67,6 @@ public sealed class AccountPluginDiscoveryTests
         finally
         {
             Console.SetOut(previousOut);
-            Directory.Delete(directory, recursive: true);
         }
     }
 
@@ -75,8 +75,8 @@ public sealed class AccountPluginDiscoveryTests
     [InlineData(true)]
     public async Task MissingOrAmbiguousProviderDoesNotModifyStore(bool duplicate)
     {
-        var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(directory);
+        using var workspace = new TestWorkspace();
+        var directory = workspace.Root;
         var path = Path.Combine(directory, "accounts.json");
         await File.WriteAllTextAsync(path, "existing data");
         var command = new AccountsSyncCommand
@@ -95,7 +95,6 @@ public sealed class AccountPluginDiscoveryTests
         finally
         {
             Console.SetError(previousError);
-            Directory.Delete(directory, recursive: true);
         }
     }
 }

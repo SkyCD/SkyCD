@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using SkiaSharp;
 using SkyCD.SDK.Capabilities.Media;
 using Xunit;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.Metadata.EBook.Tests;
 

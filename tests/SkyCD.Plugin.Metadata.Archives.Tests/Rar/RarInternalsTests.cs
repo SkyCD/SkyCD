@@ -9,6 +9,7 @@ using SkyCD.Plugin.Metadata.Archives;
 using SkyCD.Plugin.Metadata.Archives.Rar;
 using SkyCD.Plugin.Metadata.Archives.Rar.Exceptions;
 using SkyCD.Plugin.Metadata.Archives.Rar.Tests;
+using SkyCD.TestSupport;
 using Xunit;
 using SkyCD.Plugin.Metadata.Archives.Models;
 using SkyCD.Plugin.Metadata.Archives.Rar.Parsing;
@@ -132,17 +133,12 @@ public sealed class RarInternalsTests
     [Fact]
     public void EntryPath_TraversalCannotEscapeRoot()
     {
-        var root = RarTestHelpers.CreateTemporaryDirectory();
-        try
-        {
-            Assert.True(PackageEntryPath.TryResolveUnderRoot(root, "sub/file.txt", out var inside));
-            Assert.StartsWith(root, inside, StringComparison.OrdinalIgnoreCase);
-            Assert.False(PackageEntryPath.TryResolveUnderRoot(root, "../outside.txt", out _));
-        }
-        finally
-        {
-            Directory.Delete(root, recursive: true);
-        }
+        using var workspace = new TestWorkspace();
+        var root = workspace.Root;
+
+        Assert.True(PackageEntryPath.TryResolveUnderRoot(root, "sub/file.txt", out var inside));
+        Assert.StartsWith(root, inside, StringComparison.OrdinalIgnoreCase);
+        Assert.False(PackageEntryPath.TryResolveUnderRoot(root, "../outside.txt", out _));
     }
 
     [Theory]
@@ -163,22 +159,17 @@ public sealed class RarInternalsTests
     [Fact]
     public void VolumeCompanions_FindCompanionNextToSource_AndIgnoreUnrelatedFiles()
     {
-        var directory = RarTestHelpers.CreateTemporaryDirectory();
-        try
-        {
-            var first = Path.Combine(directory, "archive.part1.rar");
-            File.WriteAllBytes(first, [0]);
-            Assert.Null(RarVolumeCompanions.FindCompanion(first));
-            Assert.Null(RarVolumeCompanions.FindCompanion(null));
+        using var workspace = new TestWorkspace();
+        var directory = workspace.Root;
 
-            var second = Path.Combine(directory, "archive.part2.rar");
-            File.WriteAllBytes(second, [0]);
-            Assert.Equal(second, RarVolumeCompanions.FindCompanion(first));
-        }
-        finally
-        {
-            Directory.Delete(directory, recursive: true);
-        }
+        var first = Path.Combine(directory, "archive.part1.rar");
+        File.WriteAllBytes(first, [0]);
+        Assert.Null(RarVolumeCompanions.FindCompanion(first));
+        Assert.Null(RarVolumeCompanions.FindCompanion(null));
+
+        var second = Path.Combine(directory, "archive.part2.rar");
+        File.WriteAllBytes(second, [0]);
+        Assert.Equal(second, RarVolumeCompanions.FindCompanion(first));
     }
 
     [Fact]

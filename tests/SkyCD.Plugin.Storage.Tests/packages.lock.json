@@ -92,6 +92,15 @@
         "dependencies": {
           "xunit.extensibility.core": "[2.9.3]"
         }
+      },
+      "skycd.sdk": {
+        "type": "Project"
+      },
+      "skycd.testsupport": {
+        "type": "Project",
+        "dependencies": {
+          "SkyCD.SDK": "[3.0.0, )"
+        }
       }
     }
   }

@@ -1,48 +1,23 @@
 using System;
-using System.IO;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.Metadata.DiskImages.Tests;
 
 /// <summary>Writes image files into a throw-away directory so path-based opening can be exercised.</summary>
 internal sealed class TempVhdDirectory : IDisposable
 {
-    private TempVhdDirectory(string path)
-    {
-        Path = path;
-    }
+    private readonly TestWorkspace workspace = new();
 
-    public string Path { get; }
+    public string Path => workspace.Root;
 
     public static TempVhdDirectory Create()
     {
-        return new TempVhdDirectory(Directory.CreateTempSubdirectory("skycd-vhd-test-").FullName);
+        return new TempVhdDirectory();
     }
 
-    public string Resolve(string fileName) => System.IO.Path.Combine(Path, fileName);
+    public string Resolve(string fileName) => workspace.GetPath(fileName);
 
-    public string Write(string fileName, byte[] content)
-    {
-        var target = Resolve(fileName);
-        File.WriteAllBytes(target, content);
-        return target;
-    }
+    public string Write(string fileName, byte[] content) => workspace.CreateFile(fileName, content);
 
-    public void Dispose()
-    {
-        try
-        {
-            if (Directory.Exists(Path))
-            {
-                Directory.Delete(Path, recursive: true);
-            }
-        }
-        catch (IOException)
-        {
-            // Best-effort test cleanup.
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // Best-effort test cleanup.
-        }
-    }
+    public void Dispose() => workspace.Dispose();
 }

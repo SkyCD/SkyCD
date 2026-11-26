@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.TestSupport;
 using SkyCD.UI.Localization;
 using Xunit;
 
@@ -14,10 +15,12 @@ namespace SkyCD.App.Tests;
 /// </summary>
 public sealed class OptionsPluginPathRescanTests : IDisposable
 {
-    private readonly string root = Path.Combine(Path.GetTempPath(), "skycd-plugin-path-" + Guid.NewGuid());
+    private readonly TestWorkspace workspace = new();
     private readonly string storedFolder;
     private readonly string typedFolder;
     private readonly string missingFolder;
+
+    private string root => workspace.Root;
 
     public OptionsPluginPathRescanTests()
     {
@@ -28,7 +31,7 @@ public sealed class OptionsPluginPathRescanTests : IDisposable
         Directory.CreateDirectory(typedFolder);
     }
 
-    public void Dispose() => Directory.Delete(root, recursive: true);
+    public void Dispose() => workspace.Dispose();
 
     [Fact]
     public void OpeningTheDialog_SeedsTheStoredFolderWithoutScanningOrHinting()

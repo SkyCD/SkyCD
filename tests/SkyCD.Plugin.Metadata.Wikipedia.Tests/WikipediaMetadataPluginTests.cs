@@ -5,6 +5,7 @@ using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.OnlineMetadata.Models;
 using SkyCD.Plugin.Runtime.Factories;
 using Xunit;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.Metadata.Wikipedia.Tests;
 
@@ -17,7 +18,7 @@ public class WikipediaMetadataPluginTests
     public void ActionApiExtractsTitlePlotAndImage()
     {
         var facts = new DescriptionFacts();
-        Plugin().Parse(Fixtures.Read("wikipedia-action.json"), facts);
+        Plugin().Parse(OnlineMetadataFixtures.Read("wikipedia-action.json"), facts);
 
         Assert.Equal("Example Film", facts.Get("Title"));
         Assert.Contains("directed by Jane Doe", facts.Get("Plot"));
@@ -29,7 +30,7 @@ public class WikipediaMetadataPluginTests
     public void SummaryExtractsDescriptionAsGenre()
     {
         var facts = new DescriptionFacts();
-        Plugin().Parse(Fixtures.Read("wikipedia-summary.json"), facts);
+        Plugin().Parse(OnlineMetadataFixtures.Read("wikipedia-summary.json"), facts);
 
         Assert.Equal("Example Film", facts.Get("Title"));
         Assert.Equal("1999 film", facts.Get("Genre"));
@@ -64,7 +65,7 @@ public class WikipediaMetadataPluginTests
     [Fact]
     public async Task FetchReturnsFactsAndTheFetchedUrl()
     {
-        var fetcher = new StubFetcher(Fixtures.Read("wikipedia-summary.json"));
+        var fetcher = new StubFetcher(OnlineMetadataFixtures.Read("wikipedia-summary.json"));
         var plugin = new WikipediaMetadataPlugin(fetcher);
         var request = new OnlineMetadataRequest("", "https://en.wikipedia.org/wiki/Example_Film", "en");
 

@@ -26,6 +26,7 @@ using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.Sample.Config;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.TestSupport;
 using SkyCD.UI.Localization;
 using Xunit;
 using SkyCD.Plugin.Metadata.AudioCD.Configuration;
@@ -39,16 +40,17 @@ namespace SkyCD.UI.Tests;
 
 public sealed class PluginOptionsTests : IDisposable
 {
-    private readonly string directory = Path.Combine(Path.GetTempPath(), "SkyCD-plugin-options-" + Guid.NewGuid().ToString("N"));
+    private readonly TestWorkspace workspace = new();
     private readonly DatabaseManager database = new();
     private readonly PluginManager plugins;
     private readonly PluginConfigurationStore store;
     private readonly PluginConfigurationManager manager;
     private static string TestPluginId => typeof(OptionsTestCapability).Assembly.GetName().Name!;
 
+    private string directory => workspace.Root;
+
     public PluginOptionsTests()
     {
-        Directory.CreateDirectory(directory);
         database.Connect("default", Path.Combine(directory, "db"));
         var repositories = new RepositoryManager(database);
         store = new PluginConfigurationStore((IRepository<PluginConfigurationDocument>)repositories.For<PluginConfigurationDocument>());
@@ -627,7 +629,7 @@ public sealed class PluginOptionsTests : IDisposable
     {
         database.GetDatabase().Dispose();
         database.Dispose();
-        Directory.Delete(directory, recursive: true);
+        workspace.Dispose();
     }
 }
 

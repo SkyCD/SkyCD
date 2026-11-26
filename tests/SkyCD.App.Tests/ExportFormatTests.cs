@@ -12,6 +12,7 @@ using SkyCD.Plugin.FileFormat.Markdown;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.SDK.Capabilities.FileFormats;
 using Xunit;
+using SkyCD.TestSupport;
 
 namespace SkyCD.App.Tests;
 
@@ -50,26 +51,20 @@ public sealed class ExportFormatTests
     {
         var service = new CatalogSaveService(new FileFormatManager(
             [new JsonCatalogPlugin(), new HtmlCatalogExportPlugin(), new MarkdownCatalogExportPlugin()]));
-        var target = Path.Combine(Path.GetTempPath(), $"skycd-export-{Guid.NewGuid():N}.html");
-        try
+        using var workspace = new TestWorkspace();
+        var target = workspace.GetPath("export.html");
+        var preview = default(CatalogSavePreview);
+        var saved = await service.SaveAsync(target, BuildDocuments(), [], assessed =>
         {
-            var preview = default(CatalogSavePreview);
-            var saved = await service.SaveAsync(target, BuildDocuments(), [], assessed =>
-            {
-                preview = assessed;
-                return Task.FromResult(true);
-            });
+            preview = assessed;
+            return Task.FromResult(true);
+        });
 
-            Assert.True(saved);
-            Assert.NotNull(preview);
-            Assert.NotEmpty(preview.Items);
-            var text = await File.ReadAllTextAsync(target);
-            Assert.Contains("Track.mp3", text);
-        }
-        finally
-        {
-            File.Delete(target);
-        }
+        Assert.True(saved);
+        Assert.NotNull(preview);
+        Assert.NotEmpty(preview.Items);
+        var text = await File.ReadAllTextAsync(target);
+        Assert.Contains("Track.mp3", text);
     }
 
     [Fact]
@@ -77,20 +72,14 @@ public sealed class ExportFormatTests
     {
         var service = new CatalogSaveService(new FileFormatManager(
             [new HtmlCatalogExportPlugin()]));
-        var target = Path.Combine(Path.GetTempPath(), $"skycd-export-{Guid.NewGuid():N}.html");
-        try
-        {
-            await File.WriteAllTextAsync(target, "original");
-            var saved = await service.SaveAsync(target, BuildDocuments(), [],
-                _ => Task.FromResult(false));
+        using var workspace = new TestWorkspace();
+        var target = workspace.GetPath("export.html");
+        await File.WriteAllTextAsync(target, "original");
+        var saved = await service.SaveAsync(target, BuildDocuments(), [],
+            _ => Task.FromResult(false));
 
-            Assert.False(saved);
-            Assert.Equal("original", await File.ReadAllTextAsync(target));
-        }
-        finally
-        {
-            File.Delete(target);
-        }
+        Assert.False(saved);
+        Assert.Equal("original", await File.ReadAllTextAsync(target));
     }
 
     private static List<CatalogDocument> BuildDocuments() =>

@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using SkyCD.TestSupport;
 using PathRules = SkyCD.PackagePaths.PackageEntryPathRules;
 using PackageEntryPath = SkyCD.PackagePaths.PackageEntryPath;
 using Xunit;
@@ -89,18 +90,12 @@ public sealed class PackageEntryPathTests
     [Fact]
     public void ResolvesInsideRootAndRejectsTraversalOutsideIt()
     {
-        var root = Path.Combine(Path.GetTempPath(), $"skycd-entry-path-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(root);
-        try
-        {
-            Assert.True(PackageEntryPath.TryResolveUnderRoot(root, "lib/net10.0/plugin.dll", out var inside));
-            Assert.Equal(Path.Combine(root, "lib", "net10.0", "plugin.dll"), inside);
+        using var workspace = new TestWorkspace();
+        var root = workspace.Root;
 
-            Assert.False(PackageEntryPath.TryResolveUnderRoot(root, "../outside.txt", out _));
-        }
-        finally
-        {
-            Directory.Delete(root, recursive: true);
-        }
+        Assert.True(PackageEntryPath.TryResolveUnderRoot(root, "lib/net10.0/plugin.dll", out var inside));
+        Assert.Equal(Path.Combine(root, "lib", "net10.0", "plugin.dll"), inside);
+
+        Assert.False(PackageEntryPath.TryResolveUnderRoot(root, "../outside.txt", out _));
     }
 }

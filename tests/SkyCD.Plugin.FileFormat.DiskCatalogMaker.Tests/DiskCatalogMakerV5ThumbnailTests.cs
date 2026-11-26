@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using SkyCD.Plugin.FileFormat.DiskCatalogMaker;
+using SkyCD.TestSupport;
 using Xunit;
 using SkyCD.Plugin.FileFormat.DiskCatalogMaker.Import;
 using SkyCD.Plugin.FileFormat.DiskCatalogMaker.Models;
@@ -39,32 +40,25 @@ public sealed class DiskCatalogMakerV5ThumbnailTests
     [Fact]
     public void TryResolve_ReportsExistenceWithoutThrowing()
     {
-        var root = CreateTemporaryDirectory();
-        try
-        {
-            var expectedRelative = "Thumbnails/0a/0b/0c/0d.png";
-            Assert.False(DiskCatalogMakerV5ThumbnailResolver.TryResolve(
-                root, 0x0A0B0C0D, "png", out var relative, out var full));
-            Assert.Equal(expectedRelative, relative);
-            Assert.NotNull(full);
+        using var workspace = new TestWorkspace();
+        var root = workspace.Root;
 
-            var fullPath = Path.Combine(root, "Thumbnails", "0a", "0b", "0c", "0d.png");
-            Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
-            File.WriteAllBytes(fullPath, [1]);
+        var expectedRelative = "Thumbnails/0a/0b/0c/0d.png";
+        Assert.False(DiskCatalogMakerV5ThumbnailResolver.TryResolve(
+            root, 0x0A0B0C0D, "png", out var relative, out var full));
+        Assert.Equal(expectedRelative, relative);
+        Assert.NotNull(full);
 
-            Assert.True(DiskCatalogMakerV5ThumbnailResolver.TryResolve(
-                root, 0x0A0B0C0D, "png", out relative, out full));
-            Assert.Equal(expectedRelative, relative);
-            Assert.True(File.Exists(full));
+        workspace.CreateFile("Thumbnails/0a/0b/0c/0d.png", [1]);
 
-            Assert.False(DiskCatalogMakerV5ThumbnailResolver.TryResolve(
-                null, 0x0A0B0C0D, "png", out relative, out full));
-            Assert.Null(full);
-        }
-        finally
-        {
-            Directory.Delete(root, recursive: true);
-        }
+        Assert.True(DiskCatalogMakerV5ThumbnailResolver.TryResolve(
+            root, 0x0A0B0C0D, "png", out relative, out full));
+        Assert.Equal(expectedRelative, relative);
+        Assert.True(File.Exists(full));
+
+        Assert.False(DiskCatalogMakerV5ThumbnailResolver.TryResolve(
+            null, 0x0A0B0C0D, "png", out relative, out full));
+        Assert.Null(full);
     }
 
     [Fact]
@@ -80,40 +74,27 @@ public sealed class DiskCatalogMakerV5ThumbnailTests
     [Fact]
     public void Build_ThumbnailFilePresent_IsReportedResolved()
     {
-        var root = CreateTemporaryDirectory();
-        try
-        {
-            var fullPath = Path.Combine(root, "Thumbnails", "0a", "0b", "0c", "0d.png");
-            Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
-            File.WriteAllBytes(fullPath, [1]);
+        using var workspace = new TestWorkspace();
+        var root = workspace.Root;
+        workspace.CreateFile("Thumbnails/0a/0b/0c/0d.png", [1]);
 
-            var document = BuildDocument(thumbnailKey: 0x0A0B0C0D, extension: "png", packageRoot: root);
+        var document = BuildDocument(thumbnailKey: 0x0A0B0C0D, extension: "png", packageRoot: root);
 
-            var properties = Properties(Find(document, "item:1:2"));
-            Assert.Equal("Thumbnails/0a/0b/0c/0d.png", properties["Thumbnail"]);
-            Assert.Equal("true", properties["ThumbnailResolved"]);
-        }
-        finally
-        {
-            Directory.Delete(root, recursive: true);
-        }
+        var properties = Properties(Find(document, "item:1:2"));
+        Assert.Equal("Thumbnails/0a/0b/0c/0d.png", properties["Thumbnail"]);
+        Assert.Equal("true", properties["ThumbnailResolved"]);
     }
 
     [Fact]
     public void Build_ThumbnailFileMissing_IsReportedUnresolved()
     {
-        var root = CreateTemporaryDirectory();
-        try
-        {
-            var document = BuildDocument(thumbnailKey: 0x0A0B0C0D, extension: "png", packageRoot: root);
+        using var workspace = new TestWorkspace();
+        var root = workspace.Root;
 
-            var properties = Properties(Find(document, "item:1:2"));
-            Assert.Equal("false", properties["ThumbnailResolved"]);
-        }
-        finally
-        {
-            Directory.Delete(root, recursive: true);
-        }
+        var document = BuildDocument(thumbnailKey: 0x0A0B0C0D, extension: "png", packageRoot: root);
+
+        var properties = Properties(Find(document, "item:1:2"));
+        Assert.Equal("false", properties["ThumbnailResolved"]);
     }
 
     [Fact]
@@ -160,12 +141,5 @@ public sealed class DiskCatalogMakerV5ThumbnailTests
     private static Dictionary<string, object?> Properties(Dictionary<string, object?> row)
     {
         return Assert.IsType<Dictionary<string, object?>>(row["properties"]);
-    }
-
-    private static string CreateTemporaryDirectory()
-    {
-        var path = Path.Combine(Path.GetTempPath(), "skycd-dcm5-thumb-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(path);
-        return path;
     }
 }

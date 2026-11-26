@@ -5,6 +5,7 @@ using SkyCD.SDK.Capabilities.Media;
 using Xunit;
 using SkyCD.Plugin.Metadata.Fonts.Export;
 using SkyCD.Plugin.Metadata.Fonts.Models;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.Metadata.Fonts.Tests;
 

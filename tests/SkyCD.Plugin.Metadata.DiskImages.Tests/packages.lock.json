@@ -952,7 +952,10 @@
         "type": "Project"
       },
       "skycd.testsupport": {
-        "type": "Project"
+        "type": "Project",
+        "dependencies": {
+          "SkyCD.SDK": "[3.0.0, )"
+        }
       },
       "skycd.ui": {
         "type": "Project",

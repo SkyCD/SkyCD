@@ -8,6 +8,7 @@ using SkyCD.Plugin.Metadata.Office.Models;
 using SkyCD.Plugin.Metadata.Office.Parsing;
 using SkyCD.SDK.Capabilities.Media;
 using Xunit;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.Metadata.Office.Tests;
 

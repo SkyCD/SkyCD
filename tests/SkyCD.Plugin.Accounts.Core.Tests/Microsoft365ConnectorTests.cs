@@ -14,6 +14,7 @@ using SkyCD.SDK.Capabilities.Accounts;
 using SkyCD.SDK.Capabilities.Ownership;
 using SkyCD.SDK.OAuth;
 using SkyCD.Plugin.Accounts.Microsoft365;
+using SkyCD.TestSupport;
 using Xunit;
 using SkyCD.Plugin.Accounts.Microsoft365.Models;
 using SkyCD.Plugin.Accounts.Microsoft365.Parsing;
@@ -366,19 +367,19 @@ public sealed class Microsoft365ConnectorTests
 
     private sealed class ConnectorFixture : IDisposable
     {
+        private readonly TestWorkspace workspace = new();
+
         private readonly Dictionary<string, string> appPaths = new(StringComparer.OrdinalIgnoreCase);
 
         public ConnectorFixture(bool connectOnLogin = true)
         {
-            Root = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(Root);
             StorePath = Path.Combine(Root, "microsoft365.json");
             OAuth = new FakeOAuth { ConnectOnLogin = connectOnLogin };
             Handler = new GraphHandler();
             Connector = CreateConnector((_, _) => Task.CompletedTask);
         }
 
-        public string Root { get; }
+        public string Root => workspace.Root;
         public string StorePath { get; }
         public FakeOAuth OAuth { get; }
         public GraphHandler Handler { get; }
@@ -416,10 +417,7 @@ public sealed class Microsoft365ConnectorTests
         public void Dispose()
         {
             Handler.Dispose();
-            if (Directory.Exists(Root))
-            {
-                Directory.Delete(Root, recursive: true);
-            }
+            workspace.Dispose();
         }
     }
 
@@ -535,71 +533,62 @@ public sealed class Microsoft365ConnectorTests
     }
 }
 
-public sealed class Microsoft365OfficeDetectorTests
+public sealed class Microsoft365OfficeDetectorTests : IDisposable
 {
+    private readonly TestWorkspace workspace = new();
+
+    public void Dispose()
+    {
+        workspace.Dispose();
+    }
+
     [Fact]
     public void Detect_FindsRegisteredAppsAndClickToRunPackage()
     {
-        var root = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(root);
-        try
+        var root = workspace.Root;
+        var wordPath = CreateFile(root, "WINWORD.EXE");
+        var excelPath = CreateFile(root, "EXCEL.EXE");
+        var unknownPath = CreateFile(root, "UNKNOWN.EXE");
+        var missingPath = Path.Combine(root, "OUTLOOK.EXE");
+        var appPaths = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            var wordPath = CreateFile(root, "WINWORD.EXE");
-            var excelPath = CreateFile(root, "EXCEL.EXE");
-            var unknownPath = CreateFile(root, "UNKNOWN.EXE");
-            var missingPath = Path.Combine(root, "OUTLOOK.EXE");
-            var appPaths = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            ["WINWORD.EXE"] = wordPath,
+            ["EXCEL.EXE"] = excelPath,
+            ["UNKNOWN.EXE"] = unknownPath,
+            ["OUTLOOK.EXE"] = missingPath
+        };
+        var detector = new Microsoft365OfficeDetector(
+            () => appPaths,
+            () => new Microsoft365OfficePackage
             {
-                ["WINWORD.EXE"] = wordPath,
-                ["EXCEL.EXE"] = excelPath,
-                ["UNKNOWN.EXE"] = unknownPath,
-                ["OUTLOOK.EXE"] = missingPath
-            };
-            var detector = new Microsoft365OfficeDetector(
-                () => appPaths,
-                () => new Microsoft365OfficePackage
-                {
-                    ReleaseId = "O365ProPlusRetail",
-                    ProductName = Microsoft365Products.ResolvePackageName("O365ProPlusRetail"),
-                    Version = "16.0.17928.20156"
-                },
-                isWindows: true);
+                ReleaseId = "O365ProPlusRetail",
+                ProductName = Microsoft365Products.ResolvePackageName("O365ProPlusRetail"),
+                Version = "16.0.17928.20156"
+            },
+            isWindows: true);
 
-            var installs = detector.Detect();
+        var installs = detector.Detect();
 
-            Assert.Equal(2, installs.Count);
-            var excel = installs.Single(install => install.ProductCode == "EXCEL");
-            Assert.Equal("Excel", excel.ProductName);
-            Assert.Equal(excelPath, excel.ExecutablePath);
-            Assert.Equal("16.0.17928.20156", excel.Version);
-            Assert.Equal("Microsoft 365 Apps for enterprise", excel.Suite);
-            Assert.Contains(installs, install => install.ProductCode == "WINWORD");
-        }
-        finally
-        {
-            Directory.Delete(root, recursive: true);
-        }
+        Assert.Equal(2, installs.Count);
+        var excel = installs.Single(install => install.ProductCode == "EXCEL");
+        Assert.Equal("Excel", excel.ProductName);
+        Assert.Equal(excelPath, excel.ExecutablePath);
+        Assert.Equal("16.0.17928.20156", excel.Version);
+        Assert.Equal("Microsoft 365 Apps for enterprise", excel.Suite);
+        Assert.Contains(installs, install => install.ProductCode == "WINWORD");
     }
 
     [Fact]
     public void Detect_NonWindows_ReturnsEmpty()
     {
-        var root = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(root);
-        try
-        {
-            var wordPath = CreateFile(root, "WINWORD.EXE");
-            var detector = new Microsoft365OfficeDetector(
-                () => new Dictionary<string, string> { ["WINWORD.EXE"] = wordPath },
-                () => null,
-                isWindows: false);
+        var root = workspace.Root;
+        var wordPath = CreateFile(root, "WINWORD.EXE");
+        var detector = new Microsoft365OfficeDetector(
+            () => new Dictionary<string, string> { ["WINWORD.EXE"] = wordPath },
+            () => null,
+            isWindows: false);
 
-            Assert.Empty(detector.Detect());
-        }
-        finally
-        {
-            Directory.Delete(root, recursive: true);
-        }
+        Assert.Empty(detector.Detect());
     }
 
     [Fact]

@@ -6,6 +6,7 @@ using SkyCD.Plugin.Runtime.Marketplace.Models;
 using SkyCD.Presentation.Marketplace;
 using SkyCD.Presentation.Plugins;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.TestSupport;
 using SkyCD.UI.Localization;
 using Xunit;
 
@@ -199,29 +200,26 @@ public sealed class OptionsPluginAdditionalInfoTests
     [Fact]
     public void PluginFolderSize_SumsNestedFiles()
     {
-        var root = Path.Combine(Path.GetTempPath(), "skycd-plugin-size-" + Guid.NewGuid().ToString("N"));
+        using var workspace = new TestWorkspace();
+        var root = workspace.Root;
         var nested = Path.Combine(root, "nested");
         Directory.CreateDirectory(nested);
-        try
-        {
-            File.WriteAllBytes(Path.Combine(root, "plugin.dll"), new byte[100]);
-            File.WriteAllBytes(Path.Combine(nested, "dependency.dll"), new byte[24]);
 
-            Assert.Equal(124L, PluginFolderSize.TryComputeBytes(Path.Combine(root, "plugin.dll")));
-        }
-        finally
-        {
-            Directory.Delete(root, recursive: true);
-        }
+        File.WriteAllBytes(Path.Combine(root, "plugin.dll"), new byte[100]);
+        File.WriteAllBytes(Path.Combine(nested, "dependency.dll"), new byte[24]);
+
+        Assert.Equal(124L, PluginFolderSize.TryComputeBytes(Path.Combine(root, "plugin.dll")));
     }
 
     [Fact]
     public void PluginFolderSize_ReturnsNullWhenNoFolderIsKnown()
     {
+        using var workspace = new TestWorkspace();
+
         Assert.Null(PluginFolderSize.TryComputeBytes(null));
         Assert.Null(PluginFolderSize.TryComputeBytes(string.Empty));
         Assert.Null(PluginFolderSize.TryComputeBytes(
-            Path.Combine(Path.GetTempPath(), "skycd-missing-" + Guid.NewGuid().ToString("N"), "plugin.dll")));
+            workspace.GetPath(Path.Combine("missing", "plugin.dll"))));
     }
 
     private static OptionsDialogViewModel CreateViewModel() => new(["English"]);

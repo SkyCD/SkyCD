@@ -15,12 +15,20 @@ using SkyCD.Couchbase.Helpers;
 using SkyCD.Couchbase.Mapping;
 using SkyCD.Couchbase.Models;
 using SkyCD.Couchbase.Repository;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.Couchbase.Tests;
 
-public class CouchbaseContractsTests
+public class CouchbaseContractsTests : IDisposable
 {
+    private readonly TestWorkspace workspace = new();
+
+    public void Dispose()
+    {
+        workspace.Dispose();
+    }
+
     [Fact]
     public void CouchbaseServiceRegistrator_IsolatesDefaultDatabasesBetweenTestContainers()
     {
@@ -159,7 +167,7 @@ public class CouchbaseContractsTests
     public void DatabaseManager_ConnectGetForAndDisconnect_Work()
     {
         const string databaseName = "default";
-        var directory = CreateTempDirectory();
+        var directory = workspace.CreateDirectory("database-manager");
         using var manager = new DatabaseManager();
 
         var connected = manager.Connect(databaseName, directory);
@@ -174,7 +182,7 @@ public class CouchbaseContractsTests
     [Fact]
     public void DatabaseManager_Disconnect_ReleasesTheDatabaseFiles()
     {
-        var directory = CreateTempDirectory();
+        var directory = workspace.CreateDirectory("disconnect-test");
         using var manager = new DatabaseManager();
         manager.Connect("disconnect-test", directory);
 
@@ -189,7 +197,7 @@ public class CouchbaseContractsTests
     [Fact]
     public void DatabaseManager_Dispose_ReleasesTheDatabaseFiles()
     {
-        var directory = CreateTempDirectory();
+        var directory = workspace.CreateDirectory("dispose-test");
         var manager = new DatabaseManager();
         manager.Connect("dispose-test", directory);
 
@@ -203,7 +211,7 @@ public class CouchbaseContractsTests
     public void RepositoryManager_ProvidesRepositoryWithCrudAndTreeApis()
     {
         var databaseName = "default";
-        var directory = CreateTempDirectory();
+        var directory = workspace.CreateDirectory("repository-manager");
         using var manager = new DatabaseManager();
         manager.Connect(databaseName, directory);
         var repositories = new RepositoryManager(manager);
@@ -383,18 +391,11 @@ public class CouchbaseContractsTests
         Assert.Equal("child", children[0].Id);
     }
 
-    private static Database CreateDatabase(string prefix)
+    private Database CreateDatabase(string prefix)
     {
         var name = $"{prefix}-{Guid.NewGuid():N}";
-        var directory = CreateTempDirectory();
+        var directory = workspace.CreateDirectory(prefix);
         return new Database(name, new DatabaseConfiguration { Directory = directory });
-    }
-
-    private static string CreateTempDirectory()
-    {
-        var path = Path.Combine(Path.GetTempPath(), "skycd-tests", Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(path);
-        return path;
     }
 
     [CouchbaseDocument("annotated", typeof(TestTreeRepository))]

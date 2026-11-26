@@ -5,6 +5,7 @@ using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.OnlineMetadata.Models;
 using SkyCD.Plugin.Runtime.Factories;
 using Xunit;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.Metadata.AnimeNewsNetwork.Tests;
 
@@ -16,7 +17,7 @@ public class AnimeNewsNetworkMetadataPluginTests
     public void ReadsProfileTable()
     {
         var facts = new DescriptionFacts();
-        Plugin().Parse(Fixtures.Read("ann-encyclopedia.html"), facts);
+        Plugin().Parse(OnlineMetadataFixtures.Read("ann-encyclopedia.html"), facts);
 
         Assert.Equal("Cowboy Bebop", facts.Get("Title"));
         Assert.Equal("TV", facts.Get("Type"));
@@ -50,7 +51,7 @@ public class AnimeNewsNetworkMetadataPluginTests
     [Fact]
     public async Task FetchReturnsFactsAndTheFetchedUrl()
     {
-        var fetcher = new StubFetcher(Fixtures.Read("ann-encyclopedia.html"));
+        var fetcher = new StubFetcher(OnlineMetadataFixtures.Read("ann-encyclopedia.html"));
         var plugin = new AnimeNewsNetworkMetadataPlugin(fetcher);
         var request = new OnlineMetadataRequest("", "https://www.animenewsnetwork.com/encyclopedia/anime.php?id=1", "en");
 

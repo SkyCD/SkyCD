@@ -7,6 +7,7 @@ using SkyCD.Plugin.Metadata.Pdf.Exceptions;
 using Xunit;
 using SkyCD.Plugin.Metadata.Pdf.Export;
 using SkyCD.Plugin.Metadata.Pdf.Models;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.Metadata.Pdf.Tests;
 

@@ -10,6 +10,7 @@ using SkyCD.Presentation.MediaCache;
 using SkyCD.SDK.Capabilities;
 using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Host.Media;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.App.Tests;
@@ -25,16 +26,16 @@ public sealed class MediaThumbnailProgressTests : IDisposable
 
     private static readonly byte[] ThumbnailBytes = [0x89, 0x50, 0x4E, 0x47];
 
-    private readonly string sourceDirectory =
-        Path.Combine(Path.GetTempPath(), $"skycd-thumbnail-{Guid.NewGuid():N}");
+    private readonly TestWorkspace workspace = new();
 
     private readonly string sourcePath;
     private readonly CatalogDocument root;
     private readonly CatalogDocument entry;
 
+    private string sourceDirectory => workspace.Root;
+
     public MediaThumbnailProgressTests()
     {
-        Directory.CreateDirectory(sourceDirectory);
         sourcePath = Path.Combine(sourceDirectory, "poster.mp4");
         File.WriteAllBytes(sourcePath, new byte[64]);
 
@@ -62,16 +63,7 @@ public sealed class MediaThumbnailProgressTests : IDisposable
 
     public void Dispose()
     {
-        try
-        {
-            Directory.Delete(sourceDirectory, recursive: true);
-        }
-        catch (IOException)
-        {
-        }
-        catch (UnauthorizedAccessException)
-        {
-        }
+        workspace.Dispose();
     }
 
     [Fact]

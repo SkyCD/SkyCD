@@ -6,6 +6,7 @@ using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Metadata.IWork.Exceptions;
 using Xunit;
 using SkyCD.Plugin.Metadata.IWork.Models;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.Metadata.IWork.Tests;
 

@@ -11,12 +11,20 @@ using DryIoc;
 using SkyCD.Core.DependencyInjection.Registrators;
 using SkyCD.Core.OAuth;
 using SkyCD.SDK.OAuth;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.Plugin.Runtime.Tests;
 
-public sealed class OAuthStorageTests
+public sealed class OAuthStorageTests : IDisposable
 {
+    private readonly TestWorkspace workspace = new();
+
+    public void Dispose()
+    {
+        workspace.Dispose();
+    }
+
     [Fact]
     public void PlatformSelection_PreservesDpapiAndFailsClosedOnUnsupportedPlatforms()
     {
@@ -65,63 +73,51 @@ public sealed class OAuthStorageTests
     [InlineData("invalid-key")]
     public async Task KeyringFailure_NeverPublishesCredentialsOrLeaksNativeErrors(string failure)
     {
-        var folder = TemporaryFolder();
-        try
-        {
-            var keys = new KeyStore { Failure = failure };
-            var store = new ProtectedFileOAuthTokenStore(folder, new KeyringOAuthDataProtector(keys));
-            var error = await Assert.ThrowsAsync<OAuthException>(() => store.WriteAsync("plugin", Session("personal"), default));
-            Assert.Equal(OAuthFailure.SecureStorageUnavailable, error.Failure);
-            Assert.DoesNotContain("sensitive", error.ToString());
-            Assert.Null(error.InnerException);
-            Assert.False(Directory.Exists(folder));
-        }
-        finally { Cleanup(folder); }
+        var folder = workspace.GetPath(Guid.NewGuid().ToString("N"));
+        var keys = new KeyStore { Failure = failure };
+        var store = new ProtectedFileOAuthTokenStore(folder, new KeyringOAuthDataProtector(keys));
+        var error = await Assert.ThrowsAsync<OAuthException>(() => store.WriteAsync("plugin", Session("personal"), default));
+        Assert.Equal(OAuthFailure.SecureStorageUnavailable, error.Failure);
+        Assert.DoesNotContain("sensitive", error.ToString());
+        Assert.Null(error.InnerException);
+        Assert.False(Directory.Exists(folder));
     }
 
     [Fact]
     public async Task LockedOrLostKey_PreservesExistingCiphertext_AndDeletionStillWorks()
     {
         var keys = new KeyStore();
-        var folder = TemporaryFolder();
-        try
-        {
-            var store = new ProtectedFileOAuthTokenStore(folder, new KeyringOAuthDataProtector(keys));
-            await store.WriteAsync("plugin", Session("personal"), default);
-            var path = Directory.GetFiles(folder, "*.token", SearchOption.AllDirectories).Single();
-            var original = await File.ReadAllBytesAsync(path);
-            keys.Failure = "read";
-            Assert.Equal(OAuthFailure.SecureStorageUnavailable,
-                (await Assert.ThrowsAsync<OAuthException>(() => store.ReadAsync("plugin", "personal", default))).Failure);
-            await Assert.ThrowsAsync<OAuthException>(() => store.GetAccountsAsync("plugin", default));
-            await Assert.ThrowsAsync<OAuthException>(() => store.WriteAsync("plugin", Session("personal"), default));
-            Assert.Equal(original, await File.ReadAllBytesAsync(path));
-            keys.Failure = null;
-            keys.Keys.Clear();
-            await Assert.ThrowsAsync<OAuthException>(() => store.ReadAsync("plugin", "personal", default));
-            Assert.Empty(keys.Keys); // Decryption never creates a replacement key.
-            await store.DeleteAsync("plugin", "personal", default);
-            await store.DeleteAsync("plugin", "personal", default);
-            Assert.Null(await store.ReadAsync("plugin", "personal", default));
-        }
-        finally { Cleanup(folder); }
+        var folder = workspace.GetPath(Guid.NewGuid().ToString("N"));
+        var store = new ProtectedFileOAuthTokenStore(folder, new KeyringOAuthDataProtector(keys));
+        await store.WriteAsync("plugin", Session("personal"), default);
+        var path = Directory.GetFiles(folder, "*.token", SearchOption.AllDirectories).Single();
+        var original = await File.ReadAllBytesAsync(path);
+        keys.Failure = "read";
+        Assert.Equal(OAuthFailure.SecureStorageUnavailable,
+            (await Assert.ThrowsAsync<OAuthException>(() => store.ReadAsync("plugin", "personal", default))).Failure);
+        await Assert.ThrowsAsync<OAuthException>(() => store.GetAccountsAsync("plugin", default));
+        await Assert.ThrowsAsync<OAuthException>(() => store.WriteAsync("plugin", Session("personal"), default));
+        Assert.Equal(original, await File.ReadAllBytesAsync(path));
+        keys.Failure = null;
+        keys.Keys.Clear();
+        await Assert.ThrowsAsync<OAuthException>(() => store.ReadAsync("plugin", "personal", default));
+        Assert.Empty(keys.Keys); // Decryption never creates a replacement key.
+        await store.DeleteAsync("plugin", "personal", default);
+        await store.DeleteAsync("plugin", "personal", default);
+        Assert.Null(await store.ReadAsync("plugin", "personal", default));
     }
 
     [Fact]
     public async Task Cancellation_DoesNotWriteSession()
     {
-        var folder = TemporaryFolder();
-        try
-        {
-            var keys = new KeyStore();
-            using var cts = new CancellationTokenSource();
-            cts.Cancel();
-            var store = new ProtectedFileOAuthTokenStore(folder, new KeyringOAuthDataProtector(keys));
-            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => store.WriteAsync("plugin", Session("personal"), cts.Token));
-            Assert.Empty(keys.Keys);
-            Assert.False(Directory.Exists(folder));
-        }
-        finally { Cleanup(folder); }
+        var folder = workspace.GetPath(Guid.NewGuid().ToString("N"));
+        var keys = new KeyStore();
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+        var store = new ProtectedFileOAuthTokenStore(folder, new KeyringOAuthDataProtector(keys));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => store.WriteAsync("plugin", Session("personal"), cts.Token));
+        Assert.Empty(keys.Keys);
+        Assert.False(Directory.Exists(folder));
     }
 
     [NativeKeyringFact]
@@ -148,58 +144,54 @@ public sealed class OAuthStorageTests
         AssertUnavailable(() => protector.Protect([1], Encoding.UTF8.GetBytes(Guid.NewGuid().ToString())));
     }
 
-    private static async Task CheckPersistenceAsync(Func<IOAuthDataProtector> create, string[]? namespaces = null)
+    private async Task CheckPersistenceAsync(Func<IOAuthDataProtector> create, string[]? namespaces = null)
     {
         namespaces ??= ["plugin-a", "plugin-b"];
-        var folder = TemporaryFolder();
-        try
+        var folder = workspace.GetPath(Guid.NewGuid().ToString("N"));
+        var store = new ProtectedFileOAuthTokenStore(folder, create());
+        await Task.WhenAll(new[] { "personal", "work" }.Select(account => store.WriteAsync(namespaces[0], Session(account), default)));
+        await store.WriteAsync(namespaces[1], Session("personal", "other-token"), default);
+        foreach (var file in Directory.GetFiles(folder, "*.token", SearchOption.AllDirectories))
         {
-            var store = new ProtectedFileOAuthTokenStore(folder, create());
-            await Task.WhenAll(new[] { "personal", "work" }.Select(account => store.WriteAsync(namespaces[0], Session(account), default)));
-            await store.WriteAsync(namespaces[1], Session("personal", "other-token"), default);
-            foreach (var file in Directory.GetFiles(folder, "*.token", SearchOption.AllDirectories))
-            {
-                var data = Encoding.UTF8.GetString(await File.ReadAllBytesAsync(file));
-                Assert.DoesNotContain("secret-access", data);
-                Assert.DoesNotContain("secret-refresh", data);
-                Assert.DoesNotContain("personal", data);
-            }
-            var restarted = new ProtectedFileOAuthTokenStore(folder, create());
-            var restored = await restarted.ReadAsync(namespaces[0], "personal", default);
-            Assert.NotNull(restored);
-            Assert.Equal("personal", restored.AccountId);
-            Assert.Equal("secret-access", restored.AccessToken);
-            Assert.Equal("secret-refresh", restored.RefreshToken);
-            Assert.Equal(Session("personal").ExpiresAt, restored.ExpiresAt);
-            Assert.Equal(new[] { "personal", "work" }, await restarted.GetAccountsAsync(namespaces[0], default));
-            Assert.Equal("other-token", (await restarted.ReadAsync(namespaces[1], "personal", default))!.AccessToken);
-            var accountFiles = Directory.GetFiles(folder, "*.token", SearchOption.AllDirectories);
-            var workName = Convert.ToHexString(SHA256.HashData("work"u8)) + ".token";
-            var personalName = Convert.ToHexString(SHA256.HashData("personal"u8)) + ".token";
-            var workFile = accountFiles.Single(file => Path.GetFileName(file) == workName);
-            var personalFile = Path.Combine(Path.GetDirectoryName(workFile)!, personalName);
-            var personalBytes = await File.ReadAllBytesAsync(personalFile);
-            await File.WriteAllBytesAsync(personalFile, await File.ReadAllBytesAsync(workFile));
-            await Assert.ThrowsAsync<OAuthException>(() => restarted.ReadAsync(namespaces[0], "personal", default));
-            await Assert.ThrowsAsync<OAuthException>(() => restarted.GetAccountsAsync(namespaces[0], default));
-            await File.WriteAllBytesAsync(personalFile, personalBytes);
-            await restarted.DeleteAsync(namespaces[0], "personal", default);
-            Assert.Equal(new[] { "work" }, await restarted.GetAccountsAsync(namespaces[0], default));
-            Assert.Single(await restarted.GetAccountsAsync(namespaces[1], default));
-            var remaining = Directory.GetFiles(folder, "*.token", SearchOption.AllDirectories);
-            var work = remaining.Single(file => Path.GetFileName(file) == Convert.ToHexString(SHA256.HashData("work"u8)) + ".token");
-            var other = remaining.Single(file => file != work);
-            // Swapping whole valid files between accounts and between namespaces must fail closed.
-            var saved = await File.ReadAllBytesAsync(work);
-            await File.WriteAllBytesAsync(work, await File.ReadAllBytesAsync(other));
-            await Assert.ThrowsAsync<OAuthException>(() => restarted.ReadAsync(namespaces[0], "work", default));
-            saved[^1] ^= 1;
-            await File.WriteAllBytesAsync(work, saved);
-            await Assert.ThrowsAsync<OAuthException>(() => restarted.ReadAsync(namespaces[0], "work", default));
-            await restarted.DeleteAsync(namespaces[0], "work", default);
-            Assert.Empty(await restarted.GetAccountsAsync(namespaces[0], default));
+            var data = Encoding.UTF8.GetString(await File.ReadAllBytesAsync(file));
+            Assert.DoesNotContain("secret-access", data);
+            Assert.DoesNotContain("secret-refresh", data);
+            Assert.DoesNotContain("personal", data);
         }
-        finally { Cleanup(folder); }
+        var restarted = new ProtectedFileOAuthTokenStore(folder, create());
+        var restored = await restarted.ReadAsync(namespaces[0], "personal", default);
+        Assert.NotNull(restored);
+        Assert.Equal("personal", restored.AccountId);
+        Assert.Equal("secret-access", restored.AccessToken);
+        Assert.Equal("secret-refresh", restored.RefreshToken);
+        Assert.Equal(Session("personal").ExpiresAt, restored.ExpiresAt);
+        Assert.Equal(new[] { "personal", "work" }, await restarted.GetAccountsAsync(namespaces[0], default));
+        Assert.Equal("other-token", (await restarted.ReadAsync(namespaces[1], "personal", default))!.AccessToken);
+        var accountFiles = Directory.GetFiles(folder, "*.token", SearchOption.AllDirectories);
+        var workName = Convert.ToHexString(SHA256.HashData("work"u8)) + ".token";
+        var personalName = Convert.ToHexString(SHA256.HashData("personal"u8)) + ".token";
+        var workFile = accountFiles.Single(file => Path.GetFileName(file) == workName);
+        var personalFile = Path.Combine(Path.GetDirectoryName(workFile)!, personalName);
+        var personalBytes = await File.ReadAllBytesAsync(personalFile);
+        await File.WriteAllBytesAsync(personalFile, await File.ReadAllBytesAsync(workFile));
+        await Assert.ThrowsAsync<OAuthException>(() => restarted.ReadAsync(namespaces[0], "personal", default));
+        await Assert.ThrowsAsync<OAuthException>(() => restarted.GetAccountsAsync(namespaces[0], default));
+        await File.WriteAllBytesAsync(personalFile, personalBytes);
+        await restarted.DeleteAsync(namespaces[0], "personal", default);
+        Assert.Equal(new[] { "work" }, await restarted.GetAccountsAsync(namespaces[0], default));
+        Assert.Single(await restarted.GetAccountsAsync(namespaces[1], default));
+        var remaining = Directory.GetFiles(folder, "*.token", SearchOption.AllDirectories);
+        var work = remaining.Single(file => Path.GetFileName(file) == Convert.ToHexString(SHA256.HashData("work"u8)) + ".token");
+        var other = remaining.Single(file => file != work);
+        // Swapping whole valid files between accounts and between namespaces must fail closed.
+        var saved = await File.ReadAllBytesAsync(work);
+        await File.WriteAllBytesAsync(work, await File.ReadAllBytesAsync(other));
+        await Assert.ThrowsAsync<OAuthException>(() => restarted.ReadAsync(namespaces[0], "work", default));
+        saved[^1] ^= 1;
+        await File.WriteAllBytesAsync(work, saved);
+        await Assert.ThrowsAsync<OAuthException>(() => restarted.ReadAsync(namespaces[0], "work", default));
+        await restarted.DeleteAsync(namespaces[0], "work", default);
+        Assert.Empty(await restarted.GetAccountsAsync(namespaces[0], default));
     }
 
     private static OAuthSession Session(string account, string accessToken = "secret-access") => new()
@@ -209,8 +201,6 @@ public sealed class OAuthStorageTests
         RefreshToken = "secret-refresh",
         ExpiresAt = DateTimeOffset.UnixEpoch.AddHours(1)
     };
-    private static string TemporaryFolder() => Path.Combine(Path.GetTempPath(), "skycd-oauth-tests", Guid.NewGuid().ToString("N"));
-    private static void Cleanup(string folder) { if (Directory.Exists(folder)) Directory.Delete(folder, true); }
     private static void AssertUnavailable(Action action) => Assert.Equal(OAuthFailure.SecureStorageUnavailable, Assert.Throws<OAuthException>(action).Failure);
 
     private sealed class KeyStore : IOAuthKeyStore

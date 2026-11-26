@@ -5,24 +5,20 @@ using SkyCD.Plugin.Ai.Description;
 using Xunit;
 using SkyCD.Plugin.Ai.Description.Exceptions;
 using SkyCD.Plugin.Ai.Description.Sources;
+using SkyCD.TestSupport;
 
 namespace SkyCD.App.Tests;
 
 public sealed class AcpAgentRegistryTests
 {
-    private static string WriteRegistry(object value)
-    {
-        var directory = Path.Combine(Path.GetTempPath(), "skycd-acp-registry-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(directory);
-        var path = Path.Combine(directory, AcpAgentRegistry.FileName);
-        File.WriteAllText(path, JsonSerializer.Serialize(value));
-        return path;
-    }
+    private static string WriteRegistry(TestWorkspace workspace, object value) =>
+        workspace.CreateFile(AcpAgentRegistry.FileName, JsonSerializer.Serialize(value));
 
     [Fact]
     public void LoadsCachedEntriesWithoutExecutingOrInstallingThem()
     {
-        var path = WriteRegistry(new
+        using var workspace = new TestWorkspace();
+        var path = WriteRegistry(workspace, new
         {
             version = "1.0.0",
             agents = new object[]
@@ -45,28 +41,22 @@ public sealed class AcpAgentRegistryTests
                 }
             }
         });
-        try
-        {
-            var registry = AcpAgentRegistry.Load(path);
-            Assert.Equal(2, registry.Agents.Count);
-            var agent = Assert.IsType<AcpRegistryAgent>(registry.Find("agent-one"));
-            Assert.Equal("Agent One", agent.Name);
-            Assert.Equal("2.1.0", agent.Version);
-            Assert.Equal("npx", Assert.Single(agent.Distributions));
-            Assert.Equal("npx agent-one@2.1.0 --acp", agent.LaunchHint);
-            Assert.Contains("uvx agent-two", registry.Find("agent-two")!.LaunchHint);
-            Assert.Null(registry.Find("missing"));
-        }
-        finally
-        {
-            Directory.Delete(Path.GetDirectoryName(path)!, true);
-        }
+        var registry = AcpAgentRegistry.Load(path);
+        Assert.Equal(2, registry.Agents.Count);
+        var agent = Assert.IsType<AcpRegistryAgent>(registry.Find("agent-one"));
+        Assert.Equal("Agent One", agent.Name);
+        Assert.Equal("2.1.0", agent.Version);
+        Assert.Equal("npx", Assert.Single(agent.Distributions));
+        Assert.Equal("npx agent-one@2.1.0 --acp", agent.LaunchHint);
+        Assert.Contains("uvx agent-two", registry.Find("agent-two")!.LaunchHint);
+        Assert.Null(registry.Find("missing"));
     }
 
     [Fact]
     public void SkipsMalformedEntriesAndIgnoresUnknownFields()
     {
-        var path = WriteRegistry(new
+        using var workspace = new TestWorkspace();
+        var path = WriteRegistry(workspace, new
         {
             version = "1.0.0",
             extra = "ignored",
@@ -78,19 +68,12 @@ public sealed class AcpAgentRegistryTests
                 new { id = "binary-only", name = "Binary", version = "1.0.0", distribution = new { binary = new { } } }
             }
         });
-        try
-        {
-            var registry = AcpAgentRegistry.Load(path);
-            Assert.Equal(2, registry.Agents.Count);
-            var packageAgent = registry.Find("bad-args")!;
-            Assert.Equal("npx ok fine", packageAgent.LaunchHint);
-            var binaryAgent = registry.Find("binary-only")!;
-            Assert.Equal("binary", Assert.Single(binaryAgent.Distributions));
-        }
-        finally
-        {
-            Directory.Delete(Path.GetDirectoryName(path)!, true);
-        }
+        var registry = AcpAgentRegistry.Load(path);
+        Assert.Equal(2, registry.Agents.Count);
+        var packageAgent = registry.Find("bad-args")!;
+        Assert.Equal("npx ok fine", packageAgent.LaunchHint);
+        var binaryAgent = registry.Find("binary-only")!;
+        Assert.Equal("binary", Assert.Single(binaryAgent.Distributions));
     }
 
     [Theory]
@@ -99,35 +82,19 @@ public sealed class AcpAgentRegistryTests
     [InlineData("{\"version\":\"1.0.0\"}")]
     public void RejectsInvalidRegistryDocuments(string content)
     {
-        var directory = Path.Combine(Path.GetTempPath(), "skycd-acp-registry-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(directory);
-        var path = Path.Combine(directory, AcpAgentRegistry.FileName);
-        try
-        {
-            File.WriteAllText(path, content);
-            Assert.Throws<AcpRegistryException>(() => AcpAgentRegistry.Load(path));
-        }
-        finally
-        {
-            Directory.Delete(directory, true);
-        }
+        using var workspace = new TestWorkspace();
+        var path = workspace.GetPath(AcpAgentRegistry.FileName);
+        File.WriteAllText(path, content);
+        Assert.Throws<AcpRegistryException>(() => AcpAgentRegistry.Load(path));
     }
 
     [Fact]
     public void MissingAndOversizedCachesAreReported()
     {
-        Assert.Throws<AcpRegistryException>(() => AcpAgentRegistry.Load(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "missing.json")));
-        var directory = Path.Combine(Path.GetTempPath(), "skycd-acp-registry-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(directory);
-        var path = Path.Combine(directory, AcpAgentRegistry.FileName);
-        try
-        {
-            using (var stream = File.Create(path)) stream.SetLength(AcpAgentRegistry.MaximumBytes + 1);
-            Assert.Throws<AcpRegistryException>(() => AcpAgentRegistry.Load(path));
-        }
-        finally
-        {
-            Directory.Delete(directory, true);
-        }
+        using var workspace = new TestWorkspace();
+        Assert.Throws<AcpRegistryException>(() => AcpAgentRegistry.Load(workspace.GetPath("missing.json")));
+        var path = workspace.GetPath(AcpAgentRegistry.FileName);
+        using (var stream = File.Create(path)) stream.SetLength(AcpAgentRegistry.MaximumBytes + 1);
+        Assert.Throws<AcpRegistryException>(() => AcpAgentRegistry.Load(path));
     }
 }

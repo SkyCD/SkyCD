@@ -9,6 +9,7 @@ using SkyCD.Plugin.Metadata.Video.Exceptions;
 using Xunit;
 using SkyCD.Plugin.Metadata.Video.Models;
 using SkyCD.Plugin.Metadata.Video.Parsing;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.Metadata.Video.Tests;
 
@@ -144,7 +145,8 @@ public class VideoPosterPluginTests
     [Fact]
     public void NoDecoderIsFound_ForAnExplicitPathThatDoesNotExist()
     {
-        var missing = Path.Combine(Path.GetTempPath(), $"skycd-absent-{Guid.NewGuid():N}", "ffmpeg");
+        using var workspace = new TestWorkspace();
+        var missing = workspace.GetPath(Path.Combine("absent", "ffmpeg"));
 
         // An explicit path that does not resolve yields an unavailable extractor; nothing is downloaded.
         Assert.Null(FFmpegFrameExtractor.DiscoverExecutable(missing));
@@ -157,7 +159,8 @@ public class VideoPosterPluginTests
     [Fact]
     public async Task UnavailableFFmpegExtractor_ProducesNoArtifact()
     {
-        var missing = Path.Combine(Path.GetTempPath(), $"skycd-absent-{Guid.NewGuid():N}", "ffmpeg");
+        using var workspace = new TestWorkspace();
+        var missing = workspace.GetPath(Path.Combine("absent", "ffmpeg"));
         var plugin = new VideoPosterPlugin(
             new VideoPluginOptions(ffmpegPath: missing),
             new FFmpegFrameExtractor(new VideoPluginOptions(ffmpegPath: missing)));

@@ -6,6 +6,7 @@ using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Metadata.Video.Exceptions;
 using Xunit;
 using SkyCD.Plugin.Metadata.Video.Models;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.Metadata.Video.Tests;
 

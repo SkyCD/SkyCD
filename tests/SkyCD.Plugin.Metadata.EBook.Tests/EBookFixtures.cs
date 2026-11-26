@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using SkiaSharp;
 using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Metadata.EBook.Models;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.Metadata.EBook.Tests;
 

@@ -19,25 +19,14 @@ namespace SkyCD.App.Tests;
 public sealed class MediaScanningIntegrationTests : IDisposable
 {
     private readonly AppDataSandbox sandbox = new();
-    private readonly string scanTestDirectory = Path.Combine(Path.GetTempPath(), $"skycd-media-source-{Guid.NewGuid():N}");
+    private readonly TestWorkspace workspace = new();
 
-    public MediaScanningIntegrationTests()
-    {
-        Directory.CreateDirectory(scanTestDirectory);
-    }
+    private string scanTestDirectory => workspace.Root;
 
     public void Dispose()
     {
         sandbox.Dispose();
-
-        try
-        {
-            if (Directory.Exists(scanTestDirectory))
-            {
-                Directory.Delete(scanTestDirectory, recursive: true);
-            }
-        }
-        catch { }
+        workspace.Dispose();
     }
 
     private sealed class FakeDriveProvider(IReadOnlyList<MediaDriveInfo> drives) : IMediaDriveProvider

@@ -12,6 +12,7 @@ using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Metadata.Image.Parsing;
 using SkyCD.SDK.Capabilities.Media;
 using Xunit;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.Metadata.Image.Tests;
 
@@ -172,33 +173,29 @@ public sealed class ContainerImageTests
     [Fact]
     public async Task ClipOpensTheEmbeddedDatabaseReadOnly()
     {
-        var path = Path.Combine(Path.GetTempPath(), $"skycd-clip-fixture-{Guid.NewGuid():N}.sqlite");
-        try
+        using var workspace = new TestWorkspace();
+        var path = workspace.GetPath("clip.sqlite");
+
+        var settings = new SqliteConnectionStringBuilder { DataSource = path, Pooling = false };
+        using (var connection = new SqliteConnection(settings.ConnectionString))
         {
-            var settings = new SqliteConnectionStringBuilder { DataSource = path, Pooling = false };
-            using (var connection = new SqliteConnection(settings.ConnectionString))
-            {
-                connection.Open();
-                using var command = connection.CreateCommand();
-                command.CommandText = """
-                    CREATE TABLE Canvas (CanvasWidth INTEGER, CanvasHeight INTEGER);
-                    INSERT INTO Canvas VALUES (640, 480);
-                    CREATE TABLE CanvasPreview (ImageData BLOB);
-                    INSERT INTO CanvasPreview VALUES ($preview);
-                    """;
-                command.Parameters.AddWithValue("$preview", ImageFixtures.OpaquePng(60, 40));
-                command.ExecuteNonQuery();
-            }
-            var bytes = new byte[128].Concat(await File.ReadAllBytesAsync(path)).ToArray();
-            var metadata = await Extract(new PaintDocumentPlugin(), ".clip", bytes);
-            Assert.Equal(640L, Field(metadata, "Width").Integer);
-            AssertPreview(Assert.Single((await Preview(new PaintDocumentPreviewPlugin(), ".clip", bytes)).Artifacts),
-                "image/jpeg", 60, 40);
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = """
+                CREATE TABLE Canvas (CanvasWidth INTEGER, CanvasHeight INTEGER);
+                INSERT INTO Canvas VALUES (640, 480);
+                CREATE TABLE CanvasPreview (ImageData BLOB);
+                INSERT INTO CanvasPreview VALUES ($preview);
+                """;
+            command.Parameters.AddWithValue("$preview", ImageFixtures.OpaquePng(60, 40));
+            command.ExecuteNonQuery();
         }
-        finally
-        {
-            File.Delete(path);
-        }
+
+        var bytes = new byte[128].Concat(await File.ReadAllBytesAsync(path)).ToArray();
+        var metadata = await Extract(new PaintDocumentPlugin(), ".clip", bytes);
+        Assert.Equal(640L, Field(metadata, "Width").Integer);
+        AssertPreview(Assert.Single((await Preview(new PaintDocumentPreviewPlugin(), ".clip", bytes)).Artifacts),
+            "image/jpeg", 60, 40);
     }
 
     [Fact]
