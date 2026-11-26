@@ -45,9 +45,18 @@ public partial class MultiSelectDropdown : UserControl
         AvaloniaProperty.Register<MultiSelectDropdown, string?>(nameof(SelectedIconKey), defaultBindingMode: BindingMode.TwoWay);
 
     private readonly ObservableCollection<MultiSelectOptionItem> filteredItems = [];
+    // Issue #1214: the tile grid cannot virtualize (a WrapPanel realizes every child), so the
+    // emoji-style grid pages through the catalog instead of materializing thousands of icons.
+    private const int IconTilePageSize = 120;
+    private readonly ObservableCollection<string> iconTiles = [];
+    private IReadOnlyList<string> iconTilePool = [];
     private IEnumerable<MultiSelectOptionItem>? trackedItems;
     private bool suppressInlineTextProcessing;
+    private bool suppressOpenOnInlineFocus;
+    private bool suppressIconSelection;
     private string searchText = string.Empty;
+    private string iconSearchText = string.Empty;
+    private string activeIconCategory = string.Empty;
 
     public MultiSelectDropdown()
     {
@@ -58,7 +67,14 @@ public partial class MultiSelectDropdown : UserControl
             Priority = BindingPriority.Style
         });
         ItemsListBox.ItemsSource = filteredItems;
-        IconItemsListBox.AddHandler(InputElement.PointerPressedEvent, OnIconItemsListPointerPressed, RoutingStrategies.Tunnel);
+        IconTilesListBox.ItemsSource = iconTiles;
+        IconTilesListBox.AddHandler(ScrollViewer.ScrollChangedEvent, OnIconTilesScrollChanged, RoutingStrategies.Bubble);
+        IconTilesListBox.AddHandler(InputElement.PointerPressedEvent, OnIconTilesPointerPressed, RoutingStrategies.Tunnel);
+        // Tunnel navigation so the grid owns its arrow keys before the ListBox moves the selection.
+        IconTilesListBox.AddHandler(InputElement.KeyDownEvent, OnIconTilesKeyDown, RoutingStrategies.Tunnel);
+        // Tunneling keeps Down available for moving from the search field into the grid; a plain
+        // TextBox handler would lose it to caret movement.
+        IconSearchTextBox.AddHandler(InputElement.KeyDownEvent, OnIconSearchKeyDown, RoutingStrategies.Tunnel);
     }
 
     public IEnumerable<MultiSelectOptionItem>? ItemsSource
@@ -133,7 +149,8 @@ public partial class MultiSelectDropdown : UserControl
 
         if (change.Property == IconKeysProperty || change.Property == IsIconPickerProperty)
         {
-            RefreshFilteredItems();
+            RebuildIconCategories();
+            RefreshIconTiles();
             RefreshSelectedItemsView();
         }
     }
@@ -226,13 +243,13 @@ public partial class MultiSelectDropdown : UserControl
             return;
         }
 
-        searchText = InlineSearchTextBox.Text?.Trim() ?? string.Empty;
-        if (IsIconPicker && !DropdownPopup.IsOpen &&
-            (string.Equals(searchText, SelectedIconKey ?? PlaceholderText ?? string.Empty, StringComparison.Ordinal) ||
-             (string.IsNullOrEmpty(searchText) && !string.IsNullOrWhiteSpace(SelectedIconKey))))
+        // The icon picker searches inside its popup; the collapsed field only mirrors the choice.
+        if (IsIconPicker)
         {
             return;
         }
+
+        searchText = InlineSearchTextBox.Text?.Trim() ?? string.Empty;
 
         if (InlineSearchTextBox.IsFocused && !DropdownPopup.IsOpen)
         {
@@ -244,6 +261,11 @@ public partial class MultiSelectDropdown : UserControl
 
     private void OnInlineSearchTextBoxGotFocus(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
+        if (suppressOpenOnInlineFocus)
+        {
+            return;
+        }
+
         suppressInlineTextProcessing = true;
         InlineSearchTextBox.Text = string.Empty;
         suppressInlineTextProcessing = false;
@@ -276,6 +298,22 @@ public partial class MultiSelectDropdown : UserControl
 
     private void OnInlineSearchTextBoxKeyDown(object? sender, KeyEventArgs e)
     {
+        if (IsIconPicker)
+        {
+            if (e.Key is Key.Down or Key.Space or Key.Enter)
+            {
+                if (!DropdownPopup.IsOpen)
+                {
+                    DropdownPopup.IsOpen = true;
+                }
+
+                Dispatcher.UIThread.Post(() => FocusIconSearch(), DispatcherPriority.Input);
+                e.Handled = true;
+            }
+
+            return;
+        }
+
         if (e.Key != Key.Down && e.Key != Key.Up && e.Key != Key.Space && e.Key != Key.Enter)
         {
             return;
@@ -287,8 +325,7 @@ public partial class MultiSelectDropdown : UserControl
             RefreshFilteredItems();
         }
 
-        var list = IsIconPicker ? IconItemsListBox : ItemsListBox;
-        if (list.ItemCount == 0)
+        if (ItemsListBox.ItemCount == 0)
         {
             e.Handled = true;
             return;
@@ -297,18 +334,18 @@ public partial class MultiSelectDropdown : UserControl
         if (e.Key == Key.Down || e.Key == Key.Up)
         {
             var targetIndex = e.Key == Key.Up
-                ? Math.Max(0, list.ItemCount - 1)
+                ? Math.Max(0, ItemsListBox.ItemCount - 1)
                 : 0;
-            if (list.SelectedIndex < 0)
+            if (ItemsListBox.SelectedIndex < 0)
             {
-                list.SelectedIndex = targetIndex;
+                ItemsListBox.SelectedIndex = targetIndex;
             }
             else
             {
                 MoveSelection(e.Key);
             }
 
-            Dispatcher.UIThread.Post(() => list.Focus(), DispatcherPriority.Input);
+            Dispatcher.UIThread.Post(() => ItemsListBox.Focus(), DispatcherPriority.Input);
             e.Handled = true;
             return;
         }
@@ -325,28 +362,11 @@ public partial class MultiSelectDropdown : UserControl
         }
     }
 
-    private void OnIconItemsListGotFocus(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        if (IconItemsListBox.SelectedIndex < 0 && IconItemsListBox.ItemCount > 0)
-        {
-            IconItemsListBox.SelectedIndex = 0;
-        }
-    }
-
     private void RefreshFilteredItems()
     {
         if (IsIconPicker)
         {
-            if (!DropdownPopup.IsOpen)
-            {
-                return;
-            }
-
-            var keys = IconKeys ?? [];
-            IconItemsListBox.ItemsSource = string.IsNullOrWhiteSpace(searchText)
-                ? keys
-                : keys.Where(key => key.Contains(searchText, StringComparison.OrdinalIgnoreCase)).ToArray();
-            IconItemsListBox.SelectedItem = SelectedIconKey;
+            RefreshIconTiles();
             return;
         }
 
@@ -362,6 +382,132 @@ public partial class MultiSelectDropdown : UserControl
                 filteredItems.Add(item);
             }
         }
+    }
+
+    // Issue #1214: the icon picker keeps its own search text and pack category, independent from
+    // the inline multi-select filter, and renders a wrapping tile grid instead of a checkbox list.
+    private void RefreshIconTiles()
+    {
+        if (!IsIconPicker || !DropdownPopup.IsOpen)
+        {
+            return;
+        }
+
+        var keys = IconKeys ?? [];
+        iconTilePool = (string.IsNullOrWhiteSpace(iconSearchText)
+            ? FilterIconKeysByCategory(keys)
+            : keys.Where(key => key.Contains(iconSearchText, StringComparison.OrdinalIgnoreCase)))
+            .ToArray();
+
+        iconTiles.Clear();
+        AppendIconTilePage();
+        ApplyIconTileSelection();
+    }
+
+    private void AppendIconTilePage()
+    {
+        var start = iconTiles.Count;
+        if (start >= iconTilePool.Count)
+        {
+            return;
+        }
+
+        var end = Math.Min(iconTilePool.Count, start + IconTilePageSize);
+        for (var index = start; index < end; index++)
+        {
+            iconTiles.Add(iconTilePool[index]);
+        }
+    }
+
+    private void EnsureIconTilesLoaded(int index)
+    {
+        while (index >= iconTiles.Count && iconTiles.Count < iconTilePool.Count)
+        {
+            AppendIconTilePage();
+        }
+    }
+
+    private void OnIconTilesScrollChanged(object? sender, ScrollChangedEventArgs e)
+    {
+        // Avalonia 12 reports deltas only, so read the scroller's absolute values instead.
+        if (!IsIconPicker ||
+            !DropdownPopup.IsOpen ||
+            iconTiles.Count >= iconTilePool.Count ||
+            e.Source is not ScrollViewer scroller ||
+            scroller.Viewport.Height <= 0 ||
+            scroller.Extent.Height - (scroller.Offset.Y + scroller.Viewport.Height) > IconTilePageSize)
+        {
+            return;
+        }
+
+        AppendIconTilePage();
+    }
+
+    private void ApplyIconTileSelection()
+    {
+        suppressIconSelection = true;
+        IconTilesListBox.SelectedItem = SelectedIconKey is { } selected
+            ? iconTiles.FirstOrDefault(key => string.Equals(key, selected, StringComparison.OrdinalIgnoreCase))
+            : null;
+        suppressIconSelection = false;
+    }
+
+    private IEnumerable<string> FilterIconKeysByCategory(IReadOnlyList<string> keys)
+    {
+        if (string.IsNullOrWhiteSpace(activeIconCategory) || activeIconCategory == AllCategoryLabel)
+        {
+            return keys;
+        }
+
+        return keys.Where(key => string.Equals(GetIconPackName(key), activeIconCategory,
+            StringComparison.OrdinalIgnoreCase));
+    }
+
+    private string AllCategoryLabel => LocalizationService.Current.Get(UiKeys.AllIcons);
+
+    private static string GetIconPackName(string key)
+    {
+        var separator = key.IndexOf(':');
+        return separator > 0 ? key[..separator] : key;
+    }
+
+    private void RebuildIconCategories()
+    {
+        if (!IsIconPicker)
+        {
+            return;
+        }
+
+        var packs = (IconKeys ?? [])
+            .Select(GetIconPackName)
+            .Where(static pack => !string.IsNullOrWhiteSpace(pack))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(static pack => pack, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var categories = new[] { AllCategoryLabel }.Concat(packs).ToArray();
+
+        var selected = categories.Contains(activeIconCategory, StringComparer.Ordinal)
+            ? activeIconCategory
+            : AllCategoryLabel;
+        activeIconCategory = selected;
+
+        suppressIconSelection = true;
+        IconCategoryList.ItemsSource = categories;
+        IconCategoryList.SelectedItem = selected;
+        suppressIconSelection = false;
+    }
+
+    private void OnIconCategorySelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (suppressIconSelection)
+        {
+            return;
+        }
+
+        activeIconCategory = IconCategoryList.SelectedItem is string category
+            ? category
+            : AllCategoryLabel;
+        RefreshIconTiles();
     }
 
     private void RefreshSelectedItemsView()
@@ -400,10 +546,184 @@ public partial class MultiSelectDropdown : UserControl
             !DropdownPopup.IsOpen;
     }
 
+    private void OnDropdownPopupOpened(object? sender, EventArgs e)
+    {
+        if (!IsIconPicker)
+        {
+            return;
+        }
+
+        iconSearchText = string.Empty;
+        suppressInlineTextProcessing = true;
+        IconSearchTextBox.Text = string.Empty;
+        suppressInlineTextProcessing = false;
+        RebuildIconCategories();
+        RefreshIconTiles();
+        Dispatcher.UIThread.Post(FocusIconSearch, DispatcherPriority.Input);
+    }
+
     private void OnDropdownPopupClosed(object? sender, EventArgs e)
     {
         searchText = string.Empty;
+        iconSearchText = string.Empty;
+        activeIconCategory = AllCategoryLabel;
+        iconTiles.Clear();
+        iconTilePool = [];
+        suppressInlineTextProcessing = true;
+        IconSearchTextBox.Text = string.Empty;
+        suppressInlineTextProcessing = false;
         RefreshSelectedItemsView();
+    }
+
+    private void FocusIconSearch()
+    {
+        if (DropdownPopup.IsOpen)
+        {
+            IconSearchTextBox.Focus();
+        }
+    }
+
+    private void OnIconSearchTextChanged(object? sender, TextChangedEventArgs e)
+    {
+        iconSearchText = IconSearchTextBox.Text?.Trim() ?? string.Empty;
+        RefreshIconTiles();
+    }
+
+    private void FocusSelectedIconTile()
+    {
+        if (!DropdownPopup.IsOpen)
+        {
+            return;
+        }
+
+        if (IconTilesListBox.SelectedIndex >= 0 &&
+            IconTilesListBox.ContainerFromIndex(IconTilesListBox.SelectedIndex) is { } tile)
+        {
+            tile.Focus();
+            return;
+        }
+
+        IconTilesListBox.Focus();
+    }
+
+    private void OnIconSearchKeyDown(object? sender, KeyEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case Key.Escape:
+                CloseIconPicker();
+                e.Handled = true;
+                break;
+            case Key.Down when IconTilesListBox.ItemCount > 0:
+                if (IconTilesListBox.SelectedIndex < 0)
+                {
+                    IconTilesListBox.SelectedIndex = 0;
+                }
+
+                Dispatcher.UIThread.Post(FocusSelectedIconTile, DispatcherPriority.Input);
+                e.Handled = true;
+                break;
+            case Key.Enter when IconTilesListBox.SelectedItem is string key:
+                SelectIcon(key);
+                e.Handled = true;
+                break;
+        }
+    }
+
+    private void OnIconTilesKeyDown(object? sender, KeyEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case Key.Escape:
+                CloseIconPicker();
+                e.Handled = true;
+                return;
+            case Key.Left:
+            case Key.Right:
+            case Key.Up:
+            case Key.Down:
+                MoveIconTileSelection(e.Key);
+                e.Handled = true;
+                return;
+            case Key.Space:
+            case Key.Enter:
+                if (IconTilesListBox.SelectedItem is string key)
+                {
+                    SelectIcon(key);
+                }
+
+                e.Handled = true;
+                return;
+        }
+    }
+
+    private void MoveIconTileSelection(Key key)
+    {
+        var count = iconTilePool.Count;
+        if (count == 0)
+        {
+            return;
+        }
+
+        var current = IconTilesListBox.SelectedIndex < 0 ? 0 : IconTilesListBox.SelectedIndex;
+        var columns = GetIconTileColumnCount();
+        var next = key switch
+        {
+            Key.Left => Math.Max(0, current - 1),
+            Key.Right => Math.Min(count - 1, current + 1),
+            Key.Up => Math.Max(0, current - columns),
+            Key.Down => Math.Min(count - 1, current + columns),
+            _ => current
+        };
+
+        EnsureIconTilesLoaded(next);
+        IconTilesListBox.SelectedIndex = Math.Min(next, iconTiles.Count - 1);
+        if (IconTilesListBox.SelectedItem is string selected)
+        {
+            IconTilesListBox.ScrollIntoView(selected);
+        }
+    }
+
+    private int GetIconTileColumnCount()
+    {
+        if (IconTilesListBox.GetVisualDescendants().OfType<WrapPanel>().FirstOrDefault() is not { } panel ||
+            panel.GetVisualDescendants().OfType<ListBoxItem>().FirstOrDefault() is not { } firstTile)
+        {
+            return 1;
+        }
+
+        var spacing = panel.ItemSpacing;
+        var cellWidth = firstTile.Bounds.Width + spacing;
+        return cellWidth > 0
+            ? Math.Max(1, (int)((panel.Bounds.Width + spacing) / cellWidth))
+            : 1;
+    }
+
+    private void OnIconPickerCloseClick(object? sender, RoutedEventArgs e)
+    {
+        CloseIconPicker();
+    }
+
+    private void CloseIconPicker()
+    {
+        DropdownPopup.IsOpen = false;
+        iconSearchText = string.Empty;
+        activeIconCategory = AllCategoryLabel;
+        RefreshSelectedItemsView();
+        FocusInlineField();
+    }
+
+    private void FocusInlineField()
+    {
+        suppressOpenOnInlineFocus = true;
+        try
+        {
+            InlineSearchTextBox.Focus();
+        }
+        finally
+        {
+            suppressOpenOnInlineFocus = false;
+        }
     }
 
     private void OnItemsListPointerPressed(object? sender, PointerPressedEventArgs e)
@@ -449,7 +769,7 @@ public partial class MultiSelectDropdown : UserControl
         e.Handled = true;
     }
 
-    private void OnIconItemsListPointerPressed(object? sender, PointerPressedEventArgs e)
+    private void OnIconTilesPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         var element = e.Source as Control;
         while (element is not null && element is not ListBoxItem)
@@ -467,9 +787,7 @@ public partial class MultiSelectDropdown : UserControl
     private void SelectIcon(string key)
     {
         SetCurrentValue(SelectedIconKeyProperty, key);
-        DropdownPopup.IsOpen = false;
-        searchText = string.Empty;
-        RefreshSelectedItemsView();
+        CloseIconPicker();
     }
 
     private void OnItemsListSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -517,42 +835,31 @@ public partial class MultiSelectDropdown : UserControl
 
     private void MoveSelection(Key directionKey)
     {
-        var list = IsIconPicker ? IconItemsListBox : ItemsListBox;
-        if (list.ItemCount == 0)
+        if (ItemsListBox.ItemCount == 0)
         {
             return;
         }
 
-        var current = list.SelectedIndex;
+        var current = ItemsListBox.SelectedIndex;
         if (current < 0)
         {
-            current = directionKey == Key.Up ? list.ItemCount : -1;
+            current = directionKey == Key.Up ? ItemsListBox.ItemCount : -1;
         }
 
         var next = directionKey == Key.Down
-            ? Math.Min(list.ItemCount - 1, current + 1)
+            ? Math.Min(ItemsListBox.ItemCount - 1, current + 1)
             : Math.Max(0, current - 1);
 
-        list.SelectedIndex = next;
-        var selectedItem = list.SelectedItem;
+        ItemsListBox.SelectedIndex = next;
+        var selectedItem = ItemsListBox.SelectedItem;
         if (selectedItem is not null)
         {
-            list.ScrollIntoView(selectedItem);
+            ItemsListBox.ScrollIntoView(selectedItem);
         }
     }
 
     private void ToggleCurrentItemFromKeyboard()
     {
-        if (IsIconPicker)
-        {
-            if (IconItemsListBox.SelectedItem is string key)
-            {
-                SelectIcon(key);
-            }
-
-            return;
-        }
-
         if (ItemsListBox.SelectedItem is not MultiSelectOptionItem item)
         {
             return;

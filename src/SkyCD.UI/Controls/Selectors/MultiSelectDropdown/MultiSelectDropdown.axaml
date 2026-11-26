@@ -1,11 +1,30 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:i18n="clr-namespace:SkyCD.UI.Localization"
+             xmlns:search="clr-namespace:SkyCD.UI.Controls.SearchTextBox"
+             xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
+             xmlns:lucide="using:IconPacks.Avalonia.Lucide"
              x:Class="SkyCD.UI.Controls.Selectors.MultiSelectDropdown.MultiSelectDropdown"
              x:Name="Root">
+    <UserControl.Styles>
+        <!-- The icon picker header close affordance: a flat glyph button, no chrome until hover. -->
+        <Style Selector="Button.icon-close">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="{DynamicResource SkyControlPaddingTight}" />
+            <Setter Property="CornerRadius" Value="{DynamicResource SkyCornerRadius}" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.icon-close:pointerover">
+            <Setter Property="Background" Value="{DynamicResource ThemeControlMidBrush}" />
+        </Style>
+    </UserControl.Styles>
+
     <Grid RowDefinitions="Auto">
-        <Border BorderBrush="#3F3F46"
+        <Border BorderBrush="{DynamicResource ThemeBorderMidBrush}"
                 BorderThickness="1"
-                CornerRadius="4"
+                CornerRadius="{DynamicResource SkyCornerRadius}"
                 Padding="{DynamicResource SkyRowPadding}"
                 Height="32">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
@@ -28,7 +47,7 @@
                 <TextBlock Grid.Column="1"
                            VerticalAlignment="Center"
                            Text="▾"
-                           Foreground="#9CA3AF"
+                           Foreground="{DynamicResource ThemeForegroundLowBrush}"
                            PointerPressed="OnChevronPointerPressed" />
             </Grid>
         </Border>
@@ -39,11 +58,12 @@
                IsOpen="False"
                IsLightDismissEnabled="True"
                Closed="OnDropdownPopupClosed"
+               Opened="OnDropdownPopupOpened"
                Topmost="False">
             <Border Background="{DynamicResource ThemeBackgroundBrush}"
                     BorderBrush="{DynamicResource ThemeBorderMidBrush}"
                     BorderThickness="1"
-                    CornerRadius="4"
+                    CornerRadius="{DynamicResource SkyCornerRadius}"
                     MinWidth="{Binding Bounds.Width, ElementName=Root}"
                     Padding="{DynamicResource SkyInsetSm}">
                 <Grid>
@@ -96,52 +116,153 @@
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
-                    <ListBox x:Name="IconItemsListBox"
-                             IsVisible="{Binding IsIconPicker, ElementName=Root}"
-                             MaxHeight="220"
-                             Background="Transparent"
-                             BorderThickness="0"
-                             Padding="0"
-                             SelectionMode="Single"
-                             GotFocus="OnIconItemsListGotFocus"
-                             KeyDown="OnItemsListKeyDown">
-                        <ListBox.Styles>
-                            <Style Selector="ListBoxItem">
-                                <Setter Property="Padding" Value="0" />
-                                <Setter Property="AutomationProperties.Name" Value="{Binding}" />
-                            </Style>
-                            <Style Selector="ListBoxItem:selected">
-                                <Setter Property="Background" Value="{DynamicResource ThemeBorderHighBrush}" />
-                            </Style>
-                        </ListBox.Styles>
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <Border Padding="{DynamicResource SkyControlPadding}"
-                                        CornerRadius="2">
-                                    <Border.Styles>
-                                        <Style Selector="Border:pointerover">
-                                            <Setter Property="Background" Value="{DynamicResource ThemeBorderHighBrush}" />
-                                        </Style>
-                                    </Border.Styles>
-                                    <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                                        <CheckBox IsChecked="{Binding $parent[ListBoxItem].IsSelected, Mode=OneWay}"
-                                                  IsHitTestVisible="False"
-                                                  VerticalAlignment="Center" />
-                                        <ContentControl Grid.Column="1"
-                                                        IsVisible="{Binding ItemPreviewTemplate, ElementName=Root, Converter={x:Static ObjectConverters.IsNotNull}}"
+
+                    <!--
+                        Issue #1214: the status icon picker imitates the Windows emoji panel — a header
+                        with a close button, its own search field, a pack category strip and a wrapping
+                        tile grid with no checkboxes. Only the type multi-select keeps the list above.
+                    -->
+                    <Grid x:Name="IconPickerPanel"
+                          IsVisible="{Binding IsIconPicker, ElementName=Root}"
+                          Width="{DynamicResource SkyIconPickerWidth}"
+                          RowDefinitions="Auto,Auto,Auto,*"
+                          RowSpacing="{DynamicResource SkySpaceSm}">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectIcon}}"
+                                       FontSize="{DynamicResource SkyFontSecondary}"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource ThemeForegroundBrush}"
+                                       VerticalAlignment="Center" />
+                            <Button Grid.Column="1"
+                                    x:Name="IconPickerCloseButton"
+                                    Classes="icon-close"
+                                    AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.Close}}"
+                                    Click="OnIconPickerCloseClick">
+                                <iconPacks:PackIconControl Kind="{x:Static lucide:PackIconLucideKind.X}"
+                                                           Width="{DynamicResource SkyIconSize}"
+                                                           Height="{DynamicResource SkyIconSize}"
+                                                           Foreground="{DynamicResource ThemeForegroundBrush}" />
+                            </Button>
+                        </Grid>
+
+                        <search:SearchTextBox Grid.Row="1"
+                                              x:Name="IconSearchTextBox"
+                                              PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.SearchIcons}}"
+                                              TextChanged="OnIconSearchTextChanged" />
+
+                        <ListBox Grid.Row="2"
+                                 x:Name="IconCategoryList"
+                                 SelectionMode="Single"
+                                 Background="Transparent"
+                                 BorderThickness="0"
+                                 Padding="0"
+                                 SelectionChanged="OnIconCategorySelectionChanged"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                 ScrollViewer.VerticalScrollBarVisibility="Disabled">
+                            <ListBox.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal"
+                                                Spacing="{DynamicResource SkySpaceMd}" />
+                                </ItemsPanelTemplate>
+                            </ListBox.ItemsPanel>
+                            <ListBox.Styles>
+                                <Style Selector="ListBoxItem">
+                                    <Setter Property="Padding" Value="0" />
+                                    <Setter Property="MinHeight" Value="0" />
+                                    <Setter Property="Background" Value="Transparent" />
+                                    <Setter Property="AutomationProperties.Name" Value="{Binding}" />
+                                </Style>
+                                <Style Selector="ListBoxItem:pointerover">
+                                    <Setter Property="Background" Value="Transparent" />
+                                </Style>
+                                <Style Selector="ListBoxItem:selected">
+                                    <Setter Property="Background" Value="Transparent" />
+                                </Style>
+                                <Style Selector="ListBoxItem:selected Border.icon-category">
+                                    <Setter Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}" />
+                                </Style>
+                                <Style Selector="ListBoxItem:selected Border.icon-category TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource ThemeForegroundBrush}" />
+                                </Style>
+                                <Style Selector="Border.icon-category:pointerover">
+                                    <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderHighBrush}" />
+                                </Style>
+                            </ListBox.Styles>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Classes="icon-category"
+                                            BorderThickness="0,0,0,2"
+                                            BorderBrush="Transparent"
+                                            Padding="{DynamicResource SkyIconCategoryPadding}">
+                                        <TextBlock Text="{Binding}"
+                                                   FontSize="{DynamicResource SkyFontSecondary}"
+                                                   Foreground="{DynamicResource ThemeForegroundLowBrush}" />
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+
+                        <ListBox Grid.Row="3"
+                                 x:Name="IconTilesListBox"
+                                 SelectionMode="Single"
+                                 Background="Transparent"
+                                 BorderThickness="0"
+                                 Padding="0"
+                                 MaxHeight="{DynamicResource SkyIconGridMaxHeight}"
+                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <ListBox.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel Orientation="Horizontal"
+                                               ItemSpacing="{DynamicResource SkySpaceXxs}"
+                                               LineSpacing="{DynamicResource SkySpaceXxs}" />
+                                </ItemsPanelTemplate>
+                            </ListBox.ItemsPanel>
+                            <ListBox.Styles>
+                                <Style Selector="ListBoxItem">
+                                    <Setter Property="Padding" Value="0" />
+                                    <Setter Property="MinHeight" Value="0" />
+                                    <Setter Property="Background" Value="Transparent" />
+                                    <Setter Property="AutomationProperties.Name" Value="{Binding}" />
+                                </Style>
+                                <Style Selector="ListBoxItem:pointerover">
+                                    <Setter Property="Background" Value="Transparent" />
+                                </Style>
+                                <Style Selector="ListBoxItem:selected">
+                                    <Setter Property="Background" Value="Transparent" />
+                                </Style>
+                                <Style Selector="ListBoxItem:selected Border.icon-tile">
+                                    <Setter Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}" />
+                                    <Setter Property="Background" Value="{DynamicResource ThemeControlMidBrush}" />
+                                </Style>
+                                <Style Selector="Border.icon-tile:pointerover">
+                                    <Setter Property="Background" Value="{DynamicResource ThemeControlMidBrush}" />
+                                </Style>
+                            </ListBox.Styles>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Classes="icon-tile"
+                                            Width="{DynamicResource SkyIconTileSize}"
+                                            Height="{DynamicResource SkyIconTileSize}"
+                                            CornerRadius="{DynamicResource SkyCornerRadius}"
+                                            BorderThickness="1"
+                                            BorderBrush="Transparent"
+                                            Background="Transparent"
+                                            ToolTip.Tip="{Binding}"
+                                            AutomationProperties.Name="{Binding}">
+                                        <ContentControl Width="{DynamicResource SkyIconSize}"
+                                                        Height="{DynamicResource SkyIconSize}"
+                                                        HorizontalAlignment="Center"
                                                         VerticalAlignment="Center"
+                                                        HorizontalContentAlignment="Stretch"
+                                                        VerticalContentAlignment="Stretch"
                                                         ContentTemplate="{Binding ItemPreviewTemplate, ElementName=Root}"
                                                         Content="{Binding}" />
-                                        <TextBlock Grid.Column="2"
-                                                   IsVisible="{Binding ShowItemLabels, ElementName=Root}"
-                                                   VerticalAlignment="Center"
-                                                   Foreground="{DynamicResource ThemeForegroundBrush}"
-                                                   Text="{Binding}" />
-                                    </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Grid>
                 </Grid>
             </Border>
         </Popup>

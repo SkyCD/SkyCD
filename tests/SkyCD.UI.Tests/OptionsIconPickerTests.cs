@@ -37,28 +37,35 @@ public class OptionsIconPickerTests
         {
             var picker = window.GetVisualDescendants().OfType<MultiSelectDropdown>()
                 .First(control => control.IsIconPicker);
-            var search = picker.FindControl<TextBox>("InlineSearchTextBox")!;
-            var list = picker.FindControl<ListBox>("IconItemsListBox")!;
+            var inline = picker.FindControl<TextBox>("InlineSearchTextBox")!;
+            var search = picker.FindControl<TextBox>("IconSearchTextBox")!;
+            var tiles = picker.FindControl<ListBox>("IconTilesListBox")!;
+            var categories = picker.FindControl<ListBox>("IconCategoryList")!;
             var popup = picker.FindControl<Popup>("DropdownPopup")!;
 
-            Assert.Equal(string.Empty, search.Text);
+            Assert.Equal(string.Empty, inline.Text);
             var preview = picker.FindControl<ContentControl>("SelectedIconPreview")!;
             Assert.True(preview.IsVisible);
             Assert.Equal("Lucide:Check", preview.Content);
-            Assert.Null(list.ItemsSource);
-            Assert.True(search.Focus());
+            Assert.Empty(tiles.Items);
+
+            Assert.True(inline.Focus());
             Dispatcher.UIThread.RunJobs();
             Assert.True(popup.IsOpen);
+            Assert.True(search.IsFocused);
+            Assert.NotNull(tiles.ItemsSource);
+            Assert.Contains("All", categories.Items.Cast<string>());
+            Assert.Contains("Lucide", categories.Items.Cast<string>());
 
             search.Text = "lucide:star";
             Dispatcher.UIThread.RunJobs();
-            Assert.Contains("Lucide:Star", list.Items.Cast<string>());
-            Assert.All(list.Items.Cast<string>(),
+            Assert.Contains("Lucide:Star", tiles.Items.Cast<string>());
+            Assert.All(tiles.Items.Cast<string>(),
                 key => Assert.Contains("lucide:star", key, System.StringComparison.OrdinalIgnoreCase));
 
-            list.SelectedItem = "Lucide:Star";
-            Assert.Equal("Lucide:Star", list.SelectedItem);
-            list.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Enter });
+            tiles.SelectedItem = "Lucide:Star";
+            Assert.Equal("Lucide:Star", tiles.SelectedItem);
+            tiles.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Enter });
             Dispatcher.UIThread.RunJobs();
 
             Assert.Equal("Lucide:Star", viewModel.StatusVariants[0].IconGlyph);
@@ -67,6 +74,154 @@ public class OptionsIconPickerTests
             Assert.Equal("Lucide:Check", original[0].IconGlyph);
             Assert.Equal("Lucide:Star", viewModel.GetStatusVariants()[0].IconGlyph);
             Assert.Equal("missing:icon", viewModel.GetStatusVariants()[1].IconGlyph);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public void StatusIconPicker_RendersWrappingGridWithoutCheckBoxesAndWithSearchAndCategories()
+    {
+        var picker = CreateIconPicker("Lucide:Star", "Lucide:Star", "Lucide:Heart", "Material:Star");
+        var window = new Window { Width = 400, Height = 400, Content = picker };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        try
+        {
+            OpenPopup(picker);
+            var tiles = picker.FindControl<ListBox>("IconTilesListBox")!;
+            var categories = picker.FindControl<ListBox>("IconCategoryList")!;
+            tiles.UpdateLayout();
+
+            Assert.NotNull(tiles.GetVisualDescendants().OfType<WrapPanel>().FirstOrDefault());
+            Assert.Empty(tiles.GetVisualDescendants().OfType<CheckBox>());
+            Assert.NotNull(picker.FindControl<TextBox>("IconSearchTextBox"));
+            Assert.Equal(new[] { "All", "Lucide", "Material" }, categories.Items.Cast<string>());
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public void StatusIconPicker_PagesLargeCatalogAndLoadsMoreOnKeyboardNavigation()
+    {
+        var keys = Enumerable.Range(1, 300).Select(index => $"Pack:Icon{index:0000}").ToArray();
+        var picker = CreateIconPicker("Pack:Icon0001", keys);
+        var window = new Window { Width = 480, Height = 600, Content = picker };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        try
+        {
+            OpenPopup(picker);
+            var tiles = picker.FindControl<ListBox>("IconTilesListBox")!;
+            Assert.Equal(120, tiles.Items.Count);
+
+            tiles.SelectedIndex = 119;
+            tiles.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Right });
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal(240, tiles.Items.Count);
+            Assert.Equal(120, tiles.SelectedIndex);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public void StatusIconPicker_ClearingSearchRestoresTheActiveCategory()
+    {
+        var picker = CreateIconPicker("Lucide:Star", "Lucide:Star", "Lucide:Heart", "Material:Star");
+        var window = new Window { Width = 400, Height = 400, Content = picker };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        try
+        {
+            OpenPopup(picker);
+            var search = picker.FindControl<TextBox>("IconSearchTextBox")!;
+            var tiles = picker.FindControl<ListBox>("IconTilesListBox")!;
+            var categories = picker.FindControl<ListBox>("IconCategoryList")!;
+
+            categories.SelectedItem = "Lucide";
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(new[] { "Lucide:Star", "Lucide:Heart" }, tiles.Items.Cast<string>());
+
+            search.Text = "material";
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(new[] { "Material:Star" }, tiles.Items.Cast<string>());
+
+            search.Text = string.Empty;
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(new[] { "Lucide:Star", "Lucide:Heart" }, tiles.Items.Cast<string>());
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public void StatusIconPicker_HighlightsTheCurrentIconAndNavigatesByKeyboard()
+    {
+        var picker = CreateIconPicker("Lucide:Star", "Lucide:Star", "Lucide:Heart", "Material:Star");
+        var window = new Window { Width = 400, Height = 400, Content = picker };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        try
+        {
+            OpenPopup(picker);
+            var search = picker.FindControl<TextBox>("IconSearchTextBox")!;
+            var tiles = picker.FindControl<ListBox>("IconTilesListBox")!;
+            var popup = picker.FindControl<Popup>("DropdownPopup")!;
+
+            Assert.Equal("Lucide:Star", tiles.SelectedItem);
+
+            search.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Down });
+            Dispatcher.UIThread.RunJobs();
+            var focusedTile = Assert.IsType<ListBoxItem>(tiles.ContainerFromIndex(tiles.SelectedIndex));
+            Assert.True(focusedTile.IsFocused);
+
+            tiles.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Right });
+            Assert.Equal(1, tiles.SelectedIndex);
+
+            tiles.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Enter });
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal("Lucide:Heart", picker.SelectedIconKey);
+            Assert.False(popup.IsOpen);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public void StatusIconPicker_EscapeClosesThePopup()
+    {
+        var picker = CreateIconPicker("Lucide:Star", "Lucide:Star", "Lucide:Heart");
+        var window = new Window { Width = 400, Height = 400, Content = picker };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        try
+        {
+            OpenPopup(picker);
+            var search = picker.FindControl<TextBox>("IconSearchTextBox")!;
+            var popup = picker.FindControl<Popup>("DropdownPopup")!;
+
+            search.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Escape });
+            Dispatcher.UIThread.RunJobs();
+            Assert.False(popup.IsOpen);
+            Assert.Equal("Lucide:Star", picker.SelectedIconKey);
         }
         finally
         {
@@ -98,12 +253,12 @@ public class OptionsIconPickerTests
             Dispatcher.UIThread.RunJobs();
             Assert.NotNull(pointer);
 
-            var search = picker.FindControl<TextBox>("InlineSearchTextBox")!;
-            var list = picker.FindControl<ListBox>("IconItemsListBox")!;
-            Assert.True(search.Focus());
+            var inline = picker.FindControl<TextBox>("InlineSearchTextBox")!;
+            var tiles = picker.FindControl<ListBox>("IconTilesListBox")!;
+            Assert.True(inline.Focus());
             Dispatcher.UIThread.RunJobs();
 
-            var item = Assert.IsType<ListBoxItem>(list.ContainerFromItem("second"));
+            var item = Assert.IsType<ListBoxItem>(tiles.ContainerFromItem("second"));
             var topLevel = TopLevel.GetTopLevel(item)!;
             var point = item.TranslatePoint(new Point(item.Bounds.Width / 2, item.Bounds.Height / 2), topLevel)!.Value;
             var properties = new PointerPointProperties(RawInputModifiers.LeftMouseButton, PointerUpdateKind.LeftButtonPressed);
@@ -150,5 +305,21 @@ public class OptionsIconPickerTests
         {
             window.Close();
         }
+    }
+
+    private static MultiSelectDropdown CreateIconPicker(string? selectedIconKey, params string[] keys) => new()
+    {
+        IsIconPicker = true,
+        IconKeys = keys,
+        SelectedIconKey = selectedIconKey,
+        PlaceholderText = "Select icon"
+    };
+
+    private static void OpenPopup(MultiSelectDropdown picker)
+    {
+        var inline = picker.FindControl<TextBox>("InlineSearchTextBox")!;
+        Assert.True(inline.Focus());
+        Dispatcher.UIThread.RunJobs();
+        Assert.True(picker.FindControl<Popup>("DropdownPopup")!.IsOpen);
     }
 }
