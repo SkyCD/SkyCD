@@ -128,7 +128,7 @@ internal static class TemplateFunctions
         if (double.IsNaN(bytes) || double.IsInfinity(bytes) || bytes < 0) return string.Empty;
 
         var whole = bytes >= (double)long.MaxValue ? long.MaxValue : (long)bytes;
-        return SizeFormatting.FormatBytes(whole, "0.#", formatProvider: CultureInfo.InvariantCulture);
+        return SizeFormatting.FormatBytesInvariant(whole);
     }
 
     public static string Date(object? value, object? format)
