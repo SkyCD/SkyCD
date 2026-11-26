@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Text.RegularExpressions;
 using Humanizer;
 
@@ -20,6 +21,14 @@ public static class SizeFormatting
             ? text.Replace(" ", string.Empty, StringComparison.Ordinal)
             : text;
     }
+
+    /// <summary>
+    /// The one GenDesc byte-size format (issue #1231): one fractional digit at most, invariant
+    /// culture, negatives clamped to zero. Callers with their own input policy (like template
+    /// <c>Filesize</c>, which returns empty for NaN/Infinity/negative) validate first.
+    /// </summary>
+    public static string FormatBytesInvariant(long bytes, string format = "0.#") =>
+        FormatBytes(Math.Max(0, bytes), format, formatProvider: CultureInfo.InvariantCulture);
 
     public static string FormatBytes(ulong bytes, string format = "0.##", bool removeSpace = false,
         IFormatProvider? formatProvider = null)

@@ -84,14 +84,11 @@ public static class GenDescRenderer
             ["Extension"] = extension,
             ["MimeType"] = GenDescCategory.MimeFromExtension(extension),
             ["SizeBytes"] = file.Length.ToString(CultureInfo.InvariantCulture),
-            ["Size"] = FormatSize(file.Length),
+            ["Size"] = SizeFormatting.FormatBytesInvariant(file.Length),
             ["Path"] = file.FullName,
             ["Directory"] = file.DirectoryName ?? string.Empty,
             ["LastWriteTime"] = file.LastWriteTimeUtc.ToString("O", CultureInfo.InvariantCulture)
         };
         return new GenDescEntryContext(file.Name, extension, facts["MimeType"], facts);
     }
-
-    private static string FormatSize(long bytes) =>
-        SizeFormatting.FormatBytes(Math.Max(0, bytes), "0.#", formatProvider: CultureInfo.InvariantCulture);
 }

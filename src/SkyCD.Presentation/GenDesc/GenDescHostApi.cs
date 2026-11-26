@@ -81,7 +81,7 @@ public sealed class GenDescHostApi(OpenCatalogState catalogState) : IGenDescHost
         AddFact(facts, "Extension", extension.Length == 0 ? string.Empty : extension.ToLowerInvariant());
         AddFact(facts, "MimeType", FileMimeTypeResolver.Resolve(entry));
         AddFact(facts, "SizeBytes", entry.Size.ToString(CultureInfo.InvariantCulture));
-        AddFact(facts, "Size", FormatSize(entry.Size));
+        AddFact(facts, "Size", SizeFormatting.FormatBytesInvariant(entry.Size));
         if (entry.Properties.TryGetValue(SourcePathKey, out var path) && path?.ToString() is { Length: > 0 } fullName)
         {
             AddFact(facts, "Path", fullName);
@@ -168,6 +168,4 @@ public sealed class GenDescHostApi(OpenCatalogState catalogState) : IGenDescHost
         _ => payload.ToString()
     };
 
-    private static string FormatSize(long bytes) =>
-        SizeFormatting.FormatBytes(Math.Max(0, bytes), "0.#", formatProvider: CultureInfo.InvariantCulture);
 }
