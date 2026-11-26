@@ -305,7 +305,8 @@ public sealed class AddingProgressWindowLayoutTests
                 $"the error log did not fill the remaining height ({logViewer.Bounds.Height} px).");
             Assert.True(BottomRelativeTo(logViewer, root) <= TopRelativeTo(cancel, root),
                 "the error log overlaps the footer.");
-            Assert.Equal(ScrollBarVisibility.Auto, logViewer.HorizontalScrollBarVisibility);
+            // Issue #1203: messages wrap, so the log no longer scrolls horizontally.
+            Assert.Equal(ScrollBarVisibility.Disabled, logViewer.HorizontalScrollBarVisibility);
         }
         finally
         {
