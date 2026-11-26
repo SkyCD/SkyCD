@@ -1,6 +1,7 @@
 using System.Linq;
 using Avalonia.Automation;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Templates;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
@@ -149,6 +150,47 @@ public sealed class MultiSelectDropdownTests
         finally
         {
             window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public void CollapsedFieldExposesNoVisibleScrollBar()
+    {
+        var star = new MultiSelectOptionItem { Label = "Star" };
+        var dropdowns = new[]
+        {
+            CreateIconPicker("Lucide:Star"),
+            new MultiSelectDropdown
+            {
+                IsSingleSelect = false,
+                ItemsSource = [star],
+                PlaceholderText = "Select item types"
+            }
+        };
+
+        foreach (var dropdown in dropdowns)
+        {
+            var window = new Window { Width = 400, Height = 400, Content = dropdown };
+            window.Show();
+
+            try
+            {
+                Dispatcher.UIThread.RunJobs();
+                var search = dropdown.FindControl<TextBox>("InlineSearchTextBox")!;
+                var popup = dropdown.FindControl<Popup>("DropdownPopup")!;
+                search.UpdateLayout();
+
+                Assert.False(popup.IsOpen);
+                Assert.Equal(ScrollBarVisibility.Disabled, ScrollViewer.GetHorizontalScrollBarVisibility(search));
+                Assert.Equal(ScrollBarVisibility.Disabled, ScrollViewer.GetVerticalScrollBarVisibility(search));
+                Assert.DoesNotContain(
+                    search.GetVisualDescendants().OfType<ScrollBar>(),
+                    static bar => bar.IsVisible);
+            }
+            finally
+            {
+                window.Close();
+            }
         }
     }
 

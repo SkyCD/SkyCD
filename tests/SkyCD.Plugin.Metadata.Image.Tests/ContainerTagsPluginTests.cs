@@ -79,7 +79,7 @@ public sealed class ContainerTagsPluginTests
         var data = MetadataFixtures.Tiff(littleEndian: true,
             MetadataFixtures.Raw(0x02BC, packet));
 
-        var values = (await ExtractAsync(data, ".dng")).Values;
+        var values = (await ExtractAsync(data, ".tif")).Values;
 
         Assert.Equal("raw; edited", Text(values, ImageSchema.Tags));
         Assert.Equal("Developed in-camera", Text(values, ImageSchema.Comment));
@@ -106,7 +106,7 @@ public sealed class ContainerTagsPluginTests
         var packet = Encoding.UTF8.GetBytes(MetadataFixtures.Xmp(microsoftRating: 80));
         var data = MetadataFixtures.Tiff(littleEndian: true, MetadataFixtures.Raw(0x02BC, packet));
 
-        var values = (await ExtractAsync(data, ".arw")).Values;
+        var values = (await ExtractAsync(data, ".tif")).Values;
 
         Assert.Equal(4L, Integer(values, ImageSchema.Rating));
     }
@@ -197,11 +197,11 @@ public sealed class ContainerTagsPluginTests
     }
 
     [Fact]
-    public void Descriptor_ClaimsTiffContainersAndTheRawFormats()
+    public void Descriptor_ClaimsOnlyTiffExtensions()
     {
         var descriptor = new ContainerTagsPlugin().Descriptor;
 
-        Assert.Equal([".tif", ".tiff", ".dng", ".cr2", ".nef", ".arw"], descriptor.Extensions);
+        Assert.Equal([".tif", ".tiff"], descriptor.Extensions);
         Assert.Equal(["image/tiff"], descriptor.ContentTypes);
         Assert.DoesNotContain(".jpg", descriptor.Extensions);
         Assert.DoesNotContain(".png", descriptor.Extensions);

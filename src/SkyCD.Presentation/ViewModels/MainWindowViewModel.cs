@@ -151,6 +151,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public event EventHandler? SaveCatalogAsRequested;
     public event EventHandler? SaveCatalogRequested;
     public event EventHandler? SplitCatalogRequested;
+    public event EventHandler? ExportCatalogRequested;
     public event EventHandler? AboutRequested;
     public event EventHandler? FindCatalogRequested;
     public event EventHandler<AdvancedFindDialogRequestedEventArgs>? AdvancedFindRequested;
@@ -1239,6 +1240,20 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         IsSaveAsEnabled = hasWritable;
     }
 
+    /// <summary>
+    /// Whether at least one write-only export format is loaded. Defaults to enabled so the command
+    /// stays usable before the host reports exporter availability.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ExportCatalogCommand))]
+    private bool isExportEnabled = true;
+
+    /// <summary>Applies the exporter availability the host currently reports.</summary>
+    public void SetExportAvailability(bool hasExportable)
+    {
+        IsExportEnabled = hasExportable;
+    }
+
     public bool IsDeleteEnabled => CanDeleteItem(null);
 
     [ObservableProperty]
@@ -1867,6 +1882,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     [RelayCommand(CanExecute = nameof(IsSaveAsEnabled))]
     private void SplitCatalog() => SplitCatalogRequested?.Invoke(this, EventArgs.Empty);
+
+    [RelayCommand(CanExecute = nameof(IsExportEnabled))]
+    private void ExportCatalog() => ExportCatalogRequested?.Invoke(this, EventArgs.Empty);
 
     [RelayCommand(CanExecute = nameof(IsPropertiesEnabled))]
     private void OpenProperties() => ShowProperties(null);
@@ -4638,6 +4656,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         RefreshTopMenuState();
     }
 
+    partial void OnIsExportEnabledChanged(bool value)
+    {
+        RefreshTopMenuState();
+    }
+
     partial void OnProgressValueChanged(int value)
     {
         OnPropertyChanged(nameof(ProgressText));
@@ -4694,6 +4717,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                         InputGesture = "F12",
                         Command = SaveCatalogAsCommand,
                         IsEnabled = IsSaveAsEnabled
+                    },
+                    new MainMenuItemViewModel
+                    {
+                        Key = "file_export",
+                        Header = LocalizationService.Current.Get(TextKeys.ExportFileMenu),
+                        Command = ExportCatalogCommand,
+                        IsEnabled = IsExportEnabled
                     },
                     new MainMenuItemViewModel
                     {
@@ -5015,6 +5045,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         SetMenuEnabled(byKey, "edit_status", IsDeleteEnabled);
         SetMenuEnabled(byKey, "file_open", IsOpenEnabled);
         SetMenuEnabled(byKey, "file_save_as", IsSaveAsEnabled);
+        SetMenuEnabled(byKey, "file_export", IsExportEnabled);
         SetMenuEnabled(byKey, "file_split", IsSaveAsEnabled);
         var localFileCommands = menuExtensionManager.GetMenuContributions("File")
             .Where(contribution => contribution.RequiresLocalFile)

@@ -29,7 +29,7 @@ internal static class OpenOfficeThumbnailReader
         ArgumentNullException.ThrowIfNull(data);
         ArgumentNullException.ThrowIfNull(options);
 
-        using var package = OpenOfficePackage.Open(data);
+        using var package = OpenOfficePackage.Open(data, options);
         if (package.DeclaresEncryption(options.MaxPreviewBytes))
         {
             return null;

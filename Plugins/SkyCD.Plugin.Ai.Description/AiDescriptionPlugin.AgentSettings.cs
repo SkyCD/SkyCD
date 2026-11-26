@@ -15,43 +15,85 @@ namespace SkyCD.Plugin.Ai.Description;
 
 public sealed partial class AiDescriptionPlugin
 {
-    private static readonly HttpClient RegistryClient = new() { Timeout = TimeSpan.FromSeconds(20) };
+    private static readonly HttpClient RegistryDownloads = new() { Timeout = TimeSpan.FromSeconds(20) };
+    private readonly HttpClient registryClient;
 
     public async Task RefreshRegistryAsync(CancellationToken cancellationToken)
     {
         var directory = Path.GetDirectoryName(Path.GetFullPath(configurationPath))!;
         Directory.CreateDirectory(directory);
-        var temporaryPath = Path.Combine(directory, Guid.NewGuid().ToString("N") + ".tmp");
+        var downloadFolder = Path.Combine(Path.GetTempPath(), "skycd-acp-registry-" + Guid.NewGuid().ToString("N"));
+        var temporaryPath = Path.Combine(downloadFolder, AcpAgentRegistry.FileName);
         try
         {
-            using var response = await RegistryClient.GetAsync(AcpAgentRegistry.OfficialIndexUrl,
-                HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-            response.EnsureSuccessStatusCode();
-            using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            deadline.CancelAfter(TimeSpan.FromSeconds(20));
-            await using var source = await response.Content.ReadAsStreamAsync(deadline.Token);
-            await using (var file = File.Create(temporaryPath))
+            AcpAgentRegistry registry;
+            try
             {
-                var buffer = new byte[8192];
-                int count;
-                while ((count = await source.ReadAsync(buffer, deadline.Token)) > 0)
+                Directory.CreateDirectory(downloadFolder);
+                using var response = await registryClient.GetAsync(AcpAgentRegistry.OfficialIndexUrl,
+                    HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                response.EnsureSuccessStatusCode();
+                using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                deadline.CancelAfter(TimeSpan.FromSeconds(20));
+                await using var source = await response.Content.ReadAsStreamAsync(deadline.Token);
+                await using (var file = File.Create(temporaryPath))
                 {
-                    if (file.Length + count > AcpAgentRegistry.MaximumBytes)
-                        throw new AcpRegistryException("download exceeds the 8 MiB limit");
-                    await file.WriteAsync(buffer.AsMemory(0, count), deadline.Token);
+                    var buffer = new byte[8192];
+                    int count;
+                    while ((count = await source.ReadAsync(buffer, deadline.Token)) > 0)
+                    {
+                        if (file.Length + count > AcpAgentRegistry.MaximumBytes)
+                            throw new AcpRegistryException("download exceeds the 8 MiB limit");
+                        await file.WriteAsync(buffer.AsMemory(0, count), deadline.Token);
+                    }
                 }
+
+                registry = AcpAgentRegistry.Load(temporaryPath);
+                if (registry.Agents.Count == 0)
+                    throw new AcpRegistryException("download contains no supported agents");
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                throw new AcpRegistryException(
+                    $"the ACP registry download directory '{downloadFolder}' is not writable: {exception.Message}");
             }
 
-            var registry = AcpAgentRegistry.Load(temporaryPath);
-            if (registry.Agents.Count == 0)
-                throw new AcpRegistryException("download contains no supported agents");
-            cancellationToken.ThrowIfCancellationRequested();
-            File.Move(temporaryPath, Path.Combine(directory, AcpAgentRegistry.FileName), overwrite: true);
-            await RefreshAgentIconsAsync(registry, directory, cancellationToken);
+            // The validated download is published to the cache. Across volumes File.Move falls
+            // back to copy and delete, which is acceptable for a cache: a truncated copy fails
+            // AcpAgentRegistry.Load and is simply re-downloaded on the next refresh.
+            var cachePath = Path.Combine(directory, AcpAgentRegistry.FileName);
+            try
+            {
+                File.Move(temporaryPath, cachePath, overwrite: true);
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                throw new AcpRegistryException(
+                    $"the ACP registry cache directory '{directory}' is not writable: {exception.Message}");
+            }
+
+            try
+            {
+                await RefreshAgentIconsAsync(registry, directory, cancellationToken);
+            }
+            catch (Exception exception) when ((exception is IOException or UnauthorizedAccessException) &&
+                !cancellationToken.IsCancellationRequested)
+            {
+                // The registry itself is already published; an icon that cannot be written
+                // degrades to the agent card initials instead of failing the refresh.
+            }
         }
         finally
         {
-            File.Delete(temporaryPath);
+            try
+            {
+                Directory.Delete(downloadFolder, recursive: true);
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                // Best effort: a leftover download folder must not mask the refresh result.
+            }
         }
     }
 

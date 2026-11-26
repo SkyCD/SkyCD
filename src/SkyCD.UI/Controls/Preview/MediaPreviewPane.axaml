@@ -101,7 +101,11 @@
                     </ListBox.Styles>
                     <ListBox.ItemTemplate>
                         <DataTemplate x:DataType="pv:MediaPreviewFieldRow">
-                            <Grid ColumnDefinitions="140,*" Margin="0">
+                            <Grid Margin="0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="{StaticResource SkySettingsLabelWidth}" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
                                 <Border BorderBrush="{DynamicResource ThemeBorderLowBrush}"
                                         BorderThickness="0,0,1,1"
                                         Padding="{DynamicResource SkyControlPadding}">

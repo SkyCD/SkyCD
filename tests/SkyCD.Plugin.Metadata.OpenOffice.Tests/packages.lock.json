@@ -714,6 +714,19 @@
           "Microsoft.TestPlatform.ObjectModel": "18.11.0"
         }
       },
+      "OfficeIMO.Core": {
+        "type": "Transitive",
+        "resolved": "3.6.2",
+        "contentHash": "g1vThR3DWAIlFBf7NujMtYdWtYVx5bsKPKDU0I1SVCvmDGLEhr1ezPxXlYnBJSOlMagY1WmTuMJPMfGv9NxyCw=="
+      },
+      "OfficeIMO.OpenDocument": {
+        "type": "Transitive",
+        "resolved": "3.6.2",
+        "contentHash": "zbfsHa+rsAjy0bNNxF4nm3wDlRa6d6n0ejrUjcMlZsyrZYL76ePbWVgb805LovnSzKoLToK5TYm3Wy07oZS71Q==",
+        "dependencies": {
+          "OfficeIMO.Core": "3.6.2"
+        }
+      },
       "SerialQueue": {
         "type": "Transitive",
         "resolved": "2.1.0",
@@ -890,6 +903,7 @@
       "skycd.plugin.metadata.openoffice": {
         "type": "Project",
         "dependencies": {
+          "OfficeIMO.OpenDocument": "[3.6.2, )",
           "SkyCD.SDK": "[3.0.0, )"
         }
       },

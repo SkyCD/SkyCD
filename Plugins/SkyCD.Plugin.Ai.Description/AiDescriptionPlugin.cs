@@ -28,11 +28,13 @@ public sealed partial class AiDescriptionPlugin : IGeneratedDescriptionCapabilit
 
     public AiDescriptionPlugin(string configurationPath,
         Func<DescriptionAgentOptions, DescriptionContext, CancellationToken, Task<GeneratedDescription>> generate,
-        HttpClient? agentDownloadClient = null)
+        HttpClient? agentDownloadClient = null,
+        HttpClient? registryClient = null)
     {
         this.configurationPath = configurationPath;
         this.generate = generate;
         this.agentDownloadClient = agentDownloadClient ?? AgentDownloads;
+        this.registryClient = registryClient ?? RegistryDownloads;
     }
 
     public MediaMetadataSchema Schema => new("skycd.ai-description.metadata", 1,

@@ -205,7 +205,8 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
                     plugin.IsEnabled && plugin.Id.Equals(page.PluginId, StringComparison.OrdinalIgnoreCase)))
                 .OrderBy(static page => page.Order)
                 .ThenBy(static page => page.Title, StringComparer.OrdinalIgnoreCase)
-                .Select(page => new OptionsSettingCategory(page.Id, page.Title, ContributedPage: page)));
+                .Select(page => new OptionsSettingCategory(page.Id, page.Title, ContributedPage: page,
+                    Group: NormalizeGroup(page.Group))));
 
             var scanGroup = LocalizationService.Current.Get(UiKeys.ScanExclusions);
             categories.AddRange(
@@ -333,7 +334,9 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
 
     public bool ShowNoSearchResults => !HasVisibleCategoryContent;
 
-    public event EventHandler? BrowsePluginPathRequested;
+    private Func<Task>? browsePluginPath;
+
+    public void SetPluginPathBrowser(Func<Task>? browse) => browsePluginPath = browse;
 
     public event EventHandler? RefreshPluginsRequested;
 
@@ -366,9 +369,16 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
     }
 
     [RelayCommand]
-    private void BrowsePluginPath()
+    private Task BrowsePluginPath() => browsePluginPath?.Invoke() ?? Task.CompletedTask;
+
+    public async Task BrowsePluginPathAsync(Func<Task<string?>> pickFolder)
     {
-        BrowsePluginPathRequested?.Invoke(this, EventArgs.Empty);
+        var path = await pickFolder();
+        if (!string.IsNullOrWhiteSpace(path))
+        {
+            PluginPath = path;
+            RefreshPlugins();
+        }
     }
 
     [RelayCommand]

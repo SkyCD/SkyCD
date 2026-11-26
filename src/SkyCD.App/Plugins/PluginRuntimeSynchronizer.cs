@@ -83,12 +83,13 @@ public sealed class PluginRuntimeSynchronizer(
             .GetResult();
     }
 
-    /// <summary>Pushes readable and writable format availability of <paramref name="manager"/> to the menus.</summary>
+    /// <summary>Pushes readable, writable and export format availability of <paramref name="manager"/> to the menus.</summary>
     public static void PushAvailability(MainWindowViewModel? viewModel, FileFormatManager manager)
     {
         viewModel?.SetFileFormatAvailability(
             manager.GetOpenFormats().Count > 0,
             manager.GetSaveFormats().Count > 0);
+        viewModel?.SetExportAvailability(manager.GetExportFormats().Count > 0);
     }
 
     /// <summary>Configured plugin folder when it exists, otherwise the first host default that does.</summary>

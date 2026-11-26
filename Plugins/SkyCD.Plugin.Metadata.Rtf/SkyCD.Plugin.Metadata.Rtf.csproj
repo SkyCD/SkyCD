@@ -1,8 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <ItemGroup>
-        <Compile Include="..\Shared\EncodingProfiles\LegacyEncoding.cs" Link="Shared\EncodingProfiles\LegacyEncoding.cs" />
-    </ItemGroup>
-    <ItemGroup>
         <ProjectReference Include="..\..\src\SkyCD.Formatting\SkyCD.Formatting.csproj"/>
         <ProjectReference Include="..\..\src\SkyCD.SDK\SkyCD.SDK.csproj"/>
     </ItemGroup>
@@ -13,6 +10,8 @@
         <Compile Include="..\Shared\Preview\Export\SkiaPageText.cs" Link="Shared\Preview\Export\SkiaPageText.cs"/>
     </ItemGroup>
     <ItemGroup>
+        <!-- MIT: RTF parsing (replaces the hand-written RtfInfoReader). -->
+        <PackageReference Include="OfficeIMO.Rtf" Version="3.6.2"/>
         <!-- MIT: renders the parsed document to a bounded PNG thumbnail. -->
         <PackageReference Include="SkiaSharp" Version="3.119.4"/>
         <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.4"/>

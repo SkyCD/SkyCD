@@ -20,6 +20,7 @@
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Csv\SkyCD.Plugin.FileFormat.Csv.csproj" />
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Access\SkyCD.Plugin.FileFormat.Access.csproj" />
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Ai.Description\SkyCD.Plugin.Ai.Description.csproj" />
+        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Ai.Provider\SkyCD.Plugin.Ai.Provider.csproj" />
         <ProjectReference Include="../SkyCD.Acp.FakeAgent/SkyCD.Acp.FakeAgent.csproj" ReferenceOutputAssembly="false" />
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Json\SkyCD.Plugin.FileFormat.Json.csproj" />
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Xml\SkyCD.Plugin.FileFormat.Xml.csproj" />

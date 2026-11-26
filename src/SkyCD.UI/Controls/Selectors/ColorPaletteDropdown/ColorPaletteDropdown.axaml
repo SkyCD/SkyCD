@@ -14,13 +14,13 @@
             <Border BorderBrush="{DynamicResource ThemeBorderMidBrush}"
                     BorderThickness="1"
                     Background="{DynamicResource ThemeBackgroundBrush}"
-                    CornerRadius="4"
+                    CornerRadius="{DynamicResource SkyCornerRadius}"
                     Padding="{DynamicResource SkyRowPadding}">
                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
                     <Border Width="16"
                             Height="16"
-                            CornerRadius="2"
-                            BorderBrush="#9CA3AF"
+                            CornerRadius="{DynamicResource SkyCornerRadiusSmall}"
+                            BorderBrush="{DynamicResource SkyDropdownChrome}"
                             BorderThickness="1"
                             Background="{Binding SelectedBrush, ElementName=Root}" />
                     <TextBlock Grid.Column="1"
@@ -29,7 +29,7 @@
                     <TextBlock Grid.Column="2"
                                VerticalAlignment="Center"
                                Text="▾"
-                               Foreground="#9CA3AF" />
+                               Foreground="{DynamicResource SkyDropdownChrome}" />
                 </Grid>
             </Border>
         </Button>
@@ -43,7 +43,7 @@
             <Border Background="{DynamicResource ThemeBackgroundBrush}"
                     BorderBrush="{DynamicResource ThemeBorderMidBrush}"
                     BorderThickness="1"
-                    CornerRadius="4"
+                    CornerRadius="{DynamicResource SkyCornerRadius}"
                     Padding="{DynamicResource SkyInsetMd}">
                 <StackPanel Spacing="{DynamicResource SkySpaceSm}">
                     <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Color}}"
@@ -66,10 +66,10 @@
                                 <Border x:Name="SvThumb"
                                         Width="10"
                                         Height="10"
-                                        BorderBrush="#FFFFFF"
+                                        BorderBrush="White"
                                         BorderThickness="1.5"
-                                        CornerRadius="5"
-                                        Background="#00000000" />
+                                        CornerRadius="{DynamicResource SkyColorThumbRadius}"
+                                        Background="Transparent" />
                             </Canvas>
                         </Grid>
                     </Border>
@@ -95,9 +95,9 @@
                                 <Border x:Name="HueThumb"
                                         Width="8"
                                         Height="12"
-                                        BorderBrush="#FFFFFF"
+                                        BorderBrush="White"
                                         BorderThickness="1"
-                                        Background="#00000000" />
+                                        Background="Transparent" />
                             </Canvas>
                         </Grid>
                     </Border>

@@ -118,6 +118,7 @@ public sealed class PluginManagerLoadingTests : IDisposable
         var assemblyName = Path.GetFileName(assemblyPath);
         File.Copy(assemblyPath, Path.Combine(objOutput, assemblyName), overwrite: true);
         File.Copy(assemblyPath, Path.Combine(binOutput, assemblyName), overwrite: true);
+        File.WriteAllText(Path.Combine(pluginB, "b.csproj"), "<Project />");
 
         var logger = new TestLogger<PluginManager>();
         var assembliesLogger = new TestLogger<AssembliesListFactory>();
@@ -134,6 +135,38 @@ public sealed class PluginManagerLoadingTests : IDisposable
                      entry.Message.Contains("already loaded", StringComparison.OrdinalIgnoreCase));
     }
 
+    [Fact]
+    public void LoadFromDirectories_SkipsBuildOutputWhoseProjectIsGone()
+    {
+        var binOutput = Path.Combine(_root, "deleted", "bin", "Release", "net10.0");
+        Directory.CreateDirectory(binOutput);
+        var assemblyPath = Assembly.GetExecutingAssembly().Location;
+        File.Copy(assemblyPath, Path.Combine(binOutput, Path.GetFileName(assemblyPath)), overwrite: true);
+
+        var pluginManager = CreateManager();
+
+        pluginManager.Discover(_root, new Version(3, 0, 0));
+
+        Assert.Empty(pluginManager.Plugins);
+    }
+
+    [Fact]
+    public void LoadFromDirectories_LoadsBuildOutputBesideItsProject()
+    {
+        var project = Path.Combine(_root, "project");
+        var binOutput = Path.Combine(project, "bin", "Release", "net10.0");
+        Directory.CreateDirectory(binOutput);
+        File.WriteAllText(Path.Combine(project, "project.csproj"), "<Project />");
+        var assemblyPath = Assembly.GetExecutingAssembly().Location;
+        File.Copy(assemblyPath, Path.Combine(binOutput, Path.GetFileName(assemblyPath)), overwrite: true);
+
+        var pluginManager = CreateManager();
+
+        pluginManager.Discover(_root, new Version(3, 0, 0));
+
+        Assert.Contains(pluginManager.Plugins, plugin => plugin.Id == "tests.runtime.assembly-plugin");
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_root))
@@ -147,6 +180,11 @@ public sealed class PluginManagerLoadingTests : IDisposable
             }
         }
     }
+
+    private static PluginManager CreateManager() =>
+        new(new TestLogger<PluginManager>(),
+            new AssembliesListFactory(new TestLogger<AssembliesListFactory>()),
+            new DiscoveredPluginFactory(), CreatePluginRepository());
 
     private static IRepository<PluginDocument> CreatePluginRepository()
     {

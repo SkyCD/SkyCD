@@ -25,6 +25,19 @@ internal static class RtfSourceReader
         long maxSourceBytes,
         CancellationToken cancellationToken)
     {
+        var bytes = await ReadBytesAsync(item, source, maxSourceBytes, cancellationToken).ConfigureAwait(false);
+        return Encoding.Latin1.GetString(bytes);
+    }
+
+    /// <summary>
+    /// Reads the bounded source bytes the parser works from, so metadata extraction never needs a path.
+    /// </summary>
+    public static async Task<byte[]> ReadBytesAsync(
+        MediaItem item,
+        IMediaSource source,
+        long maxSourceBytes,
+        CancellationToken cancellationToken)
+    {
         ArgumentNullException.ThrowIfNull(item);
         ArgumentNullException.ThrowIfNull(source);
         cancellationToken.ThrowIfCancellationRequested();
@@ -57,13 +70,12 @@ internal static class RtfSourceReader
             offset += count;
         }
 
-        var text = Encoding.Latin1.GetString(buffer);
-        if (!HasRtfSignature(text))
+        if (!HasRtfSignature(Encoding.Latin1.GetString(buffer)))
         {
             throw new RtfDecodeException("the source does not start with an RTF header");
         }
 
-        return text;
+        return buffer;
     }
 
     private static bool HasRtfSignature(string text)

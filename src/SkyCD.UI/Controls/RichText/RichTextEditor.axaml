@@ -6,7 +6,7 @@
              Focusable="True">
     <Border BorderBrush="{DynamicResource ThemeBorderLowBrush}"
             BorderThickness="1"
-            CornerRadius="3"
+            CornerRadius="{DynamicResource SkyCornerRadiusMedium}"
             Background="{DynamicResource ThemeBackgroundBrush}">
         <Grid RowDefinitions="Auto,*">
             <!-- Toolbar -->

@@ -2,6 +2,20 @@
   "version": 1,
   "dependencies": {
     "net10.0": {
+      "OfficeIMO.OpenDocument": {
+        "type": "Direct",
+        "requested": "[3.6.2, )",
+        "resolved": "3.6.2",
+        "contentHash": "zbfsHa+rsAjy0bNNxF4nm3wDlRa6d6n0ejrUjcMlZsyrZYL76ePbWVgb805LovnSzKoLToK5TYm3Wy07oZS71Q==",
+        "dependencies": {
+          "OfficeIMO.Core": "3.6.2"
+        }
+      },
+      "OfficeIMO.Core": {
+        "type": "Transitive",
+        "resolved": "3.6.2",
+        "contentHash": "g1vThR3DWAIlFBf7NujMtYdWtYVx5bsKPKDU0I1SVCvmDGLEhr1ezPxXlYnBJSOlMagY1WmTuMJPMfGv9NxyCw=="
+      },
       "skycd.sdk": {
         "type": "Project"
       }

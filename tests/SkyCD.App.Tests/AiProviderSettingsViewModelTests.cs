@@ -207,6 +207,59 @@ public class AiProviderSettingsViewModelTests
     }
 
     [Fact]
+    public void ApiKeyHelp_ShowsForLaunchableUrlAndFollowsProviderSelection()
+    {
+        var documented = new AiProviderChoice("documented", "Documented", "http", "127.0.0.1", 1234,
+            null, false, ApiKeyHelpUrl: "https://docs.example/api-key");
+        var plain = new AiProviderChoice("plain", "Plain", "http", "127.0.0.1", 1235, null, false);
+        var vm = new OptionsDialogViewModel(["English"]);
+
+        vm.LoadAiProviderSettings(new FakeCapability([documented, plain]));
+
+        Assert.Equal("https://docs.example/api-key", vm.AiProviderApiKeyHelpUrl);
+        Assert.True(vm.ShowAiProviderApiKeyHelp);
+        Assert.True(vm.OpenAiProviderApiKeyHelpCommand.CanExecute(null));
+
+        vm.SelectedAiProvider = vm.AiProviders.Single(provider => provider.Id == "plain");
+
+        Assert.Null(vm.AiProviderApiKeyHelpUrl);
+        Assert.False(vm.ShowAiProviderApiKeyHelp);
+        Assert.False(vm.OpenAiProviderApiKeyHelpCommand.CanExecute(null));
+    }
+
+    [Theory]
+    [InlineData("file:///C:/Windows/System32/calc.exe")]
+    [InlineData("\\\\attacker\\share\\api-key.html")]
+    [InlineData("javascript:alert(1)")]
+    [InlineData("docs/api-key")]
+    public void ApiKeyHelp_HidesAndBlocksNonHttpUrls(string helpUrl)
+    {
+        var malicious = new AiProviderChoice("malicious", "Malicious", "http", "127.0.0.1", 1234,
+            null, false, ApiKeyHelpUrl: helpUrl);
+        var vm = new OptionsDialogViewModel(["English"]);
+
+        vm.LoadAiProviderSettings(new FakeCapability([malicious]));
+
+        Assert.False(vm.ShowAiProviderApiKeyHelp);
+        Assert.False(vm.OpenAiProviderApiKeyHelpCommand.CanExecute(null));
+
+        // The guarded command stays a no-op instead of reaching the shell.
+        vm.OpenAiProviderApiKeyHelpCommand.Execute(null);
+    }
+
+    [Fact]
+    public void ApiKeyHelp_HidesWhenNoCapabilityIsAvailable()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+
+        vm.LoadAiProviderSettings(null);
+
+        Assert.Null(vm.AiProviderApiKeyHelpUrl);
+        Assert.False(vm.ShowAiProviderApiKeyHelp);
+        Assert.False(vm.OpenAiProviderApiKeyHelpCommand.CanExecute(null));
+    }
+
+    [Fact]
     public void FreshViewModel_PrefillsOutputLanguageFromUiLanguage()
     {
         var vm = new OptionsDialogViewModel(["English (US)", "Lietuvių"]);
@@ -267,7 +320,10 @@ public class AiProviderSettingsViewModelTests
 
     private sealed class FakeCapability : IAiProviderSettingsCapability
     {
-        public IReadOnlyList<AiProviderChoice> Providers { get; } = [LmStudio, Ollama];
+        public FakeCapability(IReadOnlyList<AiProviderChoice>? providers = null) =>
+            Providers = providers ?? [LmStudio, Ollama];
+
+        public IReadOnlyList<AiProviderChoice> Providers { get; }
 
         public AiProviderSettings Saved { get; set; } = new();
 

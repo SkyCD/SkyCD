@@ -43,13 +43,13 @@ public sealed class RtfMetadataPlugin : IMediaMetadataCapability
         IProgress<MediaProgress>? progress,
         CancellationToken cancellationToken)
     {
-        var rtf = await RtfSourceReader.ReadTextAsync(item, source, options.MaxSourceBytes, cancellationToken)
+        var bytes = await RtfSourceReader.ReadBytesAsync(item, source, options.MaxSourceBytes, cancellationToken)
             .ConfigureAwait(false);
 
         progress?.Report(new MediaProgress(0.4));
 
-        var info = RtfInfoReader.Read(rtf);
-        var document = ReadDocument(rtf);
+        var info = RtfInfoExtractor.Read(bytes, options, cancellationToken);
+        var document = ReadDocument(Encoding.Latin1.GetString(bytes));
 
         cancellationToken.ThrowIfCancellationRequested();
         progress?.Report(new MediaProgress(0.7));
