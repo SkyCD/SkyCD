@@ -32,6 +32,7 @@ using SkyCD.SDK.Capabilities.Volume;
 using SkyCD.Presentation.Catalog;
 using SkyCD.Presentation.MediaCache;
 using SkyCD.Presentation.Operations;
+using SkyCD.Presentation.Plugins;
 using SkyCD.Presentation.Search;
 using SkyCD.Presentation.Staging;
 using SkyCD.Presentation.UndoRedo;
@@ -3500,40 +3501,59 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         return false;
     }
 
+    public const string ProjectWebsiteUrl = "https://sourceforge.net/projects/skycd/";
+
+    public const string ProjectAreaUrl = "https://github.com/SkyCD/SkyCD";
+
+    /// <summary>Launches an external link through the shared validated path; replaceable in tests.</summary>
+    public Func<string?, Action<ProcessStartInfo>, bool> ExternalLinkOpener { get; set; } =
+        ExternalLinkLauncher.TryOpen;
+
+    /// <summary>Receives external-link failure details for the app log; wired by the host view.</summary>
+    public Action<string>? ExternalLinkFailureLog { get; set; }
+
     [RelayCommand]
     private void OpenProjectWebsite()
     {
-        try
-        {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = "https://sourceforge.net/projects/skycd/",
-                UseShellExecute = true
-            });
-            StatusText = LocalizationService.Current.Get(TextKeys.OpeningSourceForgeProjectWebsite);
-        }
-        catch (Exception ex)
-        {
-            StatusText = LocalizationService.Current.Format(TextKeys.FailedToOpenSourceForgeWebsite, ex.Message);
-        }
+        OpenExternalLink(
+            ProjectWebsiteUrl,
+            TextKeys.OpeningSourceForgeProjectWebsite,
+            TextKeys.FailedToOpenSourceForgeWebsite);
     }
 
     [RelayCommand]
     private void OpenGithubArea()
     {
+        OpenExternalLink(
+            ProjectAreaUrl,
+            TextKeys.OpeningGitHubProjectArea,
+            TextKeys.FailedToOpenGitHubArea);
+    }
+
+    private void OpenExternalLink(string url, string openingKey, string failureKey)
+    {
+        bool opened;
         try
         {
-            Process.Start(new ProcessStartInfo
+            opened = ExternalLinkOpener(url, static startInfo =>
             {
-                FileName = "https://github.com/SkyCD/SkyCD",
-                UseShellExecute = true
+                using var process = Process.Start(startInfo);
             });
-            StatusText = LocalizationService.Current.Get(TextKeys.OpeningGitHubProjectArea);
         }
         catch (Exception ex)
         {
-            StatusText = LocalizationService.Current.Format(TextKeys.FailedToOpenGitHubArea, ex.Message);
+            opened = false;
+            ExternalLinkFailureLog?.Invoke($"External link launcher threw for {url}: {ex.Message}");
         }
+
+        if (opened)
+        {
+            StatusText = LocalizationService.Current.Get(openingKey);
+            return;
+        }
+
+        ExternalLinkFailureLog?.Invoke($"Failed to open external link {url}.");
+        StatusText = LocalizationService.Current.Format(failureKey, url);
     }
 
     [RelayCommand]

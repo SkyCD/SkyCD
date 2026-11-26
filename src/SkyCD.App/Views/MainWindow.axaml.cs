@@ -223,6 +223,7 @@ public partial class MainWindow : Window
             subscribedViewModel.ToolbarStateChanged -= OnToolbarStateChanged;
             subscribedViewModel.ToolbarLayoutChanged -= OnToolbarLayoutChanged;
             subscribedViewModel.PropertyChanged -= OnViewModelPropertyChanged;
+            subscribedViewModel.ExternalLinkFailureLog = null;
             if (!ReferenceEquals(subscribedViewModel, DataContext)) subscribedViewModel.Dispose();
         }
 
@@ -250,6 +251,8 @@ public partial class MainWindow : Window
             subscribedViewModel.ToolbarStateChanged += OnToolbarStateChanged;
             subscribedViewModel.ToolbarLayoutChanged += OnToolbarLayoutChanged;
             subscribedViewModel.PropertyChanged += OnViewModelPropertyChanged;
+            subscribedViewModel.ExternalLinkFailureLog =
+                message => logger.LogWarning("{ExternalLinkFailure}", message);
             subscribedViewModel.SetStatusVariants(statusVariantRepository.GetOrdered());
             var appOptions = LoadAppOptions();
             subscribedViewModel.IsBackgroundMediaSyncEnabled = appOptions.IsBackgroundMediaSyncEnabled;
