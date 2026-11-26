@@ -3,10 +3,13 @@
              xmlns:i18n="clr-namespace:SkyCD.UI.Localization;assembly=SkyCD.UI"
              xmlns:l="clr-namespace:SkyCD.Plugin.Feature.GenDesc.Localization"
              xmlns:models="clr-namespace:SkyCD.Plugin.Feature.GenDesc.Models"
-             xmlns:views="clr-namespace:SkyCD.Plugin.Feature.GenDesc.Views"
              xmlns:vm="clr-namespace:SkyCD.Plugin.Feature.GenDesc.ViewModels"
+             xmlns:ae="clr-namespace:AvaloniaEdit;assembly=AvaloniaEdit"
              x:Class="SkyCD.Plugin.Feature.GenDesc.Views.GenDescTemplatesView"
              x:DataType="vm:GenDescTemplatesViewModel">
+    <UserControl.Styles>
+        <StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml" />
+    </UserControl.Styles>
     <Grid RowDefinitions="Auto,Auto,*,Auto,Auto"
           Margin="{DynamicResource SkyInsetMd}"
           RowSpacing="{DynamicResource SkySpaceSm}">
@@ -118,23 +121,12 @@
                              Margin="{DynamicResource SkyGapTopXs}" />
                 </TabItem>
                 <TabItem Header="{i18n:Translate {x:Static l:GenDescKeys.Highlighted}}">
-                    <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                                  VerticalScrollBarVisibility="Auto"
-                                  Margin="{DynamicResource SkyGapTopXs}">
-                        <views:TemplateSyntaxView TemplateText="{Binding EditorBody}"
-                                                  TextWrapping="NoWrap"
-                                                  FontFamily="{DynamicResource SkyFontFamilyMono}"
-                                                  Padding="{DynamicResource SkyInsetSm}"
-                                                  Foreground="{DynamicResource ThemeForegroundBrush}"
-                                                  TextBrush="{DynamicResource ThemeForegroundBrush}"
-                                                  TagBrush="{DynamicResource ThemeForegroundLowBrush}"
-                                                  KeywordBrush="{DynamicResource ThemeAccentBrush}"
-                                                  FunctionBrush="{DynamicResource ThemeForegroundBrush}"
-                                                  StringBrush="{DynamicResource ThemeAccentBrush}"
-                                                  NumberBrush="{DynamicResource ThemeForegroundBrush}"
-                                                  CommentBrush="{DynamicResource ThemeForegroundLowBrush}"
-                                                  BbCodeBrush="{DynamicResource ThemeAccentBrush}" />
-                    </ScrollViewer>
+                    <ae:TextEditor Name="HighlightedEditor"
+                                   IsReadOnly="True"
+                                   ShowLineNumbers="False"
+                                   WordWrap="False"
+                                   FontFamily="{DynamicResource SkyFontFamilyMono}"
+                                   Margin="{DynamicResource SkyGapTopXs}" />
                 </TabItem>
                 <TabItem Header="{i18n:Translate {x:Static l:GenDescKeys.Preview}}">
                     <TextBox Text="{Binding PreviewText}"

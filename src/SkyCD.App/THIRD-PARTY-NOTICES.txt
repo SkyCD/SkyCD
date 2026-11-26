@@ -59,3 +59,49 @@ The Windows runtime package also ships opencv_videoio_ffmpeg4130_64.dll, an LGPL
 FFmpeg-based OpenCV video I/O backend. It is loaded dynamically by OpenCV at runtime from the plugin
 folder, is not statically linked into SkyCD, and can be replaced by the operator.
 
+Scriban
+Copyright Alexandre Mutel
+Source: https://github.com/scriban/scriban
+License: BSD 2-Clause "Simplified" License
+https://opensource.org/licenses/BSD-2-Clause
+
+The GenDesc plugin renders user-editable templates with Scriban 7.6.0:
+https://www.nuget.org/packages/Scriban/7.6.0
+
+AvaloniaEdit
+By AvaloniaEdit (AvaloniaUI project)
+Source: https://github.com/AvaloniaUI/AvaloniaEdit
+License: MIT
+https://opensource.org/licenses/MIT
+
+The GenDesc template preview embeds the AvaloniaEdit 12.0.0 editor:
+https://www.nuget.org/packages/Avalonia.AvaloniaEdit/12.0.0
+
+AvaloniaEdit.TextMate
+Copyright 2017-2026 © The AvaloniaUI Project
+Source: https://github.com/AvaloniaUI/AvaloniaEdit
+License: MIT
+https://opensource.org/licenses/MIT
+
+The GenDesc template preview highlights TextMate grammars with AvaloniaEdit.TextMate 12.0.0:
+https://www.nuget.org/packages/AvaloniaEdit.TextMate/12.0.0
+
+TextMateSharp
+By Daniel Peñalba
+Source: https://github.com/danipen/TextMateSharp
+License: MIT
+https://opensource.org/licenses/MIT
+
+TextMate grammars and themes come from TextMateSharp 2.0.3 and TextMateSharp.Grammars 2.0.3:
+https://www.nuget.org/packages/TextMateSharp/2.0.3
+https://www.nuget.org/packages/TextMateSharp.Grammars/2.0.3
+
+Onigwrap
+Copyright (c) 2024 Aikawa Yataro
+Source: https://github.com/aikawayataro/Onigwrap
+License: MIT
+https://opensource.org/licenses/MIT
+
+TextMateSharp 2.0.3 evaluates grammars through the Onigwrap 1.0.10 native regex wrapper:
+https://www.nuget.org/packages/Onigwrap/1.0.10
+

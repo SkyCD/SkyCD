@@ -41,16 +41,16 @@ public sealed partial class GenDescTemplatesViewModel : ObservableObject
         selectedKindOption = KindOptions[1];
         Tokens =
         [
-            "Default(\"Title\", Name)",
+            "Title ?? Name",
             "Year",
-            "Has(\"Genre\")",
-            "Join(\"Genre\", \", \")",
+            "has(\"Genre\")",
+            "join(\"Genre\", \", \")",
             "Plot",
             "FileName",
             "Size",
             "MimeType",
             "CategoryTitle",
-            "upper(Name)",
+            "upper(Title)",
             "filesize(SizeBytes)",
             "date(LastWriteTime, \"yyyy-MM-dd\")"
         ];
@@ -150,7 +150,7 @@ public sealed partial class GenDescTemplatesViewModel : ObservableObject
         EditorVersion = "1";
         EditorMime = string.Empty;
         EditorExtensions = string.Empty;
-        EditorBody = "[b]<% Default(\"Title\", Name) %><% if Year %> (<% Year %>)<% end %>[/b]\n\n<% if Plot %><% Plot %><% end %>\n";
+        EditorBody = "[b]{{ default(\"Title\", Name) }}{{ if Year }} ({{ Year }}){{ end }}[/b]\n\n{{ if has(\"Plot\") }}{{ Plot }}{{ end }}\n";
         StatusText = string.Empty;
         ErrorText = string.Empty;
         UpdatePreview();
@@ -318,7 +318,7 @@ public sealed partial class GenDescTemplatesViewModel : ObservableObject
         }
 
         var separator = EditorBody.EndsWith('\n') || EditorBody.Length == 0 ? string.Empty : "\n";
-        EditorBody += separator + "<% " + SelectedToken + " %>\n";
+        EditorBody += separator + "{{ " + SelectedToken + " }}\n";
     }
 
     private void RefreshList(string? selectId = null)
@@ -377,7 +377,9 @@ public sealed partial class GenDescTemplatesViewModel : ObservableObject
 
         try
         {
-            TemplateEngine.Compile(EditorBody);
+            // Scriban reports unknown helpers at render time, so trial-render with empty facts to reject
+            // them here instead of failing the first real generation or preview.
+            TemplateEngine.Compile(EditorBody).Render(new DescriptionFacts());
         }
         catch (TemplateSyntaxException exception)
         {

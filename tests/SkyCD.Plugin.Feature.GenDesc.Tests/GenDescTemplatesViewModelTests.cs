@@ -49,7 +49,7 @@ public class GenDescTemplatesViewModelTests
         using var workspace = new TestWorkspace();
         var viewModel = Create(workspace.Root);
         viewModel.NewCommand.Execute(null);
-        viewModel.EditorBody = "<% Title %>";
+        viewModel.EditorBody = "{{ Title }}";
 
         viewModel.SaveCommand.Execute(null);
 
@@ -58,7 +58,7 @@ public class GenDescTemplatesViewModelTests
         var path = Path.Combine(workspace.Root, "custom-template.tpl");
         Assert.True(File.Exists(path));
         Assert.Equal("custom-template", viewModel.SelectedTemplate!.Id);
-        Assert.Equal("<% Title %>", TemplateStore.Load(workspace.Root).Find("custom-template")!.Body);
+        Assert.Equal("{{ Title }}", TemplateStore.Load(workspace.Root).Find("custom-template")!.Body);
     }
 
     [Fact]
@@ -107,11 +107,11 @@ public class GenDescTemplatesViewModelTests
         using var workspace = new TestWorkspace();
         var viewModel = Create(workspace.Root);
         viewModel.NewCommand.Execute(null);
-        viewModel.EditorBody = "<% if Year %>unclosed";
+        viewModel.EditorBody = "{{ if Year }}unclosed";
 
         viewModel.SaveCommand.Execute(null);
 
-        Assert.Contains("unclosed", viewModel.ErrorText);
+        Assert.Contains("was not found", viewModel.ErrorText);
     }
 
     [Fact]
@@ -120,7 +120,7 @@ public class GenDescTemplatesViewModelTests
         using var workspace = new TestWorkspace();
         var viewModel = Create(workspace.Root);
 
-        viewModel.EditorBody = "<% Name %>";
+        viewModel.EditorBody = "{{ Name }}";
 
         Assert.Equal("Example.Movie.2024.1080p.BluRay.x264-GROUP", viewModel.PreviewText);
         Assert.Equal(string.Empty, viewModel.PreviewError);
@@ -132,10 +132,10 @@ public class GenDescTemplatesViewModelTests
         using var workspace = new TestWorkspace();
         var viewModel = Create(workspace.Root);
 
-        viewModel.EditorBody = "<% Name | nope %>";
+        viewModel.EditorBody = "{{ Name | nope }}";
 
         Assert.Equal(string.Empty, viewModel.PreviewText);
-        Assert.Contains("unknown template filter", viewModel.PreviewError);
+        Assert.Contains("was not found", viewModel.PreviewError);
     }
 
     [Fact]
@@ -148,7 +148,7 @@ public class GenDescTemplatesViewModelTests
 
         viewModel.InsertTokenCommand.Execute(null);
 
-        Assert.Equal("<% Year %>\n", viewModel.EditorBody);
+        Assert.Equal("{{ Year }}\n", viewModel.EditorBody);
     }
 
     [Fact]
@@ -157,7 +157,7 @@ public class GenDescTemplatesViewModelTests
         using var workspace = new TestWorkspace();
         var viewModel = Create(workspace.Root);
         viewModel.NewCommand.Execute(null);
-        viewModel.EditorBody = "<% Title %>";
+        viewModel.EditorBody = "{{ Title }}";
         viewModel.SaveCommand.Execute(null);
         var saved = viewModel.SelectedTemplate!;
 
@@ -202,14 +202,14 @@ public class GenDescTemplatesViewModelTests
         using var workspace = new TestWorkspace();
         var path = workspace.GetPath("incoming.tpl");
         await File.WriteAllTextAsync(path,
-            "## id=imported\n## kind=description\n## category=tv\n## lang=en\n<% Name %>");
+            "## id=imported\n## kind=description\n## category=tv\n## lang=en\n{{ Name }}");
         var viewModel = Create(workspace.Root, new RecordingFileDialogApi { OpenResult = path });
 
         await viewModel.ImportCommand.ExecuteAsync(null);
 
         Assert.Equal("imported", viewModel.EditorId);
         Assert.Equal("tv", viewModel.EditorCategory);
-        Assert.Equal("<% Name %>", viewModel.EditorBody);
+        Assert.Equal("{{ Name }}", viewModel.EditorBody);
         Assert.Equal(LocalizationService.Current.Format(GenDescKeys.Imported, path), viewModel.StatusText);
     }
 

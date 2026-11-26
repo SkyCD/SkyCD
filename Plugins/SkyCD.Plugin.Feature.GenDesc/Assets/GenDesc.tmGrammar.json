@@ -1,0 +1,71 @@
+{
+    "name": "GenDesc Template",
+    "scopeName": "source.gendesc",
+    "patterns": [
+        {
+            "comment": "Scriban line comment: {{# hidden }}",
+            "match": "\\{\\{#.*?\\}\\}",
+            "name": "comment.line.gendesc"
+        },
+        {
+            "comment": "Scriban code block with GenDesc helpers",
+            "begin": "\\{\\{",
+            "beginCaptures": {
+                "0": { "name": "punctuation.definition.template.begin.gendesc" }
+            },
+            "end": "\\}\\}",
+            "endCaptures": {
+                "0": { "name": "punctuation.definition.template.end.gendesc" }
+            },
+            "name": "meta.embedded.block.gendesc",
+            "patterns": [
+                {
+                    "comment": "Pipe target: {{ Title | upper }}",
+                    "match": "(\\|)\\s*([A-Za-z_][A-Za-z0-9_]*)",
+                    "captures": {
+                        "1": { "name": "punctuation.separator.pipe.gendesc" },
+                        "2": { "name": "entity.name.function.gendesc" }
+                    }
+                },
+                {
+                    "match": "\\b(if|else|end|for|in)\\b",
+                    "name": "keyword.control.gendesc"
+                },
+                {
+                    "comment": "Whitelisted GenDesc helper called as a function",
+                    "match": "\\b(has|isset|get|default|count|join|len|trim|upper|lower|capitalize|titlecase|slug|cut|truncate|substr|replace|regexreplace|contains|pad|padleft|padright|filesize|date|nl|br|newline|twriteline|b|i|u|s|quote|code|spoiler|color|url|year)\\b(?=\\s*\\()",
+                    "name": "entity.name.function.gendesc"
+                },
+                {
+                    "match": "\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\\\.)*'",
+                    "name": "string.quoted.gendesc"
+                },
+                {
+                    "match": "\\b\\d+(?:\\.\\d+)?\\b",
+                    "name": "constant.numeric.gendesc"
+                },
+                {
+                    "match": "\\b(true|false|null)\\b",
+                    "name": "constant.language.gendesc"
+                },
+                {
+                    "match": "\\|",
+                    "name": "punctuation.separator.pipe.gendesc"
+                },
+                {
+                    "match": "==|!=|<=|>=|&&|\\|\\||\\?\\?|[=!<>+\\-*/%,?:.()!]",
+                    "name": "keyword.operator.gendesc"
+                },
+                {
+                    "match": "[A-Za-z_][A-Za-z0-9_]*",
+                    "name": "variable.other.gendesc"
+                }
+            ]
+        },
+        {
+            "comment": "BBCode tag: [b], [/url], [color=red]",
+            "match": "\\[/?[A-Za-z][^\\[\\]\\r\\n]*\\]",
+            "name": "entity.name.tag.gendesc"
+        }
+    ]
+}
