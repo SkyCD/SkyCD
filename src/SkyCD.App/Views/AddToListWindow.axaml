@@ -136,11 +136,11 @@
                 <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectMediaName}}" />
                 <TextBox Classes="source-field" Text="{Binding MediaName}" />
                 <StackPanel IsVisible="{Binding IsLocationPickerVisible}" Spacing="{DynamicResource SkySpaceXs}">
-                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Location}}" />
+                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.PhysicalLocation}}" />
                     <ComboBox Classes="source-field"
                               ItemsSource="{Binding LocationChoices}"
                               SelectedItem="{Binding SelectedLocation}"
-                              AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.Location}}"
+                              AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.PhysicalLocation}}"
                               HorizontalAlignment="Stretch">
                         <ComboBox.ItemTemplate>
                             <DataTemplate x:DataType="vm:LocationItemViewModel">
@@ -148,7 +148,14 @@
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
+                    <TextBlock Classes="caption"
+                               Text="{i18n:Translate {x:Static i18n:UiKeys.PhysicalLocationHint}}"
+                               TextWrapping="Wrap" />
                 </StackPanel>
+                <TextBlock IsVisible="{Binding IsScannedPathNoteVisible}"
+                           Classes="caption"
+                           Text="{i18n:Translate {x:Static i18n:UiKeys.LocationFromScannedPath}}"
+                           TextWrapping="Wrap" />
             </StackPanel>
 
             <!--

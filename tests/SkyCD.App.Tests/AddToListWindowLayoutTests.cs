@@ -43,7 +43,7 @@ public class AddToListWindowLayoutTests
         Assert.Equal("1", GridRowOf(sourceRegion));
         Assert.Equal("2", (string?)destinationSection.Attribute("Grid.Row"));
         Assert.Contains("UiKeys.SelectMediaName", nameBlock.ToString(), StringComparison.Ordinal);
-        Assert.Contains("UiKeys.Location", nameBlock.ToString(), StringComparison.Ordinal);
+        Assert.Contains("UiKeys.PhysicalLocation", nameBlock.ToString(), StringComparison.Ordinal);
         Assert.Contains(destinationSection.Descendants(Avalonia + "Button"),
             button => (string?)button.Attribute("Command") == "{Binding ConfirmCommand}");
     }

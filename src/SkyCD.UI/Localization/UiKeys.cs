@@ -351,6 +351,9 @@ public static class UiKeys
     public const string ShowItems = "core.ui.ShowItems";
     public const string AssignedItems = "core.ui.AssignedItems";
     public const string LocationNone = "core.ui.LocationNone";
+    public const string PhysicalLocation = "core.ui.PhysicalLocation";
+    public const string PhysicalLocationHint = "core.ui.PhysicalLocationHint";
+    public const string LocationFromScannedPath = "core.ui.LocationFromScannedPath";
     public const string Collections = "core.ui.Collections";
     public const string ManageCollections = "core.ui.ManageCollections";
     public const string NewCollection = "core.ui.NewCollection";
