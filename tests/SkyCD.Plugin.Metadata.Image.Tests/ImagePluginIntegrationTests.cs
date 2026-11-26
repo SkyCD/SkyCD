@@ -187,6 +187,46 @@ public sealed class ImagePluginIntegrationTests : IDisposable
     }
 
     [Fact]
+    public async Task IndexedContainerPreviewSurvivesReopenWithoutPluginOrSource()
+    {
+        var svg = """
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 20">
+                <title>Offline drawing</title><rect width="20" height="20" fill="blue"/>
+            </svg>
+            """u8.ToArray();
+
+        using (var database = OpenDatabase())
+        {
+            var catalog = CreateCatalogRepository(database);
+            var entry = SeedCatalog(catalog, svg.Length, "drawing.svg");
+            using var store = MediaCacheStore.Create(database);
+            var manager = new MediaExtensionManager(
+            [
+                new MediaProvider(PluginId, "1.0.0", new VectorImagePlugin()),
+                new MediaProvider(PluginId, "1.0.0", new VectorImagePreviewPlugin())
+            ]);
+            var scheduler = new MediaExtractionScheduler(manager, store);
+            var outcome = await scheduler.ProcessAsync(
+                MediaExtractionRequest.ForCatalogEntry(
+                    entry, _ => Task.FromResult<Stream>(new MemoryStream(svg)), catalog.GetAll()));
+
+            Assert.True(outcome.Published);
+        }
+
+        using (var database = OpenDatabase())
+        {
+            var entry = CreateCatalogRepository(database).GetAll().Single(document => document.Id == PhotoEntryId);
+            using var store = MediaCacheStore.Create(database);
+            var resolver = new MediaPreviewResolver(store);
+            var snapshot = resolver.Resolve(entry);
+            Assert.Equal(MediaPreviewState.Ready, snapshot.State);
+            Assert.Equal("Offline drawing", snapshot.Fields.Single(field => field.Key == "Title").Value);
+            Assert.True(resolver.TryReadPayload(snapshot, out var data));
+            Assert.Equal((40, 20), ImageFixtures.Dimensions(data));
+        }
+    }
+
+    [Fact]
     public async Task TransparentPng_RoundTripsThroughTheCacheAsPng()
     {
         var image = ImageFixtures.TransparentPng(40, 20);
@@ -259,7 +299,7 @@ public sealed class ImagePluginIntegrationTests : IDisposable
         Assert.Contains(plugin.Capabilities, capability => capability is IMediaMetadataCapability);
         Assert.Contains(plugin.Capabilities, capability => capability is IMediaPreviewCapability);
         Assert.Contains(plugin.Capabilities, capability => capability is ContainerTagsPlugin);
-        Assert.Equal(3, plugin.Capabilities.Count);
+        Assert.Equal(11, plugin.Capabilities.Count);
     }
 
     [Fact]
@@ -308,7 +348,7 @@ public sealed class ImagePluginIntegrationTests : IDisposable
         return repository;
     }
 
-    private static CatalogDocument SeedCatalog(CatalogDocumentRepository repository, long entrySize)
+    private static CatalogDocument SeedCatalog(CatalogDocumentRepository repository, long entrySize, string name = "holiday.jpg")
     {
         var root = new CatalogDocument
         {
@@ -321,7 +361,7 @@ public sealed class ImagePluginIntegrationTests : IDisposable
         var entry = new CatalogDocument
         {
             Id = PhotoEntryId,
-            Name = "holiday.jpg",
+            Name = name,
             ParentId = root.Id,
             Type = CatalogDocumentType.File,
 
@@ -330,7 +370,7 @@ public sealed class ImagePluginIntegrationTests : IDisposable
             Size = entrySize,
             Properties = new SkyCD.Documents.Collections.PropertiesCollection
             {
-                ["FullName"] = @"D:\Photos\holiday.jpg",
+                ["FullName"] = $@"D:\Photos\{name}",
                 ["LastWriteTime"] = new DateTimeOffset(2024, 3, 1, 12, 0, 0, TimeSpan.Zero).ToString("O")
             }
         };

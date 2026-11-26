@@ -25,7 +25,7 @@ public class Issue161UiContractTests
         var buttonType = ReadRepoFile("src", "SkyCD.UI", "Controls", "Toolbars", "ClassicToolbarButton.cs");
         var separatorType = ReadRepoFile("src", "SkyCD.UI", "Controls", "Toolbars", "ClassicToolbarSeparator.cs");
         var appXaml = ReadRepoFile("src", "SkyCD.App", "Views", "MainWindow.axaml");
-        var appCode = ReadRepoFile("src", "SkyCD.App", "Views", "MainWindow.axaml.cs");
+        var appCode = ReadRepoFile("src", "SkyCD.App", "Views", "MainWindow.Toolbar.cs");
 
         Assert.Contains("ItemsSource=\"{Binding Items, ElementName=Root}\"", controlXaml, StringComparison.Ordinal);
         Assert.Contains("AvaloniaList<IClassicToolbarItem>", controlCode, StringComparison.Ordinal);

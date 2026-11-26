@@ -140,7 +140,35 @@ public static class PluginEntryScanner
 
         return !normalized.Contains(objSegment, StringComparison.OrdinalIgnoreCase) &&
                !normalized.Contains(refSegment, StringComparison.OrdinalIgnoreCase) &&
-               !normalized.Contains(refIntSegment, StringComparison.OrdinalIgnoreCase);
+               !normalized.Contains(refIntSegment, StringComparison.OrdinalIgnoreCase) &&
+               !IsOrphanedBuildOutput(normalized);
+    }
+
+    /// <summary>
+    /// Build output belongs to the project folder that holds its <c>bin</c>. When that project is gone, the
+    /// leftover output would keep resurrecting a removed plugin, so it is skipped. Deployed plugin folders
+    /// hold their DLLs without a <c>bin</c> segment and stay unaffected.
+    /// </summary>
+    private static bool IsOrphanedBuildOutput(string normalizedPath)
+    {
+        var segments = normalizedPath.Split(Path.DirectorySeparatorChar);
+        var binIndex = Array.FindLastIndex(segments, segment =>
+            string.Equals(segment, "bin", StringComparison.OrdinalIgnoreCase));
+        if (binIndex <= 0)
+        {
+            return false;
+        }
+
+        var projectDirectory = string.Join(Path.DirectorySeparatorChar, segments, 0, binIndex);
+        try
+        {
+            return !Directory.EnumerateFiles(projectDirectory, "*.csproj", SearchOption.TopDirectoryOnly).Any();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException
+                                              or NotSupportedException)
+        {
+            return true;
+        }
     }
 
     internal static int GetPriority(string fullPath)

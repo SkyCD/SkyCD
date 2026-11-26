@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net10.0": {
+      "OfficeIMO.Toml": {
+        "type": "Direct",
+        "requested": "[3.6.2, )",
+        "resolved": "3.6.2",
+        "contentHash": "WAFzA1VTtc9tl/7sD1oP3WC4VnkNsVXVYpEKxmr1IWA8yGlOsMUJj/sdRHm+why86Ez62YRH37iPqEY6/n6SlQ==",
+        "dependencies": {
+          "OfficeIMO.Core": "3.6.2"
+        }
+      },
+      "OfficeIMO.Yaml": {
+        "type": "Direct",
+        "requested": "[3.6.2, )",
+        "resolved": "3.6.2",
+        "contentHash": "CfFaS+rh5XxxfFB16jc3bN6zq0iaabC1WgAXpaJMMrgIdeY9ksz7AM01nZ39/mFe8gYtJKTVDCQHuk4WcF9PJQ==",
+        "dependencies": {
+          "OfficeIMO.Core": "3.6.2"
+        }
+      },
+      "SkiaSharp": {
+        "type": "Direct",
+        "requested": "[3.119.4, )",
+        "resolved": "3.119.4",
+        "contentHash": "53NOSUZ1Us+91Sm0uCkIivh/k7jOowRErZT2sIWwPFN9mLUvdxnE6rS4sWo4255+Rd2MWUSF+j0NMZHD6Cke+Q==",
+        "dependencies": {
+          "SkiaSharp.NativeAssets.Win32": "3.119.4",
+          "SkiaSharp.NativeAssets.macOS": "3.119.4"
+        }
+      },
+      "SkiaSharp.NativeAssets.Linux": {
+        "type": "Direct",
+        "requested": "[3.119.4, )",
+        "resolved": "3.119.4",
+        "contentHash": "UAyVzbqNfZsZbKbzj68zXLyUyF/SbTKmzTfOO6qDu++dtIUMMTzPBe8oOuzU/DiewpfKoUUlOSsJmqWc6blxBw=="
+      },
+      "SkiaSharp.NativeAssets.macOS": {
+        "type": "Direct",
+        "requested": "[3.119.4, )",
+        "resolved": "3.119.4",
+        "contentHash": "fgBOWEqbY012x7gMfJU4ezgz6dfhJb30Z6YdW35h85Zoe39+a8YNbAAwL29ihPfWoppg5AjvyKNzD1oCvlqWwA=="
+      },
+      "SkiaSharp.NativeAssets.Win32": {
+        "type": "Direct",
+        "requested": "[3.119.4, )",
+        "resolved": "3.119.4",
+        "contentHash": "XOpbx/4CReO2wYsq2s6rbvdauc6dntG4Zv499sHGTJ87bwZaFXszFkwql3+FIZMc8kUPeaj3Mx2ezIJmo8a1Kg=="
+      },
+      "OfficeIMO.Core": {
+        "type": "Transitive",
+        "resolved": "3.6.2",
+        "contentHash": "g1vThR3DWAIlFBf7NujMtYdWtYVx5bsKPKDU0I1SVCvmDGLEhr1ezPxXlYnBJSOlMagY1WmTuMJPMfGv9NxyCw=="
+      },
+      "skycd.sdk": {
+        "type": "Project"
+      }
+    }
+  }
+}

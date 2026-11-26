@@ -182,7 +182,7 @@
                         MinHeight="90"
                         BorderBrush="{DynamicResource ThemeBorderLowBrush}"
                         BorderThickness="1"
-                        CornerRadius="3"
+                        CornerRadius="{DynamicResource SkyCornerRadiusMedium}"
                         Background="{DynamicResource ThemeBackgroundBrush}">
                     <ScrollViewer x:Name="LogScrollViewer"
                                   HorizontalScrollBarVisibility="Disabled"

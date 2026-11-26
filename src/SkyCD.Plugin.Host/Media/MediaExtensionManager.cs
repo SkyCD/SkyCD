@@ -417,6 +417,7 @@ public sealed class MediaExtensionManager
         private long remaining = budget;
         private long position;
         public long Length => length;
+        public long RemainingReadBytes => Interlocked.Read(ref remaining);
 
         public async ValueTask<ReadOnlyMemory<byte>> ReadAsync(long offset, int count, CancellationToken cancellationToken)
         {

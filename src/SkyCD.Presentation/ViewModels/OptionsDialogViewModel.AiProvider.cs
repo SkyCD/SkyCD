@@ -12,6 +12,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Host.Media;
+using SkyCD.Presentation.Plugins;
 using SkyCD.UI.Localization;
 
 namespace SkyCD.Presentation.ViewModels;
@@ -67,6 +68,11 @@ public partial class OptionsDialogViewModel
     public bool CanStartAiProviderServer => AiProviderCanStartServer && !IsAiProviderBusy;
 
     public bool CanUseAiProviderActions => !IsAiProviderBusy && aiProviderCapability is not null;
+
+    /// <summary>Help page for the selected provider's API key, or null when it has no key concept.</summary>
+    public string? AiProviderApiKeyHelpUrl => SelectedAiProvider?.ApiKeyHelpUrl;
+
+    public bool ShowAiProviderApiKeyHelp => ExternalLinkLauncher.IsLaunchable(AiProviderApiKeyHelpUrl);
 
     /// <summary>Loads the installed implementations and restores the host-selected one when still available.</summary>
     public void SetAiDescriptionImplementations(IEnumerable<AiDescriptionImplementationChoice> implementations,
@@ -508,6 +514,14 @@ public partial class OptionsDialogViewModel
         }
     }
 
+    [RelayCommand(CanExecute = nameof(CanOpenAiProviderApiKeyHelp))]
+    private void OpenAiProviderApiKeyHelp()
+    {
+        ExternalLinkLauncher.TryOpen(AiProviderApiKeyHelpUrl);
+    }
+
+    private bool CanOpenAiProviderApiKeyHelp() => ExternalLinkLauncher.IsLaunchable(AiProviderApiKeyHelpUrl);
+
     private bool TrySaveAiProviderSettings()
     {
         if (!IsAiProviderImplementationSelected || aiProviderCapability is null)
@@ -542,6 +556,7 @@ public partial class OptionsDialogViewModel
 
     partial void OnSelectedAiProviderChanged(AiProviderChoice? value)
     {
+        NotifyAiProviderApiKeyHelpChanged();
         if (isApplyingAiProviderSettings || value is null)
         {
             return;
@@ -609,5 +624,13 @@ public partial class OptionsDialogViewModel
         OnPropertyChanged(nameof(IsAiProviderCategorySelected));
         OnPropertyChanged(nameof(ShowAiProviderSection));
         OnPropertyChanged(nameof(ShowAiProviderAlert));
+        NotifyAiProviderApiKeyHelpChanged();
+    }
+
+    private void NotifyAiProviderApiKeyHelpChanged()
+    {
+        OnPropertyChanged(nameof(AiProviderApiKeyHelpUrl));
+        OnPropertyChanged(nameof(ShowAiProviderApiKeyHelp));
+        OpenAiProviderApiKeyHelpCommand.NotifyCanExecuteChanged();
     }
 }

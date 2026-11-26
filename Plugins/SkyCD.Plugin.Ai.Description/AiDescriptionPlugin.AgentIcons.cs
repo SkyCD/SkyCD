@@ -16,7 +16,7 @@ public sealed partial class AiDescriptionPlugin
 {
     private const int MaxIconBytes = 32 * 1024;
 
-    private static async Task RefreshAgentIconsAsync(AcpAgentRegistry registry, string directory, CancellationToken cancellationToken)
+    private async Task RefreshAgentIconsAsync(AcpAgentRegistry registry, string directory, CancellationToken cancellationToken)
     {
         var icons = Path.Combine(directory, "acp-icons");
         Directory.CreateDirectory(icons);
@@ -37,7 +37,7 @@ public sealed partial class AiDescriptionPlugin
                 if (File.Exists(path)) return;
                 try
                 {
-                    using var response = await RegistryClient.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, token);
+                    using var response = await registryClient.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, token);
                     if (!response.IsSuccessStatusCode) return;
                     await using var source = await response.Content.ReadAsStreamAsync(token);
                     var buffer = new byte[MaxIconBytes + 1];

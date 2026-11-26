@@ -12,6 +12,10 @@
         <PackageReference Include="xunit.runner.visualstudio" Version="4.0.1"/>
     </ItemGroup>
     <ItemGroup>
+        <!-- The only binary fixture: a synthetic XCF with one transparent layer. -->
+        <None Update="Fixtures/tiny-layer.xcf" CopyToOutputDirectory="PreserveNewest"/>
+    </ItemGroup>
+    <ItemGroup>
         <!-- Locator only; the packet itself is parsed by the shared XMP reader under test. -->
         <Compile Include="..\..\Plugins\Shared\MediaMetadata\Parsing\XmpPacketLocator.cs" Link="Shared\XmpPacketLocator.cs"/>
     </ItemGroup>

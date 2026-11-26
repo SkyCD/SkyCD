@@ -13,13 +13,13 @@ public sealed class MainWindowStartupRestoreTests
     [Fact]
     public void StartupRestore_PaintsTheShellBeforeLoadingPluginsAndTheLastCatalog()
     {
-        var opened = ExtractMethod(ReadRepoFile("src", "SkyCD.App", "Views", "MainWindow.axaml.cs"),
-            "private async void OnOpened(");
+        var opened = ExtractMethod(ReadRepoFile("src", "SkyCD.App", "Views", "MainWindow.Lifecycle.cs"),
+            "private async Task OpenedAsync(");
 
         var beginLoad = opened.IndexOf("vm.BeginCatalogLoad();", StringComparison.Ordinal);
         var yieldFirstFrame = opened.IndexOf("DispatcherPriority.Background", StringComparison.Ordinal);
         var loadPlugins = opened.IndexOf("EnsureFileFormatProvidersLoaded();", StringComparison.Ordinal);
-        var loadCatalog = opened.IndexOf("await TryLoadCatalogIntoViewModelAsync(", StringComparison.Ordinal);
+        var loadCatalog = opened.IndexOf("await catalogFiles.LoadAsync(", StringComparison.Ordinal);
 
         Assert.True(beginLoad >= 0, "OnOpened must publish the busy state before the restore starts.");
         Assert.True(yieldFirstFrame > beginLoad,

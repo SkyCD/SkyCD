@@ -13,16 +13,21 @@ public static class AiProviderCatalog
     public static IReadOnlyList<AiProviderChoice> Providers { get; } =
     [
         new("lmstudio", "LM Studio", "http", "127.0.0.1", 1234, "google/gemma-4-e2b", CanStartServer: true,
-            ["google/gemma-4-e2b", "meta-llama-3.1-8b-instruct", "qwen2.5-7b-instruct"]),
+            ["google/gemma-4-e2b", "meta-llama-3.1-8b-instruct", "qwen2.5-7b-instruct"],
+            ApiKeyHelpUrl: "https://lmstudio.ai/docs/developer/core/authentication"),
         new("ollama", "Ollama", "http", "127.0.0.1", 11434, "llama3.2", CanStartServer: true,
             ["llama3.2", "llama3.1", "qwen3", "gemma3", "mistral"]),
         new("colibri", "Colibri", "http", "127.0.0.1", 8000, "glm-5.2", CanStartServer: true,
             ["glm-5.2", "qwen3.6", "deepseek-v4-flash"]),
-        new("llamacpp", "llama.cpp", "http", "127.0.0.1", 8080, null, CanStartServer: false),
-        new("koboldcpp", "KoboldCpp", "http", "127.0.0.1", 5001, null, CanStartServer: false),
+        new("llamacpp", "llama.cpp", "http", "127.0.0.1", 8080, null, CanStartServer: false,
+            ApiKeyHelpUrl: "https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md#server-specific-params"),
+        new("koboldcpp", "KoboldCpp", "http", "127.0.0.1", 5001, null, CanStartServer: false,
+            ApiKeyHelpUrl: "https://github.com/LostRuins/koboldcpp/wiki#can-i-add-authentication"),
         new("jan", "Jan", "http", "127.0.0.1", 1337, null, CanStartServer: false),
-        new("localai", "LocalAI", "http", "127.0.0.1", 8080, null, CanStartServer: false),
-        new("vllm", "vLLM", "http", "127.0.0.1", 8000, null, CanStartServer: false),
+        new("localai", "LocalAI", "http", "127.0.0.1", 8080, null, CanStartServer: false,
+            ApiKeyHelpUrl: "https://localai.io/docs/administration/authentication/"),
+        new("vllm", "vLLM", "http", "127.0.0.1", 8000, null, CanStartServer: false,
+            ApiKeyHelpUrl: "https://docs.vllm.ai/en/stable/serving/online_serving/openai_compatible_server/"),
         new("custom", "Custom local OpenAI-compatible", "http", "127.0.0.1", 8000, null, CanStartServer: false)
     ];
 
