@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 using DryIoc;
 using Microsoft.Extensions.Localization;
@@ -22,6 +23,8 @@ using SkyCD.Presentation.Catalog.Split;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.SDK.Capabilities.Catalog;
 using SkyCD.SDK.Capabilities.Media;
+using SkyCD.SDK.Capabilities.Ui;
+using SkyCD.UI.Dialogs;
 using SkyCD.UI.Localization;
 
 namespace SkyCD.App.Views;
@@ -91,7 +94,7 @@ public partial class MainWindow
 
             if (vm.IsDirtyDocument)
             {
-                var decision = await ShowUnsavedChangesPromptAsync();
+                var decision = await ShowUnsavedChangesPromptAsync(UiKeys.SaveCatalogConfirmation);
                 if (decision == UnsavedChangesDecision.Cancel)
                 {
                     return;
@@ -143,7 +146,7 @@ public partial class MainWindow
 
             if (vm.IsDirtyDocument)
             {
-                var decision = await ShowUnsavedChangesPromptAsync();
+                var decision = await ShowUnsavedChangesPromptAsync(UiKeys.SaveCatalogConfirmation);
                 if (decision == UnsavedChangesDecision.Cancel)
                 {
                     return;
@@ -253,12 +256,8 @@ public partial class MainWindow
                     targetPath,
                     vm.GetAllCatalogEntries(),
                     scopeItems,
-                    async preview =>
-                    {
-                        var dialog = new SaveDataLossWindow(preview.FormatDisplayName,
-                            CatalogDataLossText.BuildLines(preview.Items));
-                        return await dialog.ShowDialog<bool>(window);
-                    });
+                    preview => ConfirmSaveDataLossAsync(window, preview.FormatDisplayName,
+                            CatalogDataLossText.BuildLines(preview.Items)));
                 if (!saved)
                 {
                     return false;
@@ -336,12 +335,8 @@ public partial class MainWindow
                         entries,
                         scopeItems,
                         request,
-                        async preview =>
-                        {
-                            var dialog = new SaveDataLossWindow(preview.FormatDisplayName,
-                                CatalogDataLossText.BuildLines(preview.Items));
-                            return await dialog.ShowDialog<bool>(splitWindow!);
-                        },
+                        preview => ConfirmSaveDataLossAsync(splitWindow!, preview.FormatDisplayName,
+                            CatalogDataLossText.BuildLines(preview.Items)),
                         progress,
                         cancellationToken);
                 });
@@ -406,12 +401,8 @@ public partial class MainWindow
                     targetPath,
                     vm.GetAllCatalogEntries(),
                     scopeItems,
-                    async preview =>
-                    {
-                        var lossDialog = new SaveDataLossWindow(preview.FormatDisplayName,
-                            CatalogDataLossText.BuildLines(preview.Items));
-                        return await lossDialog.ShowDialog<bool>(window);
-                    });
+                    preview => ConfirmSaveDataLossAsync(window, preview.FormatDisplayName,
+                            CatalogDataLossText.BuildLines(preview.Items)));
                 if (!saved)
                 {
                     return;
@@ -454,11 +445,29 @@ public partial class MainWindow
             return formats[0].FormatId;
         }
 
-        public async Task<UnsavedChangesDecision> ShowUnsavedChangesPromptAsync()
+        private static async Task<bool> ConfirmSaveDataLossAsync(
+            Window owner, string formatDisplayName, IReadOnlyList<string> details)
         {
-            var dialog = new UnsavedChangesWindow();
-            var result = await dialog.ShowDialog<UnsavedChangesDecision?>(window);
-            return result ?? UnsavedChangesDecision.Cancel;
+            var localization = LocalizationService.Current;
+            var result = await QuestionDialog.AskAsync(owner, new QuestionRequest(
+                localization.Get(UiKeys.SaveDataLoss),
+                localization.Format(UiKeys.SaveDataLossIntro, formatDisplayName),
+                QuestionButtons.SaveAnywayCancel,
+                details));
+            return result == QuestionResult.Save;
+        }
+
+        public async Task<UnsavedChangesDecision> ShowUnsavedChangesPromptAsync(string questionKey)
+        {
+            var localization = LocalizationService.Current;
+            var result = await QuestionDialog.AskAsync(window, new QuestionRequest(
+                localization.Get(UiKeys.UnsavedChanges), localization.Get(questionKey), QuestionButtons.YesNoCancel));
+            return result switch
+            {
+                QuestionResult.Yes => UnsavedChangesDecision.Save,
+                QuestionResult.No => UnsavedChangesDecision.Discard,
+                _ => UnsavedChangesDecision.Cancel
+            };
         }
 
         public Task LoadAsync(string localPath)

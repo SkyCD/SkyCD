@@ -278,6 +278,8 @@ public static class UiKeys
     public const string ResetStatusesTitle = "core.ui.ResetStatusesTitle";
     public const string ResetStatusesConfirmation = "core.ui.ResetStatusesConfirmation";
     public const string UnsavedChanges = "core.ui.UnsavedChanges";
+    public const string Discard = "core.ui.Discard";
+    public const string SaveCatalogConfirmation = "core.ui.SaveCatalogConfirmation";
     public const string SaveCollectionConfirmation = "core.ui.SaveCollectionConfirmation";
     public const string SaveDataLoss = "core.ui.SaveDataLoss";
     public const string SaveDataLossIntro = "core.ui.SaveDataLossIntro";

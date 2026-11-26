@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Threading;
 using SkyCD.SDK.Capabilities.Ui;
+using SkyCD.UI.Dialogs;
 
 namespace SkyCD.App.PluginHost;
 
@@ -25,6 +26,16 @@ public sealed class AvaloniaHostDialogApi(Func<Window?> ownerProvider) : IHostDi
         await Dispatcher.UIThread
             .InvokeAsync(() => ShowCoreAsync(request, owner))
             .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<QuestionResult> AskAsync(QuestionRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return await Dispatcher.UIThread.InvokeAsync(() =>
+            ownerProvider() is { } owner
+                ? QuestionDialog.AskAsync(owner, request)
+                : Task.FromResult(QuestionResult.Cancel)).ConfigureAwait(false);
     }
 
     private static async Task ShowCoreAsync(HostWindowRequest request, Window owner)
