@@ -17,7 +17,7 @@ public class GenDescRendererTests
     private static TemplateStore Store(params TemplateInfo[] templates) => new(templates);
 
     private static TemplateInfo Template(string id, string kind, string category, string language = "en",
-        string mime = "video/*", string extensions = ".mkv", string body = "<% Default(\"Title\", Name) %>") =>
+        string mime = "video/*", string extensions = ".mkv", string body = "{{ default(\"Title\", Name) }}") =>
         new(id, kind, category, language, TemplateInfo.DefaultSite, "1", mime, extensions, body);
 
     private static GenDescEntryContext MovieContext(params (string Key, string Value)[] extra)
@@ -54,7 +54,7 @@ public class GenDescRendererTests
     public void LocalIdentityFactsWinOverHostValues()
     {
         var store = Store(Template("identity", TemplateInfo.DescriptionKind, "movie",
-            body: "<% Name %>|<% FileName %>|<% Extension %>|<% MimeType %>|<% Category %>|<% CategoryTitle %>"));
+            body: "{{ Name }}|{{ FileName }}|{{ Extension }}|{{ MimeType }}|{{ Category }}|{{ CategoryTitle }}"));
         var context = MovieContext(("Name", "Wrong"), ("FileName", "Wrong.mkv"), ("Title", "Wrong"));
 
         var result = GenDescRenderer.Render(store, context, TemplateInfo.DescriptionKind, "en");
@@ -66,7 +66,7 @@ public class GenDescRendererTests
     [Fact]
     public void MissingTitleFallsBackToTheFileNameWithoutExtension()
     {
-        var store = Store(Template("title", TemplateInfo.DescriptionKind, "movie", body: "<% Title %>"));
+        var store = Store(Template("title", TemplateInfo.DescriptionKind, "movie", body: "{{ Title }}"));
         var context = new GenDescEntryContext("Some.File.mkv", ".mkv", "video/x-matroska",
             new Dictionary<string, string>());
 
@@ -114,7 +114,7 @@ public class GenDescRendererTests
     [Fact]
     public void EmptyRenderingThrows()
     {
-        var store = Store(Template("empty", TemplateInfo.DescriptionKind, "movie", body: "<% Missing %>   "));
+        var store = Store(Template("empty", TemplateInfo.DescriptionKind, "movie", body: "{{ Missing }}   "));
 
         var exception = Assert.Throws<GenDescGenerationException>(() =>
             GenDescRenderer.Render(store, MovieContext(), TemplateInfo.DescriptionKind, "en"));

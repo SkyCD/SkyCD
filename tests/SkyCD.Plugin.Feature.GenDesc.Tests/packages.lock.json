@@ -101,6 +101,11 @@
           "Microsoft.TestPlatform.ObjectModel": "18.11.0"
         }
       },
+      "Scriban": {
+        "type": "Transitive",
+        "resolved": "7.6.0",
+        "contentHash": "Ka3LakuFhLhhZ3JcGr4srWpDnYu6FIQnyR7jsKR6YeZnHqnq6jicrXcMa2jDFbK9X/kwkvsrx1wgMC7nJPhpUQ=="
+      },
       "SmartFormat": {
         "type": "Transitive",
         "resolved": "3.6.2",
@@ -171,6 +176,7 @@
           "Avalonia": "[12.1.6, )",
           "CommandDotNet": "[8.1.1, )",
           "CommunityToolkit.Mvvm": "[8.4.2, )",
+          "Scriban": "[7.6.0, )",
           "SkyCD.SDK": "[3.0.0, )",
           "SkyCD.UI": "[1.0.0, )"
         }

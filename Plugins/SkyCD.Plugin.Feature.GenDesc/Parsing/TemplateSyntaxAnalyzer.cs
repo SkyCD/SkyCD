@@ -20,19 +20,21 @@ public enum TemplateSyntaxKind
 public readonly record struct TemplateSyntaxSpan(int Start, int Length, TemplateSyntaxKind Kind);
 
 /// <summary>
-/// Classifies a template body into spans for the editor's syntax view. It deliberately mirrors the compiler's
-/// grammar instead of guessing: comment and tag blocks, keywords, calls, strings, numbers, filters and BBCode.
+/// Classifies a Scriban template body into spans for the editor's syntax view. It mirrors the code-block
+/// grammar instead of guessing: comment blocks, <c>{{ ... }}</c> tags, keywords, calls, strings, numbers,
+/// pipes and BBCode.
 /// </summary>
 public static class TemplateSyntaxAnalyzer
 {
     private static readonly HashSet<string> Keywords = new(StringComparer.Ordinal)
     {
-        "if", "elseif", "else", "end"
+        "if", "else", "end", "for", "in"
     };
 
     private static readonly HashSet<string> Operators = new(StringComparer.Ordinal)
     {
-        "|", "==", "!=", "&&", "||", ">", "<", ">=", "<=", "+", "-", "*", "/"
+        "|", "==", "!=", "&&", "||", ">", "<", ">=", "<=", "+", "-", "*", "/", "%", "!", "??", "?", ".",
+        ",", "(", ")"
     };
 
     public static IReadOnlyList<TemplateSyntaxSpan> Analyze(string? body)
@@ -64,12 +66,12 @@ public static class TemplateSyntaxAnalyzer
     {
         end = start;
         var openEnd = start + 2;
-        if (openEnd > text.Length || text[start] != '<' || text[start + 1] != '%')
+        if (openEnd > text.Length || text[start] != '{' || text[start + 1] != '{')
         {
             return false;
         }
 
-        var close = text.IndexOf("%>", openEnd, StringComparison.Ordinal);
+        var close = text.IndexOf("}}", openEnd, StringComparison.Ordinal);
         if (close < 0)
         {
             return false;
@@ -82,7 +84,7 @@ public static class TemplateSyntaxAnalyzer
             trimmedStart++;
         }
 
-        if (trimmedStart < close && (text[trimmedStart] == '#' || text[trimmedStart] == '-' && trimmedStart + 1 < close && text[trimmedStart + 1] == '#'))
+        if (trimmedStart < close && text[trimmedStart] == '#')
         {
             spans.Add(new TemplateSyntaxSpan(start, end - start, TemplateSyntaxKind.Comment));
             return true;
@@ -106,7 +108,7 @@ public static class TemplateSyntaxAnalyzer
                 continue;
             }
 
-            if (c == '"')
+            if (c is '"' or '\'')
             {
                 var stringStart = index;
                 index++;
@@ -118,7 +120,7 @@ public static class TemplateSyntaxAnalyzer
                         continue;
                     }
 
-                    if (text[index] == '"')
+                    if (text[index] == c)
                     {
                         index++;
                         break;
@@ -160,7 +162,7 @@ public static class TemplateSyntaxAnalyzer
 
                 var kind = Keywords.Contains(name)
                     ? TemplateSyntaxKind.Keyword
-                    : lookahead < end && text[lookahead] == '('
+                    : lookahead < end && text[lookahead] == '(' && TemplateFunctions.IsKnown(name)
                         ? TemplateSyntaxKind.Function
                         : TemplateSyntaxKind.Variable;
                 spans.Add(new TemplateSyntaxSpan(nameStart, index - nameStart, kind));

@@ -229,8 +229,8 @@ internal static class BuiltInTemplates
         var bbCode = !string.Equals(kind, TemplateInfo.NfoKind, StringComparison.Ordinal);
         var builder = new StringBuilder();
         builder.Append(bbCode ? "[b]" : string.Empty);
-        builder.Append("<% Default(\"Title\", Name) %>");
-        builder.Append("<% if Year %> (<% Year %>)<% end %>");
+        builder.Append("{{ default(\"Title\", Name) }}");
+        builder.Append("{{ if Year }} ({{ Year }}){{ end }}");
         builder.Append(bbCode ? "[/b]\n\n" : "\n" + new string('-', 60) + "\n\n");
 
         foreach (var field in category.Fields)
@@ -261,9 +261,9 @@ internal static class BuiltInTemplates
     {
         // The newline lives inside the guard: a missing fact leaves no blank line behind, and a present one
         // ends its line so the next guard starts on a fresh line.
-        builder.Append("<% if Has(\"").Append(key).Append("\") %>");
+        builder.Append("{{ if has(\"").Append(key).Append("\") }}");
         builder.Append(bbCode ? "[i]" + label + ":[/i] " : label + ": ");
-        builder.Append(list ? "<% Join(\"" + key + "\", \", \") %>" : "<% " + key + " %>");
-        builder.Append("\n<% end %>");
+        builder.Append(list ? "{{ join(\"" + key + "\", \", \") }}" : "{{ " + key + " }}");
+        builder.Append("\n{{ end }}");
     }
 }

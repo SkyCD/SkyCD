@@ -190,16 +190,16 @@ public class GenDescPluginTests
         var directory = workspace.GetPath("templates");
         Directory.CreateDirectory(directory);
         await File.WriteAllTextAsync(Path.Combine(directory, "default-description-movie.tpl"),
-            "## id=default-description-movie\n## kind=description\n## category=movie\n## lang=en\n## mime=video/*\n## ext=.mkv\n<% if Year %>broken");
+            "## id=default-description-movie\n## kind=description\n## category=movie\n## lang=en\n## mime=video/*\n## ext=.mkv\n{{ if Year }}broken");
         await File.WriteAllTextAsync(Path.Combine(directory, "default-description-movie-lt.tpl"),
-            "## id=default-description-movie-lt\n## kind=description\n## category=movie\n## lang=lt\n## mime=video/*\n## ext=.mkv\n<% if Year %>broken");
+            "## id=default-description-movie-lt\n## kind=description\n## category=movie\n## lang=lt\n## mime=video/*\n## ext=.mkv\n{{ if Year }}broken");
         var plugin = Plugin(new FakeGenDescHostApi(GenDescTestData.Movie()), directory);
         plugin.InitializeDialogApi(new RecordingDialogApi());
         var host = new RecordingHostCommandApi();
 
         await plugin.ExecuteMenuCommandAsync(DescriptionCommand, Context(host));
 
-        Assert.Contains("unclosed", Assert.Single(host.Messages));
+        Assert.Contains("was not found", Assert.Single(host.Messages));
     }
 
     [Fact]

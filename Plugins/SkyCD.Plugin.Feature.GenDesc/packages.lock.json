@@ -28,6 +28,12 @@
         "resolved": "8.4.2",
         "contentHash": "WadCzGEc2U+3e20avRLng4qNtt4zoOGWrdUISqJWrHe3/FSnrYjuM5Sb4yQb09LhkBXrrI4Zt3dLKgRMbItsrg=="
       },
+      "Scriban": {
+        "type": "Direct",
+        "requested": "[7.6.0, )",
+        "resolved": "7.6.0",
+        "contentHash": "Ka3LakuFhLhhZ3JcGr4srWpDnYu6FIQnyR7jsKR6YeZnHqnq6jicrXcMa2jDFbK9X/kwkvsrx1wgMC7nJPhpUQ=="
+      },
       "Avalonia.BuildServices": {
         "type": "Transitive",
         "resolved": "11.3.2",

@@ -145,7 +145,7 @@ public class GenDescCliOperationsTests
         var directory = Templates(workspace);
         Directory.CreateDirectory(directory);
         await File.WriteAllTextAsync(Path.Combine(directory, "custom.tpl"),
-            "## id=custom\n## kind=description\n## category=movie\n## lang=en\n## ext=.mkv\n<% Title %> secret");
+            "## id=custom\n## kind=description\n## category=movie\n## lang=en\n## ext=.mkv\n{{ Title }} secret");
         var stdout = new StringWriter();
 
         var exit = await GenDescCliOperations.GenerateDescriptionAsync(Source(workspace), "custom", "en", null, null,

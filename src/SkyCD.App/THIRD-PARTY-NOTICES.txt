@@ -59,3 +59,12 @@ The Windows runtime package also ships opencv_videoio_ffmpeg4130_64.dll, an LGPL
 FFmpeg-based OpenCV video I/O backend. It is loaded dynamically by OpenCV at runtime from the plugin
 folder, is not statically linked into SkyCD, and can be replaced by the operator.
 
+Scriban
+Copyright Alexandre Mutel
+Source: https://github.com/scriban/scriban
+License: BSD 2-Clause "Simplified" License
+https://opensource.org/licenses/BSD-2-Clause
+
+The GenDesc plugin renders user-editable templates with Scriban 7.6.0:
+https://www.nuget.org/packages/Scriban/7.6.0
+

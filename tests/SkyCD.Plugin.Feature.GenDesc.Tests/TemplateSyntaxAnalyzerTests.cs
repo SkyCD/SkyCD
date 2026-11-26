@@ -17,7 +17,7 @@ public class TemplateSyntaxAnalyzerTests
     [Fact]
     public void OutputTagIsSplitIntoTagsAndVariable()
     {
-        var spans = Spans("<% Name %>");
+        var spans = Spans("{{ Name }}");
 
         Assert.Equal(
             [TemplateSyntaxKind.Tag, TemplateSyntaxKind.Variable, TemplateSyntaxKind.Tag],
@@ -32,7 +32,7 @@ public class TemplateSyntaxAnalyzerTests
     [Fact]
     public void ConditionalClassifiesKeywordFunctionAndString()
     {
-        var spans = Spans("<% if Has(\"Year\") %>");
+        var spans = Spans("{{ if has(\"Year\") }}");
 
         Assert.Equal(
             [TemplateSyntaxKind.Tag, TemplateSyntaxKind.Keyword, TemplateSyntaxKind.Function,
@@ -42,21 +42,32 @@ public class TemplateSyntaxAnalyzerTests
     }
 
     [Fact]
+    public void ElseIfIsTwoKeywords()
+    {
+        var spans = Spans("{{ else if }}");
+
+        Assert.Equal(
+            [TemplateSyntaxKind.Tag, TemplateSyntaxKind.Keyword, TemplateSyntaxKind.Keyword,
+                TemplateSyntaxKind.Tag],
+            spans.Select(span => span.Kind).ToArray());
+    }
+
+    [Fact]
     public void FilterPipeIsAnOperator()
     {
-        var spans = Spans("<% Name | upper %>");
+        var spans = Spans("{{ Name | upper }}");
 
         Assert.Equal(
             [TemplateSyntaxKind.Tag, TemplateSyntaxKind.Variable, TemplateSyntaxKind.Operator,
                 TemplateSyntaxKind.Variable, TemplateSyntaxKind.Tag],
             spans.Select(span => span.Kind).ToArray());
-        Assert.Equal("|", "<% Name | upper %>".Substring(spans[2].Start, spans[2].Length));
+        Assert.Equal("|", "{{ Name | upper }}".Substring(spans[2].Start, spans[2].Length));
     }
 
     [Fact]
     public void NumbersAreRecognized()
     {
-        var spans = Spans("<% 42 %>");
+        var spans = Spans("{{ 42 }}");
 
         var number = Assert.Single(spans, span => span.Kind == TemplateSyntaxKind.Number);
         Assert.Equal(3, number.Start);
@@ -66,11 +77,11 @@ public class TemplateSyntaxAnalyzerTests
     [Fact]
     public void CommentTagIsOneSpan()
     {
-        var span = Assert.Single(Spans("<% # hidden %>"));
+        var span = Assert.Single(Spans("{{# hidden }}"));
 
         Assert.Equal(TemplateSyntaxKind.Comment, span.Kind);
         Assert.Equal(0, span.Start);
-        Assert.Equal(14, span.Length);
+        Assert.Equal(13, span.Length);
     }
 
     [Fact]
@@ -94,6 +105,6 @@ public class TemplateSyntaxAnalyzerTests
     [Fact]
     public void UnterminatedTagIsLeftAsText()
     {
-        Assert.Empty(Spans("<% if Year"));
+        Assert.Empty(Spans("{{ if Year"));
     }
 }
