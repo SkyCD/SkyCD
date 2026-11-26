@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using AsyncKeyedLock;
 using Microsoft.Extensions.Logging;
 using SkyCD.Plugin.Runtime.Installation;
 using SkyCD.Plugin.Runtime.Installation.Exceptions;
@@ -37,7 +38,7 @@ public sealed class PluginInstallService(
     private readonly PluginInstallStore store = new(layout);
     private readonly PluginPackageStager stager = new(httpHandler, hostVersion,
         downloadTimeout ?? DefaultDownloadTimeout, maxPackageBytes);
-    private readonly PluginAsyncKeyedLock operationLock = new();
+    private readonly AsyncKeyedLocker<string> operationLock = new(StringComparer.OrdinalIgnoreCase);
     private readonly TimeProvider clock = timeProvider ?? TimeProvider.System;
     private readonly SemaphoreSlim applyLock = new(1, 1);
     private readonly object stagingGate = new();
@@ -56,7 +57,7 @@ public sealed class PluginInstallService(
         layout.EnsureStagingOutsidePluginRoot();
 
         var requestedId = request.NormalizedPackageId;
-        using var operationGuard = await operationLock.AcquireAsync(requestedId, cancellationToken)
+        using var operationGuard = await operationLock.LockAsync(requestedId, cancellationToken)
             .ConfigureAwait(false);
 
         var existingPending = store.TryReadPending(requestedId);
@@ -83,7 +84,7 @@ public sealed class PluginInstallService(
             {
                 if (!string.Equals(plan.Entry.PluginId, requestedId, StringComparison.OrdinalIgnoreCase))
                 {
-                    identityGuard = await operationLock.AcquireAsync(plan.Entry.PluginId, cancellationToken)
+                    identityGuard = await operationLock.LockAsync(plan.Entry.PluginId, cancellationToken)
                         .ConfigureAwait(false);
                 }
 
@@ -175,7 +176,7 @@ public sealed class PluginInstallService(
             foreach (var pluginId in pluginIds)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                using var operationGuard = await operationLock.AcquireAsync(pluginId, cancellationToken)
+                using var operationGuard = await operationLock.LockAsync(pluginId, cancellationToken)
                     .ConfigureAwait(false);
                 results.Add(await ApplyPendingForPluginAsync(pluginId).ConfigureAwait(false));
             }
@@ -200,7 +201,7 @@ public sealed class PluginInstallService(
                 "The plugin id is not a safe folder name.", pluginId ?? string.Empty);
         }
 
-        using var operationGuard = await operationLock.AcquireAsync(pluginId, cancellationToken)
+        using var operationGuard = await operationLock.LockAsync(pluginId, cancellationToken)
             .ConfigureAwait(false);
 
         var pending = store.TryReadPending(pluginId);
@@ -237,7 +238,7 @@ public sealed class PluginInstallService(
                 "The plugin id is not a safe folder name.", pluginId ?? string.Empty);
         }
 
-        using var operationGuard = await operationLock.AcquireAsync(pluginId, cancellationToken)
+        using var operationGuard = await operationLock.LockAsync(pluginId, cancellationToken)
             .ConfigureAwait(false);
 
         var installFolder = store.GetInstallFolder(pluginId);
