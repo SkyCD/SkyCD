@@ -4,6 +4,8 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Text;
+using System.Xml;
+using System.Xml.Linq;
 
 namespace SkyCD.Plugin.Metadata.Office.Tests;
 
@@ -17,7 +19,12 @@ internal sealed record CompoundStream(string Name, byte[] Data);
 /// Builds structurally valid OOXML packages and OLE2 compound documents in memory, so the suite commits no
 /// binary blobs and every expected value is known to the test asserting it.
 /// </summary>
-internal static class OfficeFixtures
+/// <remarks>
+/// The documents a reading library has to open are produced by that library in
+/// <see cref="OfficeFixtures.Documents"/>. The packages built here are the deliberately bare ones: a suite that
+/// cannot construct an archive the reader must reject cannot test the rejection either.
+/// </remarks>
+internal static partial class OfficeFixtures
 {
     public const string SummaryStream = "\u0005SummaryInformation";
     public const string DocumentSummaryStream = "\u0005DocumentSummaryInformation";
@@ -34,29 +41,48 @@ internal static class OfficeFixtures
 
     private static readonly byte[] CompoundSignature = [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1];
 
+    private const string XmlProlog = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>";
+
+    private const string ContentTypesEntry = "[Content_Types].xml";
+
+    /// <summary>The relationship type a package uses to point at its Dublin Core part.</summary>
+    public const string CorePropertiesRelationship =
+        "http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties";
+
+    /// <summary>The content type a package declares for its Dublin Core part.</summary>
+    public const string CorePropertiesContentType =
+        "application/vnd.openxmlformats-package.core-properties+xml";
+
+    /// <summary>The relationship type a package uses to point at its application-properties part.</summary>
+    public const string ExtendedPropertiesRelationship =
+        "http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties";
+
+    /// <summary>The content type a package declares for its application-properties part.</summary>
+    public const string ExtendedPropertiesContentType =
+        "application/vnd.openxmlformats-officedocument.extended-properties+xml";
+
     public static readonly DateTimeOffset Created = new(2020, 1, 2, 3, 4, 5, TimeSpan.Zero);
     public static readonly DateTimeOffset Modified = new(2021, 6, 7, 8, 9, 10, TimeSpan.Zero);
     public static readonly DateTimeOffset LastPrinted = new(2019, 12, 31, 23, 59, 58, TimeSpan.Zero);
+
+    /// <summary>
+    /// A plan schedule floored to the whole minute: Project stores dates in tenths of a minute and MPX in whole
+    /// minutes, so a fixture carrying seconds asks the library for an instant the format cannot hold.
+    /// </summary>
+    public static readonly DateTimeOffset PlanStart = new(2020, 1, 2, 3, 4, 0, TimeSpan.Zero);
+    public static readonly DateTimeOffset PlanFinish = new(2021, 6, 7, 8, 9, 0, TimeSpan.Zero);
 
     static OfficeFixtures()
     {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
     }
 
-    // ---- OOXML packages ----
+    // ---- packages built as raw archives ----
 
-    public static byte[] Docx(string? core = null, string? app = null) =>
-        Package("word/document.xml", core, app);
-
-    public static byte[] Xlsx(string? core = null, string? app = null) =>
-        Package("xl/workbook.xml", core, app);
-
-    public static byte[] Xlsb(string? core = null, string? app = null) =>
-        Package("xl/workbook.bin", core, app);
-
-    public static byte[] Pptx(string? core = null, string? app = null) =>
-        Package("ppt/presentation.xml", core, app);
-
+    /// <summary>
+    /// An archive in the package layout with only the named parts. It has no relationships, so the reading
+    /// library cannot open it and only a suite asserting a rejection can use it.
+    /// </summary>
     public static byte[] Package(string? documentPart, string? core, string? app,
         params (string Name, string Content)[] extra)
     {
@@ -95,6 +121,106 @@ internal static class OfficeFixtures
     public static byte[] PackageWithoutDocumentPart(string? core = null, string? app = null) =>
         Package(null, core, app);
 
+    /// <summary>
+    /// Writes one metadata part where the package's own root relationship says it lives, adding that
+    /// relationship when the producer left the part out. The path matters: a real Word file names the core part
+    /// <c>docProps/core.xml</c>, while the reading library writes an opaque name under
+    /// <c>package/services/metadata/core-properties</c>, so a fixture that hard-coded a path would rewrite bytes
+    /// no reader ever resolves.
+    /// </summary>
+    public static byte[] SetMetadataPart(
+        byte[] package,
+        string relationshipType,
+        string path,
+        string contentType,
+        string content)
+    {
+        using var stream = new MemoryStream();
+        stream.Write(package, 0, package.Length);
+        using (var archive = new ZipArchive(stream, ZipArchiveMode.Update, leaveOpen: true))
+        {
+            var index = archive.GetEntry("_rels/.rels")
+                ?? throw new InvalidOperationException("the fixture package has no root relationships");
+
+            var relationships = ReadXml(index);
+            var declared = relationships.Root!.Elements()
+                .FirstOrDefault(element => element.Name.LocalName.Equals("Relationship", StringComparison.Ordinal)
+                    && ((string?)element.Attribute("Type"))?.Equals(relationshipType, StringComparison.Ordinal) == true);
+
+            var target = declared is null
+                ? path
+                : ((string?)declared.Attribute("Target"))
+                  ?? throw new InvalidOperationException("the fixture relationship has no target");
+
+            target = target.TrimStart('.', '/').TrimStart('/');
+
+            if (declared is null)
+            {
+                relationships.Root.Add(new XElement(
+                    relationships.Root.Name.Namespace + "Relationship",
+                    new XAttribute("Id", "R" + Guid.NewGuid().ToString("N")),
+                    new XAttribute("Type", relationshipType),
+                    new XAttribute("Target", target)));
+
+                index.Delete();
+                WriteEntry(archive, "_rels/.rels", relationships.ToString(SaveOptions.DisableFormatting));
+                DeclareContentType(archive, target, contentType);
+            }
+
+            archive.GetEntry(target)?.Delete();
+            WriteEntry(archive, target, content);
+        }
+
+        return stream.ToArray();
+    }
+
+    /// <summary>
+    /// Adds the content-type override a producer writes alongside a part it invents. Without it a package member
+    /// named <c>.xml</c> inherits the default type of the document part, and the packaging library refuses to
+    /// open the whole document rather than mislabel that one part.
+    /// </summary>
+    private static void DeclareContentType(ZipArchive archive, string target, string contentType)
+    {
+        var index = archive.GetEntry(ContentTypesEntry)
+            ?? throw new InvalidOperationException("the fixture package has no content types");
+
+        var types = ReadXml(index);
+        var partName = "/" + target;
+        if (types.Root!.Elements().Any(element => element.Name.LocalName.Equals("Override", StringComparison.Ordinal)
+                && (string?)element.Attribute("PartName") == partName))
+        {
+            return;
+        }
+
+        types.Root.Add(new XElement(
+            types.Root.Name.Namespace + "Override",
+            new XAttribute("PartName", partName),
+            new XAttribute("ContentType", contentType)));
+
+        index.Delete();
+        WriteEntry(archive, ContentTypesEntry, types.ToString(SaveOptions.DisableFormatting));
+    }
+
+    private static void WriteEntry(ZipArchive archive, string name, string content)
+    {
+        var entry = archive.CreateEntry(name, CompressionLevel.Fastest);
+        using var stream = entry.Open();
+        var xml = content.StartsWith("<?xml", StringComparison.Ordinal) ? content : XmlProlog + content;
+        var bytes = Encoding.UTF8.GetBytes(xml);
+        stream.Write(bytes, 0, bytes.Length);
+    }
+
+    private static XDocument ReadXml(ZipArchiveEntry entry)
+    {
+        using var stream = entry.Open();
+        using var reader = XmlReader.Create(stream, new XmlReaderSettings
+        {
+            DtdProcessing = DtdProcessing.Prohibit,
+            XmlResolver = null
+        });
+        return XDocument.Load(reader);
+    }
+
     /// <summary>Copies a package and adds one binary member, mirroring how a producer embeds a thumbnail.</summary>
     public static byte[] WithBinaryEntry(byte[] package, string name, byte[] data)
     {
@@ -130,11 +256,6 @@ internal static class OfficeFixtures
         0x03, 0x01, 0x22, 0x00, 0x02, 0x11, 0x01, 0x03, 0x11, 0x01,
         0xFF, 0xD9
     ];
-
-    /// <summary>A document package whose <c>docProps/thumbnail.jpeg</c> part carries the given bytes.</summary>
-    public static byte[] DocxWithThumbnail(byte[]? thumbnail = null) =>
-        WithBinaryEntry(Package("word/document.xml", FullCore(), FullApp()), "docProps/thumbnail.jpeg",
-            thumbnail ?? Jpeg(96, 64));
 
     /// <summary>An uncompressed 24-bit device-independent bitmap as a thumbnail clipboard would carry it.</summary>
     public static byte[] Dib(int width, int height)

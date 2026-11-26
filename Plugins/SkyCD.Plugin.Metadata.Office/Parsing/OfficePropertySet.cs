@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using SkyCD.Plugin.EncodingProfiles;
 
-namespace SkyCD.Plugin.Metadata.Office.Models;
+namespace SkyCD.Plugin.Metadata.Office.Parsing;
 
 /// <summary>
 /// Reads typed values from an OLE property set stream such as <c>SummaryInformation</c>.

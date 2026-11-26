@@ -18,6 +18,73 @@
           "Microsoft.TestPlatform.TestHost": "18.11.0"
         }
       },
+      "OfficeIMO.Access": {
+        "type": "Direct",
+        "requested": "[3.6.2, )",
+        "resolved": "3.6.2",
+        "contentHash": "7HuWR2LZM65X7w4ir7wvwIMdqQxVK4354Q5gAsO2xMO4sdASb5NbABTbSbMlvGDKV03Evy63TxJjDG7Ro20d9A==",
+        "dependencies": {
+          "OfficeIMO.Core": "3.6.2"
+        }
+      },
+      "OfficeIMO.Excel": {
+        "type": "Direct",
+        "requested": "[3.6.2, )",
+        "resolved": "3.6.2",
+        "contentHash": "3WCmjBwBzTFwlbd+PMkwYgYLPHidynzCdvt/Gw3nFhik3ZepH5OSPemnCML3aOCujrSiso/uJP9r5JQpQoIcoA==",
+        "dependencies": {
+          "DocumentFormat.OpenXml": "[3.5.1, 4.0.0)",
+          "OfficeIMO.Core": "3.6.2"
+        }
+      },
+      "OfficeIMO.OneNote": {
+        "type": "Direct",
+        "requested": "[3.6.2, )",
+        "resolved": "3.6.2",
+        "contentHash": "OX1IXhY11l/+1xNMeDz1P+HoTnKs8mafLCour49QgAlCHwApug1SQSy0hg6oYSuQknUClwZTmWA9pN7d9S0EvQ==",
+        "dependencies": {
+          "OfficeIMO.Core": "3.6.2"
+        }
+      },
+      "OfficeIMO.PowerPoint": {
+        "type": "Direct",
+        "requested": "[3.6.2, )",
+        "resolved": "3.6.2",
+        "contentHash": "CZqEr5d+72VhFAb7NJ5anHOLl+HQkgJRi2zHUVkXcvep9x9pTnSSncE817ifd/VxohVUwGpP9BKMiEHGGRV5ag==",
+        "dependencies": {
+          "DocumentFormat.OpenXml": "[3.5.1, 4.0.0)",
+          "OfficeIMO.Core": "3.6.2"
+        }
+      },
+      "OfficeIMO.Project": {
+        "type": "Direct",
+        "requested": "[3.6.2, )",
+        "resolved": "3.6.2",
+        "contentHash": "2ucBInUGTLa2I4Mi87rf/28GGOvlfTAP/7aiXmJA4OZGMCKzV398B4k7ANcArc2DiO4pBD572ktMSf4U1GKwkg==",
+        "dependencies": {
+          "OfficeIMO.Core": "3.6.2"
+        }
+      },
+      "OfficeIMO.Visio": {
+        "type": "Direct",
+        "requested": "[3.6.2, )",
+        "resolved": "3.6.2",
+        "contentHash": "VmQG8S5lCxYT/DIFKNQaXgDnvY/9hNZBQnc7L6HGXrGYkn/ALcxfXNrWn56tJ4MhwmvjP0uRXMkvI13g7zE36w==",
+        "dependencies": {
+          "OfficeIMO.Core": "3.6.2",
+          "System.IO.Packaging": "10.0.8"
+        }
+      },
+      "OfficeIMO.Word": {
+        "type": "Direct",
+        "requested": "[3.6.2, )",
+        "resolved": "3.6.2",
+        "contentHash": "Y87tHsbSWUSTEeHTmM/tT4731y8nREZcpgDdDn7Zvel7dkdso08z5QifwKBFNUEVv1WyWUaiqUGaonoG5P2ObQ==",
+        "dependencies": {
+          "DocumentFormat.OpenXml": "[3.5.1, 4.0.0)",
+          "OfficeIMO.Core": "3.6.2"
+        }
+      },
       "xunit": {
         "type": "Direct",
         "requested": "[2.9.3, )",
@@ -93,6 +160,22 @@
         "type": "Transitive",
         "resolved": "4.1.3",
         "contentHash": "Jtlac0cTR/iEOz27eBeetPxUoUcJdwsJDZiQF9fMD+InfDNiwozTrgZe4LBy75QJuHNv74qSWYsHSrZhsX5tOg=="
+      },
+      "DocumentFormat.OpenXml": {
+        "type": "Transitive",
+        "resolved": "3.5.1",
+        "contentHash": "zxdOf5VVCe/uNklbRhj8dVBzQGj3DoqkUuqOp9cAZVuN8mNYDjof1lvSQA2OQNr8Ptc9d7pbA7Azq/ReaI3FpA==",
+        "dependencies": {
+          "DocumentFormat.OpenXml.Framework": "3.5.1"
+        }
+      },
+      "DocumentFormat.OpenXml.Framework": {
+        "type": "Transitive",
+        "resolved": "3.5.1",
+        "contentHash": "U5txtc3ORno73xQx9Lf2gWzfaSZnZwKHfLkTAslhlew9lxe5XbUiCt0dY1fHeAf8yRqszUAe5i/+xLC9R/Xfsw==",
+        "dependencies": {
+          "System.IO.Packaging": "10.0.2"
+        }
       },
       "DryIoc.dll": {
         "type": "Transitive",
@@ -714,6 +797,11 @@
           "Microsoft.TestPlatform.ObjectModel": "18.11.0"
         }
       },
+      "OfficeIMO.Core": {
+        "type": "Transitive",
+        "resolved": "3.6.2",
+        "contentHash": "g1vThR3DWAIlFBf7NujMtYdWtYVx5bsKPKDU0I1SVCvmDGLEhr1ezPxXlYnBJSOlMagY1WmTuMJPMfGv9NxyCw=="
+      },
       "SerialQueue": {
         "type": "Transitive",
         "resolved": "2.1.0",
@@ -745,6 +833,11 @@
         "type": "Transitive",
         "resolved": "11.0.0",
         "contentHash": "lKore9DXE1q8o6ss6/M7++xBpn2FMS0axaAypBspYLqY5OT1ZRPLzFGwF18l61aXfXTPpwkx5tYh4zMUHoAv/g=="
+      },
+      "System.IO.Packaging": {
+        "type": "Transitive",
+        "resolved": "10.0.8",
+        "contentHash": "6Dzmgfpi7BdqgQ3g/6jZuJzgGspIFSEfSchY4ejTVkZTMOKRZRJiYp5/q0gIZ8H1+Eq8/sxJNnyWtzAHp6iTcQ=="
       },
       "System.IO.Pipelines": {
         "type": "Transitive",
@@ -895,6 +988,13 @@
       "skycd.plugin.metadata.office": {
         "type": "Project",
         "dependencies": {
+          "OfficeIMO.Access": "[3.6.2, )",
+          "OfficeIMO.Excel": "[3.6.2, )",
+          "OfficeIMO.OneNote": "[3.6.2, )",
+          "OfficeIMO.PowerPoint": "[3.6.2, )",
+          "OfficeIMO.Project": "[3.6.2, )",
+          "OfficeIMO.Visio": "[3.6.2, )",
+          "OfficeIMO.Word": "[3.6.2, )",
           "SkyCD.SDK": "[3.0.0, )"
         }
       },
