@@ -37,6 +37,9 @@ public sealed record AccountFolderPlan
     public required string ProviderId { get; init; }
     public required string AccountKey { get; init; }
     public string? AccountEmail { get; init; }
+    public string? DisplayName { get; init; }
+    public bool IsConnected { get; init; } = true;
+    public DateTimeOffset? LastSyncedUtc { get; init; }
     public required IReadOnlyList<AccountEntryPlan> Entries { get; init; }
 }
 
@@ -80,6 +83,9 @@ public static class AccountCatalogBuilder
             ProviderId = providerId,
             AccountKey = accountKey,
             AccountEmail = string.IsNullOrWhiteSpace(status.AccountEmail) ? null : status.AccountEmail.Trim(),
+            DisplayName = string.IsNullOrWhiteSpace(status.DisplayName) ? null : status.DisplayName.Trim(),
+            IsConnected = status.IsConnected,
+            LastSyncedUtc = status.LastSyncedUtc,
             Entries = items.Select(ToEntryPlan).ToList()
         };
     }
@@ -111,11 +117,22 @@ public static class AccountCatalogBuilder
         {
             [CatalogDocument.SizeKnownPropertyKey] = false,
             ["AccountProvider"] = plan.ProviderId,
-            ["AccountKey"] = plan.AccountKey
+            ["AccountKey"] = plan.AccountKey,
+            ["AccountConnected"] = plan.IsConnected,
         };
         if (plan.AccountEmail is { } email)
         {
             folderProperties["AccountEmail"] = email;
+        }
+
+        if (plan.DisplayName is { } displayName)
+        {
+            folderProperties["AccountDisplayName"] = displayName;
+        }
+
+        if (plan.LastSyncedUtc is { } lastSync)
+        {
+            folderProperties["AccountLastSync"] = lastSync.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture);
         }
 
         var documents = new List<CatalogDocument>(plan.Entries.Count + 1)

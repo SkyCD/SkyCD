@@ -14,6 +14,10 @@ public partial class AccountConnectorItemViewModel : ObservableObject
     private readonly IAccountSession session;
     private AccountSessionStatus? statusSnapshot;
 
+    public IAccountSession Session => session;
+
+    public AccountSessionStatus? LastStatus => statusSnapshot;
+
     public AccountConnectorItemViewModel(IAccountSession session)
     {
         this.session = session ?? throw new ArgumentNullException(nameof(session));
