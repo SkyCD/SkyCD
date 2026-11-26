@@ -1,10 +1,12 @@
 using SkyCD.Presentation.Accounts;
 using SkyCD.Presentation.Scanning;
 using SkyCD.SDK.Capabilities.Accounts;
+using SkyCD.SDK.Capabilities.Capture;
 using SkyCD.UI.Localization;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -24,7 +26,8 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
         IMediaDriveProvider? driveProvider = null,
         AddToListSourceMode initialSourceMode = AddToListSourceMode.Media,
         IReadOnlyList<LocationItemViewModel>? locationOptions = null,
-        IReadOnlyList<IAccountSession>? accountSessions = null)
+        IReadOnlyList<IAccountSession>? accountSessions = null,
+        IReadOnlyList<ICaptureSourcePluginCapability>? captureProviders = null)
     {
         this.driveProvider = driveProvider ?? new SystemMediaDriveProvider();
         this.accountSessions = accountSessions ?? [];
@@ -34,12 +37,18 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
             LocationChoices.Add(option);
         }
 
+        foreach (var provider in captureProviders ?? [])
+        {
+            CaptureProviders.Add(provider);
+        }
+
         RefreshLocationChoiceLabels();
         SelectedLocation = LocationChoices[0];
         RefreshDrives();
         SourceMode = initialSourceMode == AddToListSourceMode.Media && !CanUseMedia
             ? AddToListSourceMode.Folder
             : initialSourceMode;
+        SelectedCaptureProvider = CaptureProviders.FirstOrDefault();
 
         InternetCredentials.ConfirmCommand.CanExecuteChanged += OnInternetCredentialsChanged;
         InternetCredentials.PropertyChanged += OnInternetCredentialPropertyChanged;
@@ -102,6 +111,45 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
 
     public bool IsSourceFromAccount => SourceMode == AddToListSourceMode.FromAccount;
 
+    public bool IsSourceCapture => SourceMode == AddToListSourceMode.CaptureSource;
+
+    /// <summary>Plugin-provided capture source types; the button only appears while at least one is enabled.</summary>
+    public ObservableCollection<ICaptureSourcePluginCapability> CaptureProviders { get; } = [];
+
+    [ObservableProperty] private ICaptureSourcePluginCapability? selectedCaptureProvider;
+
+    public ObservableCollection<CaptureSourceKind> CaptureKinds { get; } = [];
+
+    [ObservableProperty] private CaptureSourceKind? selectedCaptureKind;
+
+    public ObservableCollection<CaptureDevice> CaptureDevices { get; } = [];
+
+    [ObservableProperty] private CaptureDevice? selectedCaptureDevice;
+
+    [ObservableProperty] private string captureLocation = string.Empty;
+
+    [ObservableProperty] private string captureDestination = string.Empty;
+
+    [ObservableProperty] private string captureLabel = string.Empty;
+
+    /// <summary>Inline feedback for device enumeration and preview failures, never a modal dialog.</summary>
+    [ObservableProperty] private string? captureMessage;
+
+    [ObservableProperty] private bool isCapturePreviewRunning;
+
+    public bool HasCaptureProviders => CaptureProviders.Count > 0;
+
+    public bool IsCaptureProviderPickerVisible => IsSourceCapture && CaptureProviders.Count > 1;
+
+    public bool ShowCaptureDevicePicker => IsSourceCapture && SelectedCaptureKind?.UseDevicePicker == true;
+
+    public bool ShowCaptureFilePicker => IsSourceCapture && SelectedCaptureKind?.UseFilePicker == true;
+
+    public bool ShowCaptureLocationField =>
+        IsSourceCapture && SelectedCaptureKind is { UseDevicePicker: false, UseFilePicker: false };
+
+    public string CaptureLocationLabel => SelectedCaptureKind?.LocationLabel ?? string.Empty;
+
     public ObservableCollection<AddToListAccountChoice> AccountChoices { get; } = [];
 
     [ObservableProperty] private AddToListAccountChoice? selectedAccount;
@@ -116,10 +164,10 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
     public bool ShowAccountNoProducts => ShowAccountPicker && SelectedAccount is { Products.Count: 0 };
 
     /// <summary>The account folder names itself, so no media name is entered.</summary>
-    public bool IsNameEntryVisible => !IsSourceFromAccount;
+    public bool IsNameEntryVisible => !IsSourceFromAccount && !IsSourceCapture;
 
     /// <summary>An account folder always lands under the chosen destination.</summary>
-    public bool IsDestinationSectionVisible => !IsSourceFromAccount;
+    public bool IsDestinationSectionVisible => !IsSourceFromAccount && !IsSourceCapture;
 
     /// <summary>Set when the user asks for the Options accounts section from the empty state.</summary>
     public bool OpenAccountsRequested { get; private set; }
@@ -472,6 +520,11 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
             return;
         }
 
+        if (mode == AddToListSourceMode.CaptureSource && !HasCaptureProviders)
+        {
+            return;
+        }
+
         SourceMode = mode;
     }
 
@@ -488,6 +541,127 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
     {
         OnPropertyChanged(nameof(ShowAccountNoProducts));
         RecomputeValidation();
+    }
+
+    partial void OnSelectedCaptureProviderChanged(ICaptureSourcePluginCapability? value)
+    {
+        CaptureKinds.Clear();
+        CaptureDevices.Clear();
+        CaptureMessage = null;
+        if (value is not null)
+        {
+            foreach (var kind in value.GetSourceKinds())
+            {
+                CaptureKinds.Add(kind);
+            }
+        }
+
+        SelectedCaptureKind = CaptureKinds.FirstOrDefault();
+        NotifyCaptureStateChanged();
+    }
+
+    partial void OnSelectedCaptureKindChanged(CaptureSourceKind? value)
+    {
+        CaptureDevices.Clear();
+        CaptureLocation = string.Empty;
+        CaptureMessage = null;
+        if (value is { UseDevicePicker: true } && SelectedCaptureProvider is { } provider)
+        {
+            foreach (var device in provider.GetDevices(value.Id))
+            {
+                CaptureDevices.Add(device);
+            }
+
+            if (CaptureDevices.Count == 0)
+            {
+                CaptureMessage = LocalizationService.Current.Get(UiKeys.CaptureNoDevices);
+            }
+        }
+
+        SelectedCaptureDevice = CaptureDevices.FirstOrDefault();
+        NotifyCaptureStateChanged();
+    }
+
+    partial void OnSelectedCaptureDeviceChanged(CaptureDevice? value) => RecomputeValidation();
+
+    partial void OnCaptureLocationChanged(string value) => RecomputeValidation();
+
+    partial void OnCaptureDestinationChanged(string value) => RecomputeValidation();
+
+    private void NotifyCaptureStateChanged()
+    {
+        OnPropertyChanged(nameof(ShowCaptureDevicePicker));
+        OnPropertyChanged(nameof(ShowCaptureFilePicker));
+        OnPropertyChanged(nameof(ShowCaptureLocationField));
+        OnPropertyChanged(nameof(CaptureLocationLabel));
+        RecomputeValidation();
+    }
+
+    /// <summary>The chosen location for the current kind: a device id, a file path or a stream URL.</summary>
+    public string ResolveCaptureLocation() => SelectedCaptureKind switch
+    {
+        { UseDevicePicker: true } => SelectedCaptureDevice?.Id ?? string.Empty,
+        _ => CaptureLocation.Trim()
+    };
+
+    public CaptureSourceDraft CreateCaptureDraft() => new(
+        SelectedCaptureKind?.Id ?? string.Empty,
+        ResolveCaptureLocation(),
+        CaptureDestination.Trim(),
+        CatalogFolder: string.Empty,
+        string.IsNullOrWhiteSpace(CaptureLabel)
+            ? SelectedCaptureKind?.DisplayName ?? string.Empty
+            : CaptureLabel.Trim());
+
+    /// <summary>Captures one frame through the plugin so its detector overlay can be inspected inline.</summary>
+    public async Task<CapturePreviewResult?> CapturePreviewAsync(CancellationToken cancellationToken = default)
+    {
+        if (SelectedCaptureProvider is not { } provider || SelectedCaptureKind is not { } kind)
+        {
+            CaptureMessage = LocalizationService.Current.Get(UiKeys.CaptureUnavailable);
+            return null;
+        }
+
+        IsCapturePreviewRunning = true;
+        CaptureMessage = null;
+        try
+        {
+            var result = await provider.CapturePreviewAsync(
+                new CaptureSourceConfiguration(
+                    string.Empty,
+                    kind.Id,
+                    ResolveCaptureLocation(),
+                    CaptureDestination.Trim(),
+                    CatalogFolder: string.Empty,
+                    CaptureLabel),
+                cancellationToken);
+            if (!result.Succeeded)
+            {
+                CaptureMessage = result.Message ?? LocalizationService.Current.Get(UiKeys.CaptureUnavailable);
+            }
+
+            return result;
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            CaptureMessage = exception.Message;
+            return null;
+        }
+        finally
+        {
+            IsCapturePreviewRunning = false;
+        }
+    }
+
+    /// <summary>Persists the configured source through the selected plugin, which owns its capture loop.</summary>
+    public Task<CaptureSourceConfiguration> AddCaptureSourceAsync(CancellationToken cancellationToken = default)
+    {
+        if (SelectedCaptureProvider is not { } provider)
+        {
+            throw new InvalidOperationException(LocalizationService.Current.Get(UiKeys.CaptureUnavailable));
+        }
+
+        return provider.AddSourceAsync(CreateCaptureDraft(), cancellationToken);
     }
 
     partial void OnSourceModeChanged(AddToListSourceMode value)
@@ -509,6 +683,11 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsSourceInternet));
         OnPropertyChanged(nameof(IsSourceTitleOnly));
         OnPropertyChanged(nameof(IsSourceFromAccount));
+        OnPropertyChanged(nameof(IsSourceCapture));
+        OnPropertyChanged(nameof(IsCaptureProviderPickerVisible));
+        OnPropertyChanged(nameof(ShowCaptureDevicePicker));
+        OnPropertyChanged(nameof(ShowCaptureFilePicker));
+        OnPropertyChanged(nameof(ShowCaptureLocationField));
         OnPropertyChanged(nameof(IsNameEntryVisible));
         OnPropertyChanged(nameof(IsDestinationSectionVisible));
         OnPropertyChanged(nameof(ShowAccountEmptyState));
@@ -579,7 +758,46 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
             AddToListSourceMode.FromAccount => HasConnectedAccounts && SelectedAccount is null
                 ? LocalizationService.Current.Get(UiKeys.AccountSelectPrompt)
                 : null,
+            AddToListSourceMode.CaptureSource => GetCaptureValidationMessage(),
             _ => null
         };
+    }
+
+    private string? GetCaptureValidationMessage()
+    {
+        if (SelectedCaptureProvider is null)
+        {
+            return LocalizationService.Current.Get(UiKeys.CaptureUnavailable);
+        }
+
+        if (SelectedCaptureKind is null)
+        {
+            return LocalizationService.Current.Get(TextKeys.CaptureSourceTypeRequired);
+        }
+
+        var destination = CaptureDestination.Trim();
+        if (string.IsNullOrWhiteSpace(destination))
+        {
+            return LocalizationService.Current.Get(TextKeys.CaptureDestinationIsRequired);
+        }
+
+        if (!Path.IsPathFullyQualified(destination))
+        {
+            return LocalizationService.Current.Get(TextKeys.CaptureDestinationNotAbsolute);
+        }
+
+        var location = ResolveCaptureLocation();
+        if (string.IsNullOrWhiteSpace(location))
+        {
+            return LocalizationService.Current.Get(TextKeys.CaptureSourceLocationRequired);
+        }
+
+        if (SelectedCaptureKind is { UseDevicePicker: false, UseFilePicker: false } &&
+            !Uri.TryCreate(location, UriKind.Absolute, out _))
+        {
+            return LocalizationService.Current.Get(TextKeys.CaptureSourceUrlInvalid);
+        }
+
+        return null;
     }
 }

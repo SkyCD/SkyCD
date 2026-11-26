@@ -1,9 +1,60 @@
 # Motion Detector
 
-Build Plugins/SkyCD.Plugin.Feature.MotionDetector and install its assembly through the normal plugin loader. Discovery uses assembly capabilities; no plugin.json is required.
+Build `Plugins/SkyCD.Plugin.Feature.MotionDetector` and install its assembly and the two native OpenCV
+DLLs (`OpenCvSharpExtern.dll`, `opencv_videoio_ffmpeg4130_64.dll`) through the normal plugin loader.
+Discovery uses assembly capabilities; no `plugin.json` is required.
 
-The original capture application and supporting DLLs are tracked in Plugins/SkyCD.Plugin.Feature.MotionDetector/motion and copied to motion/ beside the plugin assembly on build and publish. Distribute that entire directory with the plugin. The bundle was recovered unchanged from aa1c0b1^:SkyCD/bin/Plug-Ins/motion. Tools > Motion Detector starts it with the motion directory as its working directory. Close the capture application to finish and import; invoke a plugin command again to cancel the active capture. Cancellation terminates the launched process tree and does not import an incomplete session.
+## Capture source
 
-Only files first observed during capture are imported. AVI/MPG/WMV go under Movies/yyyy-MM-dd; JPG/BMP under Pictures/yyyy-MM-dd, using the local detection date. Existing files and other extensions are ignored. Metadata preserves Name, Size, LastWriteTime, LastAccessTime, IsReadOnly, Attributes, CreationTime and FullName. Size is normalized to bytes to match the current catalog; legacy Length * 8 bit semantics are deliberately not retained.
+The plugin contributes a capture source type to the **Add To List** dialog. The source button appears only
+while at least one enabled plugin provides `ICaptureSourcePluginCapability`, and disappears again when the
+plugin is disabled from Options without restarting the app. Plugin enable state is driven by the activation
+hook: `IActivatablePluginCapability` starts every saved source on activation and stops it on deactivation,
+and repeated discovery passes never start a second loop for one source. Sources pause while no catalog is
+open (`ICatalogLifecyclePluginCapability`) and while the plugin is inactive.
 
-ICatalogCaptureHostApi is an optional extension of IHostCommandApi. Older menu plugins remain compatible. The desktop implementation captures the current catalog root, writes all folders and files in one transaction, and refreshes the tree and list after success. Missing executable, launch, file access and import failures appear in the host status notification.
+The dialog panel collects, top to bottom:
+
+- capture provider and source type: File, Local device, JPEG URL, MJPEG URL, MMS Stream;
+- the location field that the kind needs (file picker, webcam picker or URL box);
+- **Preview**, which opens a dialog showing one frame with the detector overlay;
+- a physical destination folder, required and always absolute;
+- an optional source label.
+
+Multiple sources can be configured at once. The plugin owns their configuration: `AddSourceAsync` persists
+each source through `IPluginStorageApi` in the open catalog, and the host keeps no motion-detector state.
+
+Captured frames are written by the plugin into the physical destination folder and reported to the host
+through `ICaptureSourceHostApi.ImportCapturedFilesAsync`. The host creates the catalog entries under
+`<root>/<capture folder>/<yyyy-MM-dd>/`, recalculates ancestor sizes and refreshes the browser.
+
+## Detectors
+
+Options → **Motion detector** selects one detector for every source, using the scientific names:
+
+| Detector | Parameters |
+| --- | --- |
+| Frame difference | threshold, minimum area |
+| Running average | threshold, learning rate, minimum area |
+| Mixture of Gaussians - MOG2 | history, variance threshold, learning rate, minimum area |
+| Mixture of Gaussians - KNN | history, distance threshold, learning rate, minimum area |
+| Optical flow - Farnebäck | magnitude threshold, minimum area |
+| Edge change ratio | Canny low/high, change percent, minimum area |
+| Perceptual difference | difference percent |
+
+Detection runs in-process with OpenCvSharp (Apache-2.0). Changing the detector restarts running sources; the
+change is stored next to the sources and applies to sources without an override.
+
+## Metadata queue
+
+Every imported capture is queued durably in the open catalog (`capture_metadata_queue`, one marker per entry
+id). Extraction runs on a background task through the media pipeline, reports progress on the status bar,
+and never blocks the dialog or shows a modal. A marker is de-duplicated by entry id, drains oldest first, and
+survives a restart; a file that is still flushing is retried a bounded number of times before the marker is
+dropped. Captures imported while the media services have no providers stay queued until extraction can run.
+
+## Failure behaviour
+
+Preview, device enumeration and stream opening degrade gracefully with an inline message in the dialog; a
+missing destination, unreadable source or unavailable catalog is reported on the status bar without stopping
+the other sources.

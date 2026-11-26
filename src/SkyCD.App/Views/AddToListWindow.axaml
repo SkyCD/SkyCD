@@ -3,6 +3,7 @@
         xmlns:i18n="clr-namespace:SkyCD.UI.Localization;assembly=SkyCD.UI"
         xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
         xmlns:accounts="clr-namespace:SkyCD.Presentation.Accounts;assembly=SkyCD.Presentation"
+        xmlns:capture="clr-namespace:SkyCD.SDK.Capabilities.Capture;assembly=SkyCD.SDK"
         xmlns:avaloniaConverters="using:Avalonia.Data.Converters"
         xmlns:converters="using:SkyCD.App.Converters"
         xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
@@ -131,6 +132,20 @@
                                HorizontalAlignment="Center"
                                Source="{x:Static icons:SourceIcons.Account}" />
                         <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.FromAccount}}" HorizontalAlignment="Center" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Button>
+                <!-- Plugin-contributed capture types only take a slot while an enabled plugin provides one. -->
+                <Button Classes="source"
+                        IsVisible="{Binding HasCaptureProviders}"
+                        Classes.selected="{Binding IsSourceCapture}"
+                        Command="{Binding SelectSourceCommand}"
+                        CommandParameter="CaptureSource">
+                    <StackPanel Spacing="{DynamicResource SkySpaceXs}" HorizontalAlignment="Center">
+                        <Image Width="40"
+                               Height="40"
+                               HorizontalAlignment="Center"
+                               Source="{x:Static icons:SourceIcons.Capture}" />
+                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.CaptureSource}}" HorizontalAlignment="Center" TextWrapping="Wrap" />
                     </StackPanel>
                 </Button>
             </StackPanel>
@@ -352,6 +367,101 @@
                                        Text="{i18n:Translate {x:Static i18n:UiKeys.AccountNoProducts}}"
                                        TextWrapping="Wrap" />
                         </StackPanel>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="1" IsVisible="{Binding IsSourceCapture}" Spacing="{DynamicResource SkySpaceXs}" VerticalAlignment="Top">
+                        <StackPanel IsVisible="{Binding IsCaptureProviderPickerVisible}" Spacing="{DynamicResource SkySpaceXs}">
+                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.CapturePlugin}}" />
+                            <ComboBox Classes="source-field"
+                                      ItemsSource="{Binding CaptureProviders}"
+                                      SelectedItem="{Binding SelectedCaptureProvider}"
+                                      AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.CapturePlugin}}"
+                                      HorizontalAlignment="Stretch">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="capture:ICaptureSourcePluginCapability">
+                                        <TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.CaptureSourceType}}" />
+                        <ComboBox Classes="source-field"
+                                  ItemsSource="{Binding CaptureKinds}"
+                                  SelectedItem="{Binding SelectedCaptureKind}"
+                                  AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.CaptureSourceType}}"
+                                  HorizontalAlignment="Stretch">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="capture:CaptureSourceKind">
+                                    <TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+
+                        <StackPanel IsVisible="{Binding ShowCaptureDevicePicker}" Spacing="{DynamicResource SkySpaceXs}">
+                            <TextBlock Text="{Binding CaptureLocationLabel}" />
+                            <ComboBox Classes="source-field"
+                                      ItemsSource="{Binding CaptureDevices}"
+                                      SelectedItem="{Binding SelectedCaptureDevice}"
+                                      AutomationProperties.Name="{Binding CaptureLocationLabel}"
+                                      HorizontalAlignment="Stretch">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="capture:CaptureDevice">
+                                        <TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <StackPanel IsVisible="{Binding ShowCaptureFilePicker}" Spacing="{DynamicResource SkySpaceXs}">
+                            <TextBlock Text="{Binding CaptureLocationLabel}" />
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                                <TextBox Classes="source-field"
+                                         Text="{Binding CaptureLocation}"
+                                         AutomationProperties.Name="{Binding CaptureLocationLabel}" />
+                                <Button Grid.Column="1"
+                                        Classes="source-field"
+                                        Content="..."
+                                        Width="28"
+                                        Click="OnBrowseCaptureSourceClicked" />
+                            </Grid>
+                        </StackPanel>
+
+                        <StackPanel IsVisible="{Binding ShowCaptureLocationField}" Spacing="{DynamicResource SkySpaceXs}">
+                            <TextBlock Text="{Binding CaptureLocationLabel}" />
+                            <TextBox Classes="source-field"
+                                     Text="{Binding CaptureLocation}"
+                                     AutomationProperties.Name="{Binding CaptureLocationLabel}" />
+                        </StackPanel>
+
+                        <Button Content="{i18n:Translate {x:Static i18n:UiKeys.CapturePreview}}"
+                                IsEnabled="{Binding !IsCapturePreviewRunning}"
+                                HorizontalAlignment="Left"
+                                Click="OnPreviewCaptureClicked" />
+                        <TextBlock Text="{Binding CaptureMessage}"
+                                   Foreground="#B00000"
+                                   TextWrapping="Wrap"
+                                   IsVisible="{Binding CaptureMessage, Converter={x:Static avaloniaConverters:StringConverters.IsNotNullOrEmpty}}" />
+
+                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.CaptureDestination}}" />
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                            <TextBox Classes="source-field"
+                                     Text="{Binding CaptureDestination}"
+                                     AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.CaptureDestination}}" />
+                            <Button Grid.Column="1"
+                                    Classes="source-field"
+                                    Content="..."
+                                    Width="28"
+                                    Click="OnBrowseCaptureDestinationClicked" />
+                        </Grid>
+                        <TextBlock Classes="caption"
+                                   Text="{i18n:Translate {x:Static i18n:UiKeys.CaptureDestinationHint}}"
+                                   TextWrapping="Wrap" />
+
+                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.CaptureLabel}}" />
+                        <TextBox Classes="source-field"
+                                 Text="{Binding CaptureLabel}"
+                                 AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.CaptureLabel}}" />
                     </StackPanel>
 
                     <TextBlock Grid.Row="1"

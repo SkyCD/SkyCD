@@ -70,8 +70,8 @@ is produced. Decide the kind from the data or feature the plugin produces.
 `Menu`, `Modal` and `Cli` are host surfaces, not kinds. They must not name a production plugin. They
 remain acceptable as sample subjects because samples exist to demonstrate a surface.
 
-Example: `SkyCD.Plugin.MotionDetector` runs an external executable and imports the captured files, so
-it is `Feature.MotionDetector`, not a menu plugin. `WebBrowser` opens a user-facing tool window, so it
+Example: `SkyCD.Plugin.MotionDetector` contributes a capture source to Add To List and imports the
+captured files, so it is `Feature.MotionDetector`, not a menu plugin. `WebBrowser` opens a user-facing tool window, so it
 is `Feature.WebBrowser`.
 
 ## Examples
@@ -87,7 +87,7 @@ is `Feature.WebBrowser`.
 | `SkyCD.Plugin.Markdown.Metadata` | `SkyCD.Plugin.Metadata.Markdown` | Metadata, kind first instead of aspect suffix. |
 | `SkyCD.Plugin.Tar.Metadata` | `SkyCD.Plugin.Metadata.Archives` | Archive entry listing is metadata for generated entries' subitems. |
 | `SkyCD.Plugin.VolumeSerial` | `SkyCD.Plugin.Metadata.Volume` | Volume metadata. |
-| `SkyCD.Plugin.MotionDetector` | `SkyCD.Plugin.Feature.MotionDetector` | Capture/import feature reached from the Tools menu. |
+| `SkyCD.Plugin.MotionDetector` | `SkyCD.Plugin.Feature.MotionDetector` | Capture/import feature reached from the Add To List capture source. |
 | `SkyCD.Plugin.WebBrowser` | `SkyCD.Plugin.Feature.WebBrowser` | User-facing tool window. |
 | `SkyCD.Plugin.AiDescription` | `SkyCD.Plugin.Ai.Description` | Description implementation. |
 | `SkyCD.Plugin.AiProvider` | `SkyCD.Plugin.Ai.Provider` | Provider settings and planner. |

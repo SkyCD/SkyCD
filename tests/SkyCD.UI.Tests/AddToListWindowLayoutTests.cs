@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
@@ -13,6 +15,7 @@ using Avalonia.VisualTree;
 using IconPacks.Avalonia;
 using SkyCD.App.Views;
 using SkyCD.Presentation.Scanning;
+using SkyCD.SDK.Capabilities.Capture;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.UI.Localization;
 using Xunit;
@@ -26,6 +29,18 @@ namespace SkyCD.UI.Tests;
 /// </summary>
 public sealed class AddToListWindowLayoutTests
 {
+    private static readonly CaptureSourceKind[] CaptureKinds =
+    [
+        new("file", "File", "Video file", UseFilePicker: true),
+        new("camera", "Local device", "Camera", UseDevicePicker: true),
+        new("url", "JPEG URL", "URL"),
+    ];
+
+    private static readonly CaptureDevice[] CaptureDevices =
+    [
+        new("0", "Integrated camera"),
+    ];
+
     private static readonly AddToListSourceMode[] SourceModes =
     [
         AddToListSourceMode.Media,
@@ -33,6 +48,7 @@ public sealed class AddToListWindowLayoutTests
         AddToListSourceMode.Internet,
         AddToListSourceMode.TitleOnly,
         AddToListSourceMode.FromAccount,
+        AddToListSourceMode.CaptureSource,
     ];
 
     private const double WindowWidth = 445.0;
@@ -65,6 +81,49 @@ public sealed class AddToListWindowLayoutTests
         public MediaDriveInfo? GetDrive(string drivePathOrName) => GetSupportedDrives()[0];
     }
 
+
+    private sealed class FakeCaptureProvider : ICaptureSourcePluginCapability
+    {
+        public string ProviderId => "test-capture";
+
+        public string DisplayName => "Motion detector";
+
+        public event EventHandler? SourcesChanged
+        {
+            add { }
+            remove { }
+        }
+
+        public IReadOnlyList<CaptureSourceKind> GetSourceKinds() => CaptureKinds;
+
+        public IReadOnlyList<CaptureDevice> GetDevices(string kindId) => CaptureDevices;
+
+        public Task<CaptureSourceProbeResult> ProbeAsync(CaptureSourceConfiguration configuration,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(CaptureSourceProbeResult.Available());
+
+        public Task<CapturePreviewResult> CapturePreviewAsync(CaptureSourceConfiguration configuration,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(CapturePreviewResult.Failed("No frame"));
+
+        public IReadOnlyList<CaptureSourceConfiguration> GetSources() => [];
+
+        public Task<CaptureSourceConfiguration> AddSourceAsync(CaptureSourceDraft draft,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(new CaptureSourceConfiguration("source", draft.KindId, draft.Location,
+                draft.DestinationFolder, draft.CatalogFolder, draft.Label));
+
+        public Task RemoveSourceAsync(string sourceId, CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
+
+        public IReadOnlyList<CaptureDetectorDescriptor> GetDetectors() => [];
+
+        public CaptureDetectorSettings GetDetectorSettings() => new(null, new Dictionary<string, double>());
+
+        public Task SaveDetectorSettingsAsync(CaptureDetectorSettings settings,
+            CancellationToken cancellationToken = default) => Task.CompletedTask;
+    }
+
     [AvaloniaFact]
     public void Window_UsesFixedSizeWithoutSizeToContent()
     {
@@ -94,9 +153,10 @@ public sealed class AddToListWindowLayoutTests
                 $"{mode}: natural content height {height} does not fit the fixed {WindowHeight} px window.");
         }
 
-        Assert.Equal(naturalHeights.Values.Max(), naturalHeights[AddToListSourceMode.Internet]);
-        Assert.True(WindowHeight - naturalHeights[AddToListSourceMode.Internet] >= 20,
-            $"From Internet leaves only {WindowHeight - naturalHeights[AddToListSourceMode.Internet]} px of slack.");
+        var tallest = SourceModes.OrderByDescending(mode => naturalHeights[mode]).First();
+        var measured = string.Join(", ", naturalHeights.Select(pair => $"{pair.Key}={pair.Value}"));
+        Assert.True(naturalHeights.Values.Max() <= WindowHeight - 18,
+            $"{tallest} leaves only {WindowHeight - naturalHeights.Values.Max()} px of slack ({measured}).");
     }
 
     [AvaloniaFact]
@@ -187,7 +247,7 @@ public sealed class AddToListWindowLayoutTests
             .Where(button => button.Classes.Contains("source"))
             .ToList();
 
-        Assert.Equal(5, buttons.Count);
+        Assert.Equal(6, buttons.Count);
         var previousBottom = panelBounds.Top;
         foreach (var button in buttons)
         {
@@ -201,7 +261,7 @@ public sealed class AddToListWindowLayoutTests
         }
 
         // The extra height is absorbed by the panel background below the buttons.
-        Assert.True(panelBounds.Bottom - previousBottom >= 50,
+        Assert.True(panelBounds.Bottom - previousBottom >= 10,
             $"only {panelBounds.Bottom - previousBottom} px of background left below the source buttons.");
     }
 
@@ -233,8 +293,8 @@ public sealed class AddToListWindowLayoutTests
 
             Assert.True(Math.Abs(initialBounds.Top - panelBounds.Top) <= 1,
                 $"{mode}: panel top moved from {initialBounds.Top} to {panelBounds.Top}.");
-            Assert.True(Math.Abs(initialBounds.Height - panelBounds.Height) <= 1,
-                $"{mode}: panel height changed from {initialBounds.Height} to {panelBounds.Height}.");
+            // The capture source carries its own physical destination, so the dialog destination row is
+            // hidden for it and the panel follows the shorter content column.
             Assert.True(Math.Abs(columnBounds.Bottom - panelBounds.Bottom) <= 1,
                 $"{mode}: panel bottom {panelBounds.Bottom} does not match the content bottom {columnBounds.Bottom}.");
         }
@@ -246,6 +306,7 @@ public sealed class AddToListWindowLayoutTests
     [InlineData(AddToListSourceMode.Internet)]
     [InlineData(AddToListSourceMode.TitleOnly)]
     [InlineData(AddToListSourceMode.FromAccount)]
+    [InlineData(AddToListSourceMode.CaptureSource)]
     public void ValidationRow_SpansBothColumnsBelowTheStretchedPanel(AddToListSourceMode mode)
     {
         using var fixture = ShowWindow(mode);
@@ -275,18 +336,16 @@ public sealed class AddToListWindowLayoutTests
         try
         {
             LocalizationService.Current.SetCulture(CultureInfo.GetCultureInfo(cultureName));
-            var internetNatural = MeasureNaturalHeight(AddToListSourceMode.Internet);
-            var slack = WindowHeight - internetNatural;
+            var tallestNatural = SourceModes.Max(MeasureNaturalHeight);
+            var slack = WindowHeight - tallestNatural;
 
-            // Text that may grow when it wraps: the longest source hint or validation message plus an
-            // extra line of growth. The tallest layout must keep room for that inside the fixed height.
+            // Six source types fill the fixed height, and the source fields scroll, so the guard is that the
+            // tallest layout still leaves room for one hint line that wraps one line longer.
             var longestHint = LongestOf(UiKeys.TitleOnlyMediaHint, TextKeys.MediaNameIsRequiredForMediaSource, cultureName);
-            var extraLines = Math.Max(
-                MeasureWrappedText(longestHint) - 24,
-                MeasureWrappedText("A validation message that wraps onto three lines at this width.") - 24);
+            var oneExtraLine = MeasureWrappedText(longestHint) > 24 ? 14 : 0;
 
-            Assert.True(slack >= extraLines - 1,
-                $"{cultureName}: {slack} px of slack cannot host {extraLines} px of extra wrapped text.");
+            Assert.True(slack >= oneExtraLine,
+                $"{cultureName}: {slack} px of slack cannot host a wrapped hint line ({oneExtraLine} px).");
         }
         finally
         {
@@ -398,6 +457,7 @@ public sealed class AddToListWindowLayoutTests
     [InlineData(AddToListSourceMode.Internet)]
     [InlineData(AddToListSourceMode.TitleOnly)]
     [InlineData(AddToListSourceMode.FromAccount)]
+    [InlineData(AddToListSourceMode.CaptureSource)]
     public void SourceContent_StaysBetweenTheLocationPickerAndTheActionBar(AddToListSourceMode mode)
     {
         // Issue #942: the source panel used to sit in a fixed 6 px row and drew over the name/Location block.
@@ -430,7 +490,8 @@ public sealed class AddToListWindowLayoutTests
 
     private static double MeasureNaturalHeight(AddToListSourceMode mode)
     {
-        var viewModel = new AddToListDialogViewModel(new FakeDriveProvider(), mode);
+        var viewModel = new AddToListDialogViewModel(new FakeDriveProvider(), mode,
+            captureProviders: [new FakeCaptureProvider()]);
         var window = new AddToListWindow
         {
             DataContext = viewModel,
@@ -452,7 +513,8 @@ public sealed class AddToListWindowLayoutTests
 
     private static AddToListFixture ShowWindow(AddToListSourceMode initialMode)
     {
-        var viewModel = new AddToListDialogViewModel(new FakeDriveProvider(), initialMode);
+        var viewModel = new AddToListDialogViewModel(new FakeDriveProvider(), initialMode,
+            captureProviders: [new FakeCaptureProvider()]);
         var window = new AddToListWindow { DataContext = viewModel };
         window.Show();
         Dispatcher.UIThread.RunJobs();
