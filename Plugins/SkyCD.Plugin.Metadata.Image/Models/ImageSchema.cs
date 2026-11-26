@@ -61,11 +61,11 @@ public static class ImageSchema
     public static readonly IReadOnlyList<string> Extensions = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
 
     /// <summary>
-    /// TIFF containers, including the TIFF-based RAW formats. Their geometry is not decoded, but their tag
+    /// TIFF containers. Their geometry is not decoded, but their tag
     /// carriers are in every photo tool's path, so they are claimed by a tags-only capability.
     /// </summary>
     public static readonly IReadOnlyList<string> ContainerExtensions =
-        [".tif", ".tiff", ".dng", ".cr2", ".nef", ".arw"];
+        [".tif", ".tiff"];
 
     /// <summary>MIME types the plugin claims.</summary>
     public static readonly IReadOnlyList<string> ContentTypes =
