@@ -305,11 +305,8 @@ public class OptionsWindowLayoutTests
             .ToArray();
         Assert.Equal(
         [
-            "{Binding CollectionsPage.CreateCollectionCommand}",
+            "{Binding CollectionsPage.AddCollectionCommand}",
             "{Binding CollectionsPage.DeleteCollectionCommand}",
-            "{Binding CollectionsPage.RemoveMissingEntriesCommand}",
-            "{Binding CollectionsPage.NavigateToSelectedCommand}",
-            "{Binding CollectionsPage.OpenMemberFolderCommand}",
             "{Binding CollectionsPage.ConfirmDeleteCollectionCommand}",
             "{Binding CollectionsPage.CancelDeleteCollectionCommand}",
             "{Binding $parent[Window].((vm:OptionsDialogViewModel)DataContext).CollectionsPage.CommitRenameCollectionCommand}",
@@ -321,7 +318,31 @@ public class OptionsWindowLayoutTests
             "{Binding CollectionsPage.ConfirmRemoveSelectedMemberCommand}",
             "{Binding CollectionsPage.CancelRemoveMemberCommand}"
         ], commands);
-        Assert.Equal(2, section.Descendants(Avalonia + "TextBox").Count());
+
+        var glyphs = section.Descendants(Avalonia + "Button")
+            .Where(button => (string?)button.Attribute("Content") is "+" or "-")
+            .ToArray();
+        Assert.Equal(4, glyphs.Length);
+        Assert.All(glyphs, glyph =>
+        {
+            Assert.Equal("34", (string?)glyph.Attribute("Width"));
+            Assert.Equal("28", (string?)glyph.Attribute("Height"));
+            Assert.NotNull(glyph.Attribute("ToolTip.Tip"));
+        });
+
+        var menuCommands = section.Descendants(Avalonia + "MenuItem")
+            .Select(item => item.Attribute("Command")?.Value ?? string.Empty)
+            .ToArray();
+        Assert.Equal(
+        [
+            "{Binding CollectionsPage.RemoveMissingEntriesCommand}",
+            "{Binding CollectionsPage.NavigateToSelectedCommand}",
+            "{Binding CollectionsPage.OpenMemberFolderCommand}"
+        ], menuCommands);
+        Assert.All(section.Descendants(Avalonia + "MenuItem"),
+            item => Assert.NotNull(item.Attribute("Header")));
+        Assert.Single(section.Descendants(Avalonia + "TextBox"));
+        Assert.DoesNotContain("NewCollectionNameBox", section.ToString(), StringComparison.Ordinal);
         var memberFilter = Assert.Single(section.Descendants(),
             element => element.Name.LocalName == "SearchTextBox");
         Assert.Equal("{Binding CollectionsPage.MemberFilterText}", (string?)memberFilter.Attribute("Text"));
