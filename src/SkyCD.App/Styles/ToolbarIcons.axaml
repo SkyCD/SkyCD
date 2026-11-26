@@ -25,7 +25,7 @@
     <StreamGeometry x:Key="ToolbarIcon.Redo">F0 M15.5,7.5 L10.5,3.5 L10.5,6 L6.5,6 A5,5 0 0 0 1.5,11 L1.5,14.5 L3.5,14.5 L3.5,11 A3,3 0 0 1 6.5,8 L10.5,8 L10.5,11.5 Z</StreamGeometry>
     <StreamGeometry x:Key="ToolbarIcon.AddItem">F0 M7,0.5 L8,0.5 L8,15.5 L7,15.5 Z M0.5,7 L15.5,7 L15.5,8 L0.5,8 Z</StreamGeometry>
     <StreamGeometry x:Key="ToolbarIcon.DeleteItem">F0 M0.5,2.5 L15.5,2.5 L15.5,4.5 L0.5,4.5 Z M2.5,4.5 L13.5,4.5 L13.5,15.5 L2.5,15.5 Z M5.5,0.5 L10.5,0.5 L10.5,2.5 L5.5,2.5 Z M6,6.5 L7,6.5 L7,13.5 L6,13.5 Z M9,6.5 L10,6.5 L10,13.5 L9,13.5 Z</StreamGeometry>
-    <StreamGeometry x:Key="ToolbarIcon.Properties">F0 M0.5,1.5 L14.5,1.5 L14.5,14.5 L0.5,14.5 Z M2.5,3.5 L11.5,3.5 L11.5,5 L2.5,5 Z M2.5,7 L11.5,7 L11.5,8.5 L2.5,8.5 Z M2.5,10.5 L8.5,10.5 L8.5,12 L2.5,12 Z M11.5,9.5 L15.5,9.5 L15.5,15.5 L11.5,15.5 Z M13,10.5 L13,14.5 M11.5,12.5 L15.5,12.5</StreamGeometry>
+    <StreamGeometry x:Key="ToolbarIcon.Properties">F0 M0.5,2.5 L15.5,2.5 L15.5,13.5 L0.5,13.5 Z M1.5,3.5 L1.5,12.5 L14.5,12.5 L14.5,3.5 Z M3.5,5.5 L7,5.5 L7,10.5 L3.5,10.5 Z M8.5,5.5 L12.5,5.5 L12.5,7 L8.5,7 Z M8.5,8 L12.5,8 L12.5,9.5 L8.5,9.5</StreamGeometry>
 
     <!-- View: one family whose left block encodes the mode, so the mode buttons read consistently. -->
     <StreamGeometry x:Key="ToolbarIcon.ViewTiles">F0 M0.5,0.5 L4.5,0.5 L4.5,4.5 L0.5,4.5 Z M6,0.5 L10,0.5 L10,4.5 L6,4.5 Z M11.5,0.5 L15.5,0.5 L15.5,4.5 L11.5,4.5 Z M0.5,6 L4.5,6 L4.5,10 L0.5,10 Z M6,6 L10,6 L10,10 L6,10 Z M11.5,6 L15.5,6 L15.5,10 L11.5,10 Z M0.5,11.5 L4.5,11.5 L4.5,15.5 L0.5,15.5 Z M6,11.5 L10,11.5 L10,15.5 L6,15.5 Z M11.5,11.5 L15.5,11.5 L15.5,15.5 L11.5,15.5 Z</StreamGeometry>

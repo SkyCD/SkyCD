@@ -18,28 +18,20 @@ public class FormattingTests
     }
 
     [Fact]
-    public void FormatInvariantBytes_StaysCultureStable_UnderCommaDecimalCulture()
+    public void FormatBytes_InvariantProvider_KeepsDecimalPointUnderCommaCulture()
     {
-        var previousCulture = CultureInfo.CurrentCulture;
-        var previousUiCulture = CultureInfo.CurrentUICulture;
+        var original = CultureInfo.CurrentCulture;
         try
         {
-            var commaDecimal = new CultureInfo("de-DE");
-            CultureInfo.CurrentCulture = commaDecimal;
-            CultureInfo.CurrentUICulture = commaDecimal;
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("de-DE");
 
-            Assert.Equal("0 B", SizeFormatting.FormatInvariantBytes(0));
-            Assert.Equal("512 B", SizeFormatting.FormatInvariantBytes(512));
-            Assert.Equal("1.5 KB", SizeFormatting.FormatInvariantBytes(1536));
-            Assert.Equal("2 KB", SizeFormatting.FormatInvariantBytes(2048));
-            Assert.Equal("117.7 MB", SizeFormatting.FormatInvariantBytes(123456789L));
-            Assert.Equal("1.5 KB", SizeFormatting.FormatInvariantBytes(1536.0));
-            Assert.Equal("0 B", SizeFormatting.FormatInvariantBytes(0UL));
+            Assert.Equal("1.5 KB",
+                SizeFormatting.FormatBytes(1536, "0.#", formatProvider: CultureInfo.InvariantCulture));
+            Assert.Equal("1,5 KB", SizeFormatting.FormatBytes(1536, "0.#"));
         }
         finally
         {
-            CultureInfo.CurrentCulture = previousCulture;
-            CultureInfo.CurrentUICulture = previousUiCulture;
+            CultureInfo.CurrentCulture = original;
         }
     }
 

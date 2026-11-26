@@ -1,14 +1,13 @@
 using System;
 using System.Globalization;
 using System.IO;
-using SkyCD.Plugin.Feature.Split.Exceptions;
 
-namespace SkyCD.Plugin.Feature.Split.Parsing;
+namespace SkyCD.Presentation.Catalog.Split;
 
 /// <summary>
 /// Expands the part file naming pattern. <c>#N</c> becomes the legacy hash plus the part number, so the default
 /// pattern keeps producing <c>part #1.scd</c>; <c>{n}</c> is the bare part number, <c>{total}</c> the part count
-/// and <c>{source}</c> the source file name without its extension.
+/// and <c>{source}</c> the source catalog name.
 /// </summary>
 public static class SplitPattern
 {

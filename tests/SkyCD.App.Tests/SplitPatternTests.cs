@@ -1,8 +1,7 @@
-using SkyCD.Plugin.Feature.Split.Exceptions;
-using SkyCD.Plugin.Feature.Split.Parsing;
+using SkyCD.Presentation.Catalog.Split;
 using Xunit;
 
-namespace SkyCD.Plugin.Feature.Split.Tests;
+namespace SkyCD.App.Tests;
 
 public class SplitPatternTests
 {
@@ -34,7 +33,7 @@ public class SplitPatternTests
     [InlineData("../part #N.scd")]
     [InlineData("/part #N.scd")]
     [InlineData("disk:part #N.scd")]
-    [InlineData("part #N.con\trol.scd")]
+    [InlineData("part #N.con\ttrol.scd")]
     public void Normalize_RejectsPatternsThatCannotNamePartsSafely(string? pattern)
     {
         Assert.Throws<SplitPatternException>(() => SplitPattern.Normalize(pattern));

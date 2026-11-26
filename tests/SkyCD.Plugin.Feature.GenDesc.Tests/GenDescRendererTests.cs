@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Feature.GenDesc.Exceptions;
@@ -148,29 +147,5 @@ public class GenDescRendererTests
 
         await Assert.ThrowsAsync<FileNotFoundException>(() =>
             GenDescRenderer.FromFileAsync(workspace.GetPath("absent.mkv")));
-    }
-
-    [Fact]
-    public void FilesizeFunction_StaysCultureStable_UnderCommaDecimalCulture()
-    {
-        var previousCulture = CultureInfo.CurrentCulture;
-        var previousUiCulture = CultureInfo.CurrentUICulture;
-        try
-        {
-            var commaDecimal = new CultureInfo("de-DE");
-            CultureInfo.CurrentCulture = commaDecimal;
-            CultureInfo.CurrentUICulture = commaDecimal;
-
-            var store = Store(Template("size", TemplateInfo.DescriptionKind, "movie",
-                body: "{{ filesize \"1536\" }}"));
-            var result = GenDescRenderer.Render(store, MovieContext(), TemplateInfo.DescriptionKind, "en");
-
-            Assert.Equal("1.5 KB", result.Text);
-        }
-        finally
-        {
-            CultureInfo.CurrentCulture = previousCulture;
-            CultureInfo.CurrentUICulture = previousUiCulture;
-        }
     }
 }

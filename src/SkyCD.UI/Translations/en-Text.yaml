@@ -301,3 +301,5 @@ text.PluginUninstallNotCatalogOwned: "this plugin was not installed by SkyCD, so
 text.PluginUninstallFilesInUse: "the plugin files are in use or read-only, so nothing was deleted."
 text.PluginFilterNoMatches: "No plugins match your filter."
 text.PluginMarketplaceFilterNoMatches: "No marketplace plugins match your filter."
+text.SplitFileMenu: "S_plit..."
+text.SplitNoWritableFormat: "No catalog format that can be written and reopened is available. Check plugin settings."
