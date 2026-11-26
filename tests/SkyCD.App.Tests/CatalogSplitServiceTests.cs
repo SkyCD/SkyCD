@@ -93,9 +93,9 @@ public sealed class CatalogSplitServiceTests
         var service = CreateService();
         var source = workspace.GetPath("source.json");
         await service.SplitAsync(entries, [],
-            Request(workspace.GetPath("seed"), "seed.json", JsonFormatId, maxEntries: 100),
+            Request(workspace.GetPath("seed"), "seed #N.json", JsonFormatId, maxEntries: 100),
             _ => Task.FromResult(true), progress: null, CancellationToken.None);
-        File.Move(Path.Combine(workspace.GetPath("seed"), "seed.json"), source);
+        File.Move(Path.Combine(workspace.GetPath("seed"), "seed #1.json"), source);
         var before = File.ReadAllBytes(source);
         var written = File.GetLastWriteTimeUtc(source);
 

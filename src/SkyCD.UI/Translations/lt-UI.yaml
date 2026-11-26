@@ -541,25 +541,25 @@ ui.AddToolbarButton: "Pridėti"
 ui.Separator: "Skirtukas"
 ui.RemoveToolbarButton: "Pašalinti"
 ui.ResetToolbar: "Atkurti"
-ui.SplitDialogTitle:
-ui.SplitSourceCatalog:
-ui.SplitEntrySummary:
-ui.SplitOutputFolder:
-ui.SplitFileNamePattern:
-ui.SplitPatternHint:
-ui.SplitEntriesPerPart:
-ui.SplitPartSize:
-ui.SplitSavingFormat:
-ui.SplitNoEntries:
-ui.SplitEntriesRequired:
-ui.SplitEntriesInvalid:
-ui.SplitSizeInvalid:
-ui.SplitSizeUnitRequired:
-ui.SplitSizeTooLarge:
-ui.SplitOutputFolderRequired:
-ui.SplitPatternExtensionMismatch:
-ui.SplitProgressStatus:
-ui.SplitOutcome:
-ui.SplitCancelled:
-ui.SplitFailed:
-ui.SplitAction:
+ui.SplitDialogTitle: "Skaldymas"
+ui.SplitSourceCatalog: "Šaltinio katalogas"
+ui.SplitEntrySummary: "{0} elementų"
+ui.SplitOutputFolder: "Išvesties aplankas"
+ui.SplitFileNamePattern: "Dalies failo pavadinimas"
+ui.SplitPatternHint: "Žymos: #N arba {n} – dalies numeris, {total} – dalių skaičius, {source} – katalogo pavadinimas."
+ui.SplitEntriesPerPart: "Didžiausias elementų skaičius dalyje"
+ui.SplitPartSize: "Didžiausias dalies dydis"
+ui.SplitSavingFormat: "Įrašymo formatas"
+ui.SplitNoEntries: "Atvirame kataloge nėra elementų, kuriuos būtų galima išskaidyti."
+ui.SplitEntriesRequired: "Įveskite didžiausią elementų skaičių dalyje kaip teigiamą sveikąjį skaičių."
+ui.SplitEntriesInvalid: "Didžiausias elementų skaičius dalyje turi būti teigiamas sveikasis skaičius, o ne '{0}'."
+ui.SplitSizeInvalid: "Dalies dydis turi būti teigiamas skaičius, o ne '{0}'."
+ui.SplitSizeUnitRequired: "Pasirinkite dalies dydžio matavimo vienetą."
+ui.SplitSizeTooLarge: "Dalies dydis per didelis."
+ui.SplitOutputFolderRequired: "Pasirinkite išvesties aplanką, į kurį bus įrašytos dalys."
+ui.SplitPatternExtensionMismatch: "Šablono plėtinys '{0}' neatitinka '{1}' formato. Naudokite vieną iš: {2}."
+ui.SplitProgressStatus: "Įrašyta {0} dalis iš {1} ({2} iš {3} elementų)."
+ui.SplitOutcome: "Katalogas '{0}' ({1} elementų) išskaidytas į {2} dalies failus aplanke '{3}'."
+ui.SplitCancelled: "Skaldymas atšauktas. Jokie dalies failai nebuvo palikti."
+ui.SplitFailed: "Skaldymas nepavyko. Jokie dalies failai nebuvo palikti."
+ui.SplitAction: "Skaldyti"
