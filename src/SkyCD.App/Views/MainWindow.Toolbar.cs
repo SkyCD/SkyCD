@@ -27,7 +27,7 @@ public partial class MainWindow
             return;
         }
 
-        foreach (var command in viewModel.ToolbarCommands())
+        foreach (var command in viewModel.ToolbarCommands(trackSelection: false))
         {
             if (command.IsToggle)
             {
@@ -44,13 +44,18 @@ public partial class MainWindow
         }
 
         var options = LoadAppOptions();
-        options.Toolbar = viewModel.ToolbarEntries.ToList();
+        viewModel.SaveToolbarSettings(options);
         SaveAppOptions(options);
     }
 
     private void RebuildToolbar(MainWindowViewModel viewModel)
     {
-        var commands = viewModel.ToolbarCommands().ToDictionary(command => command.Id, StringComparer.OrdinalIgnoreCase);
+        foreach (var button in viewModel.PluginToolbars.SelectMany(toolbar => toolbar.Buttons))
+        {
+            LoadToolbarIcon(button.IconKey);
+        }
+
+        var commands = viewModel.ToolbarCommands(trackSelection: true).ToDictionary(command => command.Id, StringComparer.OrdinalIgnoreCase);
         MainToolbar.Items.Clear();
         foreach (var entry in viewModel.ToolbarEntries)
         {

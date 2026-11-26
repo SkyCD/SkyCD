@@ -1,7 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Avalonia.Controls;
+using CommunityToolkit.Mvvm.Input;
 using SkyCD.Documents;
+using SkyCD.Plugin.Host.Catalog;
+using SkyCD.SDK.Capabilities.Catalog;
 using SkyCD.UI.Localization;
 
 namespace SkyCD.Presentation.ViewModels;
@@ -10,8 +14,90 @@ public partial class MainWindowViewModel
 {
     private IReadOnlyList<ToolbarItemDocument> toolbarEntries = ToolbarLayout.CreateDefault();
 
-    /// <summary>The layout currently rendered in the toolbar, always normalized.</summary>
-    public IReadOnlyList<ToolbarItemDocument> ToolbarEntries => toolbarEntries;
+    public const string FileToolbarId = "file";
+    private readonly Dictionary<string, List<ToolbarItemDocument>> pluginToolbarLayouts = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<AsyncRelayCommand> toolbarPluginCommands = [];
+    private string? selectedToolbarId;
+
+    public IReadOnlyList<ToolbarContribution> PluginToolbars =>
+        (catalogFeatures?.GetToolbars() ?? [])
+        .Where(toolbar => !string.IsNullOrWhiteSpace(toolbar.Id)
+            && !toolbar.Id.Equals(FileToolbarId, StringComparison.OrdinalIgnoreCase))
+        .ToArray();
+
+    private ToolbarContribution? ActivePluginToolbar =>
+        PluginToolbars.FirstOrDefault(toolbar => toolbar.Id.Equals(selectedToolbarId, StringComparison.OrdinalIgnoreCase));
+
+    public string ActiveToolbarId => ActivePluginToolbar?.Id ?? FileToolbarId;
+
+    public IReadOnlyList<ToolbarItemDocument> DefaultToolbarEntries =>
+        ActivePluginToolbar is { } toolbar ? PluginDefaultLayout(toolbar) : ToolbarLayout.CreateDefault();
+
+    public IReadOnlyList<ToolbarItemDocument> ToolbarEntries =>
+        ActivePluginToolbar is { } toolbar
+            ? ToolbarLayout.Normalize(pluginToolbarLayouts.GetValueOrDefault(toolbar.Id),
+                toolbar.Buttons.Select(button => button.CommandId).ToArray(), PluginDefaultLayout(toolbar))
+            : toolbarEntries;
+
+    private static IReadOnlyList<ToolbarItemDocument> PluginDefaultLayout(ToolbarContribution toolbar) =>
+        toolbar.Buttons.Select(button => ToolbarItemDocument.Command(button.CommandId)).ToArray();
+
+    private IReadOnlyList<MainMenuItemViewModel> BuildToolbarMenuItems()
+    {
+        MainMenuItemViewModel Item(string id, string title) => new()
+        {
+            Header = title,
+            ToggleType = MenuItemToggleType.Radio,
+            IsChecked = id == ActiveToolbarId,
+            Command = new RelayCommand(() =>
+            {
+                selectedToolbarId = id;
+                RefreshToolbarMenu();
+                RaiseToolbarItemsChanged();
+                ToolbarLayoutChanged?.Invoke(this, EventArgs.Empty);
+            })
+        };
+
+        return
+        [
+            Item(FileToolbarId, ToolbarCategory(UiKeys.FileMenu)),
+            .. PluginToolbars.Select(toolbar => Item(toolbar.Id, toolbar.Title))
+        ];
+    }
+
+    private void RefreshToolbarMenu()
+    {
+        var menu = FlattenMenuItems(topMenuItems).FirstOrDefault(item => item.Key == "view_toolbars");
+        if (menu is not null)
+        {
+            menu.Items = BuildToolbarMenuItems();
+        }
+    }
+
+    private void RaiseToolbarItemsChanged()
+    {
+        toolbarPluginCommands.Clear();
+        ToolbarItemsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void RefreshToolbarCommandState()
+    {
+        foreach (var command in toolbarPluginCommands)
+        {
+            command.NotifyCanExecuteChanged();
+        }
+    }
+
+    public void SaveToolbarSettings(AppOptionsDocument options)
+    {
+        options.Toolbar = toolbarEntries.ToList();
+        options.ActiveToolbarId = selectedToolbarId;
+        options.PluginToolbarLayouts = pluginToolbarLayouts.Select(pair => new PluginToolbarLayoutDocument
+        {
+            ToolbarId = pair.Key,
+            Items = pair.Value.ToList()
+        }).ToList();
+    }
 
     /// <summary>Raised when the toolbar should be rebuilt, for example after a layout or language change.</summary>
     public event EventHandler? ToolbarItemsChanged;
@@ -28,18 +114,58 @@ public partial class MainWindowViewModel
     public event EventHandler? ToolbarLayoutChanged;
 
     /// <summary>Restores the saved layout without persisting it back, used when a window takes over the view model.</summary>
-    public void LoadToolbarLayout(IEnumerable<ToolbarItemDocument>? layout)
+    public void LoadToolbarLayout(IEnumerable<ToolbarItemDocument>? layout,
+        string? toolbarId = null, IReadOnlyList<PluginToolbarLayoutDocument>? layouts = null)
     {
         toolbarEntries = ToolbarLayout.Normalize(layout, ToolbarCommandIds.All);
-        ToolbarItemsChanged?.Invoke(this, EventArgs.Empty);
+        selectedToolbarId = toolbarId;
+        pluginToolbarLayouts.Clear();
+        if (layouts is not null)
+        {
+            foreach (var saved in layouts)
+            {
+                pluginToolbarLayouts[saved.ToolbarId] = saved.Items.ToList();
+            }
+        }
+
+        RefreshToolbarMenu();
+        RaiseToolbarItemsChanged();
+    }
+
+    public void SetStoredToolbarLayout(AppOptionsDocument options, IEnumerable<ToolbarItemDocument> layout)
+    {
+        if (ActivePluginToolbar is { } toolbar)
+        {
+            options.PluginToolbarLayouts.RemoveAll(saved =>
+                saved.ToolbarId.Equals(toolbar.Id, StringComparison.OrdinalIgnoreCase));
+            options.PluginToolbarLayouts.Add(new PluginToolbarLayoutDocument
+            {
+                ToolbarId = toolbar.Id,
+                Items = ToolbarLayout.Normalize(layout,
+                    toolbar.Buttons.Select(button => button.CommandId).ToArray(), PluginDefaultLayout(toolbar)).ToList()
+            });
+        }
+        else
+        {
+            options.Toolbar = ToolbarLayout.Normalize(layout, ToolbarCommandIds.All).ToList();
+        }
     }
 
     /// <summary>Applies a layout confirmed in the customization dialog.</summary>
     public void ApplyToolbarLayout(IEnumerable<ToolbarItemDocument> layout)
     {
         ArgumentNullException.ThrowIfNull(layout);
-        toolbarEntries = ToolbarLayout.Normalize(layout, ToolbarCommandIds.All);
-        ToolbarItemsChanged?.Invoke(this, EventArgs.Empty);
+        if (ActivePluginToolbar is { } toolbar)
+        {
+            pluginToolbarLayouts[toolbar.Id] = ToolbarLayout.Normalize(layout,
+                toolbar.Buttons.Select(button => button.CommandId).ToArray(), PluginDefaultLayout(toolbar)).ToList();
+        }
+        else
+        {
+            toolbarEntries = ToolbarLayout.Normalize(layout, ToolbarCommandIds.All);
+        }
+
+        RaiseToolbarItemsChanged();
         ToolbarLayoutChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -48,7 +174,35 @@ public partial class MainWindowViewModel
     /// call so a language change is reflected; an unavailable command simply renders disabled. Every command
     /// carries an icon so a toolbar button never falls back to text only.
     /// </summary>
-    public IReadOnlyList<ToolbarCommandDescriptor> ToolbarCommands()
+    public IReadOnlyList<ToolbarCommandDescriptor> ToolbarCommands(bool trackSelection = false) =>
+        ActivePluginToolbar is { } toolbar ? BuildPluginToolbarCommands(toolbar, trackSelection) : FileToolbarCommands();
+
+    private IReadOnlyList<ToolbarCommandDescriptor> BuildPluginToolbarCommands(ToolbarContribution toolbar, bool trackSelection)
+    {
+        var commands = catalogFeatures!.GetEntryCommands().ToDictionary(command => command.CommandId, StringComparer.OrdinalIgnoreCase);
+        return toolbar.Buttons.DistinctBy(button => button.CommandId, StringComparer.OrdinalIgnoreCase)
+            .Where(button => commands.ContainsKey(button.CommandId))
+            .Select(button =>
+            {
+                var contribution = commands[button.CommandId];
+                var command = new AsyncRelayCommand(() => ExecuteFeatureEntryCommandAsync(contribution.CommandId),
+                    () => CanExecuteFeatureCommand(contribution));
+                if (trackSelection)
+                {
+                    toolbarPluginCommands.Add(command);
+                }
+                return new ToolbarCommandDescriptor
+                {
+                    Id = contribution.CommandId,
+                    Category = toolbar.Title,
+                    Label = string.IsNullOrWhiteSpace(button.Label) ? contribution.Title : button.Label,
+                    IconPath = button.IconKey,
+                    Command = command
+                };
+            }).ToArray();
+    }
+
+    private IReadOnlyList<ToolbarCommandDescriptor> FileToolbarCommands()
     {
         var file = ToolbarCategory(UiKeys.FileMenu);
         var edit = ToolbarCategory(UiKeys.EditMenu);

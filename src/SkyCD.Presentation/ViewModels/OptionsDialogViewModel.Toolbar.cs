@@ -23,9 +23,10 @@ public partial class OptionsDialogViewModel
 
     public void SetToolbarCustomization(
         IReadOnlyList<ToolbarCommandDescriptor>? commands,
-        IEnumerable<ToolbarItemDocument>? layout)
+        IEnumerable<ToolbarItemDocument>? layout,
+        IReadOnlyList<ToolbarItemDocument>? defaultLayout = null)
     {
-        Toolbar = new ToolbarCustomizationViewModel(commands ?? [], layout ?? ToolbarLayout.CreateDefault());
+        Toolbar = new ToolbarCustomizationViewModel(commands ?? [], layout ?? ToolbarLayout.CreateDefault(), defaultLayout);
         OnPropertyChanged(nameof(Toolbar));
         OnPropertyChanged(nameof(ShowToolbarSection));
     }

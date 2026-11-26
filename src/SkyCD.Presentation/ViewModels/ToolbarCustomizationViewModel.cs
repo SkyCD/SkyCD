@@ -15,11 +15,14 @@ namespace SkyCD.Presentation.ViewModels;
 public sealed partial class ToolbarCustomizationViewModel : ObservableObject
 {
     private readonly Dictionary<string, ToolbarCommandChoiceViewModel> choicesById;
+    private readonly IReadOnlyList<ToolbarItemDocument> defaultLayout;
 
     public ToolbarCustomizationViewModel(
         IReadOnlyList<ToolbarCommandDescriptor> commands,
-        IEnumerable<ToolbarItemDocument> layout)
+        IEnumerable<ToolbarItemDocument> layout,
+        IReadOnlyList<ToolbarItemDocument>? defaultLayout = null)
     {
+        this.defaultLayout = defaultLayout ?? ToolbarLayout.CreateDefault();
         ArgumentNullException.ThrowIfNull(commands);
         ArgumentNullException.ThrowIfNull(layout);
         choicesById = new Dictionary<string, ToolbarCommandChoiceViewModel>(StringComparer.OrdinalIgnoreCase);
@@ -116,7 +119,7 @@ public sealed partial class ToolbarCustomizationViewModel : ObservableObject
     private void MoveDown() => MoveSelectedItem(1);
 
     [RelayCommand]
-    private void Reset() => LoadLayout(ToolbarLayout.CreateDefault());
+    private void Reset() => LoadLayout(defaultLayout);
 
     private void MoveSelectedItem(int offset)
     {

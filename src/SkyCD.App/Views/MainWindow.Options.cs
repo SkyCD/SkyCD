@@ -78,7 +78,7 @@ public partial class MainWindow
         }
         if (DataContext is MainWindowViewModel toolbarViewModel)
         {
-            e.Dialog.SetToolbarCustomization(toolbarViewModel.ToolbarCommands(), toolbarViewModel.ToolbarEntries);
+            e.Dialog.SetToolbarCustomization(toolbarViewModel.ToolbarCommands(), toolbarViewModel.ToolbarEntries, toolbarViewModel.DefaultToolbarEntries);
         }
         e.Dialog.SetPluginMarketplace(pluginMarketplaceService);
         e.Dialog.SetPluginUninstaller(pluginUninstaller);
@@ -137,9 +137,9 @@ public partial class MainWindow
                 options.AiScanMaxFileSizeBytes = e.Dialog.AiScanMaxFileSizeMegabytes * 1024L * 1024L;
                 options.AiDescriptionImplementation = e.Dialog.SelectedAiDescriptionImplementation?.Id
                                                       ?? options.AiDescriptionImplementation;
-                if (e.Dialog.GetToolbarLayout() is { } toolbarLayout)
+                if (e.Dialog.GetToolbarLayout() is { } toolbarLayout && DataContext is MainWindowViewModel currentToolbar)
                 {
-                    options.Toolbar = toolbarLayout.ToList();
+                    currentToolbar.SetStoredToolbarLayout(options, toolbarLayout);
                 }
 
                 SaveScanOptionsFromDialog(e.Dialog, options);

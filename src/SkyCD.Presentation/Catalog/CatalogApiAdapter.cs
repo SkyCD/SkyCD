@@ -79,7 +79,8 @@ public sealed class CatalogApiAdapter(OpenCatalogState state) : ICatalogApi
     private static CatalogEntryKind MapKind(CatalogDocumentType type) => type switch
     {
         CatalogDocumentType.Folder or CatalogDocumentType.NetworkFolder => CatalogEntryKind.Folder,
-        CatalogDocumentType.File or CatalogDocumentType.Media => CatalogEntryKind.File,
+        CatalogDocumentType.File => CatalogEntryKind.File,
+        CatalogDocumentType.Media => CatalogEntryKind.Media,
         _ => CatalogEntryKind.Other
     };
 }
