@@ -15,32 +15,41 @@ public class GenDescTemplatesViewModelTests
 {
     static GenDescTemplatesViewModelTests() => GenDescTestLocalization.EnsureRegistered();
 
-    private static GenDescTemplatesViewModel Create(string directory, RecordingFileDialogApi? dialogs = null) =>
-        new(dialogs, directory);
+    private static GenDescTemplatesViewModel Create(string directory,
+        string templateKind = TemplateInfo.DescriptionKind, RecordingFileDialogApi? dialogs = null) =>
+        new(templateKind, dialogs, directory);
 
     [Fact]
-    public void DescriptionTemplatesAreShownFirst()
+    public void PageListsOnlyItsKindsTemplates()
     {
         using var workspace = new TestWorkspace();
-        var viewModel = Create(workspace.Root);
 
-        Assert.Equal(TemplateInfo.DescriptionKind, viewModel.SelectedKindOption.Value);
-        Assert.NotEmpty(viewModel.Templates);
-        Assert.All(viewModel.Templates, template => Assert.Equal(TemplateInfo.DescriptionKind, template.Kind));
-        Assert.NotNull(viewModel.SelectedTemplate);
-        Assert.Equal(viewModel.SelectedTemplate!.Body, viewModel.EditorBody);
+        var descriptionPage = Create(workspace.Root);
+        Assert.NotEmpty(descriptionPage.Templates);
+        Assert.All(descriptionPage.Templates,
+            template => Assert.Equal(TemplateInfo.DescriptionKind, template.Kind));
+        Assert.NotNull(descriptionPage.SelectedTemplate);
+        Assert.Equal(descriptionPage.SelectedTemplate!.Body, descriptionPage.EditorBody);
+
+        var infoPage = Create(workspace.Root, TemplateInfo.NfoKind);
+        Assert.NotEmpty(infoPage.Templates);
+        Assert.All(infoPage.Templates, template => Assert.Equal(TemplateInfo.NfoKind, template.Kind));
+        Assert.Contains(infoPage.Templates, template => template.Category == "movie");
     }
 
     [Fact]
-    public void SwitchingTheKindListsThatKindsTemplates()
+    public void NewTemplatesAreCreatedWithThePageKind()
     {
         using var workspace = new TestWorkspace();
-        var viewModel = Create(workspace.Root);
+        var viewModel = Create(workspace.Root, TemplateInfo.NfoKind);
+        viewModel.NewCommand.Execute(null);
+        viewModel.EditorBody = "{{ Title }}";
 
-        viewModel.SelectedKindOption = viewModel.KindOptions.Single(option => option.Value == TemplateInfo.NfoKind);
+        viewModel.SaveCommand.Execute(null);
 
+        Assert.Equal(string.Empty, viewModel.ErrorText);
+        Assert.Equal(TemplateInfo.NfoKind, TemplateStore.Load(workspace.Root).Find("custom-template")!.Kind);
         Assert.All(viewModel.Templates, template => Assert.Equal(TemplateInfo.NfoKind, template.Kind));
-        Assert.Contains(viewModel.Templates, template => template.Category == "movie");
     }
 
     [Fact]
@@ -185,7 +194,7 @@ public class GenDescTemplatesViewModelTests
     {
         using var workspace = new TestWorkspace();
         var dialogs = new RecordingFileDialogApi { SaveResult = workspace.GetPath("exported.tpl") };
-        var viewModel = Create(workspace.Root, dialogs);
+        var viewModel = Create(workspace.Root, dialogs: dialogs);
 
         await viewModel.ExportCommand.ExecuteAsync(null);
 
@@ -203,7 +212,7 @@ public class GenDescTemplatesViewModelTests
         var path = workspace.GetPath("incoming.tpl");
         await File.WriteAllTextAsync(path,
             "## id=imported\n## kind=description\n## category=tv\n## lang=en\n{{ Name }}");
-        var viewModel = Create(workspace.Root, new RecordingFileDialogApi { OpenResult = path });
+        var viewModel = Create(workspace.Root, dialogs: new RecordingFileDialogApi { OpenResult = path });
 
         await viewModel.ImportCommand.ExecuteAsync(null);
 
@@ -211,6 +220,24 @@ public class GenDescTemplatesViewModelTests
         Assert.Equal("tv", viewModel.EditorCategory);
         Assert.Equal("{{ Name }}", viewModel.EditorBody);
         Assert.Equal(LocalizationService.Current.Format(GenDescKeys.Imported, path), viewModel.StatusText);
+    }
+
+    [Fact]
+    public async Task ImportWithoutAKindUsesThePageKind()
+    {
+        using var workspace = new TestWorkspace();
+        var sourceDirectory = workspace.GetPath("incoming");
+        Directory.CreateDirectory(sourceDirectory);
+        var path = Path.Combine(sourceDirectory, "incoming.tpl");
+        await File.WriteAllTextAsync(path, "## id=imported-nfo\n## category=movie\n{{ Name }}");
+        var viewModel = Create(workspace.Root, TemplateInfo.NfoKind,
+            new RecordingFileDialogApi { OpenResult = path });
+
+        await viewModel.ImportCommand.ExecuteAsync(null);
+        viewModel.SaveCommand.Execute(null);
+
+        Assert.Equal(string.Empty, viewModel.ErrorText);
+        Assert.Equal(TemplateInfo.NfoKind, TemplateStore.Load(workspace.Root).Find("imported-nfo")!.Kind);
     }
 
     [Fact]

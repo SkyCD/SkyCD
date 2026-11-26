@@ -53,6 +53,43 @@ public sealed class OptionsDialogViewModelOptionsPagesTests
     }
 
     [Fact]
+    public void ContributedPages_SharingAGroup_RenderOneHeaderWithOrderedChildren()
+    {
+        var viewModel = new OptionsDialogViewModel(["English"]);
+        viewModel.SetPlugins([EnabledPlugin()]);
+        var info = new TestCapability("gendesc-info-files", "Info files", group: "GenDesc templates", order: 50);
+        var descriptions = new TestCapability("gendesc-post-descriptions", "Post descriptions",
+            group: "GenDesc templates", order: 51);
+        viewModel.SetPluginOptionsPages([Provide(descriptions), Provide(info)]);
+
+        var header = Assert.Single(viewModel.SidebarEntries,
+            entry => entry.IsGroupHeader && entry.Title == "GenDesc templates");
+        var headerIndex = viewModel.SidebarEntries.IndexOf(header);
+        var children = viewModel.SidebarEntries.Skip(headerIndex + 1)
+            .TakeWhile(entry => !entry.IsGroupHeader)
+            .ToList();
+        Assert.Equal(["Info files", "Post descriptions"], children.Select(entry => entry.Title));
+        Assert.All(children, entry => Assert.Equal(1, entry.Depth));
+        Assert.All(children, entry => Assert.Equal("GenDesc templates", entry.Category?.Group));
+    }
+
+    [Fact]
+    public void ContributedPages_WithoutGroup_StayTopLevel()
+    {
+        var viewModel = new OptionsDialogViewModel(["English"]);
+        viewModel.SetPlugins([EnabledPlugin()]);
+        viewModel.SetPluginOptionsPages([
+            Provide(new TestCapability("gendesc-info-files", "Info files")),
+            Provide(new TestCapability("gendesc-post-descriptions", "Post descriptions"))
+        ]);
+
+        Assert.DoesNotContain(viewModel.SidebarEntries,
+            entry => entry.IsGroupHeader && entry.Title is "GenDesc templates" or "Info files");
+        Assert.All(viewModel.SidebarEntries.Where(entry => entry.Category?.ContributedPage is not null),
+            entry => Assert.Equal(0, entry.Depth));
+    }
+
+    [Fact]
     public void SelectingContributedPage_ShowsItsSectionAndCountsAsContent()
     {
         var viewModel = new OptionsDialogViewModel(["English"]);
@@ -260,13 +297,13 @@ public sealed class OptionsDialogViewModelOptionsPagesTests
             ContentSource?.Invoke() ?? throw new InvalidOperationException("no content source");
     }
 
-    private sealed class TestCapability(string pageIdValue, string title, Func<object?>? create = null)
-        : IOptionsPageCapability
+    private sealed class TestCapability(string pageIdValue, string title, Func<object?>? create = null,
+        string? group = null, int order = 0) : IOptionsPageCapability
     {
         public string PageIdValue { get; } = pageIdValue;
         public string Title { get; set; } = title;
         public int CreateCount { get; private set; }
-        public OptionsPageDescriptor OptionsPage => new(PageIdValue, Title, Order: 0);
+        public OptionsPageDescriptor OptionsPage => new(PageIdValue, Title, order, group);
         public object CreateOptionsPage()
         {
             CreateCount++;

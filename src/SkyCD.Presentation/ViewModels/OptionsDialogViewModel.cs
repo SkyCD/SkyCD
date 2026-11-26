@@ -205,7 +205,8 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
                     plugin.IsEnabled && plugin.Id.Equals(page.PluginId, StringComparison.OrdinalIgnoreCase)))
                 .OrderBy(static page => page.Order)
                 .ThenBy(static page => page.Title, StringComparer.OrdinalIgnoreCase)
-                .Select(page => new OptionsSettingCategory(page.Id, page.Title, ContributedPage: page)));
+                .Select(page => new OptionsSettingCategory(page.Id, page.Title, ContributedPage: page,
+                    Group: NormalizeGroup(page.Group))));
 
             var scanGroup = LocalizationService.Current.Get(UiKeys.ScanExclusions);
             categories.AddRange(

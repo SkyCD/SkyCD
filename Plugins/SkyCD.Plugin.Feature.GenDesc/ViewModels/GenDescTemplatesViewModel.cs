@@ -18,7 +18,7 @@ using SkyCD.UI.Localization;
 namespace SkyCD.Plugin.Feature.GenDesc.ViewModels;
 
 /// <summary>
-/// Edits the GenDesc templates: a kind filter, the template list, the header fields, the body with a live
+/// Edits the GenDesc templates of one fixed kind: the template list, the header fields, the body with a live
 /// syntax view and preview, and import/export of individual template files.
 /// </summary>
 public sealed partial class GenDescTemplatesViewModel : ObservableObject
@@ -26,19 +26,15 @@ public sealed partial class GenDescTemplatesViewModel : ObservableObject
     private static readonly Regex IdPattern = new("^[a-z0-9][a-z0-9._-]*$", RegexOptions.CultureInvariant);
     private readonly IHostFileDialogApi? fileDialogs;
     private readonly string directory;
+    private readonly string templateKind;
     private TemplateStore store;
     private bool suppressPreview;
 
-    public GenDescTemplatesViewModel(IHostFileDialogApi? fileDialogs, string? directory = null)
+    public GenDescTemplatesViewModel(string templateKind, IHostFileDialogApi? fileDialogs, string? directory = null)
     {
+        this.templateKind = TemplateInfo.NormalizeKind(templateKind);
         this.fileDialogs = fileDialogs;
         this.directory = directory ?? GenDescTemplatePaths.DefaultDirectory;
-        KindOptions =
-        [
-            new KindOption(TemplateInfo.NfoKind, LocalizationService.Current.Get(GenDescKeys.NfoKind)),
-            new KindOption(TemplateInfo.DescriptionKind, LocalizationService.Current.Get(GenDescKeys.DescriptionKind))
-        ];
-        selectedKindOption = KindOptions[1];
         Tokens =
         [
             "Title ?? Name",
@@ -59,16 +55,11 @@ public sealed partial class GenDescTemplatesViewModel : ObservableObject
         RefreshList();
     }
 
-    public IReadOnlyList<KindOption> KindOptions { get; }
-
     public IReadOnlyList<string> Tokens { get; }
 
     public string TemplateDirectory => directory;
 
     public ObservableCollection<TemplateInfo> Templates { get; } = [];
-
-    [ObservableProperty]
-    private KindOption selectedKindOption;
 
     [ObservableProperty]
     private TemplateInfo? selectedTemplate;
@@ -111,8 +102,6 @@ public sealed partial class GenDescTemplatesViewModel : ObservableObject
 
     [ObservableProperty]
     private string previewError = string.Empty;
-
-    partial void OnSelectedKindOptionChanged(KindOption value) => RefreshList();
 
     partial void OnSelectedTemplateChanged(TemplateInfo? value)
     {
@@ -250,8 +239,7 @@ public sealed partial class GenDescTemplatesViewModel : ObservableObject
         try
         {
             var content = await File.ReadAllTextAsync(path);
-            var template = TemplateInfo.Parse(content, Path.GetFileNameWithoutExtension(path),
-                SelectedKindOption.Value);
+            var template = TemplateInfo.Parse(content, Path.GetFileNameWithoutExtension(path), templateKind);
             suppressPreview = true;
             SelectedTemplate = null;
             EditorId = template.Id;
@@ -325,7 +313,7 @@ public sealed partial class GenDescTemplatesViewModel : ObservableObject
     {
         var wantedId = selectId ?? SelectedTemplate?.Id;
         Templates.Clear();
-        foreach (var template in store.ForKind(SelectedKindOption.Value))
+        foreach (var template in store.ForKind(templateKind))
         {
             Templates.Add(template);
         }
@@ -389,7 +377,7 @@ public sealed partial class GenDescTemplatesViewModel : ObservableObject
 
         template = new TemplateInfo(
             id,
-            SelectedKindOption.Value,
+            templateKind,
             string.IsNullOrWhiteSpace(EditorCategory) ? TemplateInfo.GeneralCategory : EditorCategory.Trim().ToLowerInvariant(),
             string.IsNullOrWhiteSpace(EditorLanguage) ? "en" : EditorLanguage.Trim().ToLowerInvariant(),
             string.IsNullOrWhiteSpace(EditorSite) ? TemplateInfo.DefaultSite : EditorSite.Trim().ToLowerInvariant(),

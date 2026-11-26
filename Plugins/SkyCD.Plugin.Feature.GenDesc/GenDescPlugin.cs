@@ -13,7 +13,6 @@ using SkyCD.Plugin.Feature.GenDesc.ViewModels;
 using SkyCD.Plugin.Feature.GenDesc.Views;
 using SkyCD.SDK.Capabilities.GenDesc;
 using SkyCD.SDK.Capabilities.Menu;
-using SkyCD.SDK.Capabilities.Options;
 using SkyCD.SDK.Capabilities.Ui;
 using SkyCD.SDK.Localization;
 using SkyCD.UI.Localization;
@@ -22,15 +21,15 @@ namespace SkyCD.Plugin.Feature.GenDesc;
 
 /// <summary>
 /// Generates .nfo files and torrent-site descriptions from editable templates. The two File-menu commands are
-/// enabled only for one selected local file; facts come from the host's catalog entry and metadata cache.
+/// enabled only for one selected local file; facts come from the host's catalog entry and metadata cache. The
+/// template editors live in the Options dialog as two pages, one per output kind.
 /// </summary>
 public sealed class GenDescPlugin : IMenuPluginCapability, IGenDescHostConsumer, IHostDialogConsumer,
-    IHostFileDialogConsumer, IClipboardConsumer, IOptionsPageCapability, ILocalizationPluginCapability
+    IHostFileDialogConsumer, IClipboardConsumer, ILocalizationPluginCapability
 {
     private const string NfoCommandId = "skycd.gendesc.nfo";
     private const string DescriptionCommandId = "skycd.gendesc.description";
     private const string FileMenuLocation = "File";
-    private const string OptionsPageId = "gendesc-templates";
 
     private IGenDescHostApi? genDescHost;
     private IHostDialogApi? dialogApi;
@@ -124,14 +123,6 @@ public sealed class GenDescPlugin : IMenuPluginCapability, IGenDescHostConsumer,
             await ShowDescriptionAsync(entry, result);
         }
     }
-
-    /// <inheritdoc />
-    public OptionsPageDescriptor OptionsPage =>
-        new(OptionsPageId, LocalizationService.Current.Get(GenDescKeys.OptionsTitle), 50);
-
-    /// <inheritdoc />
-    public object CreateOptionsPage() =>
-        new GenDescTemplatesView { DataContext = new GenDescTemplatesViewModel(fileDialogs, TemplateDirectory) };
 
     /// <inheritdoc />
     public IReadOnlyDictionary<string, string> GetTranslations() => GenDescLocalization.Translations;

@@ -19,6 +19,7 @@ public sealed partial class OptionsContributedPage : ObservableObject, IDisposab
     private readonly OptionsPageProvider provider;
     private readonly string pageId;
     private readonly string fallbackTitle;
+    private readonly string? fallbackGroup;
     private object? content;
     private string error = string.Empty;
     private bool contentRequested;
@@ -31,6 +32,7 @@ public sealed partial class OptionsContributedPage : ObservableObject, IDisposab
         pageId = descriptor.PageId;
         Order = descriptor.Order;
         fallbackTitle = descriptor.Title;
+        fallbackGroup = descriptor.Group;
     }
 
     public string Id => $"options:{provider.PluginId}/{pageId}";
@@ -57,6 +59,23 @@ public sealed partial class OptionsContributedPage : ObservableObject, IDisposab
                 // to the contributing capability, not to this host page.
                 PluginFailure.Publish(provider.Capability.GetType(), "options", exception);
                 return fallbackTitle;
+            }
+        }
+    }
+
+    /// <summary>Read on every access for the same retranslation reason as <see cref="Title"/>.</summary>
+    public string? Group
+    {
+        get
+        {
+            try
+            {
+                return provider.Capability.OptionsPage.Group;
+            }
+            catch (Exception exception)
+            {
+                PluginFailure.Publish(provider.Capability.GetType(), "options", exception);
+                return fallbackGroup;
             }
         }
     }

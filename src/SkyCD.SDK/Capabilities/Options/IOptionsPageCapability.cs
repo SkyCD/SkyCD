@@ -4,7 +4,11 @@ namespace SkyCD.SDK.Capabilities.Options;
 /// <param name="PageId">Stable identifier; the persisted Options selection survives translated title changes.</param>
 /// <param name="Title">Localized page title shown in the Options navigation and search.</param>
 /// <param name="Order">Position among contributed pages; lower values come first.</param>
-public sealed record OptionsPageDescriptor(string PageId, string Title, int Order = 0);
+/// <param name="Group">
+/// Optional localized sidebar group. Pages sharing a group render under one non-selectable header; keep the
+/// members' orders contiguous so the group stays together.
+/// </param>
+public sealed record OptionsPageDescriptor(string PageId, string Title, int Order = 0, string? Group = null);
 
 /// <summary>
 /// Capability contract for plugins that contribute a first-class Options page instead of opening a floating
