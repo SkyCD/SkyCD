@@ -214,9 +214,10 @@ public class AboutDialogViewModelTests
 
     [Theory]
     [InlineData(AboutDialogViewModel.AboutStoryTabKey, 0)]
-    [InlineData(AboutDialogViewModel.SystemInfoTabKey, 1)]
-    [InlineData(AboutDialogViewModel.LoadedAssembliesTabKey, 2)]
-    [InlineData(AboutDialogViewModel.ProjectLicenseTabKey, 3)]
+    [InlineData(AboutDialogViewModel.ThanksTabKey, 1)]
+    [InlineData(AboutDialogViewModel.SystemInfoTabKey, 2)]
+    [InlineData(AboutDialogViewModel.LoadedAssembliesTabKey, 3)]
+    [InlineData(AboutDialogViewModel.ProjectLicenseTabKey, 4)]
     public void RestoreSelectedTab_RestoresStoredKey(string tabKey, int expectedIndex)
     {
         var vm = new AboutDialogViewModel();
@@ -246,6 +247,10 @@ public class AboutDialogViewModelTests
         var vm = new AboutDialogViewModel();
 
         vm.SelectedTabIndex = 1;
+
+        Assert.Equal(AboutDialogViewModel.ThanksTabKey, vm.SelectedTabKey);
+
+        vm.SelectedTabIndex = 2;
 
         Assert.Equal(AboutDialogViewModel.SystemInfoTabKey, vm.SelectedTabKey);
     }

@@ -20,11 +20,13 @@ public partial class AboutDialogViewModel : ObservableObject
     public const string LoadedAssembliesTabKey = "loaded-assemblies";
     public const string ProjectLicenseTabKey = "project-license";
     public const string AboutStoryTabKey = "about-story";
+    public const string ThanksTabKey = "thanks";
     public const string DefaultTabKey = AboutStoryTabKey;
 
     private static readonly string[] TabKeys =
     [
         AboutStoryTabKey,
+        ThanksTabKey,
         SystemInfoTabKey,
         LoadedAssembliesTabKey,
         ProjectLicenseTabKey

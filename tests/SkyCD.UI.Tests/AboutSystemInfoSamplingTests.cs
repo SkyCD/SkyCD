@@ -22,11 +22,11 @@ public sealed class AboutSystemInfoSamplingTests
         {
             Assert.False(window.IsSystemInfoSampling);
 
-            viewModel.SelectedTabIndex = 1;
+            viewModel.RestoreSelectedTab(AboutDialogViewModel.SystemInfoTabKey);
             Dispatcher.UIThread.RunJobs();
             Assert.True(window.IsSystemInfoSampling);
 
-            viewModel.SelectedTabIndex = 0;
+            viewModel.RestoreSelectedTab(AboutDialogViewModel.AboutStoryTabKey);
             Dispatcher.UIThread.RunJobs();
             Assert.False(window.IsSystemInfoSampling);
         }
