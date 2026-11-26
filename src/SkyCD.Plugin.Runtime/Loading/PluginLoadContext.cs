@@ -72,7 +72,7 @@ public sealed class PluginLoadContext : AssemblyLoadContext
 
     protected override IntPtr LoadUnmanagedDll(string unmanagedAssemblyName)
     {
-        var path = resolver.ResolveUnmanagedDllToPath(unmanagedAssemblyName);
+        var path = resolver?.ResolveUnmanagedDllToPath(unmanagedAssemblyName);
         if (path is not null)
         {
             return LoadUnmanagedDllFromPath(path);
