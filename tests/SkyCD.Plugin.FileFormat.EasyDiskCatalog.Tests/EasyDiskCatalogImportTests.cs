@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.SDK.Capabilities.FileFormats;
+using SkyCD.TestSupport;
 using Xunit;
 using SkyCD.Plugin.FileFormat.EasyDiskCatalog.Models;
 
@@ -13,22 +14,14 @@ namespace SkyCD.Plugin.FileFormat.EasyDiskCatalog.Tests;
 
 public sealed class EasyDiskCatalogImportTests : IDisposable
 {
-    private readonly string workDirectory =
-        Path.Combine(Path.GetTempPath(), "edcdb-tests", Guid.NewGuid().ToString("N"));
+    private readonly TestWorkspace workspace = new();
 
     public void Dispose()
     {
-        try
-        {
-            if (Directory.Exists(workDirectory))
-            {
-                Directory.Delete(workDirectory, recursive: true);
-            }
-        }
-        catch
-        {
-        }
+        workspace.Dispose();
     }
+
+    private string workDirectory => workspace.Root;
 
     private static Dictionary<string, Dictionary<string, object?>> IndexById(
         EasyDiskCatalogReportDocument document)
@@ -218,9 +211,7 @@ public sealed class EasyDiskCatalogImportTests : IDisposable
     [Fact]
     public async Task CorruptTinyFile_ReturnsCorruptDiagnostic()
     {
-        var databasePath = Path.Combine(workDirectory, "tiny.edcdb");
-        Directory.CreateDirectory(workDirectory);
-        await File.WriteAllBytesAsync(databasePath, [0x01, 0x02, 0x03, 0x04, 0x05]);
+        var databasePath = workspace.CreateFile("tiny.edcdb", [0x01, 0x02, 0x03, 0x04, 0x05]);
 
         var plugin = new EasyDiskCatalogPlugin();
         await using var stream = File.OpenRead(databasePath);

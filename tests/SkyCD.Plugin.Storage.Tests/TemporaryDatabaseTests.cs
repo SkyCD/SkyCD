@@ -2,12 +2,20 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.Plugin.Storage;
 
-public sealed class TemporaryDatabaseTests
+public sealed class TemporaryDatabaseTests : IDisposable
 {
+    private readonly TestWorkspace workspace = new();
+
+    public void Dispose()
+    {
+        workspace.Dispose();
+    }
+
     [Fact]
     public void CreateNew_UsesUniqueGuidNamesWithoutCreatingTheFile()
     {
@@ -25,19 +33,12 @@ public sealed class TemporaryDatabaseTests
     [Fact]
     public void CreateNew_HonoursCustomDirectoryAndExtension()
     {
-        var directory = CreateDirectory();
-        try
-        {
-            using var database = TemporaryDatabase.CreateNew("testdb", directory);
+        var directory = workspace.CreateDirectory("custom-directory");
+        using var database = TemporaryDatabase.CreateNew("testdb", directory);
 
-            Assert.Equal(directory, Path.GetDirectoryName(database.Path));
-            Assert.EndsWith(".testdb", database.Path, StringComparison.Ordinal);
-            Assert.False(File.Exists(database.Path));
-        }
-        finally
-        {
-            Directory.Delete(directory, recursive: true);
-        }
+        Assert.Equal(directory, Path.GetDirectoryName(database.Path));
+        Assert.EndsWith(".testdb", database.Path, StringComparison.Ordinal);
+        Assert.False(File.Exists(database.Path));
     }
 
     [Fact]
@@ -66,26 +67,19 @@ public sealed class TemporaryDatabaseTests
     [Fact]
     public void CopyFrom_CopiesWalAndShmSidecarsFromKnownSource()
     {
-        var directory = CreateDirectory();
-        try
-        {
-            var sourcePath = Path.Combine(directory, "catalog.db");
-            File.WriteAllBytes(sourcePath, [1, 2, 3]);
-            File.WriteAllBytes(sourcePath + "-wal", [4, 5]);
-            File.WriteAllBytes(sourcePath + "-shm", [6, 7]);
-            File.WriteAllBytes(sourcePath + "-journal", [8]);
+        var directory = workspace.CreateDirectory("sidecars");
+        var sourcePath = Path.Combine(directory, "catalog.db");
+        File.WriteAllBytes(sourcePath, [1, 2, 3]);
+        File.WriteAllBytes(sourcePath + "-wal", [4, 5]);
+        File.WriteAllBytes(sourcePath + "-shm", [6, 7]);
+        File.WriteAllBytes(sourcePath + "-journal", [8]);
 
-            using var source = File.OpenRead(sourcePath);
-            using var database = TemporaryDatabase.CopyFrom(source, ".db", sidecarSourcePath: sourcePath);
+        using var source = File.OpenRead(sourcePath);
+        using var database = TemporaryDatabase.CopyFrom(source, ".db", sidecarSourcePath: sourcePath);
 
-            Assert.Equal(new byte[] { 4, 5 }, File.ReadAllBytes(database.Path + "-wal"));
-            Assert.Equal(new byte[] { 6, 7 }, File.ReadAllBytes(database.Path + "-shm"));
-            Assert.False(File.Exists(database.Path + "-journal"));
-        }
-        finally
-        {
-            Directory.Delete(directory, recursive: true);
-        }
+        Assert.Equal(new byte[] { 4, 5 }, File.ReadAllBytes(database.Path + "-wal"));
+        Assert.Equal(new byte[] { 6, 7 }, File.ReadAllBytes(database.Path + "-shm"));
+        Assert.False(File.Exists(database.Path + "-journal"));
     }
 
     [Fact]
@@ -153,13 +147,6 @@ public sealed class TemporaryDatabaseTests
         await database.DisposeAsync();
 
         Assert.False(File.Exists(database.Path));
-    }
-
-    private static string CreateDirectory()
-    {
-        var directory = Path.Combine(Path.GetTempPath(), "skycd-tempdb-test-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(directory);
-        return directory;
     }
 
     private static void AssertNoTemporaryFiles(string extension)

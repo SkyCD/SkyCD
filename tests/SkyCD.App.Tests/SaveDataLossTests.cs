@@ -23,6 +23,7 @@ using SkyCD.Plugin.FileFormat.Xml;
 using SkyCD.Plugin.FileFormat.XmlExport;
 using SkyCD.Plugin.FileFormat.Yaml;
 using SkyCD.Plugin.Runtime.Managers;
+using SkyCD.TestSupport;
 using SkyCD.UI.Localization;
 using Xunit;
 
@@ -60,6 +61,7 @@ public sealed class SaveDataLossTests
     public async Task DeclaredLoss_MatchesWhatTheWriterActuallyDrops(string formatId, string extension,
         string expectedLostText, bool preservesCatalogScope)
     {
+        using var workspace = new TestWorkspace();
         var manager = new FileFormatManager(CreateProviders());
         var entries = BuildEntries();
         var scope = CatalogScope();
@@ -86,33 +88,27 @@ public sealed class SaveDataLossTests
             Assert.Contains(loss, item => item.Category == FileFormatDataLossCategories.Loans);
         }
 
-        var path = Path.Combine(Path.GetTempPath(), $"skycd-loss-{Guid.NewGuid():N}{extension}");
-        try
+        var path = workspace.GetPath("catalog" + extension);
+
+        await manager.WriteFileAsync(formatId, path, rows, catalogScopeItems: scope);
+        var text = await ReadOutputAsync(formatId, path);
+        Assert.Contains("Track.mp3", text);
+        Assert.Contains("Root Folder", text);
+        AssertField(text, FileId, !lost.Contains(FileFormatDataLossFields.Id));
+        AssertField(text, ParentId, !lost.Contains(FileFormatDataLossFields.ParentId));
+        var sizeMarker = formatId is "legacy-scd" or "legacy-cscd" ? "12.0556640" : SizeMarker;
+        AssertField(text, sizeMarker, !lost.Contains(FileFormatDataLossFields.Size));
+        AssertField(text, StatusMarker, !lost.Contains(FileFormatDataLossFields.Status));
+        AssertField(text, PropertyKey, !lost.Contains(FileFormatDataLossFields.PropertyKeyPrefix + PropertyKey));
+        AssertField(text, PropertyMarker,
+            !lost.Contains(FileFormatDataLossFields.PropertyKeyPrefix + PropertyKey));
+        if (preservesCatalogScope)
         {
-            await manager.WriteFileAsync(formatId, path, rows, catalogScopeItems: scope);
-            var text = await ReadOutputAsync(formatId, path);
-            Assert.Contains("Track.mp3", text);
-            Assert.Contains("Root Folder", text);
-            AssertField(text, FileId, !lost.Contains(FileFormatDataLossFields.Id));
-            AssertField(text, ParentId, !lost.Contains(FileFormatDataLossFields.ParentId));
-            var sizeMarker = formatId is "legacy-scd" or "legacy-cscd" ? "12.0556640" : SizeMarker;
-            AssertField(text, sizeMarker, !lost.Contains(FileFormatDataLossFields.Size));
-            AssertField(text, StatusMarker, !lost.Contains(FileFormatDataLossFields.Status));
-            AssertField(text, PropertyKey, !lost.Contains(FileFormatDataLossFields.PropertyKeyPrefix + PropertyKey));
-            AssertField(text, PropertyMarker,
-                !lost.Contains(FileFormatDataLossFields.PropertyKeyPrefix + PropertyKey));
-            if (preservesCatalogScope)
-            {
-                Assert.Contains("catalogScope", text);
-            }
-            else
-            {
-                Assert.DoesNotContain("Wishlist", text);
-            }
+            Assert.Contains("catalogScope", text);
         }
-        finally
+        else
         {
-            File.Delete(path);
+            Assert.DoesNotContain("Wishlist", text);
         }
     }
 
@@ -154,82 +150,67 @@ public sealed class SaveDataLossTests
     [Fact]
     public async Task DecliningConfirmation_DoesNotCreateOrTouchTheTarget()
     {
+        using var workspace = new TestWorkspace();
         var service = new CatalogSaveService(new FileFormatManager(CreateProviders()));
-        var target = Path.Combine(Path.GetTempPath(), $"skycd-decline-{Guid.NewGuid():N}.txt");
-        try
-        {
-            var confirmed = false;
-            var saved = await service.SaveAsync(target, BuildDocuments(), [], preview =>
-            {
-                confirmed = true;
-                Assert.Equal("Catalog List Text Export (*.txt)", preview.FormatDisplayName);
-                Assert.NotEmpty(preview.Items);
-                return Task.FromResult(false);
-            });
-            Assert.True(confirmed);
-            Assert.False(saved);
-            Assert.False(File.Exists(target));
+        var target = workspace.GetPath("catalog.txt");
 
-            await File.WriteAllTextAsync(target, "original");
-            saved = await service.SaveAsync(target, BuildDocuments(), [], _ => Task.FromResult(false));
-            Assert.False(saved);
-            Assert.Equal("original", await File.ReadAllTextAsync(target));
-        }
-        finally
+        var confirmed = false;
+        var saved = await service.SaveAsync(target, BuildDocuments(), [], preview =>
         {
-            File.Delete(target);
-        }
+            confirmed = true;
+            Assert.Equal("Catalog List Text Export (*.txt)", preview.FormatDisplayName);
+            Assert.NotEmpty(preview.Items);
+            return Task.FromResult(false);
+        });
+        Assert.True(confirmed);
+        Assert.False(saved);
+        Assert.False(File.Exists(target));
+
+        await File.WriteAllTextAsync(target, "original");
+        saved = await service.SaveAsync(target, BuildDocuments(), [], _ => Task.FromResult(false));
+        Assert.False(saved);
+        Assert.Equal("original", await File.ReadAllTextAsync(target));
     }
 
     [Fact]
     public async Task EmptyCatalogAndLosslessFormat_SaveWithoutConfirmation()
     {
+        using var workspace = new TestWorkspace();
         var service = new CatalogSaveService(new FileFormatManager(CreateProviders()));
-        var target = Path.Combine(Path.GetTempPath(), $"skycd-lossless-{Guid.NewGuid():N}.json");
-        try
+        var target = workspace.GetPath("catalog.json");
+
+        var confirmed = false;
+        var saved = await service.SaveAsync(target, [], [], _ =>
         {
-            var confirmed = false;
-            var saved = await service.SaveAsync(target, [], [], _ =>
-            {
-                confirmed = true;
-                return Task.FromResult(false);
-            });
-            Assert.True(saved);
-            Assert.False(confirmed);
-            Assert.True(File.Exists(target));
-        }
-        finally
-        {
-            File.Delete(target);
-        }
+            confirmed = true;
+            return Task.FromResult(false);
+        });
+        Assert.True(saved);
+        Assert.False(confirmed);
+        Assert.True(File.Exists(target));
     }
 
     [Fact]
     public async Task AcceptingConfirmation_WritesTheAssessedSnapshotAndScope()
     {
+        using var workspace = new TestWorkspace();
         var service = new CatalogSaveService(new FileFormatManager(CreateProviders()));
-        var target = Path.Combine(Path.GetTempPath(), $"skycd-accept-{Guid.NewGuid():N}.txt");
-        try
+        var target = workspace.GetPath("catalog.txt");
+
+        var scope = CatalogScope();
+        var preview = default(CatalogSavePreview);
+        var saved = await service.SaveAsync(target, BuildDocuments(), scope, assessed =>
         {
-            var scope = CatalogScope();
-            var preview = default(CatalogSavePreview);
-            var saved = await service.SaveAsync(target, BuildDocuments(), scope, assessed =>
-            {
-                preview = assessed;
-                return Task.FromResult(true);
-            });
-            Assert.True(saved);
-            Assert.NotNull(preview);
-            Assert.Contains(preview.Items, item => item.Category == FileFormatDataLossCategories.Loans);
-            Assert.Contains(preview.Items, item => item.Category == FileFormatDataLossCategories.Entries);
-            var text = await File.ReadAllTextAsync(target);
-            Assert.Contains("Track.mp3", text);
-            Assert.DoesNotContain(StatusMarker, text);
-        }
-        finally
-        {
-            File.Delete(target);
-        }
+            preview = assessed;
+            return Task.FromResult(true);
+        });
+        Assert.True(saved);
+        Assert.NotNull(preview);
+        Assert.Contains(preview.Items, item => item.Category == FileFormatDataLossCategories.Loans);
+        Assert.Contains(preview.Items, item => item.Category == FileFormatDataLossCategories.Entries);
+        var text = await File.ReadAllTextAsync(target);
+        Assert.Contains("Track.mp3", text);
+        Assert.DoesNotContain(StatusMarker, text);
     }
 
     [Fact]

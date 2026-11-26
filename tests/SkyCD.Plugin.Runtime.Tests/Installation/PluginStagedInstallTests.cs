@@ -12,6 +12,7 @@ using SkyCD.Couchbase.Repository;
 using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Plugin.Runtime.Installation;
 using SkyCD.Plugin.Runtime.Managers;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.Plugin.Runtime.Tests.Installation;
@@ -44,29 +45,15 @@ public sealed class PluginStagedInstallTests : IDisposable
 
     private static readonly string ContentFolder = Path.Combine("lib", PluginPackageFixtures.DefaultTargetFramework);
 
-    private readonly string root = Path.Combine(Path.GetTempPath(), $"skycd-staging-{Guid.NewGuid():N}");
+    private readonly TestWorkspace workspace = new();
 
     private readonly PluginPackageFixtures fixtures = new();
 
-    public PluginStagedInstallTests()
-    {
-        Directory.CreateDirectory(root);
-    }
+    private string root => workspace.Root;
 
     public void Dispose()
     {
-        try
-        {
-            Directory.Delete(root, recursive: true);
-        }
-        catch (IOException)
-        {
-            // A locked leftover does not change assertion results.
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // Assemblies loaded by discovery stay locked until the test process exits.
-        }
+        workspace.Dispose();
     }
 
     [Fact]
@@ -661,12 +648,11 @@ public sealed class PluginStagedInstallTests : IDisposable
     private IReadOnlyCollection<string> DiscoverPluginIds(string pluginRoot) =>
         Discover(pluginRoot).Select(plugin => plugin.Id).ToList();
 
-    private static IReadOnlyList<SkyCD.Plugin.Runtime.Discovery.DiscoveredPlugin> Discover(string pluginRoot)
+    private IReadOnlyList<SkyCD.Plugin.Runtime.Discovery.DiscoveredPlugin> Discover(string pluginRoot)
     {
         var databaseManager = new DatabaseManager();
-        var directory = Path.Combine(Path.GetTempPath(), "SkyCD", "PluginStagedInstallTests",
-            Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(directory);
+        var directory = workspace.CreateDirectory(Path.Combine("plugin-discovery-db",
+            Guid.NewGuid().ToString("N")));
         databaseManager.Connect("default", directory);
         var repositoryManager = new RepositoryManager(databaseManager);
         var pluginManager = new PluginManager(new TestLogger<PluginManager>(),

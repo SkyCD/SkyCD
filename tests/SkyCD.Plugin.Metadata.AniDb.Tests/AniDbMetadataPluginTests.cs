@@ -5,6 +5,7 @@ using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.OnlineMetadata.Models;
 using SkyCD.Plugin.Runtime.Factories;
 using Xunit;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.Metadata.AniDb.Tests;
 
@@ -16,7 +17,7 @@ public class AniDbMetadataPluginTests
     public void ReadsInfoboxDefinitionList()
     {
         var facts = new DescriptionFacts();
-        Plugin().Parse(Fixtures.Read("anidb-anime.html"), facts);
+        Plugin().Parse(OnlineMetadataFixtures.Read("anidb-anime.html"), facts);
 
         Assert.Equal("Neon Genesis Evangelion", facts.Get("Title"));
         Assert.Equal("TV", facts.Get("Type"));
@@ -57,7 +58,7 @@ public class AniDbMetadataPluginTests
     [Fact]
     public async Task FetchReturnsFactsAndTheFetchedUrl()
     {
-        var fetcher = new StubFetcher(Fixtures.Read("anidb-anime.html"));
+        var fetcher = new StubFetcher(OnlineMetadataFixtures.Read("anidb-anime.html"));
         var plugin = new AniDbMetadataPlugin(fetcher);
         var request = new OnlineMetadataRequest("", "https://anidb.net/anime/1", "en");
 

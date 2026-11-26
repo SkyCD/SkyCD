@@ -7,6 +7,7 @@ using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Metadata.Office.Exceptions;
 using SkyCD.Plugin.Metadata.Office.Models;
 using Xunit;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.Metadata.Office.Tests;
 

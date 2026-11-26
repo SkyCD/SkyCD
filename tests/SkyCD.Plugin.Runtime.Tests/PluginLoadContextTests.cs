@@ -12,6 +12,7 @@ using SkyCD.Plugin.Runtime.Documents;
 using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Plugin.Runtime.Loading;
 using SkyCD.Plugin.Runtime.Managers;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.Plugin.Runtime.Tests;
@@ -21,31 +22,19 @@ namespace SkyCD.Plugin.Runtime.Tests;
 /// </summary>
 public sealed class PluginLoadContextTests : IDisposable
 {
-    private readonly string root = Path.Combine(Path.GetTempPath(), $"skycd-alc-{Guid.NewGuid():N}");
+    private readonly TestWorkspace workspace = new();
 
-    public PluginLoadContextTests()
-    {
-        Directory.CreateDirectory(root);
-    }
+    private string root => workspace.Root;
 
     public void Dispose()
     {
         // Windows keeps a loaded assembly file locked until the collectible context finishes
-        // unloading. Linux and macOS delete the file immediately.
-        for (var attempt = 0; attempt < 8 && Directory.Exists(root); attempt++)
-        {
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-            GC.Collect();
-            try
-            {
-                Directory.Delete(root, recursive: true);
-                return;
-            }
-            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-            {
-            }
-        }
+        // unloading, so nudge the collector before the workspace deletes the tree. Linux and macOS
+        // delete the file immediately.
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+        workspace.Dispose();
     }
 
     [Fact]
@@ -201,11 +190,11 @@ public sealed class PluginLoadContextTests : IDisposable
         }
     }
 
-    private static IRepository<PluginDocument> CreatePluginRepository()
+    private IRepository<PluginDocument> CreatePluginRepository()
     {
         var databaseManager = new DatabaseManager();
-        var directory = Path.Combine(Path.GetTempPath(), "SkyCD", "PluginLoadContextTests", Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(directory);
+        var directory = workspace.CreateDirectory(Path.Combine("plugin-load-context-db",
+            Guid.NewGuid().ToString("N")));
         databaseManager.Connect("default", directory);
         var repositoryManager = new RepositoryManager(databaseManager);
         return (IRepository<PluginDocument>)repositoryManager.For<PluginDocument>();

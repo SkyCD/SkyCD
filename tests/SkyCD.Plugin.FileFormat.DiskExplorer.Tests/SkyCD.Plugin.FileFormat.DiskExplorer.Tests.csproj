@@ -11,6 +11,7 @@
         <ProjectReference Include="..\..\src\SkyCD.SDK\SkyCD.SDK.csproj"/>
         <ProjectReference Include="..\..\src\SkyCD.Couchbase\SkyCD.Couchbase.csproj"/>
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.DiskExplorer\SkyCD.Plugin.FileFormat.DiskExplorer.csproj"/>
+        <ProjectReference Include="../SkyCD.TestSupport/SkyCD.TestSupport.csproj"/>
     </ItemGroup>
     <ItemGroup>
         <None Update="Fixtures\DiskExplorer\*.xml">

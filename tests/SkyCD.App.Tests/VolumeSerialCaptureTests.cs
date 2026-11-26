@@ -7,33 +7,20 @@ using SkyCD.Documents.Enum;
 using SkyCD.SDK.Capabilities.Media;
 using SkyCD.SDK.Capabilities.Volume;
 using SkyCD.Presentation.Scanning;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.App.Tests;
 
 public sealed class VolumeSerialCaptureTests : IDisposable
 {
-    private readonly string testDirectory;
+    private readonly TestWorkspace workspace = new();
 
-    public VolumeSerialCaptureTests()
-    {
-        testDirectory = Path.Combine(Path.GetTempPath(), $"skycd-volume-serial-capture-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(testDirectory);
-    }
+    private string testDirectory => workspace.Root;
 
     public void Dispose()
     {
-        try
-        {
-            if (Directory.Exists(testDirectory))
-            {
-                Directory.Delete(testDirectory, recursive: true);
-            }
-        }
-        catch
-        {
-            // Ignore cleanup errors
-        }
+        workspace.Dispose();
     }
 
     private sealed class FakeDriveProvider(IReadOnlyList<MediaDriveInfo> drives) : IMediaDriveProvider

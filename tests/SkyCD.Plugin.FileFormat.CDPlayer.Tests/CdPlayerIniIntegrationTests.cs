@@ -17,6 +17,7 @@ using SkyCD.Plugin.FileFormat.CDPlayer.Exceptions;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.TestSupport;
 using Xunit;
 using SkyCD.Plugin.FileFormat.CDPlayer.Parsing;
 
@@ -191,48 +192,40 @@ public sealed class CdPlayerIniIntegrationTests
 
     private static void Persist(IReadOnlyList<CatalogDocument> documents, Action<MainWindowViewModel>? verify = null)
     {
-        var directory = Path.Combine(Path.GetTempPath(), "skycd-cdplayer-" + Guid.NewGuid().ToString("N"));
-        try
+        using var workspace = new TestWorkspace();
+        var directory = workspace.Root;
+
+        using var database = new Database("catalog", new DatabaseConfiguration { Directory = directory });
+        var collection = database.GetDefaultCollection();
+        foreach (var entry in documents)
         {
-            using var database = new Database("catalog", new DatabaseConfiguration { Directory = directory });
-            var collection = database.GetDefaultCollection();
-            foreach (var entry in documents)
-            {
-                using var document = entry.ToMutableDocument(entry.Id);
-                collection.Save(document);
-            }
-
-            foreach (var entry in documents)
-            {
-                using var saved = collection.GetDocument(entry.Id);
-                var restored = saved.FromDocument<CatalogDocument>();
-                Assert.NotNull(restored);
-                Assert.Equal(entry.Name, restored.Name);
-                Assert.Equal(entry.ParentId, restored.ParentId);
-                Assert.Equal(entry.Size, restored.Size);
-                Assert.Equal(entry.Type, restored.Type);
-            }
-
-            var repository = new CatalogDocumentRepository();
-            repository.Initialize(typeof(CatalogDocument), collection.Name, collection);
-            var constructor = typeof(MainWindowViewModel).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance)
-                .Single(candidate => candidate.GetParameters().Length == 5);
-            using var vm = Assert.IsType<MainWindowViewModel>(constructor.Invoke(
-                [repository, new PropertyValueLocalizer(), new MenuExtensionManager([]), false, null]));
-
-            if (documents.Any(entry => entry.ParentId is null && entry.Type != CatalogDocumentType.File))
-            {
-                Assert.NotEmpty(vm.TreeNodes);
-            }
-
-            verify?.Invoke(vm);
+            using var document = entry.ToMutableDocument(entry.Id);
+            collection.Save(document);
         }
-        finally
+
+        foreach (var entry in documents)
         {
-            if (Directory.Exists(directory))
-            {
-                Directory.Delete(directory, recursive: true);
-            }
+            using var saved = collection.GetDocument(entry.Id);
+            var restored = saved.FromDocument<CatalogDocument>();
+            Assert.NotNull(restored);
+            Assert.Equal(entry.Name, restored.Name);
+            Assert.Equal(entry.ParentId, restored.ParentId);
+            Assert.Equal(entry.Size, restored.Size);
+            Assert.Equal(entry.Type, restored.Type);
         }
+
+        var repository = new CatalogDocumentRepository();
+        repository.Initialize(typeof(CatalogDocument), collection.Name, collection);
+        var constructor = typeof(MainWindowViewModel).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance)
+            .Single(candidate => candidate.GetParameters().Length == 5);
+        using var vm = Assert.IsType<MainWindowViewModel>(constructor.Invoke(
+            [repository, new PropertyValueLocalizer(), new MenuExtensionManager([]), false, null]));
+
+        if (documents.Any(entry => entry.ParentId is null && entry.Type != CatalogDocumentType.File))
+        {
+            Assert.NotEmpty(vm.TreeNodes);
+        }
+
+        verify?.Invoke(vm);
     }
 }

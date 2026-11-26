@@ -29,28 +29,14 @@ public sealed class FtpCatalogIntegrationTests : IDisposable
     private const string Username = "catalog-user";
 
     private readonly AppDataSandbox sandbox = new();
-    private readonly string ftpRoot = Path.Combine(Path.GetTempPath(), $"skycd-ftp-root-{Guid.NewGuid():N}");
+    private readonly TestWorkspace workspace = new();
 
-    public FtpCatalogIntegrationTests()
-    {
-        Directory.CreateDirectory(ftpRoot);
-    }
+    private string ftpRoot => workspace.Root;
 
     public void Dispose()
     {
         sandbox.Dispose();
-
-        try
-        {
-            if (Directory.Exists(ftpRoot))
-            {
-                Directory.Delete(ftpRoot, recursive: true);
-            }
-        }
-        catch
-        {
-            // The fixture directory is removed on the next test run if it is still open.
-        }
+        workspace.Dispose();
     }
 
     [Fact]

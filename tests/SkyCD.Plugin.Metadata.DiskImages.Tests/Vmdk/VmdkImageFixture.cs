@@ -5,6 +5,7 @@ using DiscUtils;
 using DiscUtils.Fat;
 using DiscUtils.Partitions;
 using DiscUtils.Vmdk;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.Metadata.DiskImages.Tests;
 
@@ -16,13 +17,15 @@ internal sealed class VmdkImageFixture : IDisposable
 {
     private const long CapacityBytes = 16 * 1024 * 1024;
 
-    private VmdkImageFixture(string directory, string imagePath)
+    private readonly TestWorkspace workspace;
+
+    private VmdkImageFixture(TestWorkspace workspace, string imagePath)
     {
-        Directory = directory;
+        this.workspace = workspace;
         ImagePath = imagePath;
     }
 
-    public string Directory { get; }
+    public string Directory => workspace.Root;
 
     public string ImagePath { get; }
 
@@ -34,8 +37,8 @@ internal sealed class VmdkImageFixture : IDisposable
         DiskCreateType createType,
         params (string Path, string Content)[] files)
     {
-        var directory = System.IO.Directory.CreateTempSubdirectory("skycd-vmdk-test-").FullName;
-        var imagePath = Path.Combine(directory, "disk.vmdk");
+        var workspace = new TestWorkspace();
+        var imagePath = workspace.GetPath("disk.vmdk");
 
         using (var disk = Disk.Initialize(imagePath, CapacityBytes, createType))
         {
@@ -57,25 +60,8 @@ internal sealed class VmdkImageFixture : IDisposable
             }
         }
 
-        return new VmdkImageFixture(directory, imagePath);
+        return new VmdkImageFixture(workspace, imagePath);
     }
 
-    public void Dispose()
-    {
-        try
-        {
-            if (System.IO.Directory.Exists(Directory))
-            {
-                System.IO.Directory.Delete(Directory, recursive: true);
-            }
-        }
-        catch (IOException)
-        {
-            // Best-effort test cleanup.
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // Best-effort test cleanup.
-        }
-    }
+    public void Dispose() => workspace.Dispose();
 }

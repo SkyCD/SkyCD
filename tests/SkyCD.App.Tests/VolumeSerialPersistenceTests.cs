@@ -25,15 +25,12 @@ namespace SkyCD.App.Tests;
 public sealed class VolumeSerialPersistenceTests : IDisposable
 {
     private readonly AppDataSandbox sandbox = new();
-    private readonly string scanTestDirectory = Path.Combine(Path.GetTempPath(), $"skycd-volume-serial-source-{Guid.NewGuid():N}");
+    private readonly TestWorkspace workspace = new();
     private readonly CultureInfo originalServiceCulture = LocalizationService.Current.CurrentCulture;
     private readonly CultureInfo originalCulture = CultureInfo.CurrentCulture;
     private readonly CultureInfo originalUiCulture = CultureInfo.CurrentUICulture;
 
-    public VolumeSerialPersistenceTests()
-    {
-        Directory.CreateDirectory(scanTestDirectory);
-    }
+    private string scanTestDirectory => workspace.Root;
 
     public void Dispose()
     {
@@ -41,15 +38,7 @@ public sealed class VolumeSerialPersistenceTests : IDisposable
         CultureInfo.CurrentCulture = originalCulture;
         CultureInfo.CurrentUICulture = originalUiCulture;
         sandbox.Dispose();
-
-        try
-        {
-            if (Directory.Exists(scanTestDirectory))
-            {
-                Directory.Delete(scanTestDirectory, recursive: true);
-            }
-        }
-        catch { }
+        workspace.Dispose();
     }
 
     private sealed class FakeDriveProvider(IReadOnlyList<MediaDriveInfo> drives) : IMediaDriveProvider

@@ -15,6 +15,7 @@ using SkyCD.Plugin.Runtime.Documents;
 using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.Sample.Config;
+using SkyCD.TestSupport;
 using Xunit;
 using SkyCD.Plugin.Sample.Config.Configuration;
 
@@ -22,6 +23,7 @@ namespace SkyCD.Plugin.Sample.Config.Tests;
 
 public sealed class SampleConfigurationPluginTests : IDisposable
 {
+    private readonly TestWorkspace workspace = new();
     private readonly string testDirectory;
     private readonly string pluginsDirectory;
     private readonly DatabaseManager databaseManager;
@@ -32,9 +34,8 @@ public sealed class SampleConfigurationPluginTests : IDisposable
 
     public SampleConfigurationPluginTests()
     {
-        testDirectory = Path.Combine(Path.GetTempPath(), "SkyCD", "SampleConfigTests", Guid.NewGuid().ToString("N"));
-        pluginsDirectory = Path.Combine(testDirectory, "plugins");
-        Directory.CreateDirectory(pluginsDirectory);
+        testDirectory = workspace.Root;
+        pluginsDirectory = workspace.CreateDirectory("plugins");
 
         databaseManager = new DatabaseManager();
         databaseManager.Connect("default", Path.Combine(testDirectory, "db"));
@@ -372,16 +373,7 @@ public sealed class SampleConfigurationPluginTests : IDisposable
     {
         databaseManager.GetDatabase().Dispose();
         databaseManager.Dispose();
-        if (Directory.Exists(testDirectory))
-        {
-            try
-            {
-                Directory.Delete(testDirectory, recursive: true);
-            }
-            catch (IOException)
-            {
-            }
-        }
+        workspace.Dispose();
     }
 
     private void CopyPluginAssembly(Assembly assembly)

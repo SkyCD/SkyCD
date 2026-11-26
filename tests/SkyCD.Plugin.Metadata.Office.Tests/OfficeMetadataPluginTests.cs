@@ -7,6 +7,7 @@ using SkyCD.Plugin.Metadata.Office.Exceptions;
 using SkyCD.Plugin.Metadata.Office.Parsing;
 using Xunit;
 using SkyCD.Plugin.Metadata.Office.Models;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.Metadata.Office.Tests;
 

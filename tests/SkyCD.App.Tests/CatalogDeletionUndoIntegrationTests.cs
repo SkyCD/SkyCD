@@ -846,6 +846,7 @@ public sealed class CatalogDeletionUndoIntegrationTests : IDisposable
     private sealed class TestContext : IDisposable
     {
         private readonly Container container = new();
+        private readonly TestWorkspace workspace = new();
         private readonly string mediaDirectory;
         private bool databaseClosed;
 
@@ -860,8 +861,7 @@ public sealed class CatalogDeletionUndoIntegrationTests : IDisposable
             appOptions.AppStartCount = 99;
             options.Save(AppOptionsDocument.DocumentId, appOptions);
 
-            mediaDirectory = Path.Combine(Path.GetTempPath(), $"skycd-undo-media-{Guid.NewGuid():N}");
-            Directory.CreateDirectory(mediaDirectory);
+            mediaDirectory = workspace.Root;
             SourceFile = Path.Combine(mediaDirectory, "interstellar.mkv");
             File.WriteAllBytes(SourceFile, new byte[4096]);
         }
@@ -1001,17 +1001,7 @@ public sealed class CatalogDeletionUndoIntegrationTests : IDisposable
             }
 
             container.Dispose();
-
-            try
-            {
-                if (Directory.Exists(mediaDirectory))
-                {
-                    Directory.Delete(mediaDirectory, recursive: true);
-                }
-            }
-            catch (IOException)
-            {
-            }
+            workspace.Dispose();
         }
     }
 }

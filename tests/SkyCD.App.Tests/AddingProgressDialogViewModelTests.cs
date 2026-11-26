@@ -1,10 +1,10 @@
 using System;
-using System.IO;
 using SkyCD.Documents.Enum;
 using SkyCD.Presentation.Operations;
 using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.SDK;
+using SkyCD.TestSupport;
 using SkyCD.UI.Localization;
 using Xunit;
 
@@ -15,8 +15,8 @@ public class AddingProgressDialogViewModelTests
     [Fact]
     public void CancelAction_CancelsFolderTraversalAndDisablesFurtherRequests()
     {
-        var directory = Path.Combine(Path.GetTempPath(), $"skycd-cancel-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(directory);
+        using var workspace = new TestWorkspace();
+        var directory = workspace.Root;
         var vm = new AddingProgressDialogViewModel { CanCancel = true };
         try
         {
@@ -34,7 +34,6 @@ public class AddingProgressDialogViewModelTests
         finally
         {
             vm.FinishCancellation();
-            Directory.Delete(directory);
         }
         Assert.False(vm.IsCancellationPending);
     }

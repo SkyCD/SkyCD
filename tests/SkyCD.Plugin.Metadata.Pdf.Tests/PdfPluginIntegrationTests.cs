@@ -13,6 +13,7 @@ using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Presentation.MediaCache;
+using SkyCD.TestSupport;
 using SkyCD.UI.Controls.Preview;
 using Xunit;
 using SkyCD.Plugin.Metadata.Pdf.Export;
@@ -34,37 +35,22 @@ public sealed class PdfPluginIntegrationTests : IDisposable
     /// <summary>A deterministic stand-in frame, so the pipeline does not depend on a native rasterizer.</summary>
     private static readonly byte[] RenderedPage = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3, 4];
 
-    private readonly string databaseDirectory =
-        Path.Combine(Path.GetTempPath(), $"skycd-pdf-plugin-{Guid.NewGuid():N}");
+    private readonly TestWorkspace workspace = new();
 
     private readonly string? previousDatabaseDirectory =
         Environment.GetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY");
 
+    private string databaseDirectory => workspace.Root;
+
     public PdfPluginIntegrationTests()
     {
-        Directory.CreateDirectory(databaseDirectory);
         Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", databaseDirectory);
     }
 
     public void Dispose()
     {
         Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", previousDatabaseDirectory);
-
-        try
-        {
-            if (Directory.Exists(databaseDirectory))
-            {
-                Directory.Delete(databaseDirectory, recursive: true);
-            }
-        }
-        catch (IOException)
-        {
-            // Couchbase Lite can release file handles slightly after dispose on some systems.
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // Blob files can stay locked briefly after the database is closed on Windows.
-        }
+        workspace.Dispose();
     }
 
     [Fact]

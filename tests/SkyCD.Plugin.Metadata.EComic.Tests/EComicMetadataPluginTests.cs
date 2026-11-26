@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using SkyCD.SDK.Capabilities.Media;
 using Xunit;
 using SkyCD.Plugin.Metadata.EComic.Models;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.Metadata.EComic.Tests;
 

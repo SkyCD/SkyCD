@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using SkyCD.SDK.Capabilities.Media;
 using Xunit;
 using SkyCD.Plugin.Metadata.Executable.Models;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.Metadata.Executable.Tests;
 

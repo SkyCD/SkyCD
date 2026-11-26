@@ -17,6 +17,7 @@ using SkyCD.Plugin.FileFormat.DiskExplorer.Delimited;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.Plugin.FileFormat.DiskCatalogMaker.Tests;
@@ -107,36 +108,27 @@ public sealed class DiskCatalogMakerIntegrationTests
     [Fact]
     public async Task LoadAsync_ControlCharactersAndPercentEscapes_PersistDistinctlyWithParentLinks()
     {
-        var directory = Path.Combine(Path.GetTempPath(), "skycd-diskcatalogmaker-input-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(directory);
-        try
+        using var workspace = new TestWorkspace();
+        var fixturePath = workspace.CreateFile("control-characters.txt",
+            "Name\tPath\tSize\tKind\n" +
+            "\"Folder\tOne\"\t\"/Volumes/Disk/Folder\tOne\"\t\tFolder\n" +
+            "\"notes\t2026.txt\"\t\"/Volumes/Disk/Folder\tOne/notes\t2026.txt\"\t1\tPlain text\n" +
+            "notes%092026.txt\t\"/Volumes/Disk/Folder\tOne/notes%092026.txt\"\t2\tPlain text\n");
+        var service = new CatalogLoadService(new FileFormatManager([new DiskCatalogMakerPlugin()]));
+        var count = await service.LoadAsync(fixturePath, (payload, _) =>
         {
-            var fixturePath = Path.Combine(directory, "control-characters.txt");
-            await File.WriteAllTextAsync(fixturePath,
-                "Name\tPath\tSize\tKind\n" +
-                "\"Folder\tOne\"\t\"/Volumes/Disk/Folder\tOne\"\t\tFolder\n" +
-                "\"notes\t2026.txt\"\t\"/Volumes/Disk/Folder\tOne/notes\t2026.txt\"\t1\tPlain text\n" +
-                "notes%092026.txt\t\"/Volumes/Disk/Folder\tOne/notes%092026.txt\"\t2\tPlain text\n");
-            var service = new CatalogLoadService(new FileFormatManager([new DiskCatalogMakerPlugin()]));
-            var count = await service.LoadAsync(fixturePath, (payload, _) =>
-            {
-                var documents = Extract(payload!);
-                Assert.Equal(documents.Count, documents.Select(entry => entry.Id).Distinct().Count());
-                var folder = Assert.Single(documents, entry => entry.Name == "Folder\tOne");
-                var tabbedFile = Assert.Single(documents, entry => entry.Name == "notes\t2026.txt");
-                var escapedFile = Assert.Single(documents, entry => entry.Name == "notes%092026.txt");
-                Assert.Equal(folder.Id, tabbedFile.ParentId);
-                Assert.Equal(folder.Id, escapedFile.ParentId);
-                Assert.All(documents, entry => Assert.DoesNotContain(entry.Id, char.IsControl));
-                Persist(documents);
-                return documents.Count;
-            }, new Progress<int>());
-            Assert.Equal(4, count);
-        }
-        finally
-        {
-            Directory.Delete(directory, recursive: true);
-        }
+            var documents = Extract(payload!);
+            Assert.Equal(documents.Count, documents.Select(entry => entry.Id).Distinct().Count());
+            var folder = Assert.Single(documents, entry => entry.Name == "Folder\tOne");
+            var tabbedFile = Assert.Single(documents, entry => entry.Name == "notes\t2026.txt");
+            var escapedFile = Assert.Single(documents, entry => entry.Name == "notes%092026.txt");
+            Assert.Equal(folder.Id, tabbedFile.ParentId);
+            Assert.Equal(folder.Id, escapedFile.ParentId);
+            Assert.All(documents, entry => Assert.DoesNotContain(entry.Id, char.IsControl));
+            Persist(documents);
+            return documents.Count;
+        }, new Progress<int>());
+        Assert.Equal(4, count);
     }
 
     [Theory]
@@ -176,56 +168,48 @@ public sealed class DiskCatalogMakerIntegrationTests
 
     private static void Persist(IReadOnlyList<CatalogDocument> documents, Action<MainWindowViewModel>? verify = null)
     {
-        var directory = Path.Combine(Path.GetTempPath(), "skycd-diskcatalogmaker-" + Guid.NewGuid().ToString("N"));
-        try
+        using var workspace = new TestWorkspace();
+        var directory = workspace.Root;
+
+        using var database = new Database("catalog", new DatabaseConfiguration { Directory = directory });
+        var collection = database.GetDefaultCollection();
+        foreach (var entry in documents)
         {
-            using var database = new Database("catalog", new DatabaseConfiguration { Directory = directory });
-            var collection = database.GetDefaultCollection();
-            foreach (var entry in documents)
-            {
-                using var document = entry.ToMutableDocument(entry.Id);
-                collection.Save(document);
-            }
-
-            database.Close();
-            using var reopened = new Database("catalog", new DatabaseConfiguration { Directory = directory });
-            collection = reopened.GetDefaultCollection();
-
-            foreach (var entry in documents)
-            {
-                using var saved = collection.GetDocument(entry.Id);
-                var restored = saved.FromDocument<CatalogDocument>();
-                Assert.NotNull(restored);
-                Assert.Equal(entry.Name, restored.Name);
-                Assert.Equal(entry.ParentId, restored.ParentId);
-                Assert.Equal(entry.Size, restored.Size);
-                Assert.Equal(entry.Type, restored.Type);
-                foreach (var property in entry.Properties)
-                {
-                    Assert.Equal(property.Value?.ToString(), restored.Properties[property.Key]?.ToString());
-                }
-            }
-
-            var repository = new CatalogDocumentRepository();
-            repository.Initialize(typeof(CatalogDocument), collection.Name, collection);
-            var constructor = typeof(MainWindowViewModel).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance)
-                .Single(candidate => candidate.GetParameters().Length == 5);
-            using var vm = Assert.IsType<MainWindowViewModel>(constructor.Invoke(
-                [repository, new PropertyValueLocalizer(), new MenuExtensionManager([]), false, null]));
-
-            if (documents.Any(entry => entry.ParentId is null && entry.Type != CatalogDocumentType.File))
-            {
-                Assert.NotEmpty(vm.TreeNodes);
-            }
-
-            verify?.Invoke(vm);
+            using var document = entry.ToMutableDocument(entry.Id);
+            collection.Save(document);
         }
-        finally
+
+        database.Close();
+        using var reopened = new Database("catalog", new DatabaseConfiguration { Directory = directory });
+        collection = reopened.GetDefaultCollection();
+
+        foreach (var entry in documents)
         {
-            if (Directory.Exists(directory))
+            using var saved = collection.GetDocument(entry.Id);
+            var restored = saved.FromDocument<CatalogDocument>();
+            Assert.NotNull(restored);
+            Assert.Equal(entry.Name, restored.Name);
+            Assert.Equal(entry.ParentId, restored.ParentId);
+            Assert.Equal(entry.Size, restored.Size);
+            Assert.Equal(entry.Type, restored.Type);
+            foreach (var property in entry.Properties)
             {
-                Directory.Delete(directory, recursive: true);
+                Assert.Equal(property.Value?.ToString(), restored.Properties[property.Key]?.ToString());
             }
         }
+
+        var repository = new CatalogDocumentRepository();
+        repository.Initialize(typeof(CatalogDocument), collection.Name, collection);
+        var constructor = typeof(MainWindowViewModel).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance)
+            .Single(candidate => candidate.GetParameters().Length == 5);
+        using var vm = Assert.IsType<MainWindowViewModel>(constructor.Invoke(
+            [repository, new PropertyValueLocalizer(), new MenuExtensionManager([]), false, null]));
+
+        if (documents.Any(entry => entry.ParentId is null && entry.Type != CatalogDocumentType.File))
+        {
+            Assert.NotEmpty(vm.TreeNodes);
+        }
+
+        verify?.Invoke(vm);
     }
 }

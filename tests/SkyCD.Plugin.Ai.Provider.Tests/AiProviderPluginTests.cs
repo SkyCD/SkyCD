@@ -5,21 +5,20 @@ using System.Threading.Tasks;
 using Xunit;
 using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Ai.Provider.Exceptions;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.Ai.Provider.Tests;
 
 public sealed class AiProviderPluginTests : IDisposable
 {
-    private readonly string directory = Path.Combine(Path.GetTempPath(),
-        "skycd-ai-provider-tests", Guid.NewGuid().ToString("N"));
+    private readonly TestWorkspace workspace = new();
 
     public void Dispose()
     {
-        if (Directory.Exists(directory))
-        {
-            Directory.Delete(directory, recursive: true);
-        }
+        workspace.Dispose();
     }
+
+    private string directory => workspace.Root;
 
     private AiProviderPlugin CreatePlugin() => new(Path.Combine(directory, "provider.json"));
 
@@ -87,8 +86,7 @@ public sealed class AiProviderPluginTests : IDisposable
     public void GetPlan_WhenConfigurationInvalid_ReportsUnavailable()
     {
         var plugin = CreatePlugin();
-        Directory.CreateDirectory(directory);
-        File.WriteAllText(Path.Combine(directory, "provider.json"), "{ broken");
+        workspace.CreateFile("provider.json", "{ broken");
 
         var plan = plugin.GetPlan();
 

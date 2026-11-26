@@ -9,6 +9,7 @@ using SkyCD.SDK.Capabilities.FileFormats;
 using SkyCD.Plugin.FileFormat.DiskExplorer.Html;
 using SkyCD.Plugin.Runtime.Exceptions;
 using SkyCD.Plugin.Runtime.Managers;
+using SkyCD.TestSupport;
 using Xunit;
 using SkyCD.Plugin.FileFormat.DiskExplorer.Html.Models;
 
@@ -16,21 +17,14 @@ namespace SkyCD.Plugin.Host.Tests;
 
 public class DiskExplorerHtmlTests : IDisposable
 {
-    private readonly string workDirectory = Path.Combine(Path.GetTempPath(), "dex-html-tests", Guid.NewGuid().ToString("N"));
+    private readonly TestWorkspace workspace = new();
 
     public void Dispose()
     {
-        try
-        {
-            if (Directory.Exists(workDirectory))
-            {
-                Directory.Delete(workDirectory, recursive: true);
-            }
-        }
-        catch
-        {
-        }
+        workspace.Dispose();
     }
+
+    private string workDirectory => workspace.Root;
 
     private static FileFormatManager CreateService()
     {

@@ -14,4 +14,7 @@
     <ItemGroup>
         <Compile Include="..\..\Plugins\Shared\Storage\TemporaryDatabase.cs" Link="Shared\Storage\TemporaryDatabase.cs" />
     </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="../SkyCD.TestSupport/SkyCD.TestSupport.csproj"/>
+    </ItemGroup>
 </Project>

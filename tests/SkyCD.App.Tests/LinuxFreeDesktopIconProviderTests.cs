@@ -5,6 +5,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using SkyCD.App.Converters;
 using SkyCD.App.Icons;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.App.Tests;
@@ -14,7 +15,9 @@ public sealed class LinuxFreeDesktopIconProviderTests : IDisposable
     private static readonly byte[] SamplePngBytes = Convert.FromBase64String(
         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==");
 
-    private readonly string _testTempDir;
+    private readonly TestWorkspace workspace = new();
+
+    private string _testTempDir => workspace.Root;
 
     static LinuxFreeDesktopIconProviderTests()
     {
@@ -27,9 +30,6 @@ public sealed class LinuxFreeDesktopIconProviderTests : IDisposable
 
     public LinuxFreeDesktopIconProviderTests()
     {
-        _testTempDir = Path.Combine(Path.GetTempPath(), "skycd-linux-icons-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(_testTempDir);
-
         LinuxFreeDesktopIconProvider.Instance.ClearCache();
         IconGlyphConverter.ClearCache();
     }
@@ -48,17 +48,7 @@ public sealed class LinuxFreeDesktopIconProviderTests : IDisposable
         IconGlyphConverter.ClearCache();
         IconGlyphConverter.CustomResolver = null;
 
-        try
-        {
-            if (Directory.Exists(_testTempDir))
-            {
-                Directory.Delete(_testTempDir, true);
-            }
-        }
-        catch
-        {
-            // Ignore temp cleanup errors
-        }
+        workspace.Dispose();
     }
 
     [Fact]

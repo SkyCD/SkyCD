@@ -7,6 +7,7 @@ using SkyCD.SDK.Capabilities.Media;
 using Xunit;
 using SkyCD.Plugin.Metadata.EBook.Models;
 using SkyCD.Plugin.Metadata.EBook.Parsing;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.Metadata.EBook.Tests;
 

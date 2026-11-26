@@ -8,6 +8,7 @@ using SkyCD.Plugin.Metadata.Text.Exceptions;
 using SkyCD.Plugin.Metadata.Text.Export;
 using Xunit;
 using SkyCD.Plugin.Metadata.Text.Models;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.Metadata.Text.Tests;
 

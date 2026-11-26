@@ -6,6 +6,7 @@ using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using SkyCD.Cli.Enum;
 using SkyCD.Cli.Mcp;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.Cli.Tests;
@@ -33,40 +34,33 @@ public sealed class CliMcpBridgeTests
     [Fact]
     public async Task InvokeTool_Open_ReturnsStructuredSuccess()
     {
-        var tempDirectory = Path.Combine(Path.GetTempPath(), $"skycd-mcp-open-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempDirectory);
-        try
-        {
-            var inputPath = Path.Combine(tempDirectory, "catalog.json");
-            await File.WriteAllTextAsync(
-                inputPath,
-                """
-                {
-                  "schemaVersion": "skycd.catalog.v1",
-                  "payload": []
-                }
-                """,
-                Encoding.UTF8);
-
-            var bridge = new CliMcpBridge();
-            var result = await bridge.InvokeToolAsync("skycd.open", new Dictionary<string, JsonNode?>
+        using var workspace = new TestWorkspace();
+        var tempDirectory = workspace.Root;
+        var inputPath = Path.Combine(tempDirectory, "catalog.json");
+        await File.WriteAllTextAsync(
+            inputPath,
+            """
             {
-                ["file"] = inputPath,
-                ["format"] = "skycd-json"
-            });
+              "schemaVersion": "skycd.catalog.v1",
+              "payload": []
+            }
+            """,
+            Encoding.UTF8);
 
-            Assert.True(result.Success);
-            Assert.Equal((int)CliExitCodes.Success, result.ExitCode);
-            Assert.NotNull(result.Data);
-            var successNode = result.Data!["success"];
-            Assert.NotNull(successNode);
-            Assert.True(successNode!.GetValue<bool>());
-            Assert.Equal("open", result.Data["command"]?.GetValue<string>());
-        }
-        finally
+        var bridge = new CliMcpBridge();
+        var result = await bridge.InvokeToolAsync("skycd.open", new Dictionary<string, JsonNode?>
         {
-            Directory.Delete(tempDirectory, recursive: true);
-        }
+            ["file"] = inputPath,
+            ["format"] = "skycd-json"
+        });
+
+        Assert.True(result.Success);
+        Assert.Equal((int)CliExitCodes.Success, result.ExitCode);
+        Assert.NotNull(result.Data);
+        var successNode = result.Data!["success"];
+        Assert.NotNull(successNode);
+        Assert.True(successNode!.GetValue<bool>());
+        Assert.Equal("open", result.Data["command"]?.GetValue<string>());
     }
 
     [Fact]

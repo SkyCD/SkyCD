@@ -5,18 +5,26 @@ using System;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
+using SkyCD.TestSupport;
 using Xunit;
 using SkyCD.Plugin.Accounts.Core.Models;
 
 namespace SkyCD.Plugin.Accounts.Core.Tests;
 
 [Collection("Console capture")]
-public sealed class AccountsCommandTests
+public sealed class AccountsCommandTests : IDisposable
 {
+    private readonly TestWorkspace workspace = new();
+
+    public void Dispose()
+    {
+        workspace.Dispose();
+    }
+
     [Fact]
     public async Task Sync_WithImportFile_PersistsNormalizedRecords()
     {
-        var directory = TempDirectory();
+        var directory = workspace.Root;
         var storePath = Path.Combine(directory, "accounts.json");
         var importPath = Path.Combine(directory, "jetbrains.json");
         await File.WriteAllTextAsync(importPath, """
@@ -41,7 +49,7 @@ public sealed class AccountsCommandTests
     [Fact]
     public async Task Sync_WithJsonOutput_EmitsStructuredSummary()
     {
-        var directory = TempDirectory();
+        var directory = workspace.Root;
         var storePath = Path.Combine(directory, "accounts.json");
         var command = new AccountsSyncCommand { JsonOutput = true, Providers = [new JetBrainsSyncProvider()] };
 
@@ -57,15 +65,15 @@ public sealed class AccountsCommandTests
     public async Task Sync_MissingImportFile_ReturnsInvalidArguments()
     {
         var (exitCode, _) = await RunAsync(() => new AccountsSyncCommand { Providers = [new Microsoft365SyncProvider()] }.Execute("microsoft365",
-            fromFile: Path.Combine(TempDirectory(), "missing.json"),
-            storePath: Path.Combine(TempDirectory(), "accounts.json")));
+            fromFile: Path.Combine(workspace.Root, "missing.json"),
+            storePath: Path.Combine(workspace.Root, "accounts.json")));
         Assert.Equal(2, exitCode);
     }
 
     [Fact]
     public async Task Sync_InvalidImportFile_ReturnsInvalidArguments()
     {
-        var directory = TempDirectory();
+        var directory = workspace.Root;
         var importPath = Path.Combine(directory, "bad.json");
         await File.WriteAllTextAsync(importPath, """[{ "seats": 1 }]""");
 
@@ -121,7 +129,7 @@ public sealed class AccountsCommandTests
             Assert.Single(document.RootElement.GetProperty("licenses").EnumerateArray());
         }
 
-        var outFile = Path.Combine(TempDirectory(), "inventory.json");
+        var outFile = Path.Combine(workspace.Root, "inventory.json");
         var (fileCode, fileOutput) = await RunAsync(() =>
             new InventoryExportCommand().Execute(storePath: storePath, outFile: outFile));
         Assert.Equal(0, fileCode);
@@ -129,9 +137,9 @@ public sealed class AccountsCommandTests
         Assert.True(File.Exists(outFile));
     }
 
-    private static async Task<string> SeedStoreAsync()
+    private async Task<string> SeedStoreAsync()
     {
-        var directory = TempDirectory();
+        var directory = workspace.Root;
         var storePath = Path.Combine(directory, "accounts.json");
         var importPath = Path.Combine(directory, "seed.json");
         await File.WriteAllTextAsync(importPath, """
@@ -145,14 +153,7 @@ public sealed class AccountsCommandTests
         return storePath;
     }
 
-    private static string TempStorePath() => Path.Combine(TempDirectory(), "accounts.json");
-
-    private static string TempDirectory()
-    {
-        var directory = Path.Combine(Path.GetTempPath(), "skycd-accounts-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(directory);
-        return directory;
-    }
+    private string TempStorePath() => Path.Combine(workspace.Root, "accounts.json");
 
     private static async Task<(int ExitCode, string Output)> RunAsync(Func<Task<int>> invoke)
     {

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -14,6 +13,7 @@ using SkyCD.SDK.Capabilities.Capture;
 using SkyCD.SDK.Capabilities.Menu;
 using SkyCD.SDK.Capabilities.Options;
 using SkyCD.SDK.Capabilities.Storage;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.Plugin.Feature.MotionDetector.Tests;
@@ -160,34 +160,30 @@ public sealed class MotionDetectorTests
     [Fact]
     public async Task AddSourceAsync_PersistsAndReportsWithoutACaptureLoopWhenInactive()
     {
+        using var workspace = new TestWorkspace();
         var storage = new FakeStorage();
         var host = new FakeHost { IsCatalogOpen = true };
         var plugin = new MotionDetectorPlugin();
         plugin.InitializeStorage(storage);
         plugin.InitializeCaptureHost(host);
 
-        var destination = CreateTemporaryDirectory();
-        try
-        {
-            var added = await plugin.AddSourceAsync(new CaptureSourceDraft(
-                CaptureSourceKinds.JpegUrl, "http://camera.local/frame.jpg", destination, string.Empty, string.Empty));
+        var destination = workspace.Root;
 
-            Assert.Equal(CaptureSourceKinds.JpegUrl, added.KindId);
-            Assert.Equal("Motion", added.CatalogFolder);
-            Assert.Equal(CaptureSourceKinds.JpegUrl, added.Label);
-            Assert.Equal(added, Assert.Single(plugin.GetSources()));
-            Assert.Equal(added, Assert.Single(new PluginStateStore(storage).LoadSources()));
-            Assert.Contains(host.Messages, message => message.Contains(MotionDetectorKeys.SourceAdded, StringComparison.Ordinal));
-        }
-        finally
-        {
-            Directory.Delete(destination, true);
-        }
+        var added = await plugin.AddSourceAsync(new CaptureSourceDraft(
+            CaptureSourceKinds.JpegUrl, "http://camera.local/frame.jpg", destination, string.Empty, string.Empty));
+
+        Assert.Equal(CaptureSourceKinds.JpegUrl, added.KindId);
+        Assert.Equal("Motion", added.CatalogFolder);
+        Assert.Equal(CaptureSourceKinds.JpegUrl, added.Label);
+        Assert.Equal(added, Assert.Single(plugin.GetSources()));
+        Assert.Equal(added, Assert.Single(new PluginStateStore(storage).LoadSources()));
+        Assert.Contains(host.Messages, message => message.Contains(MotionDetectorKeys.SourceAdded, StringComparison.Ordinal));
     }
 
     [Fact]
     public async Task Probe_RequiresAnOpenCatalogAndAQualifiedDestination()
     {
+        using var workspace = new TestWorkspace();
         var plugin = new MotionDetectorPlugin();
         plugin.InitializeStorage(new FakeStorage());
         plugin.InitializeCaptureHost(new FakeHost { IsCatalogOpen = false });
@@ -202,16 +198,10 @@ public sealed class MotionDetectorTests
         var withoutDestination = await plugin.ProbeAsync(configuration with { DestinationFolder = "relative" });
         Assert.False(withoutDestination.IsAvailable);
 
-        var destination = CreateTemporaryDirectory();
-        try
-        {
-            var valid = await plugin.ProbeAsync(configuration with { DestinationFolder = destination });
-            Assert.True(valid.IsAvailable);
-        }
-        finally
-        {
-            Directory.Delete(destination, true);
-        }
+        var destination = workspace.Root;
+
+        var valid = await plugin.ProbeAsync(configuration with { DestinationFolder = destination });
+        Assert.True(valid.IsAvailable);
     }
 
     [Fact]
@@ -226,13 +216,6 @@ public sealed class MotionDetectorTests
 
     private static CaptureSourceConfiguration Source(string id) =>
         new(id, CaptureSourceKinds.JpegUrl, "http://camera.local/frame.jpg", @"D:\captures", "Motion", id);
-
-    private static string CreateTemporaryDirectory()
-    {
-        var directory = Path.Combine(Path.GetTempPath(), $"skycd-motion-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(directory);
-        return directory;
-    }
 
     private sealed class FakeHost : ICaptureSourceHostApi
     {

@@ -19,6 +19,7 @@ using SkyCD.Plugin.FileFormat.Vvv;
 using SkyCD.Plugin.FileFormat.Vvv.Exceptions;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.UI.Localization;
+using SkyCD.TestSupport;
 using Xunit;
 using SkyCD.Plugin.FileFormat.Vvv.Import;
 using SkyCD.Plugin.FileFormat.Vvv.Models;
@@ -310,29 +311,19 @@ public sealed class VvvBackupImportTests
             return;
         }
 
-        var invalid = Path.Combine(Path.GetTempPath(), "skycd-vvvbk-invalid-" + Guid.NewGuid().ToString("N") + ".vvvbk");
-        try
-        {
-            await File.WriteAllTextAsync(invalid, "this is not a Firebird backup");
+        using var workspace = new TestWorkspace();
+        var invalid = workspace.CreateFile("invalid.vvvbk", "this is not a Firebird backup");
 
-            await using var stream = File.OpenRead(invalid);
-            var result = await new VvvBackupPlugin().ReadAsync(new FileFormatReadRequest
-            {
-                FormatId = "vvv-backup",
-                Source = stream,
-                FileName = Path.GetFileName(invalid)
-            });
-
-            Assert.False(result.Success);
-            Assert.Contains("VVV backup", result.Error, StringComparison.OrdinalIgnoreCase);
-        }
-        finally
+        await using var stream = File.OpenRead(invalid);
+        var result = await new VvvBackupPlugin().ReadAsync(new FileFormatReadRequest
         {
-            if (File.Exists(invalid))
-            {
-                File.Delete(invalid);
-            }
-        }
+            FormatId = "vvv-backup",
+            Source = stream,
+            FileName = Path.GetFileName(invalid)
+        });
+
+        Assert.False(result.Success);
+        Assert.Contains("VVV backup", result.Error, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -343,35 +334,26 @@ public sealed class VvvBackupImportTests
             return;
         }
 
-        var truncated = Path.Combine(Path.GetTempPath(), "skycd-vvvbk-truncated-" + Guid.NewGuid().ToString("N") + ".vvvbk");
-        try
+        using var workspace = new TestWorkspace();
+        var truncated = workspace.GetPath("truncated.vvvbk");
+        using (var source = File.OpenRead(FixturePath(GenuineFixture)))
+        using (var target = File.Create(truncated))
         {
-            using (var source = File.OpenRead(FixturePath(GenuineFixture)))
-            using (var target = File.Create(truncated))
-            {
-                var buffer = new byte[2048];
-                var read = source.Read(buffer, 0, buffer.Length);
-                target.Write(buffer, 0, read);
-            }
-
-            await using var stream = File.OpenRead(truncated);
-            var result = await new VvvBackupPlugin().ReadAsync(new FileFormatReadRequest
-            {
-                FormatId = "vvv-backup",
-                Source = stream,
-                FileName = Path.GetFileName(truncated)
-            });
-
-            Assert.False(result.Success);
-            Assert.Contains("truncated", result.Error, StringComparison.OrdinalIgnoreCase);
+            var buffer = new byte[2048];
+            var read = source.Read(buffer, 0, buffer.Length);
+            target.Write(buffer, 0, read);
         }
-        finally
+
+        await using var stream = File.OpenRead(truncated);
+        var result = await new VvvBackupPlugin().ReadAsync(new FileFormatReadRequest
         {
-            if (File.Exists(truncated))
-            {
-                File.Delete(truncated);
-            }
-        }
+            FormatId = "vvv-backup",
+            Source = stream,
+            FileName = Path.GetFileName(truncated)
+        });
+
+        Assert.False(result.Success);
+        Assert.Contains("truncated", result.Error, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -436,58 +418,50 @@ public sealed class VvvBackupImportTests
 
     private static void PersistAndVerify(IReadOnlyList<CatalogDocument> documents)
     {
-        var directory = Path.Combine(Path.GetTempPath(), "skycd-vvvbk-persist-" + Guid.NewGuid().ToString("N"));
-        try
+        using var workspace = new TestWorkspace();
+        var directory = workspace.Root;
+
+        using (var database = new Database("catalog", new DatabaseConfiguration { Directory = directory }))
         {
-            using (var database = new Database("catalog", new DatabaseConfiguration { Directory = directory }))
+            var collection = database.GetDefaultCollection();
+            foreach (var entry in documents)
             {
-                var collection = database.GetDefaultCollection();
-                foreach (var entry in documents)
-                {
-                    using var document = entry.ToMutableDocument(entry.Id);
-                    collection.Save(document);
-                }
-            }
-
-            using (var database = new Database("catalog", new DatabaseConfiguration { Directory = directory }))
-            {
-                var collection = database.GetDefaultCollection();
-                var repository = new CatalogDocumentRepository();
-                repository.Initialize(typeof(CatalogDocument), collection.Name, collection);
-                var constructor = typeof(MainWindowViewModel)
-                    .GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance)
-                    .Single(candidate => candidate.GetParameters().Length == 5);
-                using var viewModel = Assert.IsType<MainWindowViewModel>(constructor.Invoke(
-                    [
-                        repository,
-                        new PropertyValueLocalizer(),
-                        new MenuExtensionManager(Array.Empty<IMenuPluginCapability>()),
-                        false,
-                        null
-                    ]));
-
-                var volume = Assert.Single(viewModel.TreeNodes);
-                Assert.Equal("Fixture volume", volume.Title);
-                var sample = Assert.Single(volume.Children);
-                Assert.Equal("sample", sample.Title);
-                var folder = Assert.Single(sample.Children);
-                Assert.Equal("folder", folder.Title);
-
-                viewModel.SelectedTreeNode = sample;
-                Assert.Contains(viewModel.BrowserItems, item => item.Name == "hello.txt");
-                Assert.Contains(viewModel.BrowserItems, item => item.Name == "folder");
-
-                viewModel.SelectedTreeNode = folder;
-                var nested = Assert.Single(viewModel.BrowserItems);
-                Assert.Equal("nested.txt", nested.Name);
+                using var document = entry.ToMutableDocument(entry.Id);
+                collection.Save(document);
             }
         }
-        finally
+
+        using (var database = new Database("catalog", new DatabaseConfiguration { Directory = directory }))
         {
-            if (Directory.Exists(directory))
-            {
-                Directory.Delete(directory, recursive: true);
-            }
+            var collection = database.GetDefaultCollection();
+            var repository = new CatalogDocumentRepository();
+            repository.Initialize(typeof(CatalogDocument), collection.Name, collection);
+            var constructor = typeof(MainWindowViewModel)
+                .GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance)
+                .Single(candidate => candidate.GetParameters().Length == 5);
+            using var viewModel = Assert.IsType<MainWindowViewModel>(constructor.Invoke(
+                [
+                    repository,
+                    new PropertyValueLocalizer(),
+                    new MenuExtensionManager(Array.Empty<IMenuPluginCapability>()),
+                    false,
+                    null
+                ]));
+
+            var volume = Assert.Single(viewModel.TreeNodes);
+            Assert.Equal("Fixture volume", volume.Title);
+            var sample = Assert.Single(volume.Children);
+            Assert.Equal("sample", sample.Title);
+            var folder = Assert.Single(sample.Children);
+            Assert.Equal("folder", folder.Title);
+
+            viewModel.SelectedTreeNode = sample;
+            Assert.Contains(viewModel.BrowserItems, item => item.Name == "hello.txt");
+            Assert.Contains(viewModel.BrowserItems, item => item.Name == "folder");
+
+            viewModel.SelectedTreeNode = folder;
+            var nested = Assert.Single(viewModel.BrowserItems);
+            Assert.Equal("nested.txt", nested.Name);
         }
     }
 }

@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading;
 using FxSsh;
 using FxSsh.Services;
+using SkyCD.TestSupport;
 
 namespace SkyCD.App.Tests;
 
@@ -26,6 +27,7 @@ namespace SkyCD.App.Tests;
 internal sealed class ScriptedSftpServer : IDisposable
 {
     private readonly SshServer server;
+    private readonly TestWorkspace workspace = new();
     private readonly string rootPath;
     private readonly object gate = new();
     private int userAuthAttempts;
@@ -36,8 +38,7 @@ internal sealed class ScriptedSftpServer : IDisposable
     {
         Username = username;
         Password = password;
-        rootPath = Directory.CreateDirectory(
-            Path.Combine(Path.GetTempPath(), "skycd-sftp-" + Guid.NewGuid().ToString("N"))).FullName;
+        rootPath = workspace.Root;
         HostKeyPem = KeyGenerator.GenerateRsaKeyPem(2048);
         ExpectedHostKeyFingerprint = ComputeHostKeyFingerprint(HostKeyPem);
 
@@ -157,17 +158,7 @@ internal sealed class ScriptedSftpServer : IDisposable
             // Already stopped; disposal has nothing left to do.
         }
 
-        try
-        {
-            Directory.Delete(rootPath, recursive: true);
-        }
-        catch (IOException)
-        {
-            // A stray handle must not fail the test run; the temp directory is expendable.
-        }
-        catch (UnauthorizedAccessException)
-        {
-        }
+        workspace.Dispose();
     }
 
     private static int ReserveLoopbackPort()

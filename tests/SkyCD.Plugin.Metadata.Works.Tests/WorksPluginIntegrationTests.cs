@@ -14,6 +14,7 @@ using SkyCD.Plugin.Metadata.Works.Export;
 using SkyCD.Plugin.Metadata.Works.Models;
 using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Presentation.MediaCache;
+using SkyCD.TestSupport;
 using SkyCD.UI.Controls.Preview;
 using Xunit;
 
@@ -36,37 +37,22 @@ public sealed class WorksPluginIntegrationTests : IDisposable
         "Quarterly report for the regional sales meeting. Revenue grew by twelve percent this quarter, "
         + "and the field team expects the trend to continue into the next period.";
 
-    private readonly string databaseDirectory =
-        Path.Combine(Path.GetTempPath(), $"skycd-works-plugin-{Guid.NewGuid():N}");
+    private readonly TestWorkspace workspace = new();
 
     private readonly string? previousDatabaseDirectory =
         Environment.GetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY");
 
+    private string databaseDirectory => workspace.Root;
+
     public WorksPluginIntegrationTests()
     {
-        Directory.CreateDirectory(databaseDirectory);
         Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", databaseDirectory);
     }
 
     public void Dispose()
     {
         Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", previousDatabaseDirectory);
-
-        try
-        {
-            if (Directory.Exists(databaseDirectory))
-            {
-                Directory.Delete(databaseDirectory, recursive: true);
-            }
-        }
-        catch (IOException)
-        {
-            // Couchbase Lite can release file handles slightly after dispose on some systems.
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // Blob files can stay locked briefly after the database is closed on Windows.
-        }
+        workspace.Dispose();
     }
 
     [Fact]
