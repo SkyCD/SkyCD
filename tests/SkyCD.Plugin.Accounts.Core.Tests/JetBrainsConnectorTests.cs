@@ -95,6 +95,42 @@ public sealed class JetBrainsConnectorTests
     }
 
     [Fact]
+    public async Task AccountSession_ReadsTokenFreeSnapshotWithoutNetwork()
+    {
+        using var fixture = new ConnectorFixture();
+        var ideaPath = fixture.Install("IntelliJ IDEA Ultimate 2026.1", "idea64.exe");
+        await fixture.Connector.ConnectCommand(store: fixture.StorePath);
+        var session = fixture.CreateConnector((_, _) => Task.CompletedTask, fixture.StorePath);
+
+        var status = await ((IAccountSession)session).GetStatusAsync(CancellationToken.None);
+
+        Assert.True(status.IsConnected);
+        Assert.Equal(JetBrainsSettings.ProviderId, status.ProviderId);
+        Assert.Equal("dev@example.com", status.AccountEmail);
+        Assert.Equal(3, status.Products.Count);
+        Assert.Equal(
+            ["IntelliJ IDEA Ultimate", "PhpStorm", "WebStorm"],
+            status.Products.Select(product => product.Product));
+        var idea = status.Products.Single(product => product.Product == "IntelliJ IDEA Ultimate");
+        Assert.Equal("active", idea.Status);
+        Assert.Equal(ideaPath, idea.ExecutablePath);
+        Assert.Equal("L1", idea.Id);
+    }
+
+    [Fact]
+    public async Task AccountSession_SignOut_LeavesTheAccountDisconnected()
+    {
+        using var fixture = new ConnectorFixture();
+        await fixture.Connector.ConnectCommand(store: fixture.StorePath);
+        var session = (IAccountSession)fixture.CreateConnector((_, _) => Task.CompletedTask, fixture.StorePath);
+
+        await session.SignOutAsync(CancellationToken.None);
+
+        var status = await session.GetStatusAsync(CancellationToken.None);
+        Assert.False(status.IsConnected);
+    }
+
+    [Fact]
     public async Task StatusCommand_Json_LinksInstalledIdesAndShowsSubscriptionState()
     {
         using var fixture = new ConnectorFixture();
@@ -275,13 +311,16 @@ public sealed class JetBrainsConnectorTests
         public LicenseHandler Handler { get; }
         public JetBrainsConnector Connector { get; }
 
-        public JetBrainsConnector CreateConnector(Func<string, CancellationToken, Task> launcher) => new(
+        public JetBrainsConnector CreateConnector(
+            Func<string, CancellationToken, Task> launcher,
+            string? storePath = null) => new(
             OAuth,
             TestSettings(),
             new HttpClient(Handler),
             new FixedClock(new DateTimeOffset(2026, 11, 18, 0, 0, 0, TimeSpan.Zero)),
             new JetBrainsIdeDetector([Path.Combine(Root, "installs")], isWindows: true, isMacOS: false),
-            launcher);
+            launcher,
+            storePath);
 
         public string Install(string folder, string executable)
         {

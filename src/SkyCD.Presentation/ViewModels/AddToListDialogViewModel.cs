@@ -1,9 +1,13 @@
+using SkyCD.Presentation.Accounts;
 using SkyCD.Presentation.Scanning;
+using SkyCD.SDK.Capabilities.Accounts;
 using SkyCD.UI.Localization;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -12,15 +16,18 @@ namespace SkyCD.Presentation.ViewModels;
 public partial class AddToListDialogViewModel : ObservableObject, IDisposable
 {
     private readonly IMediaDriveProvider driveProvider;
+    private readonly IReadOnlyList<IAccountSession> accountSessions;
     private readonly IDisposable localizationSubscription;
     private bool isDisposed;
 
     public AddToListDialogViewModel(
         IMediaDriveProvider? driveProvider = null,
         AddToListSourceMode initialSourceMode = AddToListSourceMode.Media,
-        IReadOnlyList<LocationItemViewModel>? locationOptions = null)
+        IReadOnlyList<LocationItemViewModel>? locationOptions = null,
+        IReadOnlyList<IAccountSession>? accountSessions = null)
     {
         this.driveProvider = driveProvider ?? new SystemMediaDriveProvider();
+        this.accountSessions = accountSessions ?? [];
         this.driveProvider.DrivesChanged += OnDrivesChanged;
         foreach (var option in locationOptions ?? [])
         {
@@ -82,7 +89,8 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
 
     [ObservableProperty] private MediaDriveInfo? selectedDrive;
 
-    public bool CanConfirm => string.IsNullOrWhiteSpace(ValidationMessage);
+    public bool CanConfirm =>
+        string.IsNullOrWhiteSpace(ValidationMessage) && (!IsSourceFromAccount || SelectedAccount is not null);
 
     public bool IsSourceMedia => SourceMode == AddToListSourceMode.Media;
 
@@ -91,6 +99,30 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
     public bool IsSourceInternet => SourceMode == AddToListSourceMode.Internet;
 
     public bool IsSourceTitleOnly => SourceMode == AddToListSourceMode.TitleOnly;
+
+    public bool IsSourceFromAccount => SourceMode == AddToListSourceMode.FromAccount;
+
+    public ObservableCollection<AddToListAccountChoice> AccountChoices { get; } = [];
+
+    [ObservableProperty] private AddToListAccountChoice? selectedAccount;
+
+    public bool HasConnectedAccounts => AccountChoices.Count > 0;
+
+    /// <summary>"From account" with no connected account explains itself instead of validating.</summary>
+    public bool ShowAccountEmptyState => IsSourceFromAccount && !HasConnectedAccounts;
+
+    public bool ShowAccountPicker => IsSourceFromAccount && HasConnectedAccounts;
+
+    public bool ShowAccountNoProducts => ShowAccountPicker && SelectedAccount is { Products.Count: 0 };
+
+    /// <summary>The account folder names itself, so no media name is entered.</summary>
+    public bool IsNameEntryVisible => !IsSourceFromAccount;
+
+    /// <summary>An account folder always lands under the chosen destination.</summary>
+    public bool IsDestinationSectionVisible => !IsSourceFromAccount;
+
+    /// <summary>Set when the user asks for the Options accounts section from the empty state.</summary>
+    public bool OpenAccountsRequested { get; private set; }
 
     public bool CanUseMedia => AvailableDrives.Count > 0;
 
@@ -251,6 +283,52 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
         RecomputeValidation();
     }
 
+    /// <summary>
+    /// Reads the token-free snapshots of every discovered connector; only signed-in accounts become
+    /// choices, so nothing connected shows the empty state instead of an unusable picker.
+    /// </summary>
+    public async Task RefreshAccountsAsync(CancellationToken cancellationToken = default)
+    {
+        var choices = new List<AddToListAccountChoice>();
+        foreach (var session in accountSessions)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                var status = await session.GetStatusAsync(cancellationToken);
+                if (status.IsConnected)
+                {
+                    choices.Add(new AddToListAccountChoice(session, status, AccountCatalogBuilder.BuildPlan(status)));
+                }
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                // A broken connector snapshot must not block the other accounts or the dialog.
+            }
+        }
+
+        var previousFolderId = SelectedAccount?.Plan.FolderId;
+        AccountChoices.Clear();
+        foreach (var choice in choices.OrderBy(choice => choice.Name, StringComparer.CurrentCultureIgnoreCase))
+        {
+            AccountChoices.Add(choice);
+        }
+
+        SelectedAccount = AccountChoices.FirstOrDefault(choice => choice.Plan.FolderId == previousFolderId)
+                          ?? AccountChoices.FirstOrDefault();
+        OnPropertyChanged(nameof(HasConnectedAccounts));
+        OnPropertyChanged(nameof(ShowAccountEmptyState));
+        OnPropertyChanged(nameof(ShowAccountPicker));
+        RecomputeValidation();
+    }
+
+    [RelayCommand]
+    private void OpenAccountSettings()
+    {
+        OpenAccountsRequested = true;
+        DialogAccepted = false;
+    }
+
     public ObservableCollection<DroppedSource> DroppedRoots { get; } = [];
 
     public bool HasMultipleDroppedRoots => DroppedRoots.Count > 1;
@@ -406,6 +484,12 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
         }
     }
 
+    partial void OnSelectedAccountChanged(AddToListAccountChoice? value)
+    {
+        OnPropertyChanged(nameof(ShowAccountNoProducts));
+        RecomputeValidation();
+    }
+
     partial void OnSourceModeChanged(AddToListSourceMode value)
     {
         if (value == AddToListSourceMode.Media && AvailableDrives.Count == 0)
@@ -413,11 +497,22 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
             RefreshDrives();
         }
 
+        if (value == AddToListSourceMode.FromAccount)
+        {
+            // The account folder always lands under the chosen destination.
+            TargetPlacement = AddToListTargetPlacement.SelectedFolder;
+        }
+
         RecomputeValidation();
         OnPropertyChanged(nameof(IsSourceMedia));
         OnPropertyChanged(nameof(IsSourceFolder));
         OnPropertyChanged(nameof(IsSourceInternet));
         OnPropertyChanged(nameof(IsSourceTitleOnly));
+        OnPropertyChanged(nameof(IsSourceFromAccount));
+        OnPropertyChanged(nameof(IsNameEntryVisible));
+        OnPropertyChanged(nameof(IsDestinationSectionVisible));
+        OnPropertyChanged(nameof(ShowAccountEmptyState));
+        OnPropertyChanged(nameof(ShowAccountPicker));
         OnPropertyChanged(nameof(IsLocationPickerVisible));
         OnPropertyChanged(nameof(IsScannedPathNoteVisible));
     }
@@ -480,6 +575,9 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
             AddToListSourceMode.Internet => GetInternetValidationMessage(),
             AddToListSourceMode.TitleOnly => string.IsNullOrWhiteSpace(MediaName)
                 ? LocalizationService.Current.Get(TextKeys.MediaNameIsRequiredForTitleOnly)
+                : null,
+            AddToListSourceMode.FromAccount => HasConnectedAccounts && SelectedAccount is null
+                ? LocalizationService.Current.Get(UiKeys.AccountSelectPrompt)
                 : null,
             _ => null
         };

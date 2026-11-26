@@ -25,7 +25,7 @@ namespace SkyCD.Plugin.Accounts.Microsoft365;
 /// discovery, renewal state and launch actions. Commands are exposed as <c>skycd microsoft365 ...</c>.
 /// </summary>
 [Command("microsoft365")]
-public sealed class Microsoft365Connector : IOAuthClient, IAccountConnector, IOwnershipProvider, IActionProvider,
+public sealed class Microsoft365Connector : IOAuthClient, IAccountSession, IActionProvider,
     ICliPluginCapability, ISupportsJsonOutput
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -39,6 +39,7 @@ public sealed class Microsoft365Connector : IOAuthClient, IAccountConnector, IOw
     private readonly TimeProvider clock;
     private readonly Microsoft365OfficeDetector detector;
     private readonly Func<string, CancellationToken, Task> launchProcess;
+    private readonly string? storePath;
     private IOAuthService? oauth;
 
     public Microsoft365Connector()
@@ -52,7 +53,8 @@ public sealed class Microsoft365Connector : IOAuthClient, IAccountConnector, IOw
         HttpClient? httpClient = null,
         TimeProvider? clock = null,
         Microsoft365OfficeDetector? detector = null,
-        Func<string, CancellationToken, Task>? launchProcess = null)
+        Func<string, CancellationToken, Task>? launchProcess = null,
+        string? storePath = null)
     {
         this.oauth = oauth;
         this.settings = settings ?? Microsoft365Settings.FromEnvironment();
@@ -60,6 +62,7 @@ public sealed class Microsoft365Connector : IOAuthClient, IAccountConnector, IOw
         this.clock = clock ?? TimeProvider.System;
         this.detector = detector ?? new Microsoft365OfficeDetector();
         this.launchProcess = launchProcess ?? LaunchWithShellAsync;
+        this.storePath = string.IsNullOrWhiteSpace(storePath) ? null : storePath;
     }
 
     public bool JsonOutput { get; set; }
@@ -97,7 +100,33 @@ public sealed class Microsoft365Connector : IOAuthClient, IAccountConnector, IOw
     }
 
     Task IOwnershipProvider.SyncAsync(CancellationToken cancellationToken) =>
-        SyncOwnershipAsync(Microsoft365Settings.DefaultAccountKey, null, cancellationToken);
+        SyncOwnershipAsync(Microsoft365Settings.DefaultAccountKey, storePath, cancellationToken);
+
+    async Task<AccountSessionStatus> IAccountSession.GetStatusAsync(CancellationToken cancellationToken)
+    {
+        var snapshot = await GetStatusAsync(Microsoft365Settings.DefaultAccountKey, storePath, cancellationToken)
+            .ConfigureAwait(false);
+        return new AccountSessionStatus
+        {
+            ProviderId = Microsoft365Settings.ProviderId,
+            DisplayName = "Microsoft 365",
+            AccountId = Microsoft365Settings.DefaultAccountKey,
+            IsConnected = snapshot.Connected,
+            LastSyncedUtc = snapshot.LastSyncedUtc,
+            Products = BuildOwnedProducts(snapshot, clock.GetUtcNow())
+        };
+    }
+
+    async Task IAccountSession.SignOutAsync(CancellationToken cancellationToken)
+    {
+        if (oauth is null)
+        {
+            throw new OAuthException(OAuthFailure.LoginRequired);
+        }
+
+        await oauth.SignOutAsync(settings.CreateOAuthProvider(), Microsoft365Settings.DefaultAccountKey,
+            cancellationToken).ConfigureAwait(false);
+    }
 
     IEnumerable<SkyAction> IActionProvider.GetActions(Item item)
     {
@@ -157,7 +186,7 @@ public sealed class Microsoft365Connector : IOAuthClient, IAccountConnector, IOw
 
         try
         {
-            var snapshot = await SyncOwnershipAsync(account, store, CancellationToken.None);
+            var snapshot = await SyncOwnershipAsync(account, store ?? storePath, CancellationToken.None);
             await WriteSnapshotAsync(Console.Out, snapshot, clock.GetUtcNow(), JsonOutput);
             return 0;
         }
@@ -200,7 +229,7 @@ public sealed class Microsoft365Connector : IOAuthClient, IAccountConnector, IOw
     {
         try
         {
-            var snapshot = await SyncOwnershipAsync(account, store, CancellationToken.None);
+            var snapshot = await SyncOwnershipAsync(account, store ?? storePath, CancellationToken.None);
             await WriteSnapshotAsync(Console.Out, snapshot, clock.GetUtcNow(), JsonOutput);
             return 0;
         }
@@ -230,7 +259,7 @@ public sealed class Microsoft365Connector : IOAuthClient, IAccountConnector, IOw
     {
         try
         {
-            var snapshot = await GetStatusAsync(account, store, CancellationToken.None);
+            var snapshot = await GetStatusAsync(account, store ?? storePath, CancellationToken.None);
             await WriteSnapshotAsync(Console.Out, snapshot, clock.GetUtcNow(), JsonOutput);
             return 0;
         }
@@ -337,6 +366,37 @@ public sealed class Microsoft365Connector : IOAuthClient, IAccountConnector, IOw
 
         snapshot.AccountKey = string.IsNullOrWhiteSpace(snapshot.AccountKey) ? accountKey : snapshot.AccountKey;
         return snapshot;
+    }
+
+    private static IReadOnlyList<AccountOwnedProduct> BuildOwnedProducts(
+        Microsoft365OwnershipSnapshot snapshot,
+        DateTimeOffset asOf)
+    {
+        return snapshot.Subscriptions
+            .Select(subscription =>
+            {
+                var linkedCodes = Microsoft365Products.GetLinkedAppCodes(subscription.SkuPartNumber);
+                var linkedApp = snapshot.InstalledOfficeApps
+                    .Where(app => linkedCodes.Contains(app.ProductCode, StringComparer.OrdinalIgnoreCase))
+                    .OrderBy(app => app.ProductName, StringComparer.OrdinalIgnoreCase)
+                    .FirstOrDefault();
+                return new AccountOwnedProduct
+                {
+                    Id = subscription.SubscriptionId,
+                    Product = string.IsNullOrWhiteSpace(subscription.ProductName)
+                        ? Microsoft365Products.ResolveName(subscription.SkuPartNumber)
+                        : subscription.ProductName,
+                    ProductCode = subscription.SkuPartNumber,
+                    LicenseType = subscription.IsTrial ? "trial" : "subscription",
+                    Seats = subscription.Seats,
+                    RenewsUtc = subscription.RenewsUtc,
+                    Status = subscription.EvaluateStatus(asOf),
+                    ExecutablePath = linkedApp?.ExecutablePath
+                };
+            })
+            .OrderBy(product => product.Product, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(product => product.Id, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     private static IReadOnlyList<Microsoft365ProductOwnership> BuildProducts(

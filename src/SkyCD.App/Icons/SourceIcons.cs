@@ -16,4 +16,6 @@ public static class SourceIcons
     public static DrawingImage Internet { get; } = TwemojiArtwork.Create(Twemoji.GlobeShowingEuropeAfrica);
 
     public static DrawingImage TitleOnly { get; } = TwemojiArtwork.Create(Twemoji.LetterT);
+
+    public static DrawingImage Account { get; } = TwemojiArtwork.Create(Twemoji.BustInSilhouette);
 }
