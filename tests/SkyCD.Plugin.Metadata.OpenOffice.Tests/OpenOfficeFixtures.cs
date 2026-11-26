@@ -243,7 +243,8 @@ internal static class OpenOfficeFixtures
 
     private static void AddEntry(ZipArchive archive, string name, byte[] content)
     {
-        var entry = archive.CreateEntry(name, CompressionLevel.Fastest);
+        var compressionLevel = name.Equals("mimetype", StringComparison.Ordinal) ? CompressionLevel.NoCompression : CompressionLevel.Fastest;
+        var entry = archive.CreateEntry(name, compressionLevel);
         using var entryStream = entry.Open();
         entryStream.Write(content, 0, content.Length);
     }
