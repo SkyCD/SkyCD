@@ -5,7 +5,7 @@
         xmlns:search="clr-namespace:SkyCD.UI.Controls.SearchTextBox;assembly=SkyCD.UI"
         x:Class="SkyCD.App.Views.AboutWindow"
         x:DataType="vm:AboutDialogViewModel"
-        Width="560"
+        Width="1040"
         Height="460"
         CanResize="False"
         CanMinimize="False"
@@ -134,29 +134,29 @@
                                                PointerPressed="OnOpenRepositoryUrl" />
                                 </StackPanel>
                             </StackPanel>
-
-                            <StackPanel Spacing="{DynamicResource SkySpaceSm}">
-                                <TextBlock Classes="h2"
-                                           Text="{i18n:Translate {x:Static i18n:UiKeys.AboutStoryThanks}}" />
-
-                                <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
-                                    <TextBlock Classes="caption"
-                                               Text="{i18n:Translate {x:Static i18n:UiKeys.AboutStoryThanksFreewareBase}}"
-                                               TextWrapping="Wrap" />
-                                    <TextBlock Classes="caption"
-                                               Text="{i18n:Translate {x:Static i18n:UiKeys.AboutStoryThanksSourceForge}}"
-                                               TextWrapping="Wrap" />
-                                    <TextBlock Classes="caption"
-                                               Text="{i18n:Translate {x:Static i18n:UiKeys.AboutStoryThanksGbit}}"
-                                               TextWrapping="Wrap" />
-                                    <TextBlock Classes="caption"
-                                               Text="{i18n:Translate {x:Static i18n:UiKeys.AboutStoryThanksSlivickas}}"
-                                               TextWrapping="Wrap" />
-                                    <TextBlock Classes="caption"
-                                               Text="{i18n:Translate {x:Static i18n:UiKeys.AboutStoryThanksAndYou}}"
-                                               TextWrapping="Wrap" />
-                                </StackPanel>
-                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+                <TabItem Header="{i18n:Translate {x:Static i18n:UiKeys.AboutStoryThanks}}">
+                    <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                                  VerticalScrollBarVisibility="Auto"
+                                  AllowAutoHide="False">
+                        <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
+                            <TextBlock Classes="body"
+                                       Text="{i18n:Translate {x:Static i18n:UiKeys.AboutStoryThanksFreewareBase}}"
+                                       TextWrapping="Wrap" />
+                            <TextBlock Classes="body"
+                                       Text="{i18n:Translate {x:Static i18n:UiKeys.AboutStoryThanksSourceForge}}"
+                                       TextWrapping="Wrap" />
+                            <TextBlock Classes="body"
+                                       Text="{i18n:Translate {x:Static i18n:UiKeys.AboutStoryThanksGbit}}"
+                                       TextWrapping="Wrap" />
+                            <TextBlock Classes="body"
+                                       Text="{i18n:Translate {x:Static i18n:UiKeys.AboutStoryThanksSlivickas}}"
+                                       TextWrapping="Wrap" />
+                            <TextBlock Classes="body"
+                                       Text="{i18n:Translate {x:Static i18n:UiKeys.AboutStoryThanksAndYou}}"
+                                       TextWrapping="Wrap" />
                         </StackPanel>
                     </ScrollViewer>
                 </TabItem>

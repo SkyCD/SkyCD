@@ -25,21 +25,15 @@ public sealed record PluginAssemblyIdentitySnapshot
     /// <summary>Package-relative path of the entry assembly (forward slashes).</summary>
     public required string EntryAssemblyPath { get; init; }
 
-    public bool IsCompatibleWith(Version hostVersion)
-    {
-        var min = Resolve(MinHostVersion) ?? DefaultMinHostVersion;
-        var max = Resolve(MaxHostVersion);
-        return hostVersion >= min && (max is null || hostVersion <= max);
-    }
-
-    private static readonly Version DefaultMinHostVersion = new(3, 0, 0);
-
-    private static Version? Resolve(string? value) =>
-        !string.IsNullOrWhiteSpace(value) && Version.TryParse(value.Trim(), out var parsed) ? parsed : null;
+    public bool IsCompatibleWith(Version hostVersion) =>
+        Discovery.PluginCompatibilityEvaluator.IsCompatibleWithBounds(hostVersion, MinHostVersion, MaxHostVersion);
 
     [JsonIgnore]
-    public Version EffectiveMinHostVersion => Resolve(MinHostVersion) ?? DefaultMinHostVersion;
+    public Version EffectiveMinHostVersion =>
+        Discovery.PluginCompatibilityEvaluator.TryParseBound(MinHostVersion)
+        ?? Discovery.PluginCompatibilityEvaluator.DefaultMinHostVersion;
 
     [JsonIgnore]
-    public Version? EffectiveMaxHostVersion => Resolve(MaxHostVersion);
+    public Version? EffectiveMaxHostVersion =>
+        Discovery.PluginCompatibilityEvaluator.TryParseBound(MaxHostVersion);
 }

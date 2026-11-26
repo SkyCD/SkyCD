@@ -9,6 +9,8 @@
     <ItemGroup>
         <!-- MIT: reads the ISO 9660 volume a type 1 AppImage appends to its runtime. -->
         <PackageReference Include="DiscUtils.Iso9660" Version="0.16.13"/>
+        <!-- Apache-2.0: icon directory parsing for the executable facts (issue #1221). Pixel decoding stays SkiaSharp. -->
+        <PackageReference Include="MetadataExtractor" Version="2.9.3" />
         <!-- MIT: decoding embedded PNG icons and encoding the bounded preview. -->
         <PackageReference Include="SkiaSharp" Version="3.119.4"/>
         <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.4"/>

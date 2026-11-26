@@ -75,6 +75,18 @@ public sealed class MediaExtensionManager
                 continue;
             }
 
+            if (provider.Capability is IMediaPreviewAvailability { PreviewUnavailableReason: { } reason })
+            {
+                // The decoder is known to be missing before any work starts: one clearly named
+                // warning per plugin (collapsed by fingerprint in the dialog) and no per-file
+                // error spam, while the entry outcome stays stored (issue #1202).
+                var itemName = sourcePath is null ? null : Path.GetFileName(sourcePath);
+                PluginFailure.Publish(provider.Capability.GetType(), "media",
+                    new PreviewDecoderUnavailableException(reason), provider.PluginId, reason, itemName,
+                    isWarning: true);
+                continue;
+            }
+
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeout.CancelAfter(effective.TimeoutMilliseconds);
             var operation = RunAsync(provider, item, openSource, progress, timeout.Token, effective, selection,
@@ -93,7 +105,13 @@ public sealed class MediaExtensionManager
             catch (Exception exception)
             {
                 Observe(operation);
-                PluginFailure.Publish(provider.Capability.GetType(), "media", exception);
+                var itemName = sourcePath is null ? null : Path.GetFileName(sourcePath);
+                PluginFailure.Publish(provider.Capability.GetType(), "media", exception, provider.PluginId,
+                    FirstLine(exception.Message), itemName);
+                // Record the provider failure even for an optional preview. The cache treats a failed
+                // refresh as "keep the previous capture", and callers tell a timed-out poster from a
+                // stored one by this result. The dialog still collapses the published failure by
+                // fingerprint, so a missing poster does not spam one error line per file.
                 results.Add((int.MinValue, Failure(provider, timeout.IsCancellationRequested)));
             }
         }
@@ -373,6 +391,22 @@ public sealed class MediaExtensionManager
 
     private static MediaProviderResult Failure(MediaProvider provider, bool timedOut) =>
         new(provider.PluginId, provider.PluginVersion, provider.Capability.GetType().FullName!, null, null, null, true, timedOut);
+
+    private static string FirstLine(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var newline = value.IndexOf('\n');
+        if (newline >= 0)
+        {
+            value = value.Substring(0, newline);
+        }
+
+        return value.TrimEnd('\r').Trim();
+    }
 
     private static void Observe(Task task) => _ = task.ContinueWith(t => _ = t.Exception,
         CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);

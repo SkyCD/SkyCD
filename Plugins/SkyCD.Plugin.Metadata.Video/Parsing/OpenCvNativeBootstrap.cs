@@ -35,14 +35,17 @@ internal static class OpenCvNativeBootstrap
             return false;
         }
 
-        var directory = ResolveNativeDirectory();
-        if (directory is null)
-        {
-            return false;
-        }
-
         try
         {
+            // Resolving the managed binding touches typeof(VideoCapture): when OpenCvSharp.dll is
+            // not deployed this throws at type-load time, which must read as "decoder unavailable"
+            // (issue #1202) instead of escaping the capability as a provider failure.
+            var directory = ResolveNativeDirectory();
+            if (directory is null)
+            {
+                return false;
+            }
+
             foreach (var ffmpeg in Directory.EnumerateFiles(directory, "opencv_videoio_ffmpeg*.dll"))
             {
                 NativeLibrary.Load(ffmpeg);
@@ -52,7 +55,9 @@ internal static class OpenCvNativeBootstrap
             return true;
         }
         catch (Exception exception) when (exception is DllNotFoundException or BadImageFormatException
-                                              or IOException or UnauthorizedAccessException or ArgumentException)
+                                              or IOException or UnauthorizedAccessException or ArgumentException
+                                              or FileNotFoundException or FileLoadException or TypeLoadException
+                                              or MissingMethodException)
         {
             return false;
         }

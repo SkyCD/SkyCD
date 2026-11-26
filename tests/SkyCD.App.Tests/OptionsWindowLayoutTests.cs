@@ -241,15 +241,15 @@ public class OptionsWindowLayoutTests
     }
 
     [Fact]
-    public void ScanSection_HostsSettingsInScrollableViewerAboveTheRulesTable()
+    public void ScanSection_HostsSettingsInItsOwnScrollablePage()
     {
         var section = GetScanSection();
 
         Assert.Equal("Grid", section.Name.LocalName);
-        Assert.Equal("Auto,*,Auto,Auto,*,Auto", (string?)section.Attribute("RowDefinitions"));
+        Assert.Equal("*", (string?)section.Attribute("RowDefinitions"));
 
         var viewer = Assert.Single(section.Elements(Avalonia + "ScrollViewer"));
-        Assert.Equal("1", (string?)viewer.Attribute("Grid.Row"));
+        Assert.Null(viewer.Attribute("Grid.Row"));
         Assert.Equal("ScanSettingsScrollViewer", (string?)viewer.Attribute(Xaml2006 + "Name"));
         Assert.Equal("Auto", (string?)viewer.Attribute("VerticalScrollBarVisibility"));
         Assert.Equal("Disabled", (string?)viewer.Attribute("HorizontalScrollBarVisibility"));
@@ -257,24 +257,39 @@ public class OptionsWindowLayoutTests
         var settings = Assert.Single(viewer.Elements(Avalonia + "StackPanel"));
         var settingsMarkup = settings.ToString();
         Assert.Contains("UiKeys.ScanSettings", settingsMarkup, StringComparison.Ordinal);
-        Assert.Contains("UiKeys.ScanCompletionHeader", settingsMarkup, StringComparison.Ordinal);
-        Assert.Contains("UiKeys.ActivateMainWindowAfterScan", settingsMarkup, StringComparison.Ordinal);
-        Assert.Contains("UiKeys.PlaySoundAfterScan", settingsMarkup, StringComparison.Ordinal);
+        Assert.Contains("UiKeys.ShowScanErrorsAfterScan", settingsMarkup, StringComparison.Ordinal);
+        Assert.Contains("UiKeys.SaveScanErrorsToComments", settingsMarkup, StringComparison.Ordinal);
+        Assert.DoesNotContain("UiKeys.ScanCompletionHeader", settingsMarkup, StringComparison.Ordinal);
+        Assert.DoesNotContain("UiKeys.EjectMediaAfterScan", settingsMarkup, StringComparison.Ordinal);
+        Assert.DoesNotContain("UiKeys.ActivateMainWindowAfterScan", settingsMarkup, StringComparison.Ordinal);
+        Assert.DoesNotContain("UiKeys.PlaySoundAfterScan", settingsMarkup, StringComparison.Ordinal);
+        Assert.DoesNotContain("ResetScanExclusionRulesCommand", settingsMarkup, StringComparison.Ordinal);
 
-        // The settings stack must not sit loose in the page grid again.
         Assert.DoesNotContain(section.Elements(Avalonia + "StackPanel"),
             panel => panel.ToString().Contains("UiKeys.ScanSettings", StringComparison.Ordinal));
+    }
 
-        var rulesToolbar = Assert.Single(section.Elements(Avalonia + "Grid"),
-            grid => (string?)grid.Attribute("Grid.Row") == "3");
-        var toolbarMarkup = rulesToolbar.ToString();
+    [Fact]
+    public void ScanRulesSection_HostsOnlyThePatternTableAndToolbar()
+    {
+        var section = GetSection("ShowScanRulesSection");
+
+        Assert.Equal("Grid", section.Name.LocalName);
+        Assert.Equal("Auto,*,Auto", (string?)section.Attribute("RowDefinitions"));
+
+        var toolbar = Assert.Single(section.Elements(Avalonia + "Grid"),
+            grid => grid.Attribute("Grid.Row") is null);
+        var toolbarMarkup = toolbar.ToString();
+        Assert.Contains("UiKeys.ExclusionRules", toolbarMarkup, StringComparison.Ordinal);
         Assert.Contains("ResetScanExclusionRulesCommand", toolbarMarkup, StringComparison.Ordinal);
         Assert.Contains("AddScanExclusionRuleCommand", toolbarMarkup, StringComparison.Ordinal);
         Assert.Contains("RemoveScanExclusionRuleCommand", toolbarMarkup, StringComparison.Ordinal);
+        Assert.DoesNotContain("UiKeys.SkipSymbolicLinks", section.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain("UiKeys.ScanCompletionHeader", section.ToString(), StringComparison.Ordinal);
 
         var rulesBorder = Assert.Single(section.Elements(Avalonia + "Border"),
             border => (string?)border.Attribute(Xaml2006 + "Name") == "ScanExclusionRulesBorder");
-        Assert.Equal("4", (string?)rulesBorder.Attribute("Grid.Row"));
+        Assert.Equal("1", (string?)rulesBorder.Attribute("Grid.Row"));
         var rulesHost = Assert.Single(rulesBorder.Elements(Avalonia + "Grid"));
         Assert.Equal("Auto,*", (string?)rulesHost.Attribute("RowDefinitions"));
 
@@ -282,6 +297,34 @@ public class OptionsWindowLayoutTests
         Assert.Equal("1", (string?)rulesList.Attribute("Grid.Row"));
         Assert.Equal("ScanExclusionRulesList", (string?)rulesList.Attribute(Xaml2006 + "Name"));
         Assert.Equal("Auto", (string?)rulesList.Attribute("ScrollViewer.VerticalScrollBarVisibility"));
+
+        var alert = Assert.Single(section.Elements(Avalonia + "Border"),
+            border => (string?)border.Attribute("IsVisible") == "{Binding ShowScanAlert}");
+        Assert.Equal("2", (string?)alert.Attribute("Grid.Row"));
+    }
+
+    [Fact]
+    public void ScanCompletionSection_HostsOnlyTheFinishActions()
+    {
+        var section = GetSection("ShowScanCompletionSection");
+
+        Assert.Equal("Grid", section.Name.LocalName);
+        Assert.Equal("*", (string?)section.Attribute("RowDefinitions"));
+
+        var viewer = Assert.Single(section.Elements(Avalonia + "ScrollViewer"));
+        Assert.Equal("ScanCompletionScrollViewer", (string?)viewer.Attribute(Xaml2006 + "Name"));
+        Assert.Equal("Auto", (string?)viewer.Attribute("VerticalScrollBarVisibility"));
+        Assert.Equal("Disabled", (string?)viewer.Attribute("HorizontalScrollBarVisibility"));
+
+        var markup = Assert.Single(viewer.Elements(Avalonia + "StackPanel")).ToString();
+        Assert.Contains("UiKeys.ScanCompletionHeader", markup, StringComparison.Ordinal);
+        Assert.Contains("UiKeys.EjectMediaAfterScan", markup, StringComparison.Ordinal);
+        Assert.Contains("UiKeys.ActivateMainWindowAfterScan", markup, StringComparison.Ordinal);
+        Assert.Contains("UiKeys.PlaySoundAfterScan", markup, StringComparison.Ordinal);
+        Assert.Contains("MediaEjectionSupportHint", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("UiKeys.SkipSymbolicLinks", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("ResetScanExclusionRulesCommand", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("ScanExclusionRules", markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -368,13 +411,15 @@ public class OptionsWindowLayoutTests
             viewer => (string?)viewer.Attribute(Xaml2006 + "Name") == "ScanSettingsScrollViewer");
     }
 
-    private static XElement GetScanSection()
+    private static XElement GetScanSection() => GetSection("ShowScanSection");
+
+    private static XElement GetSection(string visibilityFlag)
     {
         var xaml = ReadRepoFile("src", "SkyCD.App", "Views", "OptionsWindow.axaml");
         var document = XDocument.Parse(xaml);
 
         return Assert.Single(document.Descendants(),
-            element => (string?)element.Attribute("IsVisible") == "{Binding ShowScanSection}");
+            element => (string?)element.Attribute("IsVisible") == "{Binding " + visibilityFlag + "}");
     }
 
     [Fact]

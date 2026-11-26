@@ -26,6 +26,18 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
         return BuildFilters(GetSaveFormats());
     }
 
+    /// <summary>
+    /// Save filters limited to one export format, so the export target picker cannot leave the
+    /// format chosen in the export dialog.
+    /// </summary>
+    public FileFormatFilterCollection GetExportFiltersFor(string formatId)
+    {
+        var format = GetExportFormats()
+            .FirstOrDefault(candidate =>
+                candidate.FormatId.Equals(formatId, StringComparison.OrdinalIgnoreCase));
+        return BuildFilters(format is null ? [] : [format]);
+    }
+
     public IReadOnlyList<FileFormatDescriptor> GetOpenFormats()
     {
         return fileFormatProviders
@@ -41,6 +53,20 @@ public sealed class FileFormatManager(IEnumerable<IFileFormatPluginCapability> f
         return fileFormatProviders
             .Select(static capability => capability.SupportedFormat)
             .Where(static format => format.CanWrite)
+            .DistinctBy(static format => format.FormatId, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(static format => format.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Write-only export formats (HTML, Markdown and any future exporter): writable formats that can
+    /// never be read back, so they appear in File &gt; Export instead of the open list. Issue #1239.
+    /// </summary>
+    public IReadOnlyList<FileFormatDescriptor> GetExportFormats()
+    {
+        return fileFormatProviders
+            .Select(static capability => capability.SupportedFormat)
+            .Where(static format => format.CanWrite && !format.CanRead)
             .DistinctBy(static format => format.FormatId, StringComparer.OrdinalIgnoreCase)
             .OrderBy(static format => format.DisplayName, StringComparer.OrdinalIgnoreCase)
             .ToList();

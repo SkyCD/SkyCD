@@ -72,9 +72,42 @@ public partial class OptionsDialogViewModel
 
     public bool IsOnlineOnlyCloudFilesOptionVisible => OperatingSystem.IsWindows();
 
-    public bool IsScanCategorySelected => SelectedBuiltInIndex == 6;
+    /// <summary>Existing scan category. Index 6 stays so legacy Options tab restoration still opens scan settings.</summary>
+    public const string ScanCategoryId = "scan";
+
+    public const int ScanCategoryIndex = 6;
+
+    /// <summary>Fresh indexes so the pinned built-in sequence of the other pages stays unchanged.</summary>
+    public const string ScanRulesCategoryId = "scan-rules";
+
+    public const int ScanRulesCategoryIndex = 14;
+
+    public const string ScanCompletionCategoryId = "scan-completion";
+
+    public const int ScanCompletionCategoryIndex = 15;
+
+    public bool IsScanCategorySelected => SelectedBuiltInIndex == ScanCategoryIndex;
 
     public bool ShowScanSection => IsScanCategorySelected && IsCurrentCategoryVisibleInSearch;
+
+    public bool IsScanRulesCategorySelected => SelectedBuiltInIndex == ScanRulesCategoryIndex;
+
+    public bool ShowScanRulesSection => IsScanRulesCategorySelected && IsCurrentCategoryVisibleInSearch;
+
+    public bool IsScanCompletionCategorySelected => SelectedBuiltInIndex == ScanCompletionCategoryIndex;
+
+    public bool ShowScanCompletionSection => IsScanCompletionCategorySelected && IsCurrentCategoryVisibleInSearch;
+
+    /// <summary>The blank-pattern alert lives on the rules page, so Save reveals that page.</summary>
+    public void RevealScanRulesPage()
+    {
+        if (!FilteredSettingCategories.Any(category => category.Id == ScanRulesCategoryId))
+        {
+            SettingsSearchText = string.Empty;
+        }
+
+        SelectedSettingCategory = SettingCategories.First(category => category.Id == ScanRulesCategoryId);
+    }
 
     public event EventHandler? ResetScanExclusionRulesRequested;
 

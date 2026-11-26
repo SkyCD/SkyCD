@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
@@ -64,6 +65,36 @@ public sealed class AboutTabStripSpacingTests
                     Assert.True(gap >= 4,
                         $"Adjacent About tab headers are only {gap}px apart; expected at least 4px.");
                 }
+            }
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public void About_AllTabHeadersShareOneRowWithoutClipping()
+    {
+        // Issue #1204: five headers (with long lt labels) must fit on one row of the fixed window.
+        var window = Show(new AboutWindow { DataContext = new AboutDialogViewModel() });
+        try
+        {
+            var tabs = Assert.IsType<TabControl>(window.FindControl<Control>("MainTabs"));
+            var strip = (Panel)tabs.ItemsPanelRoot!;
+
+            var headers = strip.Children.OfType<TabItem>().ToArray();
+            Assert.Equal(5, headers.Length);
+
+            var firstY = headers[0].Bounds.Y;
+            foreach (var header in headers)
+            {
+                Assert.True(Math.Abs(header.Bounds.Y - firstY) < 0.5,
+                    $"Tab header at Y={header.Bounds.Y} is not on the same row as Y={firstY}; the strip wrapped.");
+                Assert.True(header.Bounds.Width > 0,
+                    "Tab header has no width; it is clipped.");
+                Assert.True(header.Bounds.X + header.Bounds.Width <= strip.Bounds.Width + 1,
+                    "Tab header extends past the strip; it is clipped.");
             }
         }
         finally

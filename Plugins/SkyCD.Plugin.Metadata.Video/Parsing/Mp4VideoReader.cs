@@ -1,7 +1,11 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using MetadataExtractor.Formats.QuickTime;
 using SkyCD.Plugin.Metadata.Video.Exceptions;
 using SkyCD.Plugin.Metadata.Video.Models;
 
@@ -35,6 +39,7 @@ internal static class Mp4VideoReader
         };
 
         await WalkAsync(source, 0, source.Length, 0, state, cancellationToken).ConfigureAwait(false);
+        await ApplyMetadataExtractorAsync(source, state, options, cancellationToken).ConfigureAwait(false);
 
         if (!state.SawMovieHeader && state.Codec is null)
         {
@@ -152,6 +157,12 @@ internal static class Mp4VideoReader
         switch (type)
         {
             case "moov":
+                state.MoovStart ??= payloadStart;
+                state.MoovEnd = payloadEnd;
+                await WalkAsync(source, payloadStart, payloadEnd, depth + 1, state, cancellationToken)
+                    .ConfigureAwait(false);
+                return;
+
             case "trak":
             case "mdia":
             case "minf":
@@ -177,15 +188,6 @@ internal static class Mp4VideoReader
                 await ReadItemListAsync(source, payloadStart, payloadEnd, state, cancellationToken).ConfigureAwait(false);
                 return;
 
-            case "mvhd":
-                await ReadMovieHeaderAsync(source, payloadStart, state, cancellationToken).ConfigureAwait(false);
-                return;
-
-            case "tkhd":
-                await ReadTrackHeaderAsync(source, payloadStart, payloadEnd, state, cancellationToken)
-                    .ConfigureAwait(false);
-                return;
-
             case "mdhd":
                 await ReadMediaHeaderAsync(source, payloadStart, state, cancellationToken).ConfigureAwait(false);
                 return;
@@ -205,141 +207,124 @@ internal static class Mp4VideoReader
         }
     }
 
-    private static async Task ReadMovieHeaderAsync(
+    /// <summary>
+    /// Reads the movie box with MetadataExtractor and maps the movie header and the first video-sized
+    /// track header onto the probe. Dimensions and rotation come from the track header; the matrix is
+    /// the authoritative source and width and height are stored unrotated, matching the old hand reader.
+    /// MetadataExtractor reports rotation counter-clockwise, so it is converted to the clockwise
+    /// convention this probe publishes; only axis-aligned rotations are recognized and anything else
+    /// (including a missing value) reads as upright rather than guessed at.
+    /// </summary>
+    private static async Task ApplyMetadataExtractorAsync(
         VideoSourceReader source,
-        long payloadStart,
         WalkState state,
+        VideoPluginOptions options,
         CancellationToken cancellationToken)
     {
-        var payload = await source.ReadBytesAsync(payloadStart, 32, cancellationToken).ConfigureAwait(false);
-        if (payload.Length < 20)
+        if (state.MoovStart is not { } moovStart || state.MoovEnd is not { } moovEnd)
         {
             return;
         }
 
-        var version = payload[0];
-        uint timescale;
-        ulong duration;
-
-        if (version == 1)
-        {
-            if (!VideoBinary.TryU32BE(payload, 20, out timescale) ||
-                !VideoBinary.TryU64BE(payload, 24, out duration))
-            {
-                return;
-            }
-        }
-        else
-        {
-            if (!VideoBinary.TryU32BE(payload, 12, out timescale) ||
-                !VideoBinary.TryU32BE(payload, 16, out var duration32))
-            {
-                return;
-            }
-
-            duration = duration32;
-        }
-
-        state.SawMovieHeader = true;
-        if (timescale > 0 && duration > 0)
-        {
-            state.MovieDurationSeconds = (double)duration / timescale;
-        }
-    }
-
-    /// <summary>
-    /// Reads the track header, which carries both the display size and the transformation matrix that encodes
-    /// rotation. The matrix is the authoritative source: width and height are stored unrotated.
-    /// </summary>
-    private static async Task ReadTrackHeaderAsync(
-        VideoSourceReader source,
-        long payloadStart,
-        long payloadEnd,
-        WalkState state,
-        CancellationToken cancellationToken)
-    {
-        var payload = await source.ReadBytesAsync(payloadStart, (int)Math.Min(92, payloadEnd - payloadStart), cancellationToken)
-            .ConfigureAwait(false);
-        if (payload.Length < 8)
+        var moovLength = moovEnd - moovStart;
+        if (moovLength <= 0 || moovLength > options.HeaderScanBytes)
         {
             return;
         }
 
-        var version = payload[0];
-        var matrixOffset = version == 1 ? 48 : 40;
-        var sizeOffset = matrixOffset + 36;
-
-        // The track header precedes the handler that identifies the track, so size and rotation are held
-        // pending and only committed once the track is known to carry video.
-        if (state.PendingRotationDegrees is null && payload.Length > matrixOffset + 20)
+        // MetadataExtractor parses whole boxes, so reattach the 8-byte moov header that the walk
+        // consumed. Only 32-bit sizes are reattached; a 64-bit moov box is pathological enough to
+        // skip rather than misread.
+        var header = await source.ReadBytesAsync(moovStart - 8, 8, cancellationToken).ConfigureAwait(false);
+        if (header.Length < 8 ||
+            !VideoBinary.TryU32BE(header, 0, out var boxSize) ||
+            boxSize != (uint)moovLength + 8 ||
+            !VideoBinary.StartsWith(header, 4, "moov"u8))
         {
-            state.PendingRotationDegrees = RotationFromMatrix(payload, matrixOffset);
+            return;
         }
 
-        if (payload.Length >= sizeOffset + 8 &&
-            VideoBinary.TryU32BE(payload, sizeOffset, out var widthFixed) &&
-            VideoBinary.TryU32BE(payload, sizeOffset + 4, out var heightFixed))
+        var payload = await source.ReadBytesAsync(moovStart, (int)moovLength, cancellationToken).ConfigureAwait(false);
+        if (payload.Length != moovLength)
         {
-            var width = (int)(widthFixed >> 16);
-            var height = (int)(heightFixed >> 16);
-            if (width > 0 && height > 0 && state.PendingWidth is null)
+            return;
+        }
+
+        var moov = new byte[moovLength + 8];
+        header.CopyTo(moov, 0);
+        payload.CopyTo(moov, 8);
+
+        IReadOnlyList<MetadataExtractor.Directory> directories;
+        try
+        {
+            directories = QuickTimeMetadataReader.ReadMetadata(new MemoryStream(moov));
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            return;
+        }
+
+        var trackDirectories = directories.OfType<QuickTimeTrackHeaderDirectory>().ToList();
+        foreach (var directory in directories)
+        {
+            if (directory is QuickTimeMovieHeaderDirectory movie &&
+                VideoBinary.TryToDuration(movie.GetObject(QuickTimeMovieHeaderDirectory.TagDuration), out var duration))
             {
-                state.PendingWidth = width;
-                state.PendingHeight = height;
+                state.SawMovieHeader = true;
+                state.MovieDurationSeconds ??= duration.TotalSeconds;
             }
+        }
+
+        // Track handlers are walked in document order, the same order MetadataExtractor reports
+        // its track headers, so the handler at an index identifies the track at that index. A
+        // count mismatch means a malformed box the two readers disagreed on; fall back to the
+        // first video-sized track instead of guessing.
+        var aligned = trackDirectories.Count == state.TrakHandlers.Count;
+        for (var index = 0; index < trackDirectories.Count; index++)
+        {
+            var track = trackDirectories[index];
+            if (aligned)
+            {
+                if (!string.Equals(state.TrakHandlers[index], "vide", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+            }
+            else if (!(VideoBinary.TryToInt(track.GetObject(QuickTimeTrackHeaderDirectory.TagWidth), out var fallbackWidth) &&
+                         VideoBinary.TryToInt(track.GetObject(QuickTimeTrackHeaderDirectory.TagHeight), out var fallbackHeight) &&
+                         fallbackWidth > 0 && fallbackHeight > 0))
+            {
+                continue;
+            }
+
+            if (!VideoBinary.TryToInt(track.GetObject(QuickTimeTrackHeaderDirectory.TagWidth), out var width) ||
+                !VideoBinary.TryToInt(track.GetObject(QuickTimeTrackHeaderDirectory.TagHeight), out var height) ||
+                width <= 0 || height <= 0)
+            {
+                continue;
+            }
+
+            state.Width ??= width;
+            state.Height ??= height;
+            state.RotationDegrees ??= MapCounterClockwiseRotation(track.GetObject(QuickTimeTrackHeaderDirectory.TagRotation));
+            break;
         }
     }
 
     /// <summary>
-    /// Derives clockwise rotation from the 16.16 fixed-point matrix. The matrix is stored row-major as
-    /// a, b, u, c, d, v, x, y, w, so <c>c</c> and <c>d</c> sit at offsets 12 and 16 rather than 8 and 12.
-    /// Only the four axis-aligned rotations are recognized; an arbitrary transform is reported as upright
-    /// rather than guessed at.
+    /// Converts MetadataExtractor's counter-clockwise track rotation to the clockwise degrees published
+    /// by this probe. Only axis-aligned rotations are recognized; anything else reads as upright.
     /// </summary>
-    internal static int RotationFromMatrix(ReadOnlySpan<byte> matrix, int offset)
+    internal static int MapCounterClockwiseRotation(object? counterClockwiseDegrees)
     {
-        if (offset + 20 > matrix.Length)
+        if (!VideoBinary.TryToDouble(counterClockwiseDegrees, out var degrees))
         {
             return 0;
         }
 
-        var a = ReadFixed16(matrix, offset);
-        var b = ReadFixed16(matrix, offset + 4);
-        var c = ReadFixed16(matrix, offset + 12);
-        var d = ReadFixed16(matrix, offset + 16);
-
-        if (a == 1 && b == 0 && c == 0 && d == 1)
-        {
-            return 0;
-        }
-
-        if (a == 0 && b == 1 && c == -1 && d == 0)
-        {
-            return 90;
-        }
-
-        if (a == -1 && b == 0 && c == 0 && d == -1)
-        {
-            return 180;
-        }
-
-        if (a == 0 && b == -1 && c == 1 && d == 0)
-        {
-            return 270;
-        }
-
-        return 0;
-    }
-
-    private static int ReadFixed16(ReadOnlySpan<byte> data, int offset)
-    {
-        if (!VideoBinary.TryU32BE(data, offset, out var raw))
-        {
-            return 0;
-        }
-
-        // The 16.16 value is signed; compare against 65536 rather than converting to float.
-        return unchecked((int)raw) / 65536;
+        var normalized = ((360 - (degrees % 360)) % 360 + 360) % 360;
+        var snapped = (int)Math.Round(normalized, MidpointRounding.AwayFromZero);
+        return snapped is 0 or 90 or 180 or 270 ? snapped : 0;
     }
 
     private static async Task ReadMediaHeaderAsync(
@@ -398,15 +383,11 @@ internal static class Mp4VideoReader
         }
 
         state.Handler = Encoding.ASCII.GetString(payload, 0, 4);
+        state.TrakHandlers.Add(state.Handler);
         if (state.Handler == "vide")
         {
             state.IsVideoTrack = true;
             state.VideoStreamCount++;
-
-            // Commit what the track header held pending, now that this track is known to carry video.
-            state.Width ??= state.PendingWidth;
-            state.Height ??= state.PendingHeight;
-            state.RotationDegrees ??= state.PendingRotationDegrees;
         }
         else if (state.Handler == "soun")
         {
@@ -577,15 +558,15 @@ internal static class Mp4VideoReader
         public bool IsVideoTrack { get; set; }
         public bool IsAudioTrack { get; set; }
         public string? Handler { get; set; }
+        public List<string> TrakHandlers { get; } = [];
         public double? MovieDurationSeconds { get; set; }
         public double? TrackDurationSeconds { get; set; }
         public uint TrackTimescale { get; set; }
         public int? Width { get; set; }
         public int? Height { get; set; }
         public int? RotationDegrees { get; set; }
-        public int? PendingWidth { get; set; }
-        public int? PendingHeight { get; set; }
-        public int? PendingRotationDegrees { get; set; }
+        public long? MoovStart { get; set; }
+        public long? MoovEnd { get; set; }
         public int VideoStreamCount { get; set; }
         public int AudioStreamCount { get; set; }
         public string? Codec { get; set; }
@@ -600,9 +581,6 @@ internal static class Mp4VideoReader
             Handler = null;
             TrackDurationSeconds = null;
             TrackTimescale = 0;
-            PendingWidth = null;
-            PendingHeight = null;
-            PendingRotationDegrees = null;
         }
     }
 }

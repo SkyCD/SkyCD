@@ -28,28 +28,28 @@ public sealed class AboutStoryLayoutTests
     }
 
     [Fact]
-    public void OverviewTab_ShowsAuthorsAndThanksAfterReferences()
+    public void OverviewTab_ShowsAuthorsAfterReferencesAndHoldsNoThanks()
     {
-        // Issue #1134: the Overview tab ends with the legacy authors and thanks credits,
-        // in story -> references -> authors -> thanks order.
+        // Issue #1204: the Thanks credits moved to their own tab, so the Overview tab ends
+        // with the authors section in story -> references -> authors order.
         var story = OverviewTab();
         var markup = story.ToString();
 
         var references = markup.IndexOf("UiKeys.AboutStoryReferences", StringComparison.Ordinal);
         var authors = markup.IndexOf("UiKeys.AboutStoryAuthors}", StringComparison.Ordinal);
-        var thanks = markup.IndexOf("UiKeys.AboutStoryThanks}", StringComparison.Ordinal);
-        Assert.True(0 <= references && references < authors && authors < thanks,
-            "the Overview tab must read story, references, authors, thanks.");
+        Assert.True(0 <= references && references < authors,
+            "the Overview tab must read story, references, authors.");
+        Assert.DoesNotContain("UiKeys.AboutStoryThanks}", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("UiKeys.AboutStoryThanksFreewareBase", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("UiKeys.AboutStoryThanksSourceForge", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("UiKeys.AboutStoryThanksGbit", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("UiKeys.AboutStoryThanksSlivickas", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("UiKeys.AboutStoryThanksAndYou", markup, StringComparison.Ordinal);
 
         foreach (var key in new[]
                  {
                      "UiKeys.AboutStoryAuthorName",
-                     "UiKeys.AboutStoryAuthorContact",
-                     "UiKeys.AboutStoryThanksFreewareBase",
-                     "UiKeys.AboutStoryThanksSourceForge",
-                     "UiKeys.AboutStoryThanksGbit",
-                     "UiKeys.AboutStoryThanksSlivickas",
-                     "UiKeys.AboutStoryThanksAndYou"
+                     "UiKeys.AboutStoryAuthorContact"
                  })
         {
             Assert.Contains(key, markup, StringComparison.Ordinal);
@@ -58,6 +58,37 @@ public sealed class AboutStoryLayoutTests
         var email = Assert.Single(story.Descendants(Avalonia + "TextBlock"),
             text => ((string?)text.Attribute("Tag"))?.StartsWith("mailto:", StringComparison.Ordinal) == true);
         Assert.Equal("OnOpenRepositoryUrl", (string?)email.Attribute("PointerPressed"));
+    }
+
+    [Fact]
+    public void ThanksTab_IsSecondAndHoldsTheFiveCreditLines()
+    {
+        // Issue #1204: the Thanks tab sits right after Overview and holds exactly the five credit lines.
+        var tabs = AllTabs();
+        Assert.True(tabs.Length >= 2, "the About window must render at least the Overview and Thanks tabs.");
+
+        var thanks = tabs[1];
+        Assert.Contains("UiKeys.AboutStoryThanks", (string?)thanks.Attribute("Header"), StringComparison.Ordinal);
+
+        var thanksTexts = thanks.Descendants(Avalonia + "TextBlock").ToArray();
+        Assert.Equal(5, thanksTexts.Length);
+        foreach (var key in new[]
+                 {
+                     "UiKeys.AboutStoryThanksFreewareBase",
+                     "UiKeys.AboutStoryThanksSourceForge",
+                     "UiKeys.AboutStoryThanksGbit",
+                     "UiKeys.AboutStoryThanksSlivickas",
+                     "UiKeys.AboutStoryThanksAndYou"
+                 })
+        {
+            var entry = Assert.Single(thanksTexts,
+                text => ((string?)text.Attribute("Text"))?.Contains(key, StringComparison.Ordinal) == true);
+            Assert.Equal("body", (string?)entry.Attribute("Classes"));
+            Assert.Equal("Wrap", (string?)entry.Attribute("TextWrapping"));
+        }
+
+        Assert.DoesNotContain(thanksTexts,
+            text => ((string?)text.Attribute("Text"))?.Contains("UiKeys.AboutStoryThanks}", StringComparison.Ordinal) == true);
     }
 
     [Fact]

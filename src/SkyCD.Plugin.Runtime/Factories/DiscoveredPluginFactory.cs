@@ -11,6 +11,7 @@ using SkyCD.SDK.Lifecycle;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Documents;
 using SkyCD.Plugin.Runtime.Exceptions;
+using SkyCD.Plugin.Runtime.Installation;
 
 namespace SkyCD.Plugin.Runtime.Factories;
 
@@ -209,29 +210,56 @@ public sealed class DiscoveredPluginFactory
             return null;
         }
 
-        var id = assembly.GetCustomAttribute<PluginIdAttribute>()?.Id ?? assemblySimpleName;
+        var fileBacked = TryReadFileBackedIdentity(assembly);
+        var id = fileBacked?.PluginId
+            ?? assembly.GetCustomAttribute<PluginIdAttribute>()?.Id
+            ?? assemblySimpleName;
         var name = assembly.GetCustomAttribute<AssemblyTitleAttribute>()?.Title ?? assemblySimpleName;
         var authorName = NormalizeAuthor(assembly.GetCustomAttribute<AssemblyCompanyAttribute>()?.Company, name, id);
         var authorUrl = ResolveAuthorUrl(assembly);
         var projectUrl = ResolveProjectUrl(assembly);
         var version = assemblyName.Version ?? new Version(1, 0, 0, 0);
-        var minHostVersion = TryParseVersion(assembly.GetCustomAttribute<MinHostVersionAttribute>()?.Version)
-                             ?? new Version(3, 0, 0);
-        var maxHostVersion = TryParseVersion(assembly.GetCustomAttribute<MaxHostVersionAttribute>()?.Version);
+        var minHostVersion = PluginCompatibilityEvaluator.TryParseBound(fileBacked?.MinHostVersion)
+            ?? PluginCompatibilityEvaluator.TryParseBound(
+                assembly.GetCustomAttribute<MinHostVersionAttribute>()?.Version)
+            ?? PluginCompatibilityEvaluator.DefaultMinHostVersion;
+        var maxHostVersion = PluginCompatibilityEvaluator.TryParseBound(fileBacked?.MaxHostVersion)
+            ?? PluginCompatibilityEvaluator.TryParseBound(
+                assembly.GetCustomAttribute<MaxHostVersionAttribute>()?.Version);
         var description = assembly.GetCustomAttribute<AssemblyDescriptionAttribute>()?.Description ?? string.Empty;
         var fileName = Path.GetFileName(assembly.Location);
         return (id, name, authorName, authorUrl, projectUrl, version, minHostVersion, maxHostVersion, description,
             fileName);
     }
 
-    private static Version? TryParseVersion(string? value)
+    /// <summary>
+    /// Reads raw identity attributes from the assembly file without touching loaded metadata.
+    /// Returns <c>null</c> when the file is missing or unreadable; the caller falls back to reflection.
+    /// </summary>
+    private static PluginAssemblyAttributes? TryReadFileBackedIdentity(Assembly assembly)
     {
-        if (string.IsNullOrWhiteSpace(value))
+        var location = assembly.Location;
+        if (string.IsNullOrWhiteSpace(location) || !File.Exists(location))
         {
             return null;
         }
 
-        return Version.TryParse(value, out var parsed) ? parsed : null;
+        try
+        {
+            return PluginAssemblyAttributes.TryRead(location);
+        }
+        catch (BadImageFormatException)
+        {
+            return null;
+        }
+        catch (IOException)
+        {
+            return null;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return null;
+        }
     }
 
     private static string NormalizeAuthor(string? candidate, string pluginName, string pluginId)

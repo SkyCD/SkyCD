@@ -572,6 +572,14 @@
           "IconPacks.Avalonia.Core": "2.0.0"
         }
       },
+      "MetadataExtractor": {
+        "type": "Transitive",
+        "resolved": "2.9.3",
+        "contentHash": "7dBcqlPC2Zc/bsZtXnv8nCWe5h5WsLHszzHtxnpcsVy4MwlD3KQ3wVNoiYBm0a3rzt5hRwAosPvLPhlXrV5lyg==",
+        "dependencies": {
+          "XmpCore": "6.1.10.1"
+        }
+      },
       "MicroCom.Runtime": {
         "type": "Transitive",
         "resolved": "0.11.6",
@@ -835,6 +843,11 @@
         "resolved": "2.9.0",
         "contentHash": "GLhd1tQAJeuVO1sj3Wm/dkg0GEVWxk+XGl6rdegMSMHenZuOaWQw4PifWDsjNEC1dtV1/C8JJfK0qfdkM+VIgA=="
       },
+      "XmpCore": {
+        "type": "Transitive",
+        "resolved": "6.1.10.1",
+        "contentHash": "/Tp2/e39e7z8hLtS4TXt0FNNZHbf5yNFfHS0/59soXlgOzZlyRZivvzWpvujyaWkTWWgecp/1nHxkuc5vntn7A=="
+      },
       "xunit.abstractions": {
         "type": "Transitive",
         "resolved": "2.0.3",
@@ -941,6 +954,7 @@
         "type": "Project",
         "dependencies": {
           "DiscUtils.Iso9660": "[0.16.13, )",
+          "MetadataExtractor": "[2.9.3, )",
           "SkiaSharp": "[3.119.4, )",
           "SkiaSharp.NativeAssets.Linux": "[3.119.4, )",
           "SkiaSharp.NativeAssets.Win32": "[3.119.4, )",
@@ -970,6 +984,7 @@
       "skycd.presentation": {
         "type": "Project",
         "dependencies": {
+          "Avalonia": "[12.1.6, )",
           "CommunityToolkit.Mvvm": "[8.4.2, )",
           "Couchbase.Lite": "[4.1.3, )",
           "FluentFTP": "[55.1.0, )",

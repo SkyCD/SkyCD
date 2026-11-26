@@ -479,6 +479,7 @@ public static class UiKeys
     public const string DescriptionResults = "core.ui.DescriptionResults";
     public const string ScanExclusions = "core.ui.ScanExclusions";
     public const string ScanSettings = "core.ui.ScanSettings";
+    public const string ExclusionByScanName = "core.ui.ExclusionByScanName";
     public const string ExclusionRules = "core.ui.ExclusionRules";
     public const string Pattern = "core.ui.Pattern";
     public const string EntryType = "core.ui.EntryType";
@@ -506,6 +507,7 @@ public static class UiKeys
     public const string ShowScanErrorsAfterScan = "core.ui.ShowScanErrorsAfterScan";
     public const string SaveScanErrorsToComments = "core.ui.SaveScanErrorsToComments";
     public const string ScanCompletionHeader = "core.ui.ScanCompletionHeader";
+    public const string ScanCompletionPage = "core.ui.ScanCompletionPage";
     public const string EjectMediaAfterScan = "core.ui.EjectMediaAfterScan";
     public const string ActivateMainWindowAfterScan = "core.ui.ActivateMainWindowAfterScan";
     public const string PlaySoundAfterScan = "core.ui.PlaySoundAfterScan";
@@ -576,4 +578,8 @@ public static class UiKeys
     public const string SplitCancelled = "core.ui.SplitCancelled";
     public const string SplitFailed = "core.ui.SplitFailed";
     public const string SplitAction = "core.ui.SplitAction";
+    public const string ExportDialogTitle = "core.ui.ExportDialogTitle";
+    public const string ExportFormat = "core.ui.ExportFormat";
+    public const string ExportAction = "core.ui.ExportAction";
+    public const string ExportNoFormat = "core.ui.ExportNoFormat";
 }

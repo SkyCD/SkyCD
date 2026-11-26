@@ -12,6 +12,104 @@ namespace SkyCD.Plugin.Metadata.Video.Parsing;
 /// </remarks>
 internal static class VideoBinary
 {
+    /// <summary>
+    /// Best-effort conversion of a MetadataExtractor tag value to int. Tag CLR types vary by
+    /// directory (int, uint, decimal, float, ...); only whole in-range values convert, everything
+    /// else reads as absent.
+    /// </summary>
+    internal static bool TryToInt(object? value, out int result)
+    {
+        result = 0;
+
+        double number;
+        try
+        {
+            number = value switch
+            {
+                int i => i,
+                uint u => u,
+                long l => l,
+                ulong ul => ul,
+                short s => s,
+                ushort us => us,
+                byte b => b,
+                sbyte sb => sb,
+                float f => f,
+                double d => d,
+                decimal m => (double)m,
+                _ => double.NaN,
+            };
+        }
+        catch (OverflowException)
+        {
+            return false;
+        }
+
+        if (double.IsNaN(number) || number % 1 != 0 || number < int.MinValue || number > int.MaxValue)
+        {
+            return false;
+        }
+
+        result = (int)number;
+        return true;
+    }
+
+    /// <summary>Best-effort conversion of a MetadataExtractor tag value to double. See <see cref="TryToInt"/>.</summary>
+    internal static bool TryToDouble(object? value, out double result)
+    {
+        result = 0;
+
+        try
+        {
+            result = value switch
+            {
+                double d => d,
+                float f => f,
+                decimal m => (double)m,
+                int i => i,
+                uint u => u,
+                long l => l,
+                ulong ul => ul,
+                short s => s,
+                ushort us => us,
+                byte b => b,
+                sbyte sb => sb,
+                _ => double.NaN,
+            };
+        }
+        catch (OverflowException)
+        {
+            return false;
+        }
+
+        return !double.IsNaN(result) && !double.IsInfinity(result);
+    }
+
+    /// <summary>
+    /// Best-effort conversion of a MetadataExtractor tag value to a duration. Directories report
+    /// durations as TimeSpan values or "hh:mm:ss" strings; anything else reads as absent.
+    /// </summary>
+    internal static bool TryToDuration(object? value, out TimeSpan result)
+    {
+        result = TimeSpan.Zero;
+
+        if (value is TimeSpan span && span > TimeSpan.Zero)
+        {
+            result = span;
+            return true;
+        }
+
+        if (value is string text &&
+            TimeSpan.TryParse(text, System.Globalization.CultureInfo.InvariantCulture, out var parsed) &&
+            parsed > TimeSpan.Zero)
+        {
+            result = parsed;
+            return true;
+        }
+
+        return false;
+    }
+
     public static bool TryU16BE(ReadOnlySpan<byte> data, int offset, out ushort value)
     {
         value = 0;
