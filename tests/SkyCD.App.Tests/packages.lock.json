@@ -1033,6 +1033,11 @@
         "resolved": "3.119.4",
         "contentHash": "XOpbx/4CReO2wYsq2s6rbvdauc6dntG4Zv499sHGTJ87bwZaFXszFkwql3+FIZMc8kUPeaj3Mx2ezIJmo8a1Kg=="
       },
+      "SkyCD.Resource.Icons.LlmBackends": {
+        "type": "Transitive",
+        "resolved": "0.2.0",
+        "contentHash": "CLqyDfKVZiRrXk7jVYrkbllqj1CWE/+G6MiX1VgN7yeEegQX7ZkBNhq/2RFq8r01khjhIB6UyK6d9I5OXmJidQ=="
+      },
       "SmartFormat": {
         "type": "Transitive",
         "resolved": "3.6.2",
@@ -1232,6 +1237,7 @@
           "SkyCD.Plugin.Feature.Locations": "[1.0.0, )",
           "SkyCD.Plugin.Host": "[1.0.0, )",
           "SkyCD.Presentation": "[1.0.0, )",
+          "SkyCD.Resource.Icons.LlmBackends": "[0.2.0, )",
           "SkyCD.UI": "[1.0.0, )"
         }
       },

@@ -151,6 +151,12 @@
           "ModelContextProtocol": "[2.4.0]"
         }
       },
+      "SkyCD.Resource.Icons.LlmBackends": {
+        "type": "Direct",
+        "requested": "[0.2.0, )",
+        "resolved": "0.2.0",
+        "contentHash": "CLqyDfKVZiRrXk7jVYrkbllqj1CWE/+G6MiX1VgN7yeEegQX7ZkBNhq/2RFq8r01khjhIB6UyK6d9I5OXmJidQ=="
+      },
       "Ace4896.DBus.Services.Secrets": {
         "type": "Transitive",
         "resolved": "1.6.0",

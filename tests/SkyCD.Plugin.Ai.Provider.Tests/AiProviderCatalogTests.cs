@@ -39,7 +39,7 @@ public sealed class AiProviderCatalogTests
     public void ServerCommand_IsAllowlistedPerProvider()
     {
         Assert.Equal(("ollama", "serve"), AiProviderCatalog.ServerCommand("ollama"));
-        Assert.Equal(("lms", "server start"), AiProviderCatalog.ServerCommand("lmstudio"));
+        Assert.Null(AiProviderCatalog.ServerCommand("lmstudio"));
         Assert.Equal(("coli", "serve"), AiProviderCatalog.ServerCommand("colibri"));
         Assert.Null(AiProviderCatalog.ServerCommand("llamacpp"));
         Assert.Null(AiProviderCatalog.ServerCommand("custom"));
@@ -57,7 +57,7 @@ public sealed class AiProviderCatalogTests
         Assert.Contains(AiProviderCatalog.Providers, provider => provider.Id == "colibri");
         Assert.Contains(AiProviderCatalog.Providers, provider => provider.Id == "llamacpp");
         Assert.Contains(AiProviderCatalog.Providers, provider => provider.Id == "ollama");
-        Assert.Contains(AiProviderCatalog.Providers, provider => provider.Id == "lmstudio");
+        Assert.DoesNotContain(AiProviderCatalog.Providers, provider => provider.Id == "lmstudio");
         Assert.DoesNotContain(AiProviderCatalog.Providers, provider => provider.Id == "openai");
     }
 
@@ -72,23 +72,17 @@ public sealed class AiProviderCatalogTests
     [Fact]
     public void EveryPreset_ProvidesOfficialArtworkOrUsesItsMonogram()
     {
-        var assembly = typeof(AiProviderCatalog).Assembly;
         Assert.All(AiProviderCatalog.Providers, provider =>
         {
             Assert.InRange(provider.Monogram.Length, 1, 3);
             Assert.Matches("^[A-Za-z]+$", provider.Monogram);
-            var resourceName = AiProviderCatalog.IconResourceName(provider.Id);
-            if (provider.Id is "custom" or "koboldcpp" or "localai")
+            if (provider.Id is "colibri" or "jan" or "ollama" or "llamacpp" or "vllm")
             {
-                Assert.Null(provider.IconKey);
-                Assert.Null(assembly.GetManifestResourceStream(resourceName));
+                Assert.Equal("llm-backend:" + provider.Id, provider.IconKey);
                 return;
             }
 
-            Assert.Equal(resourceName, provider.IconKey);
-            using var stream = assembly.GetManifestResourceStream(provider.IconKey!);
-            Assert.NotNull(stream);
-            Assert.True(stream!.Length > 32, provider.Id);
+            Assert.Null(provider.IconKey);
         });
         Assert.Equal("AI", AiProviderCatalog.Find("custom")!.Monogram);
     }

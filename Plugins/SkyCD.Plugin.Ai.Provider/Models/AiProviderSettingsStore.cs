@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Ai.Provider.Exceptions;
@@ -33,9 +34,28 @@ public sealed class AiProviderSettingsStore
 
         try
         {
-            return JsonSerializer.Deserialize<AiProviderSettings>(File.ReadAllText(ConfigurationPath),
-                       new JsonSerializerOptions { PropertyNameCaseInsensitive = true, MaxDepth = 16 })
-                   ?? throw new AiProviderException("configuration is invalid");
+            using var document = JsonDocument.Parse(File.ReadAllText(ConfigurationPath),
+                new JsonDocumentOptions { MaxDepth = 16 });
+            var root = document.RootElement;
+            var settings = root.Deserialize<AiProviderSettings>(
+                               new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
+                           ?? throw new AiProviderException("configuration is invalid");
+            if (!string.Equals(settings.ProviderId, "lmstudio", StringComparison.OrdinalIgnoreCase))
+            {
+                return settings;
+            }
+
+            // Preserve the old preset defaults for fields omitted from an existing file.
+            return settings with
+            {
+                ProviderId = "custom",
+                Port = root.EnumerateObject().Any(property =>
+                    string.Equals(property.Name, "port", StringComparison.OrdinalIgnoreCase)) ? settings.Port : 1234,
+                Model = root.EnumerateObject().Any(property =>
+                    string.Equals(property.Name, "model", StringComparison.OrdinalIgnoreCase))
+                    ? settings.Model
+                    : "google/gemma-4-e2b"
+            };
         }
         catch (JsonException)
         {

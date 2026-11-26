@@ -38,9 +38,9 @@ public sealed class AiProviderPickerIconTests
         try
         {
             var picker = window.FindControl<ComboBox>("AiProviderComboBox")!;
-            Assert.Contains(Texts(picker), text => text == "LM Studio");
+            Assert.Contains(Texts(picker), text => text == "Ollama");
             Assert.NotNull(Icon(picker));
-            Assert.DoesNotContain("LM", Texts(picker));
+            Assert.DoesNotContain("OL", Texts(picker));
 
             viewModel.SelectedAiProvider = viewModel.AiProviders.Single(provider => provider.Id == "custom");
             window.UpdateLayout();
@@ -73,7 +73,7 @@ public sealed class AiProviderPickerIconTests
             viewModel.AiProviders.Clear();
             viewModel.AiProviders.Add(new AiProviderChoice(
                 "missing", "Missing", "http", "127.0.0.1", 9, null, false,
-                IconKey: "SkyCD.Plugin.Ai.Provider.Assets.Providers.missing.png", Monogram: "ZZ"));
+                IconKey: "llm-backend:missing", Monogram: "ZZ"));
             viewModel.SelectedAiProvider = viewModel.AiProviders[0];
             picker.IsDropDownOpen = false;
             window.UpdateLayout();
@@ -100,7 +100,7 @@ public sealed class AiProviderPickerIconTests
     {
         public IReadOnlyList<AiProviderChoice> Providers => AiProviderCatalog.Providers;
 
-        public AiProviderSettings GetSettings() => new() { ProviderId = "lmstudio" };
+        public AiProviderSettings GetSettings() => new() { ProviderId = "ollama" };
 
         public void SaveSettings(AiProviderSettings settings)
         {

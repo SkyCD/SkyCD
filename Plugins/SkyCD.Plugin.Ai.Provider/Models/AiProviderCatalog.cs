@@ -10,15 +10,8 @@ public static class AiProviderCatalog
 {
     public const string EndpointPath = "/v1";
 
-    /// <summary>Manifest name of <c>Assets/Providers/{id}.png</c>.</summary>
-    public static string IconResourceName(string providerId) =>
-        "SkyCD.Plugin.Ai.Provider.Assets.Providers." + providerId + ".png";
-
     public static IReadOnlyList<AiProviderChoice> Providers { get; } =
     [
-        Preset("lmstudio", "LM Studio", 1234, "google/gemma-4-e2b", true,
-            ["google/gemma-4-e2b", "meta-llama-3.1-8b-instruct", "qwen2.5-7b-instruct"],
-            "LM", "https://lmstudio.ai/docs/developer/core/authentication"),
         Preset("ollama", "Ollama", 11434, "llama3.2", true,
             ["llama3.2", "llama3.1", "qwen3", "gemma3", "mistral"], "OL"),
         Preset("colibri", "Colibri", 8000, "glm-5.2", true,
@@ -55,12 +48,11 @@ public static class AiProviderCatalog
         IReadOnlyList<string>? suggestedModels, string monogram, string? apiKeyHelpUrl = null,
         bool hasArtwork = true) =>
         new(id, name, "http", "127.0.0.1", port, defaultModel, canStartServer, suggestedModels, apiKeyHelpUrl,
-            hasArtwork ? IconResourceName(id) : null, monogram);
+            hasArtwork ? "llm-backend:" + id : null, monogram);
 
     /// <summary>Fixed, allowlisted commands used by the Start server action.</summary>
     public static (string Command, string Arguments)? ServerCommand(string providerId) => providerId switch
     {
-        "lmstudio" => ("lms", "server start"),
         "ollama" => ("ollama", "serve"),
         "colibri" => ("coli", "serve"),
         _ => null
