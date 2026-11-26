@@ -225,8 +225,12 @@ public sealed class MediaExtensionManager
         await slots.WaitAsync(token);
         try
         {
-            // Task.Run also guards synchronous plugin entry points. A timed-out worker retains its slot
-            // and stream until it exits, preventing uncooperative plugins from bypassing concurrency limits.
+            // Task.Run also guards synchronous plugin entry points. The work is queued without the
+            // operation token so that, once a slot is taken, the worker is guaranteed to start; passing
+            // the token would let a timeout that fires before the pool schedules the delegate cancel it
+            // and silently skip the plugin. A cooperating plugin still observes the cancelled token and
+            // stops, while an uncooperative one retains its slot and stream until it exits, preventing it
+            // from bypassing the concurrency limit.
             return await Task.Run(async () =>
             {
                 var descriptor = ResolveDescriptor(provider.Capability);
@@ -270,7 +274,7 @@ public sealed class MediaExtensionManager
                     new MediaProviderResult(provider.PluginId, provider.PluginVersion,
                         provider.Capability.GetType().FullName!,
                         descriptor.Schema with { Fields = descriptor.Schema.Fields.ToArray() }, extraction, artifacts, false, false));
-            }, token);
+            });
         }
         finally { slots.Release(); }
     }
