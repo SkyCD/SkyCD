@@ -10,7 +10,7 @@ using SkyCD.Plugin.FileFormat.AbeMeda.Text.Exceptions;
 using SkyCD.Plugin.FileFormat.Csv.Parsing;
 using SkyCD.Plugin.FileFormat.AbeMeda.Text.Import;
 using SkyCD.Plugin.FileFormat.AbeMeda.Text.Models;
-using SkyCD.Plugin.FileFormat.AbeMeda.Text.Parsing;
+using SkyCD.Plugin.EncodingProfiles;
 
 namespace SkyCD.Plugin.FileFormat.AbeMeda.Text;
 
@@ -55,13 +55,13 @@ public sealed class NeoFinderTextPlugin : IFileFormatPluginCapability, IContentA
         try
         {
             var data = ReadAllBytes(stream);
-            var profile = NeoFinderTextEncodingDetector.Detect(data);
-            if (profile.Kind == NeoFinderTextEncodingKind.Unknown)
+            var encoding = CharsetEncodingDetector.Detect(data);
+            if (encoding is null)
             {
                 return false;
             }
 
-            var text = profile.Decode(data);
+            var text = CharsetEncodingDetector.Decode(encoding, data);
             var headerLine = ReadFirstNonEmptyLine(text);
             if (headerLine is null)
             {
@@ -117,15 +117,15 @@ public sealed class NeoFinderTextPlugin : IFileFormatPluginCapability, IContentA
         try
         {
             var data = await ReadAllBytesAsync(request.Source, cancellationToken);
-            var profile = NeoFinderTextEncodingDetector.Detect(data);
-            if (profile.Kind == NeoFinderTextEncodingKind.Unknown)
+            var encoding = CharsetEncodingDetector.Detect(data);
+            if (encoding is null)
             {
                 throw new NeoFinderTextUnsupportedEncodingException();
             }
 
             request.Progress?.Report(10);
 
-            var text = profile.Decode(data);
+            var text = CharsetEncodingDetector.Decode(encoding, data);
 
             using var reader = new StringReader(text);
             var parseResult = await CsvParser.ReadCsvAsync(reader, null, cancellationToken);
@@ -139,7 +139,7 @@ public sealed class NeoFinderTextPlugin : IFileFormatPluginCapability, IContentA
             var fileStem = Path.GetFileNameWithoutExtension(
                 request.FileName ?? request.SourcePath ?? "NeoFinder");
             var document = NeoFinderTextHierarchyBuilder.Build(
-                parseResult.Rows, parseResult.Delimiter, profile, fileStem, cancellationToken);
+                parseResult.Rows, parseResult.Delimiter, encoding.EncodingName, fileStem, cancellationToken);
             request.Progress?.Report(100);
 
             return new FileFormatReadResult

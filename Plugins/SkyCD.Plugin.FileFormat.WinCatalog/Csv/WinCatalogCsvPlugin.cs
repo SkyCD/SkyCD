@@ -10,8 +10,8 @@ using SkyCD.Plugin.FileFormat.WinCatalog.Csv.Exceptions;
 using SkyCD.Plugin.FileFormat.Csv.Parsing;
 using SkyCD.Plugin.FileFormat.WinCatalog.Csv.Import;
 using SkyCD.Plugin.FileFormat.WinCatalog.Csv.Models;
-using SkyCD.Plugin.FileFormat.WinCatalog.Csv.Parsing;
 using SkyCD.Plugin.FileFormat.WinCatalog.Models;
+using SkyCD.Plugin.EncodingProfiles;
 
 namespace SkyCD.Plugin.FileFormat.WinCatalog.Csv;
 
@@ -50,13 +50,13 @@ public sealed class WinCatalogCsvPlugin : IFileFormatPluginCapability, IContentA
         try
         {
             var data = ReadAllBytes(stream);
-            var profile = WinCatalogCsvEncodingDetector.Detect(data);
-            if (profile.Kind == WinCatalogCsvEncodingKind.Unknown)
+            var encoding = CharsetEncodingDetector.Detect(data);
+            if (encoding is null)
             {
                 return false;
             }
 
-            var text = profile.Decode(data);
+            var text = CharsetEncodingDetector.Decode(encoding, data);
             var headerLine = ReadFirstNonEmptyLine(text);
             if (headerLine is null)
             {
@@ -142,15 +142,15 @@ public sealed class WinCatalogCsvPlugin : IFileFormatPluginCapability, IContentA
         try
         {
             var data = await ReadAllBytesAsync(request.Source, cancellationToken);
-            var profile = WinCatalogCsvEncodingDetector.Detect(data);
-            if (profile.Kind == WinCatalogCsvEncodingKind.Unknown)
+            var encoding = CharsetEncodingDetector.Detect(data);
+            if (encoding is null)
             {
                 throw new WinCatalogUnsupportedEncodingException();
             }
 
             request.Progress?.Report(10);
 
-            var text = profile.Decode(data);
+            var text = CharsetEncodingDetector.Decode(encoding, data);
 
             using var reader = new StringReader(text);
             var parseResult = await CsvParser.ReadCsvAsync(reader, null, cancellationToken);
@@ -161,7 +161,8 @@ public sealed class WinCatalogCsvPlugin : IFileFormatPluginCapability, IContentA
                 throw new WinCatalogCorruptHeaderException();
             }
 
-            var document = WinCatalogHierarchyBuilder.Build(parseResult.Rows, parseResult.Delimiter, profile);
+            var document = WinCatalogHierarchyBuilder.Build(
+                parseResult.Rows, parseResult.Delimiter, encoding.EncodingName);
             request.Progress?.Report(100);
 
             return new FileFormatReadResult

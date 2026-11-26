@@ -1,12 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <ItemGroup>
-        <Compile Include="..\Shared\EncodingProfiles\LegacyEncoding.cs" Link="Shared\EncodingProfiles\LegacyEncoding.cs" />
+        <Compile Include="..\Shared\EncodingProfiles\CharsetEncodingDetector.cs" Link="Shared\EncodingProfiles\CharsetEncodingDetector.cs" />
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\..\src\SkyCD.SDK\SkyCD.SDK.csproj"/>
         <ProjectReference Include="..\SkyCD.Plugin.FileFormat.Csv\SkyCD.Plugin.FileFormat.Csv.csproj"/>
         <PackageReference Include="Microsoft.Data.Sqlite" Version="11.0.0"/>
         <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="2.1.14"/>
+        <PackageReference Include="UTF.Unknown" Version="2.8.0"/>
     </ItemGroup>
     <ItemGroup>
         <Compile Include="..\Shared\Storage\TemporaryDatabase.cs" Link="Shared\Storage\TemporaryDatabase.cs"/>
