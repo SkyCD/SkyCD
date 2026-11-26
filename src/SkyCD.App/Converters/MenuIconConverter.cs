@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using Avalonia.Data.Converters;
 using IconPacks.Avalonia;
+using SkyCD.App.Icons;
 using SkyCD.Presentation.ViewModels;
 
 namespace SkyCD.App.Converters;
@@ -15,13 +16,13 @@ public sealed class MenuIconConverter : IValueConverter
             return value;
         }
 
-        return StatusIconCatalog.TryResolveKind(statusIcon.IconGlyph, out var kind) && kind is Enum iconKind
+        return StatusIconResolver.TryResolveKind(statusIcon.IconGlyph, out var iconKind) && iconKind is not null
             ? new PackIconControl
             {
                 Kind = iconKind,
                 Width = 14,
                 Height = 14,
-                Foreground = StatusIconCatalog.ResolveBrush(statusIcon.IconColor)
+                Foreground = StatusIconResolver.ResolveBrush(statusIcon.IconColor)
             }
             : null;
     }
