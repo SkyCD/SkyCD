@@ -30,13 +30,19 @@ public sealed class PluginLoadContextTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(root))
+        // Windows keeps a loaded assembly file locked until the collectible context finishes
+        // unloading. Linux and macOS delete the file immediately.
+        for (var attempt = 0; attempt < 8 && Directory.Exists(root); attempt++)
         {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
             try
             {
                 Directory.Delete(root, recursive: true);
+                return;
             }
-            catch (IOException)
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
             {
             }
         }
