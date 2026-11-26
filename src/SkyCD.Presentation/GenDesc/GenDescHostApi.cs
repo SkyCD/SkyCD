@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Couchbase.Lite;
 using SkyCD.Documents;
 using SkyCD.Documents.Enum;
+using SkyCD.Formatting;
 using SkyCD.Presentation.Catalog;
 using SkyCD.Presentation.MediaCache;
 using SkyCD.SDK.Capabilities.GenDesc;
@@ -167,19 +168,6 @@ public sealed class GenDescHostApi(OpenCatalogState catalogState) : IGenDescHost
         _ => payload.ToString()
     };
 
-    private static string FormatSize(long bytes)
-    {
-        string[] units = ["B", "KB", "MB", "GB", "TB"];
-        var value = (double)Math.Max(0, bytes);
-        var unit = 0;
-        while (value >= 1024 && unit < units.Length - 1)
-        {
-            value /= 1024;
-            unit++;
-        }
-
-        return unit == 0
-            ? value.ToString("0", CultureInfo.InvariantCulture) + " " + units[unit]
-            : value.ToString("0.#", CultureInfo.InvariantCulture) + " " + units[unit];
-    }
+    private static string FormatSize(long bytes) =>
+        SizeFormatting.FormatBytes(Math.Max(0, bytes), "0.#", formatProvider: CultureInfo.InvariantCulture);
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using SkyCD.Plugin.Feature.GenDesc.Exceptions;
 using SkyCD.Plugin.Feature.GenDesc.Parsing;
 using SkyCD.Plugin.OnlineMetadata.Models;
@@ -91,6 +92,26 @@ public class TemplateEngineTests
     public void ConsecutiveBlankLinesCollapseAndEdgesAreTrimmed()
     {
         Assert.Equal("One\n\nTwo", TemplateEngine.Render("\nOne\n\n\nTwo\n\n", Facts()));
+    }
+
+    [Fact]
+    public void FilesizeHumanizesThroughTheSharedFormatterAndStaysCultureInvariant()
+    {
+        Assert.Equal("512 B", TemplateEngine.Render("{{ filesize(512) }}", Facts()));
+        Assert.Equal("2 KB", TemplateEngine.Render("{{ filesize(2048) }}", Facts()));
+        Assert.Equal("", TemplateEngine.Render("{{ filesize(-1) }}", Facts()));
+
+        var original = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("de-DE");
+
+            Assert.Equal("1.5 KB", TemplateEngine.Render("{{ filesize(1536) }}", Facts()));
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = original;
+        }
     }
 
     [Fact]

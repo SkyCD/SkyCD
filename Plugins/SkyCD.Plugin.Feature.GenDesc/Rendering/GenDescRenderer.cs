@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Threading.Tasks;
+using SkyCD.Formatting;
 using SkyCD.Plugin.OnlineMetadata.Models;
 using SkyCD.Plugin.Feature.GenDesc.Exceptions;
 using SkyCD.Plugin.Feature.GenDesc.Models;
@@ -91,17 +92,6 @@ public static class GenDescRenderer
         return new GenDescEntryContext(file.Name, extension, facts["MimeType"], facts);
     }
 
-    private static string FormatSize(long bytes)
-    {
-        string[] units = ["B", "KB", "MB", "GB", "TB"];
-        var value = (double)Math.Max(0, bytes);
-        var unit = 0;
-        while (value >= 1024 && unit < units.Length - 1)
-        {
-            value /= 1024;
-            unit++;
-        }
-
-        return value.ToString(unit == 0 ? "0" : "0.#", CultureInfo.InvariantCulture) + " " + units[unit];
-    }
+    private static string FormatSize(long bytes) =>
+        SizeFormatting.FormatBytes(Math.Max(0, bytes), "0.#", formatProvider: CultureInfo.InvariantCulture);
 }
