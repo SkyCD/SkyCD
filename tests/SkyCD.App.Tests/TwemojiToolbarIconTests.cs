@@ -32,8 +32,9 @@ public sealed class TwemojiToolbarIconTests : IDisposable
 
     /// <summary>
     /// Issue #1140: only commands with a fitting emoji keep colored artwork; the view modes, the list,
-    /// the status bar, the options page and the add command fall back to their project-owned monochrome
-    /// glyphs, which read without a label on both themes.
+    /// the status bar and the add command fall back to their project-owned monochrome glyphs, which
+    /// read without a label on both themes. Issue #1187 moved the options page into the colored set
+    /// with the gear, leaving properties the ID card.
     /// </summary>
     [Fact]
     public void ColoredArtwork_CoversExactlyTheCommandsWithAFittingEmoji()
@@ -54,6 +55,7 @@ public sealed class TwemojiToolbarIconTests : IDisposable
             ToolbarIconKeys.Refresh,
             ToolbarIconKeys.Find,
             ToolbarIconKeys.AdvancedFind,
+            ToolbarIconKeys.Options,
             ToolbarIconKeys.Tags,
             ToolbarIconKeys.Collections,
             ToolbarIconKeys.SaveSearchAsCollection,
@@ -68,7 +70,6 @@ public sealed class TwemojiToolbarIconTests : IDisposable
                      ToolbarIconKeys.ViewLargeIcons,
                      ToolbarIconKeys.ViewList,
                      ToolbarIconKeys.StatusBar,
-                     ToolbarIconKeys.Options,
                  })
         {
             Assert.DoesNotContain(key, TwemojiToolbarIcons.Keys);
@@ -87,15 +88,17 @@ public sealed class TwemojiToolbarIconTests : IDisposable
 
     /// <summary>
     /// Issue #1140: the hook arrowheads were verified against the shipped SVG geometry —
-    /// RightArrowCurvingLeft draws ↩ (undo) and LeftArrowCurvingRight draws ↪ (redo) — and the
-    /// properties page gets the gear instead of the badge.
+    /// RightArrowCurvingLeft draws ↩ (undo) and LeftArrowCurvingRight draws ↪ (redo).
+    /// Issue #1187: the options page gets the gear while properties paints the ID card, so the
+    /// two commands no longer share one metaphor.
     /// </summary>
     [Fact]
     public void CorrectedCommands_PaintSemanticallyFittingArtwork()
     {
         Assert.Equal("right-arrow-curving-left", TwemojiToolbarIcons.IconNameFor(ToolbarIconKeys.Undo));
         Assert.Equal("left-arrow-curving-right", TwemojiToolbarIcons.IconNameFor(ToolbarIconKeys.Redo));
-        Assert.Equal("gear", TwemojiToolbarIcons.IconNameFor(ToolbarIconKeys.Properties));
+        Assert.Equal("gear", TwemojiToolbarIcons.IconNameFor(ToolbarIconKeys.Options));
+        Assert.Equal("identification-card", TwemojiToolbarIcons.IconNameFor(ToolbarIconKeys.Properties));
     }
 
     /// <summary>
