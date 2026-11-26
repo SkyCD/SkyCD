@@ -204,6 +204,65 @@ public class AiProviderSettingsViewModelTests
         Assert.Equal("toolbar", vm.SelectedSettingCategory?.Id);
     }
 
+    [Fact]
+    public void FreshViewModel_PrefillsOutputLanguageFromUiLanguage()
+    {
+        var vm = new OptionsDialogViewModel(["English (US)", "Lietuvių"]);
+        vm.LoadAiProviderSettings(new FakeCapability
+        {
+            Saved = new AiProviderSettings { ProviderId = "ollama", Language = string.Empty },
+        });
+
+        Assert.False(string.IsNullOrWhiteSpace(vm.AiProviderLanguage));
+        Assert.Contains(vm.AiProviderLanguage, vm.AiProviderLanguages);
+    }
+
+    [Fact]
+    public void LoadingPlainEnglish_SelectsMatchingEntryWithoutAppend()
+    {
+        var vm = new OptionsDialogViewModel(["English (US)", "Lietuvių"]);
+        vm.LoadAiProviderSettings(new FakeCapability
+        {
+            Saved = new AiProviderSettings { ProviderId = "ollama", Language = "English" },
+        });
+
+        Assert.Equal("English (US)", vm.AiProviderLanguage);
+        Assert.Equal(["English (US)", "Lietuvių"], vm.AiProviderLanguages);
+    }
+
+    [Fact]
+    public void LoadingUnknownLanguage_AppendsAndSelectsIt()
+    {
+        var vm = new OptionsDialogViewModel(["English (US)", "Lietuvių"]);
+        vm.LoadAiProviderSettings(new FakeCapability
+        {
+            Saved = new AiProviderSettings { ProviderId = "ollama", Language = "Klingon" },
+        });
+
+        Assert.Equal("Klingon", vm.AiProviderLanguage);
+        Assert.Equal(["English (US)", "Lietuvių", "Klingon"], vm.AiProviderLanguages);
+    }
+
+    [Fact]
+    public void ReloadingSavedMappedLanguage_PreservesSelection()
+    {
+        var vm = new OptionsDialogViewModel(["English (US)", "Lietuvių"]);
+        vm.LoadAiProviderSettings(new FakeCapability
+        {
+            Saved = new AiProviderSettings { ProviderId = "ollama", Language = "English" },
+        });
+
+        Assert.Equal("English (US)", vm.AiProviderLanguage);
+
+        vm.LoadAiProviderSettings(new FakeCapability
+        {
+            Saved = new AiProviderSettings { ProviderId = "ollama", Language = vm.AiProviderLanguage },
+        });
+
+        Assert.Equal("English (US)", vm.AiProviderLanguage);
+        Assert.Equal(["English (US)", "Lietuvių"], vm.AiProviderLanguages);
+    }
+
     private sealed class FakeCapability : IAiProviderSettingsCapability
     {
         public IReadOnlyList<AiProviderChoice> Providers { get; } = [LmStudio, Ollama];
