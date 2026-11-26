@@ -46,7 +46,7 @@
         <PackageReference Include="Couchbase.Lite" Version="4.1.3" />
         <PackageReference Include="IconifyBundle.Twemoji" Version="0.3.1" />
         <PackageReference Include="IconPacks.Avalonia" Version="2.0.0" />
-        <PackageReference Include="SkyCD.Resource.Icons.LlmBackends" Version="0.1.0" />
+        <PackageReference Include="SkyCD.Resource.Icons.LlmBackends" Version="0.2.0" />
         <PackageReference Include="Microsoft.Extensions.Localization.Abstractions" Version="11.0.0" />
         <PackageReference Include="ModelContextProtocol.AspNetCore" Version="2.4.0" />
     </ItemGroup>

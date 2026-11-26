@@ -86,7 +86,7 @@ public sealed class AiProviderCatalogTests
             }
 
             Assert.Equal(resourceName, provider.IconKey);
-            if (provider.Id is "colibri" or "jan" or "ollama")
+            if (provider.Id is "colibri" or "jan" or "ollama" or "llamacpp" or "vllm")
             {
                 Assert.Equal("llm-backend:" + provider.Id, provider.IconKey);
                 Assert.Null(assembly.GetManifestResourceStream(

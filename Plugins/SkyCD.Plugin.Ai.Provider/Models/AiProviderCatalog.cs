@@ -13,7 +13,7 @@ public static class AiProviderCatalog
     /// <summary>Icon key for the preset picker.</summary>
     public static string IconResourceName(string providerId) => providerId switch
     {
-        "colibri" or "jan" or "ollama" => "llm-backend:" + providerId,
+        "colibri" or "jan" or "ollama" or "llamacpp" or "vllm" => "llm-backend:" + providerId,
         _ => "SkyCD.Plugin.Ai.Provider.Assets.Providers." + providerId + ".png"
     };
 

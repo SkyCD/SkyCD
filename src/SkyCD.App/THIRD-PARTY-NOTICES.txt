@@ -36,11 +36,10 @@ Source: https://github.com/janhq/jan/blob/main/src-tauri/icons/icon.png
 License: Apache License 2.0
 https://www.apache.org/licenses/LICENSE-2.0
 
-llama.cpp brand icon (resized)
-Source: https://github.com/ggml-org/llama-brand
-License: Creative Commons Attribution-NonCommercial 4.0 International with
-additional permission for redistribution to identify llama.cpp.
-https://github.com/ggml-org/llama-brand/blob/master/BRAND-USAGE.md
+llama.cpp earlier server favicon (resized)
+Copyright (c) 2023-2024 The ggml authors
+Source: https://github.com/ggml-org/llama.cpp/blob/296901983700f3c37449bcb555d85d27150a679d/examples/server/public_legacy/favicon.ico
+License: MIT
 
 LM Studio color app icon (resized)
 Source and brand-use terms: https://lmstudio.ai/brand
@@ -48,8 +47,10 @@ Source and brand-use terms: https://lmstudio.ai/brand
 Ollama documentation favicon
 Source: https://github.com/ollama/ollama/blob/main/docs/images/favicon.png
 
-vLLM compact logo (resized)
-Source and usage guidelines: https://github.com/vllm-project/media-kit
+vLLM documentation logo (resized)
+Source: https://github.com/vllm-project/vllm/blob/f9d1824a770f01e681fef8adb4b4bbe506e080aa/docs/assets/logos/vllm-logo-only-light.png
+License: Apache License 2.0
+Usage guidelines: https://github.com/vllm-project/media-kit
 
 Twemoji artwork
 Copyright Twitter, Inc. and other contributors.
@@ -243,12 +244,35 @@ SOFTWARE.
 
 SkyCD.Resource.Icons.LlmBackends and bundled artwork
 https://github.com/SkyCD/SkyCD.Resource.Icons.LlmBackends
-Colibrì, Jan, and Ollama artwork is resized proportionally and converted to ICO.
+Colibrì, Jan, llama.cpp, Ollama, and vLLM artwork is resized proportionally and encoded as multi-frame ICO.
 
 SkyCD.Resource.Icons.LlmBackends library license
 MIT License
 
 Copyright (c) 2026 SkyCD contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+llama.cpp license
+MIT License
+
+Copyright (c) 2023-2024 The ggml authors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -331,7 +355,7 @@ limitations under the License.
 Third-party components bundled with this software and their licenses
 are listed in THIRD_PARTY_NOTICES.md.
 
-Colibrì and Jan Apache License 2.0
+Colibrì, Jan, and vLLM Apache License 2.0
                                  Apache License
                            Version 2.0, January 2004
                         http://www.apache.org/licenses/
