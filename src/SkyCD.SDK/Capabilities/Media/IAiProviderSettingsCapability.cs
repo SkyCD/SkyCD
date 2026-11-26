@@ -14,8 +14,13 @@ namespace SkyCD.SDK.Capabilities.Media;
 /// <param name="DefaultModel">Model suggested when the provider is first selected.</param>
 /// <param name="CanStartServer">Whether the plugin can start a local provider server.</param>
 /// <param name="SuggestedModels">Models to offer when this provider is selected.</param>
+/// <param name="ApiKeyHelpUrl">
+/// Page that explains authentication and how to obtain an API key for this provider;
+/// <c>null</c> when the provider has no key concept.
+/// </param>
 public sealed record AiProviderChoice(string Id, string Name, string Protocol, string Address, int Port,
-    string? DefaultModel, bool CanStartServer, IReadOnlyList<string>? SuggestedModels = null);
+    string? DefaultModel, bool CanStartServer, IReadOnlyList<string>? SuggestedModels = null,
+    string? ApiKeyHelpUrl = null);
 
 /// <summary>Persisted provider connection and generation settings.</summary>
 public sealed record AiProviderSettings

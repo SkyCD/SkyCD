@@ -56,6 +56,9 @@
         <Style Selector="Button.pluginLink:pointerover TextBlock">
             <Setter Property="TextDecorations" Value="Underline" />
         </Style>
+        <Style Selector="Button.pluginLink.alignRight">
+            <Setter Property="HorizontalAlignment" Value="Right" />
+        </Style>
         <Style Selector="Border.acpAgentCard.selected Button.acpUseAgent">
             <Setter Property="IsEnabled" Value="False" />
             <Setter Property="Theme">
@@ -2188,9 +2191,20 @@
                                     <Grid ColumnDefinitions="180,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
                                         <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiProviderApiKey}}"
                                                    VerticalAlignment="Center" />
-                                        <TextBox Grid.Column="1"
-                                                 PasswordChar="*"
-                                                 Text="{Binding AiProviderApiKey, UpdateSourceTrigger=PropertyChanged}" />
+                                        <StackPanel Grid.Column="1" Spacing="{DynamicResource SkySpaceXxs}">
+                                            <TextBox PasswordChar="*"
+                                                     Text="{Binding AiProviderApiKey, UpdateSourceTrigger=PropertyChanged}" />
+                                            <Button Classes="pluginLink alignRight"
+                                                    IsVisible="{Binding ShowAiProviderApiKeyHelp}"
+                                                    Command="{Binding OpenAiProviderApiKeyHelpCommand}"
+                                                    ToolTip.Tip="{Binding AiProviderApiKeyHelpUrl}"
+                                                    AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.AiProviderApiKeyHelp}}">
+                                                <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceXxs}">
+                                                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiProviderApiKeyHelp}}" />
+                                                    <TextBlock Text="↗" />
+                                                </StackPanel>
+                                            </Button>
+                                        </StackPanel>
                                     </Grid>
                                     <Grid ColumnDefinitions="180,*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
                                         <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiProviderModel}}"

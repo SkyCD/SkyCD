@@ -166,6 +166,7 @@ public static class UiKeys
     public const string AiProviderAddress = "core.ui.AiProviderAddress";
     public const string AiProviderEndpoint = "core.ui.AiProviderEndpoint";
     public const string AiProviderApiKey = "core.ui.AiProviderApiKey";
+    public const string AiProviderApiKeyHelp = "core.ui.AiProviderApiKeyHelp";
     public const string AiProviderModel = "core.ui.AiProviderModel";
     public const string AiProviderModels = "core.ui.AiProviderModels";
     public const string AiProviderOutputLanguage = "core.ui.AiProviderOutputLanguage";
