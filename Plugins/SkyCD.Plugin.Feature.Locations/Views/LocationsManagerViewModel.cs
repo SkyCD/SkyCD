@@ -78,6 +78,12 @@ public sealed partial class LocationsManagerViewModel : ObservableObject
             return;
         }
 
+        if (!selected.IsStored)
+        {
+            CancelLocationRename(selected);
+            return;
+        }
+
         var usageCount = selected.UsageCount;
         try
         {
@@ -146,16 +152,20 @@ public sealed partial class LocationsManagerViewModel : ObservableObject
 
         try
         {
+            var selectionId = SelectedLocation?.Id;
             if (row.IsStored)
             {
                 api.RenameLocation(row.Id, name);
-                Reload(row.Id);
+                Reload(selectionId ?? row.Id);
                 StatusText = LocalizationService.Current.Format(LocationsKeys.LocationRenamed, name);
             }
             else
             {
                 var created = api.CreateLocation(name);
-                Reload(created.Id);
+                // Keep the row the user moved to, unless the draft itself was still selected.
+                Reload(string.Equals(selectionId, row.Id, StringComparison.Ordinal) || selectionId is null
+                    ? created.Id
+                    : selectionId);
                 StatusText = LocalizationService.Current.Format(LocationsKeys.LocationCreated, created.Name);
             }
 

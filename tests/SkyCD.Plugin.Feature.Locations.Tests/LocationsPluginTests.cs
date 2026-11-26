@@ -262,6 +262,73 @@ public sealed class LocationsPluginTests
     }
 
     [Fact]
+    public void ManagerDiscardsUnstoredDraftWhenDeleted()
+    {
+        using var stack = new Stack();
+        var viewModel = new LocationsManagerViewModel(stack.Api);
+
+        viewModel.AddLocationCommand.Execute(null);
+        Assert.Single(viewModel.Locations);
+        Assert.True(viewModel.DeleteLocationCommand.CanExecute(null));
+
+        viewModel.DeleteLocationCommand.Execute(null);
+
+        Assert.Empty(viewModel.Locations);
+        Assert.Null(viewModel.SelectedLocation);
+        Assert.Empty(viewModel.ErrorText);
+        Assert.Empty(stack.Api.GetLocations());
+    }
+
+    [Fact]
+    public void CommittingInlineRenameKeepsTheNewlySelectedRow()
+    {
+        const string translationNamespace = "plugins.skycd.locations";
+        LocalizationService.Current.Register(translationNamespace, new LocationsPlugin());
+        try
+        {
+            using var stack = new Stack();
+            var garage = stack.Api.CreateLocation("Garage");
+            var attic = stack.Api.CreateLocation("Attic");
+            var viewModel = new LocationsManagerViewModel(stack.Api);
+
+            var garageRow = viewModel.Locations.Single(location => location.Id == garage.Id);
+            var atticRow = viewModel.Locations.Single(location => location.Id == attic.Id);
+
+            // The list commits an open editor when the selection moves to another row.
+            viewModel.SelectedLocation = garageRow;
+            viewModel.BeginLocationEdit(garageRow);
+            garageRow.EditName = "Garage 2";
+            viewModel.SelectedLocation = atticRow;
+
+            Assert.True(viewModel.CommitLocationRename(garageRow));
+
+            Assert.Equal(atticRow.Id, viewModel.SelectedLocation?.Id);
+            Assert.Equal("Garage 2",
+                stack.Api.GetLocations().Single(location => location.Id == garage.Id).Name);
+        }
+        finally
+        {
+            LocalizationService.Current.Unregister(translationNamespace);
+        }
+    }
+
+    [Fact]
+    public void MergeDestinationsExcludeTheSourceAndUnstoredRows()
+    {
+        using var stack = new Stack();
+        var garage = stack.Api.CreateLocation("Garage");
+        var attic = stack.Api.CreateLocation("Attic");
+        var viewModel = new LocationsManagerViewModel(stack.Api);
+        viewModel.AddLocationCommand.Execute(null);
+
+        var source = viewModel.Locations.Single(location => location.Id == garage.Id);
+        var destination = Assert.Single(viewModel.GetMergeDestinations(source));
+
+        Assert.Equal(attic.Id, destination.Id);
+        Assert.DoesNotContain(viewModel.GetMergeDestinations(source), location => !location.IsStored);
+    }
+
+    [Fact]
     public void PluginWithoutLocationApiKeepsContributionsInert()
     {
         var plugin = new LocationsPlugin();
