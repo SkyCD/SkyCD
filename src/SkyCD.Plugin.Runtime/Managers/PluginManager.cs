@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Loader;
 using Microsoft.Extensions.Logging;
 using SkyCD.Couchbase;
 using SkyCD.Couchbase.Repository;
 using SkyCD.Plugin.Runtime.Collections;
+using SkyCD.Plugin.Runtime.Loading;
 using SkyCD.SDK.Capabilities;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Runtime.Documents;
@@ -25,6 +27,7 @@ public sealed class PluginManager(
 {
     private readonly DiscoveredPluginCollection plugins = [];
     private IReadOnlyCollection<DiscoveredPlugin> availablePlugins = [];
+    private IReadOnlyCollection<PluginLoadContext> previousContexts = [];
 
     public IReadOnlyCollection<DiscoveredPlugin> Plugins => plugins;
 
@@ -148,6 +151,7 @@ public sealed class PluginManager(
         var discovered = new DiscoveredPluginCollection();
         var seenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var assemblies = assembliesListFactory.BuildFromPaths(directories);
+        RotateLoadContexts(assembliesListFactory.LoadedContexts);
 
         foreach (var assembly in assemblies)
         {
@@ -166,6 +170,32 @@ public sealed class PluginManager(
         }
 
         return discovered;
+    }
+
+    /// <summary>
+    /// Unloads superseded plugin contexts after a fresh discovery. Unload is best effort:
+    /// contexts stay alive until the host drops every instance they created, and installs,
+    /// updates and removals activate on the next host restart, which the installer enforces.
+    /// </summary>
+    private void RotateLoadContexts(IReadOnlyCollection<PluginLoadContext> current)
+    {
+        foreach (var previous in previousContexts)
+        {
+            if (!current.Contains(previous))
+            {
+                try
+                {
+                    previous.Unload();
+                }
+                catch (Exception exception)
+                {
+                    logger.LogWarning(exception,
+                        "A superseded plugin load context could not be unloaded; it stays alive until restart.");
+                }
+            }
+        }
+
+        previousContexts = current;
     }
 
     private void UpsertPluginDocuments(IReadOnlyCollection<PluginDocument> discovered)

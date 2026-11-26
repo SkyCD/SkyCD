@@ -37,8 +37,13 @@ public sealed class PluginFileFormatAvailabilityTests : IDisposable
         pluginManager.SavePluginEnabledStates(pluginManager.AvailablePlugins
             .Select(static plugin => (plugin.Id, IsEnabled: false))
             .ToArray());
-        pluginManager.Discover(pluginFolder, ServiceProvider.Resolve<HostVersionProvider>().Current);
-        Directory.Delete(pluginFolder, recursive: true);
+        // Discover an empty directory so the collectible context that mapped the copied plugin
+        // is unloaded. Windows otherwise denies deletion of that dll.
+        var empty = Path.Combine(Path.GetTempPath(), "SkyCD-file-format-empty-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(empty);
+        pluginManager.Discover(empty, ServiceProvider.Resolve<HostVersionProvider>().Current);
+        DeleteDirectory(pluginFolder);
+        DeleteDirectory(empty);
     }
 
     [Fact]
@@ -114,6 +119,25 @@ public sealed class PluginFileFormatAvailabilityTests : IDisposable
     private static MainMenuItemViewModel FileItem(MainWindowViewModel viewModel, string key)
     {
         return Assert.Single(viewModel.FileMenuItems, item => item.Key == key);
+    }
+
+    private static void DeleteDirectory(string path)
+    {
+        for (var attempt = 0; attempt < 8 && Directory.Exists(path); attempt++)
+        {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+            try
+            {
+                Directory.Delete(path, recursive: true);
+                return;
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                Thread.Sleep(50);
+            }
+        }
     }
 
     private static void CopyPluginAssembly(string targetDirectory)
