@@ -55,7 +55,7 @@ public class OptionsWindowLayoutTests
         Assert.Contains("AddCustomPropertyCommand", buttons[0].ToString(), StringComparison.Ordinal);
         Assert.Contains("RemoveCustomPropertyCommand", buttons[1].ToString(), StringComparison.Ordinal);
         Assert.Contains(section.Descendants(Avalonia + "Border"),
-            border => (string?)border.Attribute("Height") == "1" && (string?)border.Attribute("Background") == "#2E2E2E");
+            border => (string?)border.Attribute("Height") == "1" && (string?)border.Attribute("Background") == "{DynamicResource ThemeBorderLowBrush}");
     }
 
     [Fact]
@@ -63,7 +63,7 @@ public class OptionsWindowLayoutTests
     {
         var section = GetCustomPropertiesSection();
         var table = Assert.Single(section.Descendants(Avalonia + "Border"),
-            border => (string?)border.Attribute("BorderThickness") == "1" && (string?)border.Attribute("BorderBrush") == "#2E2E2E");
+            border => (string?)border.Attribute("BorderThickness") == "1" && (string?)border.Attribute("BorderBrush") == "{DynamicResource ThemeBorderLowBrush}");
         var headers = table.Descendants(Avalonia + "TextBlock")
             .Where(textBlock => (string?)textBlock.Attribute("FontWeight") == "SemiBold")
             .ToArray();

@@ -81,7 +81,11 @@
                        Margin="{DynamicResource SkyGapBottomXs}" />
         </Grid>
 
-        <Grid Grid.Row="2" ColumnDefinitions="260,*" ColumnSpacing="{DynamicResource SkySpaceMd}">
+        <Grid Grid.Row="2" ColumnSpacing="{DynamicResource SkySpaceMd}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="{StaticResource SkyGenDescTemplateLabelWidth}" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
             <DockPanel Grid.Column="0">
                 <TextBlock DockPanel.Dock="Top"
                            Text="{i18n:Translate {x:Static l:GenDescKeys.TemplateList}}"

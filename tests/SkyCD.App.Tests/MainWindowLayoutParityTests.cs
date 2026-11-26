@@ -16,7 +16,7 @@ public class MainWindowLayoutParityTests
         Assert.Contains("MinWidth=\"320\"", xaml, StringComparison.Ordinal);
         Assert.Contains("MinHeight=\"200\"", xaml, StringComparison.Ordinal);
 
-        Assert.Contains("<ColumnDefinition Width=\"121\" MinWidth=\"50\" />", xaml, StringComparison.Ordinal);
+        Assert.Contains("<ColumnDefinition Width=\"{StaticResource SkyMainSidebarWidth}\" MinWidth=\"50\" />", xaml, StringComparison.Ordinal);
         Assert.Contains("<ColumnDefinition Width=\"3\" />", xaml, StringComparison.Ordinal);
 
         Assert.Contains("<GridSplitter Grid.Column=\"1\"", xaml, StringComparison.Ordinal);

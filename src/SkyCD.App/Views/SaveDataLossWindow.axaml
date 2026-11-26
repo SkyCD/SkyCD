@@ -19,7 +19,7 @@
                 Margin="{DynamicResource SkyGapYMd}"
                 BorderBrush="{DynamicResource ThemeBorderLowBrush}"
                 BorderThickness="1"
-                CornerRadius="4"
+                CornerRadius="{DynamicResource SkyCornerRadius}"
                 Padding="{DynamicResource SkyInsetSm}">
             <ScrollViewer>
                 <ItemsControl x:Name="LossList">

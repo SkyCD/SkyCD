@@ -30,7 +30,12 @@
             </Grid>
         </StackPanel>
 
-        <Grid ColumnDefinitions="200,10,*">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="{StaticResource SkyContactsLabelWidth}" />
+                <ColumnDefinition Width="10" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
             <DockPanel Grid.Column="0">
                 <TextBlock DockPanel.Dock="Top" Text="{i18n:Translate {x:Static loans:LoansKeys.Contacts}}"
                            FontWeight="Bold" Margin="{DynamicResource SkyGapBottomXs}" />
