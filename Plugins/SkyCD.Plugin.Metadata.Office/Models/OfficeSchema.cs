@@ -11,19 +11,38 @@ namespace SkyCD.Plugin.Metadata.Office.Models;
 public static class OfficeSchema
 {
     public const string MetadataSchemaId = "skycd.office.metadata";
-    public const int MetadataSchemaVersion = 1;
+
+    /// <summary>
+    /// Version 2 widens the family from Word, Excel and PowerPoint to Visio, OneNote, Access and Project and
+    /// adds the count and profile fields those applications publish. Every version 1 key keeps its meaning,
+    /// so a version 1 result for a Word, Excel or PowerPoint document stays comparable.
+    /// </summary>
+    public const int MetadataSchemaVersion = 2;
 
     public const string PreviewSchemaId = "skycd.office.preview";
     public const int PreviewSchemaVersion = 1;
 
-    /// <summary>How the document is stored: <c>ooxml</c> for a ZIP package, <c>ole</c> for a compound file.</summary>
+    /// <summary>
+    /// How the document is stored: <c>ooxml</c> for a ZIP package, <c>ole</c> for a compound file,
+    /// <c>onenote</c> for a OneNote revision store, <c>cab</c> for a OneNote notebook package, <c>jet</c> for
+    /// an Access database and <c>text</c> for Project's delimited interchange format.
+    /// </summary>
     public const string Container = "Container";
 
-    /// <summary>Which Office application wrote the document: <c>word</c>, <c>excel</c> or <c>powerpoint</c>.</summary>
+    /// <summary>
+    /// Which Office application wrote the document: <c>word</c>, <c>excel</c>, <c>powerpoint</c>, <c>visio</c>,
+    /// <c>onenote</c>, <c>access</c> or <c>project</c>.
+    /// </summary>
     public const string DocumentType = "DocumentType";
 
-    /// <summary>True only when an encryption wrapper is present and was therefore left unread.</summary>
+    /// <summary>True only when a protection wrapper is present and the content was therefore left unread.</summary>
     public const string IsEncrypted = "IsEncrypted";
+
+    /// <summary>Why the content was left unread, as the reading library reported it.</summary>
+    public const string ProtectionReason = "ProtectionReason";
+
+    /// <summary>True when the source is a template or a stencil rather than an ordinary document.</summary>
+    public const string IsTemplate = "IsTemplate";
 
     public const string Title = "Title";
     public const string Subject = "Subject";
@@ -51,11 +70,42 @@ public static class OfficeSchema
     public const string CharacterCount = "CharacterCount";
     public const string SlideCount = "SlideCount";
 
+    /// <summary>Worksheets in a workbook, or pages in a OneNote section.</summary>
+    public const string SheetCount = "SheetCount";
+
+    /// <summary>Sections listed by a OneNote table of contents or notebook package.</summary>
+    public const string SectionCount = "SectionCount";
+
+    /// <summary>Newline-separated page or section titles, in the order the document lists them.</summary>
+    public const string PageTitles = "PageTitles";
+
+    /// <summary>User tables in an Access database.</summary>
+    public const string TableCount = "TableCount";
+
+    /// <summary>Saved queries in an Access database.</summary>
+    public const string QueryCount = "QueryCount";
+
+    /// <summary>Tasks in a project, including the tasks nested inside summary tasks.</summary>
+    public const string TaskCount = "TaskCount";
+
+    /// <summary>Tasks directly under the project, which is the visible first level of the task tree.</summary>
+    public const string TopLevelTaskCount = "TopLevelTaskCount";
+
+    public const string PlanStartAt = "PlanStartAt";
+    public const string PlanFinishAt = "PlanFinishAt";
+
+    /// <summary>The concrete file profile the container was read as, such as <c>xlsb</c> or <c>Ace12</c>.</summary>
+    public const string FormatProfile = "FormatProfile";
+
     public static readonly IReadOnlyList<string> Extensions =
     [
-        ".docx", ".docm", ".dotx", ".dotm", ".doc",
-        ".xlsx", ".xlsm", ".xltx", ".xltm", ".xlsb", ".xls",
-        ".pptx", ".pptm", ".potx", ".potm", ".ppsx", ".ppsm", ".ppt"
+        ".docx", ".docm", ".dotx", ".dotm", ".doc", ".dot",
+        ".xlsx", ".xlsm", ".xltx", ".xltm", ".xlsb", ".xls", ".xlt",
+        ".pptx", ".pptm", ".potx", ".potm", ".ppsx", ".ppsm", ".ppt", ".pot", ".pps",
+        ".vsdx", ".vsdm", ".vstx", ".vstm", ".vssx", ".vssm", ".vsd", ".vss", ".vst",
+        ".one", ".onetoc2", ".onepkg",
+        ".mdb", ".accdb",
+        ".mpp", ".mpt", ".mpx"
     ];
 
     public static readonly IReadOnlyList<string> ContentTypes =
@@ -77,7 +127,19 @@ public static class OfficeSchema
         "application/vnd.ms-powerpoint.slideshow.macroEnabled.12",
         "application/msword",
         "application/vnd.ms-excel",
-        "application/vnd.ms-powerpoint"
+        "application/vnd.ms-powerpoint",
+        "application/vnd.ms-visio.drawing",
+        "application/vnd.ms-visio.drawing.macroEnabled.12",
+        "application/vnd.ms-visio.template",
+        "application/vnd.ms-visio.template.macroEnabled.12",
+        "application/vnd.ms-visio.stencil",
+        "application/vnd.ms-visio.stencil.macroEnabled.12",
+        "application/vnd.visio",
+        "application/onenote",
+        "application/msonenote",
+        "application/vnd.ms-access",
+        "application/x-msaccess",
+        "application/vnd.ms-project"
     ];
 
     public static MediaMetadataSchema Metadata { get; } = new(MetadataSchemaId, MetadataSchemaVersion,
@@ -85,6 +147,8 @@ public static class OfficeSchema
         new MediaMetadataField(Container, MediaMetadataType.Text),
         new MediaMetadataField(DocumentType, MediaMetadataType.Text),
         new MediaMetadataField(IsEncrypted, MediaMetadataType.Boolean),
+        new MediaMetadataField(ProtectionReason, MediaMetadataType.Text),
+        new MediaMetadataField(IsTemplate, MediaMetadataType.Boolean),
         new MediaMetadataField(Title, MediaMetadataType.Text),
         new MediaMetadataField(Subject, MediaMetadataType.Text),
         new MediaMetadataField(Author, MediaMetadataType.Text),
@@ -106,7 +170,17 @@ public static class OfficeSchema
         new MediaMetadataField(PageCount, MediaMetadataType.Integer),
         new MediaMetadataField(WordCount, MediaMetadataType.Integer),
         new MediaMetadataField(CharacterCount, MediaMetadataType.Integer),
-        new MediaMetadataField(SlideCount, MediaMetadataType.Integer)
+        new MediaMetadataField(SlideCount, MediaMetadataType.Integer),
+        new MediaMetadataField(SheetCount, MediaMetadataType.Integer),
+        new MediaMetadataField(SectionCount, MediaMetadataType.Integer),
+        new MediaMetadataField(PageTitles, MediaMetadataType.Text),
+        new MediaMetadataField(TableCount, MediaMetadataType.Integer),
+        new MediaMetadataField(QueryCount, MediaMetadataType.Integer),
+        new MediaMetadataField(TaskCount, MediaMetadataType.Integer),
+        new MediaMetadataField(TopLevelTaskCount, MediaMetadataType.Integer),
+        new MediaMetadataField(PlanStartAt, MediaMetadataType.Timestamp),
+        new MediaMetadataField(PlanFinishAt, MediaMetadataType.Timestamp),
+        new MediaMetadataField(FormatProfile, MediaMetadataType.Text)
     ]);
 
     /// <summary>Preview results carry the embedded thumbnail rather than values, so the schema is identity only.</summary>

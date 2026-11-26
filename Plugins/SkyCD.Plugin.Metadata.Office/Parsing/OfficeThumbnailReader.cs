@@ -16,7 +16,10 @@ namespace SkyCD.Plugin.Metadata.Office.Parsing;
 /// <c>SummaryInformation</c> property set as clipboard data; only the device-independent bitmap form is
 /// published, wrapped in a bitmap container, while metafile variants stay unrendered because no rasterizer is
 /// added. Nothing is decrypted: an encrypted package, a missing or damaged part and an unsupported variant all
-/// yield <see langword="null"/>, which the host records as an explicit "no preview".
+/// yield <see langword="null"/>, which the host records as an explicit "no preview". The containers that hold no
+/// thumbnail at all, such as a cabinet-packed notebook or a Jet database, end the same way rather than as an
+/// error, because the absence of a picture is the answer. A source that holds no Office container of any kind is
+/// still a decode failure, the same verdict the metadata capability reaches for it.
 /// </remarks>
 internal static class OfficeThumbnailReader
 {
@@ -31,12 +34,16 @@ internal static class OfficeThumbnailReader
     private const int BitmapFileHeaderBytes = 14;
     private const int BitmapInfoHeaderBytes = 40;
 
-    public static OfficeThumbnail? Read(byte[] data, OfficePluginOptions options, CancellationToken cancellationToken)
+    public static OfficeThumbnail? Read(
+        byte[] data,
+        string? extension,
+        OfficePluginOptions options,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(data);
         ArgumentNullException.ThrowIfNull(options);
 
-        if (OfficePackageReader.HasSignature(data))
+        if (OfficeContainers.IsPackage(data))
         {
             return ReadPackageThumbnail(data, options, cancellationToken);
         }
@@ -46,7 +53,20 @@ internal static class OfficeThumbnailReader
             return ReadCompoundThumbnail(data, options, cancellationToken);
         }
 
-        throw new OfficeDecodeException("the source is neither an OOXML package nor an OLE2 compound file");
+        // A notebook package and a database are Office containers that hold no picture at all.
+        if (OfficeContainers.IsCabinet(data) || OfficeContainers.IsJet(data))
+        {
+            return null;
+        }
+
+        // The interchange plan is plain text, which is the one Office source with no container to inspect.
+        if (OfficeFamilyResolver.FromExtension(extension) is OfficeFamily.Plan)
+        {
+            return null;
+        }
+
+        throw new OfficeDecodeException(
+            "the source is neither an OOXML package, an Office compound document nor a OneNote, Access or Project file");
     }
 
     private static OfficeThumbnail? ReadPackageThumbnail(byte[] data, OfficePluginOptions options,
@@ -57,18 +77,62 @@ internal static class OfficeThumbnailReader
             using var stream = new MemoryStream(data, writable: false);
             using var archive = new ZipArchive(stream, ZipArchiveMode.Read, leaveOpen: false);
 
-            var entry = OfficePackageReader.FindEntry(archive, PackageThumbnailPart);
+            var entry = FindEntry(archive, PackageThumbnailPart);
             if (entry is null || entry.Length <= 0 || entry.Length > options.MaxPreviewBytes)
             {
                 return null;
             }
 
-            var bytes = OfficePackageReader.ReadBounded(entry, options.MaxPreviewBytes, cancellationToken);
+            var bytes = ReadBounded(entry, options.MaxPreviewBytes, cancellationToken);
             return bytes is null ? null : ReadJpeg(bytes, options.MaxThumbnailDimension);
         }
         catch (InvalidDataException exception)
         {
             throw new OfficeDecodeException("the package structure could not be read", exception);
+        }
+    }
+
+    /// <summary>Part names inside a package differ in case between producers, so the lookup ignores case.</summary>
+    private static ZipArchiveEntry? FindEntry(ZipArchive archive, string name)
+    {
+        foreach (var entry in archive.Entries)
+        {
+            if (string.Equals(entry.FullName, name, StringComparison.OrdinalIgnoreCase))
+            {
+                return entry;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>Reads a member, refusing one whose decompressed size exceeds the bound.</summary>
+    private static byte[]? ReadBounded(ZipArchiveEntry entry, long maxBytes, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var source = entry.Open();
+            using var buffer = new MemoryStream();
+            var chunk = new byte[8192];
+            long total = 0;
+            int read;
+            while ((read = source.Read(chunk, 0, chunk.Length)) > 0)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                total += read;
+                if (total > maxBytes)
+                {
+                    return null;
+                }
+
+                buffer.Write(chunk, 0, read);
+            }
+
+            return buffer.ToArray();
+        }
+        catch (InvalidDataException)
+        {
+            return null;
         }
     }
 

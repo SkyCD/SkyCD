@@ -45,7 +45,8 @@ public sealed class OfficePreviewPlugin : IMediaPreviewCapability
         cancellationToken.ThrowIfCancellationRequested();
         progress?.Report(new MediaProgress(0.5));
 
-        var thumbnail = OfficeThumbnailReader.Read(data, options, cancellationToken);
+        var thumbnail = OfficeThumbnailReader.Read(
+            data, OfficeFamilyResolver.Normalize(item.Extension), options, cancellationToken);
         progress?.Report(new MediaProgress(1));
 
         return thumbnail is null

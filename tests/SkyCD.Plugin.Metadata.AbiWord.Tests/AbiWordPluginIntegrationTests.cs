@@ -353,6 +353,9 @@ public sealed class AbiWordPluginIntegrationTests : IDisposable
     private static string FieldText(EntryPreviewSnapshot snapshot, string key) =>
         Assert.IsType<string>(snapshot.Fields.Single(field => field.Key == key).Value);
 
+    // These tests assert host plumbing, not the 5 s production budget, which a loaded CI runner can stall past.
+    private static readonly MediaExecutionLimits HostTestLimits = new(TimeoutMilliseconds: 60_000);
+
     private static MediaExtensionManager CreateManager(
         MediaExecutionLimits? limits = null, bool rendererAvailable = true) =>
         new(new[]
@@ -361,7 +364,7 @@ public sealed class AbiWordPluginIntegrationTests : IDisposable
             new MediaProvider(PluginId, "1.0.0", new AbiWordPreviewPlugin(
                 AbiWordPluginOptions.Default,
                 new StubRenderer(rendererAvailable)))
-        }, limits);
+        }, limits ?? HostTestLimits);
 
     private static readonly byte[] RenderedThumbnail =
         [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3, 4];

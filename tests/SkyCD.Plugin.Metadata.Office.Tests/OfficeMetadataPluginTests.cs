@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Metadata.Office.Exceptions;
+using SkyCD.Plugin.Metadata.Office.Parsing;
 using Xunit;
 using SkyCD.Plugin.Metadata.Office.Models;
 
@@ -12,7 +13,7 @@ namespace SkyCD.Plugin.Metadata.Office.Tests;
 public class OfficeMetadataPluginTests
 {
     [Fact]
-    public void Descriptor_ClaimsOfficeSourcesAndAVersionedSchema()
+    public void Descriptor_ClaimsEveryOfficeApplicationAndSchemaVersionTwo()
     {
         var descriptor = new OfficeMetadataPlugin().Descriptor;
 
@@ -20,13 +21,71 @@ public class OfficeMetadataPluginTests
         Assert.Contains(".xlsx", descriptor.Extensions);
         Assert.Contains(".pptx", descriptor.Extensions);
         Assert.Contains(".doc", descriptor.Extensions);
+        Assert.Contains(".dot", descriptor.Extensions);
         Assert.Contains(".xls", descriptor.Extensions);
+        Assert.Contains(".xlt", descriptor.Extensions);
         Assert.Contains(".ppt", descriptor.Extensions);
+        Assert.Contains(".pot", descriptor.Extensions);
+        Assert.Contains(".pps", descriptor.Extensions);
+        Assert.Contains(".vsdx", descriptor.Extensions);
+        Assert.Contains(".vsd", descriptor.Extensions);
+        Assert.Contains(".one", descriptor.Extensions);
+        Assert.Contains(".onepkg", descriptor.Extensions);
+        Assert.Contains(".mdb", descriptor.Extensions);
+        Assert.Contains(".accdb", descriptor.Extensions);
+        Assert.Contains(".mpp", descriptor.Extensions);
+        Assert.Contains(".mpx", descriptor.Extensions);
         Assert.Contains("application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             descriptor.ContentTypes);
         Assert.Contains("application/msword", descriptor.ContentTypes);
+        Assert.Contains("application/vnd.ms-visio.drawing", descriptor.ContentTypes);
+        Assert.Contains("application/onenote", descriptor.ContentTypes);
+        Assert.Contains("application/vnd.ms-access", descriptor.ContentTypes);
+        Assert.Contains("application/vnd.ms-project", descriptor.ContentTypes);
         Assert.Equal("skycd.office.metadata", descriptor.Schema.Id);
-        Assert.Equal(1, descriptor.Schema.Version);
+        Assert.Equal(2, descriptor.Schema.Version);
+    }
+
+    [Fact]
+    public void Descriptor_LeavesInterchangeFormatsToTheirOwners()
+    {
+        var descriptor = new OfficeMetadataPlugin().Descriptor;
+
+        // These belong to other plugins: .xml and .txt to the XML, plain-text and text-metadata plugins, .msg to
+        // Email, .odt to OpenDocument, .wpd to WordPerfect and .pdf to PDF. A plan is not a generic .xml.
+        foreach (var foreign in new[] { ".xml", ".txt", ".msg", ".odt", ".ods", ".odp", ".wpd", ".pdf", ".csv" })
+        {
+            Assert.DoesNotContain(foreign, descriptor.Extensions);
+        }
+
+        foreach (var foreign in new[] { "text/xml", "application/xml", "text/plain", "message/rfc822" })
+        {
+            Assert.DoesNotContain(foreign, descriptor.ContentTypes);
+        }
+    }
+
+    [Fact]
+    public void Descriptor_ClaimsEachExtensionAndContentTypeOnce()
+    {
+        var descriptor = new OfficeMetadataPlugin().Descriptor;
+
+        Assert.Equal(descriptor.Extensions.Distinct(StringComparer.OrdinalIgnoreCase).Count(),
+            descriptor.Extensions.Count);
+        Assert.Equal(descriptor.ContentTypes.Distinct(StringComparer.Ordinal).Count(),
+            descriptor.ContentTypes.Count);
+        Assert.Equal(descriptor.Extensions, new OfficePreviewPlugin().Descriptor.Extensions);
+    }
+
+    [Fact]
+    public void EveryClaimedExtension_ResolvesToAnApplicationFamily()
+    {
+        foreach (var extension in OfficeSchema.Extensions)
+        {
+            Assert.NotNull(OfficeFamilyResolver.FromExtension(extension));
+        }
+
+        Assert.Null(OfficeFamilyResolver.FromExtension(".xml"));
+        Assert.Null(OfficeFamilyResolver.FromExtension(".msg"));
     }
 
     [Fact]
@@ -89,37 +148,43 @@ public class OfficeMetadataPluginTests
         var result = await ExtractAsync(OfficeFixtures.Xlsb(null, OfficeFixtures.App(("Application", "Microsoft Excel"))));
 
         Assert.Equal("excel", Text(result, OfficeSchema.DocumentType));
+        Assert.Equal("xlsb", Text(result, OfficeSchema.FormatProfile));
     }
 
     [Fact]
     public async Task PresentationPackage_ReportsTheSlideCount()
     {
-        var result = await ExtractAsync(OfficeFixtures.Pptx(null, OfficeFixtures.PresentationApp(12)));
+        var result = await ExtractAsync(OfficeFixtures.PptxWithSlides(12));
 
         Assert.Equal("powerpoint", Text(result, OfficeSchema.DocumentType));
+        Assert.Equal("pptx", Text(result, OfficeSchema.FormatProfile));
         Assert.Equal(12L, Integer(result, OfficeSchema.SlideCount));
         Assert.Null(Integer(result, OfficeSchema.PageCount));
     }
 
     [Fact]
-    public async Task MissingMetadataParts_PublishOnlyTheContainerAndDocumentType()
+    public async Task DocumentWithoutPropertyValues_PublishesIdentityFieldsOnly()
     {
         var result = await ExtractAsync(OfficeFixtures.Docx());
 
-        Assert.Equal(2, result.Values.Count);
         Assert.Equal("ooxml", Text(result, OfficeSchema.Container));
         Assert.Equal("word", Text(result, OfficeSchema.DocumentType));
+        Assert.Equal("docx", Text(result, OfficeSchema.FormatProfile));
+        Assert.DoesNotContain(result.Values, value => value.Key == OfficeSchema.Title);
+        Assert.DoesNotContain(result.Values, value => value.Key == OfficeSchema.Author);
     }
 
     [Fact]
-    public async Task MetadataPartNames_AreMatchedCaseInsensitively()
+    public async Task CoreElements_AreMatchedByLocalNameRegardlessOfThePrefix()
     {
-        var package = OfficeFixtures.Package("word/document.xml", null, null,
-            ("docProps/Core.XML", OfficeFixtures.Core(("dc:title", "Upper case part"))));
+        // Producers differ on the prefixes they declare for the same part; only the local name carries meaning.
+        const string core =
+            "<o:coreProperties xmlns:o=\"http://schemas.openxmlformats.org/package/2006/metadata/core-properties\" " +
+            "xmlns:x=\"http://purl.org/dc/elements/1.1/\"><x:title>Another prefix</x:title></o:coreProperties>";
 
-        var result = await ExtractAsync(package);
+        var result = await ExtractAsync(OfficeFixtures.Docx(core, null));
 
-        Assert.Equal("Upper case part", Text(result, OfficeSchema.Title));
+        Assert.Equal("Another prefix", Text(result, OfficeSchema.Title));
     }
 
     [Fact]
@@ -129,6 +194,7 @@ public class OfficeMetadataPluginTests
 
         Assert.Equal("ooxml", Text(result, OfficeSchema.Container));
         Assert.True(result.Values.Single(value => value.Key == OfficeSchema.IsEncrypted).Boolean);
+        Assert.Contains("encrypted", Text(result, OfficeSchema.ProtectionReason), StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain(result.Values, value => value.Key == OfficeSchema.Title);
         Assert.DoesNotContain(result.Values, value => value.Key == OfficeSchema.DocumentType);
     }
@@ -281,7 +347,7 @@ public class OfficeMetadataPluginTests
         {
             "notoffice" => "This is not an Office document."u8.ToArray(),
             "empty" => [],
-            "damagedpackage" => OfficeFixtures.Truncate(OfficeFixtures.Docx(), 100),
+            "damagedpackage" => OfficeFixtures.Truncate(OfficeFixtures.Docx(OfficeFixtures.FullCore()), 100),
             "nodocumentpart" => OfficeFixtures.PackageWithoutDocumentPart(OfficeFixtures.FullCore()),
             "damagedcompound" => OfficeFixtures.DamageDirectory(OfficeFixtures.LegacyWorkbook()),
             _ => OfficeFixtures.CompoundWithoutOfficeStream()

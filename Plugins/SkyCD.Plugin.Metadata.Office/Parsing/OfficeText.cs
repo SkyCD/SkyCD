@@ -39,6 +39,27 @@ internal static class OfficeText
         return builder.Length == 0 ? null : builder.ToString();
     }
 
+    /// <summary>
+    /// Converts a timestamp a library reported as a <see cref="DateTime"/>. A value without a zone is taken as
+    /// UTC, so the published instant does not depend on the machine running the scan.
+    /// </summary>
+    public static DateTimeOffset? FromDateTime(DateTime? value)
+    {
+        if (value is not { } timestamp)
+        {
+            return null;
+        }
+
+        var normalized = timestamp.Kind switch
+        {
+            DateTimeKind.Utc => new DateTimeOffset(timestamp),
+            DateTimeKind.Local => new DateTimeOffset(timestamp),
+            _ => new DateTimeOffset(DateTime.SpecifyKind(timestamp, DateTimeKind.Utc))
+        };
+
+        return normalized.Year is < 1601 or > 9999 ? null : normalized;
+    }
+
     /// <summary>Parses a W3C date-time value and normalizes it to UTC; a value without a zone is taken as UTC.</summary>
     public static DateTimeOffset? ParseTimestamp(string? text)
     {

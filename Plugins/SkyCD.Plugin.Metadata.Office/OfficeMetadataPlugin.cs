@@ -77,6 +77,12 @@ public sealed class OfficeMetadataPlugin : IMediaMetadataCapability
         if (metadata.IsEncrypted)
         {
             values.Add(new MediaMetadataValue(OfficeSchema.IsEncrypted, MediaMetadataType.Boolean, Boolean: true));
+            AddText(values, OfficeSchema.ProtectionReason, metadata.ProtectionReason);
+        }
+
+        if (metadata.IsTemplate)
+        {
+            values.Add(new MediaMetadataValue(OfficeSchema.IsTemplate, MediaMetadataType.Boolean, Boolean: true));
         }
 
         AddText(values, OfficeSchema.Title, metadata.Title);
@@ -103,6 +109,18 @@ public sealed class OfficeMetadataPlugin : IMediaMetadataCapability
         AddPositiveInteger(values, OfficeSchema.WordCount, metadata.WordCount);
         AddPositiveInteger(values, OfficeSchema.CharacterCount, metadata.CharacterCount);
         AddPositiveInteger(values, OfficeSchema.SlideCount, metadata.SlideCount);
+        AddPositiveInteger(values, OfficeSchema.SheetCount, metadata.SheetCount);
+        AddPositiveInteger(values, OfficeSchema.SectionCount, metadata.SectionCount);
+        AddPositiveInteger(values, OfficeSchema.TableCount, metadata.TableCount);
+        AddPositiveInteger(values, OfficeSchema.QueryCount, metadata.QueryCount);
+        AddPositiveInteger(values, OfficeSchema.TaskCount, metadata.TaskCount);
+        AddPositiveInteger(values, OfficeSchema.TopLevelTaskCount, metadata.TopLevelTaskCount);
+
+        AddTimestamp(values, OfficeSchema.PlanStartAt, metadata.PlanStartAt);
+        AddTimestamp(values, OfficeSchema.PlanFinishAt, metadata.PlanFinishAt);
+
+        AddText(values, OfficeSchema.PageTitles, metadata.PageTitles);
+        AddText(values, OfficeSchema.FormatProfile, metadata.FormatProfile);
 
         return values;
     }

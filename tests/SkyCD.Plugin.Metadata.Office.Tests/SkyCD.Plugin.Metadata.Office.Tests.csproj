@@ -10,6 +10,13 @@
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.11.0"/>
         <PackageReference Include="xunit" Version="2.9.3"/>
         <PackageReference Include="xunit.runner.visualstudio" Version="4.0.1"/>
+        <PackageReference Include="OfficeIMO.Word" Version="3.6.2"/>
+        <PackageReference Include="OfficeIMO.Excel" Version="3.6.2"/>
+        <PackageReference Include="OfficeIMO.PowerPoint" Version="3.6.2"/>
+        <PackageReference Include="OfficeIMO.Visio" Version="3.6.2"/>
+        <PackageReference Include="OfficeIMO.OneNote" Version="3.6.2"/>
+        <PackageReference Include="OfficeIMO.Access" Version="3.6.2"/>
+        <PackageReference Include="OfficeIMO.Project" Version="3.6.2"/>
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\..\src\SkyCD.Plugin.Host\SkyCD.Plugin.Host.csproj"/>

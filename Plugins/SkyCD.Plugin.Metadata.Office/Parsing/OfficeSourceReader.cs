@@ -1,5 +1,6 @@
 using System;
-using System.Collections.Generic;
+using System.IO;
+using System.IO.Compression;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.SDK.Capabilities.Media;
@@ -12,10 +13,19 @@ namespace SkyCD.Plugin.Metadata.Office.Parsing;
 /// Reads a bounded source into memory and resolves the metadata it carries.
 /// </summary>
 /// <remarks>
-/// Reading in one pass keeps the host's budget accounting simple: the charge equals the source size, once.
-/// The plugin only ever holds bytes and never a path, so a document that references another file has no way
-/// to make it open that file. A damaged optional metadata part is skipped, while a source that is neither an
-/// OOXML package nor an Office compound document raises <see cref="OfficeDecodeException"/>.
+/// <para>
+/// Reading in one pass keeps the host's budget accounting simple: the charge equals the source size, once. The
+/// plugin only ever holds bytes and never a path, so a document that references another file has no way to make
+/// it open that file.
+/// </para>
+/// <para>
+/// A package is resolved by the application directory its document part lives in and a compound document by the
+/// content stream it writes, so the published document type comes from the bytes rather than from the file name.
+/// Three families need the extension as well: a OneNote store, a Jet database and a Project plan each share a
+/// container with other Office formats and none of them writes a stream this plugin models. A damaged optional
+/// metadata part is skipped, while a source that is not an Office document at all raises
+/// <see cref="OfficeDecodeException"/>.
+/// </para>
 /// </remarks>
 internal static class OfficeSourceReader
 {
@@ -25,8 +35,6 @@ internal static class OfficeSourceReader
     public const string DocumentSummaryStream = "\u0005DocumentSummaryInformation";
     public const string EncryptionInfoStream = "EncryptionInfo";
     public const string EncryptedPackageStream = "EncryptedPackage";
-
-    private static readonly IReadOnlyDictionary<uint, object> NoValues = new Dictionary<uint, object>();
 
     public static async Task<OfficeMetadata> ReadAllAsync(
         MediaItem item,
@@ -42,73 +50,108 @@ internal static class OfficeSourceReader
         var data = await ReadSourceAsync(item, source, options, cancellationToken).ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (OfficePackageReader.HasSignature(data))
+        return ReadAll(item, data, options, cancellationToken);
+    }
+
+    public static OfficeMetadata ReadAll(
+        MediaItem item,
+        byte[] data,
+        OfficePluginOptions options,
+        CancellationToken cancellationToken)
+    {
+        var extension = OfficeFamilyResolver.Normalize(item.Extension);
+        var hint = OfficeFamilyResolver.FromExtension(extension);
+
+        // These three are decided by the matched extension before the container is inspected, because their
+        // container is one another Office format also uses.
+        switch (hint)
         {
-            return OfficePackageReader.Read(data, options, cancellationToken);
+            case OfficeFamily.Note:
+                return OfficeOneNoteReader.Read(extension, data, options, cancellationToken);
+            case OfficeFamily.Database when OfficeContainers.IsJet(data):
+                return OfficeAccessReader.Read(data, options, cancellationToken);
+            case OfficeFamily.Plan:
+                // The same family stores a plan as a compound document and as the older delimited interchange text,
+                // and the extension does not say which, so the leading bytes decide.
+                return OfficeProjectReader.Read(
+                    CompoundFile.HasSignature(data) ? OfficeContainers.Ole : OfficeContainers.Text,
+                    data,
+                    options,
+                    extension,
+                    cancellationToken);
+        }
+
+        if (OfficeContainers.IsPackage(data))
+        {
+            return ReadPackage(data, options, extension, cancellationToken);
         }
 
         if (CompoundFile.HasSignature(data))
         {
-            return ReadCompound(data, options);
+            return ReadCompound(data, options, hint, extension);
         }
 
-        throw new OfficeDecodeException("the source is neither an OOXML package nor an OLE2 compound file");
-    }
-
-    private static OfficeMetadata ReadCompound(byte[] data, OfficePluginOptions options)
-    {
-        var compound = CompoundFile.Open(data);
-
-        // Office 2007 and later protect an OOXML package by wrapping it, unchanged, in a compound file.
-        if (IsEncryptedWrapper(compound))
-        {
-            return OfficeMetadata.Encrypted;
-        }
-
-        var documentType = DetectCompoundDocumentType(compound)
-            ?? throw new OfficeDecodeException(
-                "the compound document does not contain a Microsoft Office document stream");
-
-        return OfficeMetadata.FromCompound(
-            documentType,
-            ReadPropertyStream(compound, SummaryStream, options),
-            ReadPropertyStream(compound, DocumentSummaryStream, options));
+        throw new OfficeDecodeException(
+            "the source is neither an OOXML package, an Office compound document nor a OneNote, Access or Project file");
     }
 
     /// <summary>True when the compound file wraps an encrypted OOXML package rather than a legacy document.</summary>
     public static bool IsEncryptedWrapper(CompoundFile compound) =>
         compound.ContainsStream(EncryptionInfoStream) && compound.ContainsStream(EncryptedPackageStream);
 
-    private static string? DetectCompoundDocumentType(CompoundFile compound)
+    private static OfficeMetadata ReadPackage(
+        byte[] data,
+        OfficePluginOptions options,
+        string? extension,
+        CancellationToken cancellationToken)
     {
-        if (compound.ContainsStream("WordDocument"))
-        {
-            return "word";
-        }
+        var family = SniffPackageFamily(data)
+            ?? throw new OfficeDecodeException("the package holds no Word, Excel, PowerPoint or Visio document part");
 
-        if (compound.ContainsStream("Workbook") || compound.ContainsStream("Book"))
+        return family switch
         {
-            return "excel";
-        }
-
-        return compound.ContainsStream("PowerPoint Document") ? "powerpoint" : null;
+            OfficeFamily.Word => OfficeWordReader.Read(data, options, extension, cancellationToken),
+            OfficeFamily.Workbook => OfficeWorkbookReader.Read(data, options, extension, cancellationToken),
+            OfficeFamily.Presentation => OfficePowerPointReader.Read(data, options, extension, cancellationToken),
+            _ => OfficeVisioReader.Read(data, options, extension, cancellationToken)
+        };
     }
 
-    private static IReadOnlyDictionary<uint, object> ReadPropertyStream(
-        CompoundFile compound,
-        string name,
-        OfficePluginOptions options)
+    private static OfficeMetadata ReadCompound(
+        byte[] data,
+        OfficePluginOptions options,
+        OfficeFamily? hint,
+        string? extension)
+    {
+        var compound = CompoundFile.Open(data);
+
+        // Word, Excel and PowerPoint identify themselves by the stream they write, so a matching extension is
+        // never allowed to stand in for a document stream that is not there.
+        var legacyHint = hint is OfficeFamily.Drawing ? hint : null;
+        return OfficeProtection.Read(OfficeContainers.Ole,
+            () => OfficeLegacyReader.Read(compound, options, legacyHint, extension));
+    }
+
+    /// <summary>The application directory the package stores its document part in, which names the application.</summary>
+    private static OfficeFamily? SniffPackageFamily(byte[] data)
     {
         try
         {
-            return compound.TryReadStream(name, options.MaxMetadataPartBytes, out var stream)
-                ? OfficePropertySet.Parse(stream)
-                : NoValues;
+            using var stream = new MemoryStream(data, writable: false);
+            using var archive = new ZipArchive(stream, ZipArchiveMode.Read, leaveOpen: false);
+            foreach (var entry in archive.Entries)
+            {
+                if (OfficeFamilyResolver.FromPackagePart(entry.FullName) is { } family)
+                {
+                    return family;
+                }
+            }
+
+            return null;
         }
-        catch (OfficeDecodeException)
+        catch (InvalidDataException exception)
         {
-            // The summary is optional: a damaged chain costs metadata, not the whole extraction.
-            return NoValues;
+            throw new OfficeDecodeException("the package structure could not be read", exception);
         }
     }
 

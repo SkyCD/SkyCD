@@ -5,6 +5,16 @@
     <ItemGroup>
         <ProjectReference Include="..\..\src\SkyCD.SDK\SkyCD.SDK.csproj"/>
     </ItemGroup>
+    <ItemGroup>
+        <!-- MIT: one reading library for all seven applications, on the version every OfficeIMO plugin in the solution pins. -->
+        <PackageReference Include="OfficeIMO.Word" Version="3.6.2"/>
+        <PackageReference Include="OfficeIMO.Excel" Version="3.6.2"/>
+        <PackageReference Include="OfficeIMO.PowerPoint" Version="3.6.2"/>
+        <PackageReference Include="OfficeIMO.Visio" Version="3.6.2"/>
+        <PackageReference Include="OfficeIMO.OneNote" Version="3.6.2"/>
+        <PackageReference Include="OfficeIMO.Access" Version="3.6.2"/>
+        <PackageReference Include="OfficeIMO.Project" Version="3.6.2"/>
+    </ItemGroup>
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>disable</ImplicitUsings>
@@ -12,7 +22,7 @@
         <Company>SkyCD</Company>
         <Authors>SkyCD</Authors>
         <AssemblyTitle>Microsoft Office Document Metadata</AssemblyTitle>
-        <Description>Reads title, author, dates and document statistics from Microsoft Office documents without altering them. Password-protected packages are never decrypted.</Description>
+        <Description>Reads title, author, dates and document statistics from Word, Excel, PowerPoint, Visio, OneNote, Access and Project documents without altering them. Password-protected content is never decrypted.</Description>
     </PropertyGroup>
     <ItemGroup>
         <AssemblyMetadata Include="AuthorUrl" Value="https://sourceforge.net/projects/skycd/"/>
