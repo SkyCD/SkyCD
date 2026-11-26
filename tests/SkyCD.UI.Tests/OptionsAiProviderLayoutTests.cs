@@ -220,13 +220,13 @@ public sealed class OptionsAiProviderLayoutTests : IDisposable
 
     private sealed class FakeCapability : IAiProviderSettingsCapability
     {
-        private static readonly AiProviderChoice LmStudio = new("lmstudio", "LM Studio", "http", "127.0.0.1",
-            1234, "model-a", true, ["model-a", "model-b"]);
+        private static readonly AiProviderChoice Colibri = new("colibri", "Colibri", "http", "127.0.0.1",
+            8000, "model-a", true, ["model-a", "model-b"]);
 
         private static readonly AiProviderChoice Ollama = new("ollama", "Ollama", "http", "127.0.0.1",
             11434, "llama3.2", true, ["llama3.2", "qwen3"]);
 
-        public IReadOnlyList<AiProviderChoice> Providers { get; } = [LmStudio, Ollama];
+        public IReadOnlyList<AiProviderChoice> Providers { get; } = [Colibri, Ollama];
 
         public AiProviderSettings GetSettings() => new();
 

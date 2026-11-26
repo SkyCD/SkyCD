@@ -31,7 +31,7 @@ public sealed record AiProviderChoice(string Id, string Name, string Protocol, s
 public sealed record AiProviderSettings
 {
     /// <summary>Selected provider preset id.</summary>
-    public string ProviderId { get; init; } = "lmstudio";
+    public string ProviderId { get; init; } = "ollama";
 
     /// <summary>Connection protocol, <c>http</c> or <c>https</c>.</summary>
     public string Protocol { get; init; } = "http";
@@ -40,13 +40,13 @@ public sealed record AiProviderSettings
     public string Address { get; init; } = "127.0.0.1";
 
     /// <summary>TCP port of the OpenAI-compatible endpoint.</summary>
-    public int Port { get; init; } = 1234;
+    public int Port { get; init; } = 11434;
 
     /// <summary>Optional bearer token; empty for unauthenticated local providers.</summary>
     public string ApiKey { get; init; } = string.Empty;
 
     /// <summary>Model identifier sent with each request.</summary>
-    public string Model { get; init; } = "google/gemma-4-e2b";
+    public string Model { get; init; } = "llama3.2";
 
     /// <summary>Requested output language.</summary>
     public string Language { get; init; } = "English";

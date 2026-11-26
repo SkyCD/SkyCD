@@ -14,9 +14,11 @@ provider connection settings in **AI → Provider**.
 The provider picker shows a 16 px icon before each preset name in the closed
 field and dropdown rows. Colibrì, Jan, llama.cpp, Ollama, and vLLM use the 16 px frame from the
 multi-resolution ICOs in [SkyCD.Resource.Icons.LlmBackends](https://github.com/SkyCD/SkyCD.Resource.Icons.LlmBackends).
-LM Studio loads a PNG from the provider plugin. If artwork is unavailable or fails to load, the
-picker draws the preset's `Monogram` on the theme accent. KoboldCpp uses `KC`,
+If artwork is unavailable or fails to load, the picker draws the preset's
+`Monogram` on the theme accent. KoboldCpp uses `KC`,
 LocalAI uses `LA`, and the unbranded custom preset uses `AI`.
+New configurations default to Ollama. Saved LM Studio configurations appear as
+custom OpenAI-compatible connections and retain their endpoint and model.
 
 Official artwork sources
 
@@ -25,12 +27,10 @@ Official artwork sources
 | Colibrì | [Desktop icon](https://github.com/JustVugg/colibri/blob/e479104ae01bdc40ce81e675299b1d230891b321/desktop/src-tauri/icons/128x128.png), © 2026 Vincenzo Fornaro, Apache-2.0 |
 | Jan | [Desktop icon](https://github.com/janhq/jan/blob/49a84bdeaebdfc0f36c00f252eb638f516a48432/src-tauri/icons/icon.png), © 2025 Menlo Research, Apache-2.0 |
 | llama.cpp | [Earlier server favicon](https://github.com/ggml-org/llama.cpp/blob/296901983700f3c37449bcb555d85d27150a679d/examples/server/public_legacy/favicon.ico), MIT |
-| LM Studio | [Color app icon](https://lmstudio.ai/brand) |
 | Ollama | [Documentation favicon](https://github.com/ollama/ollama/blob/8ae8acb81afba9c3c67adf08190964eb7d1207ef/docs/images/favicon.png), MIT |
 | vLLM | [Documentation logo](https://github.com/vllm-project/vllm/blob/f9d1824a770f01e681fef8adb4b4bbe506e080aa/docs/assets/logos/vllm-logo-only-light.png), Apache-2.0 |
 
-Jan, llama.cpp, LM Studio, and vLLM artwork was resized proportionally for
-bundling. KoboldCpp's [upstream license](https://github.com/LostRuins/koboldcpp#license)
+The package resizes artwork proportionally. KoboldCpp's [upstream license](https://github.com/LostRuins/koboldcpp#license)
 and LocalAI's [brand-use terms](https://github.com/mudler/LocalAI/blob/master/BRAND-USAGE.md)
 are why those presets use monograms.
 
