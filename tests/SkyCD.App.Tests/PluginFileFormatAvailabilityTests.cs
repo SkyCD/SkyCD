@@ -10,6 +10,7 @@ using SkyCD.Core.Versioning;
 using SkyCD.Plugin.Runtime.Installation;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.App.Tests;
@@ -22,14 +23,10 @@ public sealed class PluginFileFormatAvailabilityTests : IDisposable
 {
     private const string PluginAssemblyFileName = "SkyCD.Plugin.FileFormat.Json.dll";
 
-    private readonly string pluginFolder =
-        Path.Combine(Path.GetTempPath(), "SkyCD-file-format-availability-" + Guid.NewGuid().ToString("N"));
+    private readonly TestWorkspace workspace = new();
     private readonly PluginManager pluginManager = ServiceProvider.Resolve<PluginManager>();
 
-    public PluginFileFormatAvailabilityTests()
-    {
-        Directory.CreateDirectory(pluginFolder);
-    }
+    private string pluginFolder => workspace.Root;
 
     public void Dispose()
     {
@@ -39,11 +36,10 @@ public sealed class PluginFileFormatAvailabilityTests : IDisposable
             .ToArray());
         // Discover an empty directory so the collectible context that mapped the copied plugin
         // is unloaded. Windows otherwise denies deletion of that dll.
-        var empty = Path.Combine(Path.GetTempPath(), "SkyCD-file-format-empty-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(empty);
+        var empty = workspace.CreateDirectory("empty");
         pluginManager.Discover(empty, ServiceProvider.Resolve<HostVersionProvider>().Current);
         DeleteDirectory(pluginFolder);
-        DeleteDirectory(empty);
+        workspace.Dispose();
     }
 
     [Fact]

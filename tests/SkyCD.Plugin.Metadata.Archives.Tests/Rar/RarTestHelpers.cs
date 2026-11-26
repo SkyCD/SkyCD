@@ -23,14 +23,6 @@ internal static class RarTestHelpers
             OpenSource = _ => Task.FromResult<Stream>(new NonDisposingStream(stream))
         };
 
-    /// <summary>Creates an empty temporary directory owned by the test.</summary>
-    public static string CreateTemporaryDirectory()
-    {
-        var path = Path.Combine(Path.GetTempPath(), $"skycd-rar-test-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(path);
-        return path;
-    }
-
     /// <summary>Lets the plugin dispose its source stream while the test keeps ownership of it.</summary>
     public sealed class NonDisposingStream(Stream inner) : Stream
     {

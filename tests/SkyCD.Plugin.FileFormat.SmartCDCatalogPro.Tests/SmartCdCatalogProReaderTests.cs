@@ -8,6 +8,7 @@ using SkyCD.SDK.Capabilities.FileFormats;
 using SkyCD.Plugin.FileFormat.SmartCDCatalogPro;
 using Xunit;
 using SkyCD.Plugin.FileFormat.SmartCDCatalogPro.Models;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.FileFormat.SmartCDCatalogPro.Tests;
 
@@ -303,28 +304,19 @@ public sealed class SmartCdCatalogProReaderTests
     public async Task ReadAsync_DoesNotModifySourceOrCreateLockFile()
     {
         using var catalog = await SmartCdCatalogProFixture.CreateCatalogAsync();
-        var path = Path.Combine(Path.GetTempPath(), $"scdc-source-{Guid.NewGuid():N}.scdc");
-        try
-        {
-            await File.WriteAllBytesAsync(path, catalog.ToArray());
-            var before = await File.ReadAllBytesAsync(path);
-            using (var source = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.Read))
-            {
-                var result = await plugin.ReadAsync(SmartCdCatalogProFixture.ReadRequest(source, Path.GetFileName(path)));
-                Assert.True(result.Success, result.Error);
-            }
+        using var workspace = new TestWorkspace();
+        var path = workspace.CreateFile("source.scdc", catalog.ToArray());
 
-            Assert.Equal(before, await File.ReadAllBytesAsync(path));
-            Assert.False(File.Exists(Path.ChangeExtension(path, ".ldb")));
-            Assert.False(File.Exists(path + ".jdw-journal"));
-        }
-        finally
+        var before = await File.ReadAllBytesAsync(path);
+        using (var source = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.Read))
         {
-            if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
+            var result = await plugin.ReadAsync(SmartCdCatalogProFixture.ReadRequest(source, Path.GetFileName(path)));
+            Assert.True(result.Success, result.Error);
         }
+
+        Assert.Equal(before, await File.ReadAllBytesAsync(path));
+        Assert.False(File.Exists(Path.ChangeExtension(path, ".ldb")));
+        Assert.False(File.Exists(path + ".jdw-journal"));
     }
 
     private async Task<SmartCdCatalogProReportDocument> ImportAsync()

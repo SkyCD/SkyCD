@@ -5,6 +5,7 @@ using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.OnlineMetadata.Models;
 using SkyCD.Plugin.Runtime.Factories;
 using Xunit;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.Metadata.TvCom.Tests;
 
@@ -16,7 +17,7 @@ public class TvComMetadataPluginTests
     public void ReadsMetaAndJsonLd()
     {
         var facts = new DescriptionFacts();
-        Plugin().Parse(Fixtures.Read("tvcom-show.html"), facts);
+        Plugin().Parse(OnlineMetadataFixtures.Read("tvcom-show.html"), facts);
 
         Assert.Equal("Breaking Bad", facts.Get("Title"));
         Assert.Equal("Crime|Drama|Thriller", facts.Get("Genre"));
@@ -55,7 +56,7 @@ public class TvComMetadataPluginTests
     [Fact]
     public async Task FetchReturnsFactsAndTheFetchedUrl()
     {
-        var fetcher = new StubFetcher(Fixtures.Read("tvcom-show.html"));
+        var fetcher = new StubFetcher(OnlineMetadataFixtures.Read("tvcom-show.html"));
         var plugin = new TvComMetadataPlugin(fetcher);
         var request = new OnlineMetadataRequest("", "https://www.tv.com/shows/breaking-bad/", "en");
 

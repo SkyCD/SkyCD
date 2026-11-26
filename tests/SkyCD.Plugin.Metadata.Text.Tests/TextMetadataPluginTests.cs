@@ -7,6 +7,7 @@ using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Metadata.Text.Exceptions;
 using Xunit;
 using SkyCD.Plugin.Metadata.Text.Models;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.Metadata.Text.Tests;
 

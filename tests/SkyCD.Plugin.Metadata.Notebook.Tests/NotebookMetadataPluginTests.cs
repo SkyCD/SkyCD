@@ -8,6 +8,7 @@ using SkyCD.Plugin.Metadata.Notebook.Exceptions;
 using SkyCD.Plugin.Metadata.Notebook.Models;
 using SkyCD.SDK.Capabilities.Media;
 using Xunit;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.Metadata.Notebook.Tests;
 

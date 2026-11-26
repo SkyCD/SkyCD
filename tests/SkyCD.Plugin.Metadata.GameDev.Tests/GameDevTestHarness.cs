@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.SDK.Capabilities.Media;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.Metadata.GameDev.Tests;
 

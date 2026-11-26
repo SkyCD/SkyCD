@@ -7,6 +7,7 @@ using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Metadata.WordPerfect.Exceptions;
 using Xunit;
 using SkyCD.Plugin.Metadata.WordPerfect.Models;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.Metadata.WordPerfect.Tests;
 

@@ -149,6 +149,7 @@ public sealed class CaptureMetadataQueueIntegrationTests : IDisposable
     private sealed class TestContext : IDisposable
     {
         private readonly Container container = new();
+        private readonly TestWorkspace workspace = new();
 
         public TestContext()
         {
@@ -163,8 +164,7 @@ public sealed class CaptureMetadataQueueIntegrationTests : IDisposable
                 Type = CatalogDocumentType.Folder
             });
 
-            MediaDirectory = Path.Combine(Path.GetTempPath(), $"skycd-capture-{Guid.NewGuid():N}");
-            Directory.CreateDirectory(MediaDirectory);
+            MediaDirectory = workspace.Root;
         }
 
         public RepositoryManager Repositories { get; }
@@ -188,12 +188,8 @@ public sealed class CaptureMetadataQueueIntegrationTests : IDisposable
                 // Already closed by the test.
             }
 
-            if (Directory.Exists(MediaDirectory))
-            {
-                Directory.Delete(MediaDirectory, true);
-            }
-
             container.Dispose();
+            workspace.Dispose();
         }
     }
 }

@@ -17,6 +17,7 @@ using SkyCD.SDK.Capabilities;
 using SkyCD.SDK.OAuth;
 using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.SDK;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.Plugin.Runtime.Tests;
@@ -428,34 +429,31 @@ public sealed class OAuthTests
             Assert.Throws<OAuthException>(() => new WindowsOAuthDataProtector().Protect([1], [2]));
             return;
         }
-        var folder = Path.Combine(Path.GetTempPath(), "skycd-oauth-tests", Guid.NewGuid().ToString("N"));
-        try
-        {
-            var handler = new TokenEndpoint();
-            var clock = new Clock();
-            using var http = new HttpClient(handler);
-            var first = new OAuthService(http, new ProtectedFileOAuthTokenStore(folder, new WindowsOAuthDataProtector()),
-                new Browser(), clock).ForPlugin("plugin");
-            await first.LoginAsync(Provider(), "account");
-            var files = Directory.GetFiles(folder, "*.token", SearchOption.AllDirectories);
-            Assert.Single(files);
-            Assert.DoesNotContain("access-1", Encoding.UTF8.GetString(await File.ReadAllBytesAsync(files[0])));
-            Assert.DoesNotContain("refresh-1", Encoding.UTF8.GetString(await File.ReadAllBytesAsync(files[0])));
-            var restarted = new OAuthService(http, new ProtectedFileOAuthTokenStore(folder, new WindowsOAuthDataProtector()),
-                new Browser(), clock).ForPlugin("plugin");
-            Assert.Equal("access-1", await restarted.GetAccessTokenAsync(Provider(), "account"));
-            Assert.Equal(["account"], await restarted.GetAccountsAsync(Provider()));
-            clock.Now = clock.Now.AddHours(2);
-            Assert.Equal("access-2", await restarted.GetAccessTokenAsync(Provider(), "account"));
-            var bytes = await File.ReadAllBytesAsync(files[0]);
-            bytes[^1] ^= 1;
-            await File.WriteAllBytesAsync(files[0], bytes);
-            Assert.Equal(OAuthFailure.SecureStorageUnavailable,
-                (await Assert.ThrowsAsync<OAuthException>(() => restarted.GetAccessTokenAsync(Provider(), "account"))).Failure);
-            await restarted.SignOutAsync(Provider(), "account");
-            Assert.Empty(await restarted.GetAccountsAsync(Provider()));
-        }
-        finally { if (Directory.Exists(folder)) Directory.Delete(folder, recursive: true); }
+        using var workspace = new TestWorkspace();
+        var folder = workspace.GetPath(Guid.NewGuid().ToString("N"));
+        var handler = new TokenEndpoint();
+        var clock = new Clock();
+        using var http = new HttpClient(handler);
+        var first = new OAuthService(http, new ProtectedFileOAuthTokenStore(folder, new WindowsOAuthDataProtector()),
+            new Browser(), clock).ForPlugin("plugin");
+        await first.LoginAsync(Provider(), "account");
+        var files = Directory.GetFiles(folder, "*.token", SearchOption.AllDirectories);
+        Assert.Single(files);
+        Assert.DoesNotContain("access-1", Encoding.UTF8.GetString(await File.ReadAllBytesAsync(files[0])));
+        Assert.DoesNotContain("refresh-1", Encoding.UTF8.GetString(await File.ReadAllBytesAsync(files[0])));
+        var restarted = new OAuthService(http, new ProtectedFileOAuthTokenStore(folder, new WindowsOAuthDataProtector()),
+            new Browser(), clock).ForPlugin("plugin");
+        Assert.Equal("access-1", await restarted.GetAccessTokenAsync(Provider(), "account"));
+        Assert.Equal(["account"], await restarted.GetAccountsAsync(Provider()));
+        clock.Now = clock.Now.AddHours(2);
+        Assert.Equal("access-2", await restarted.GetAccessTokenAsync(Provider(), "account"));
+        var bytes = await File.ReadAllBytesAsync(files[0]);
+        bytes[^1] ^= 1;
+        await File.WriteAllBytesAsync(files[0], bytes);
+        Assert.Equal(OAuthFailure.SecureStorageUnavailable,
+            (await Assert.ThrowsAsync<OAuthException>(() => restarted.GetAccessTokenAsync(Provider(), "account"))).Failure);
+        await restarted.SignOutAsync(Provider(), "account");
+        Assert.Empty(await restarted.GetAccountsAsync(Provider()));
     }
 
     [Fact]

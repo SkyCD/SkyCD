@@ -5,6 +5,7 @@ using JetDatabaseWriter;
 using JetDatabaseWriter.Enums;
 using JetDatabaseWriter.Models;
 using SkyCD.SDK.Capabilities.FileFormats;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.FileFormat.SmartCDCatalogPro.Tests;
 
@@ -248,46 +249,25 @@ internal static class SmartCdCatalogProFixture
 
     private static async Task<MemoryStream> CreateCoreAsync(string password, Func<AccessWriter, Task> build)
     {
-        var path = Path.Combine(Path.GetTempPath(), $"scdc-fixture-{Guid.NewGuid():N}.scdc");
-        try
-        {
-            var options = new AccessWriterOptions
-            {
-                Password = password.AsMemory(),
-                UseLockFile = false
-            };
+        using var workspace = new TestWorkspace();
+        var path = workspace.GetPath($"fixture-{Guid.NewGuid():N}.scdc");
 
-            await using (var writer = await AccessWriter.CreateDatabaseAsync(
-                             path,
-                             DatabaseFormat.Jet4Mdb,
-                             options))
-            {
-                await build(writer).ConfigureAwait(false);
-            }
+        var options = new AccessWriterOptions
+        {
+            Password = password.AsMemory(),
+            UseLockFile = false
+        };
 
-            var bytes = await File.ReadAllBytesAsync(path).ConfigureAwait(false);
-            return new MemoryStream(bytes, writable: false);
-        }
-        finally
+        await using (var writer = await AccessWriter.CreateDatabaseAsync(
+                         path,
+                         DatabaseFormat.Jet4Mdb,
+                         options))
         {
-            TryDelete(path);
-            TryDelete(path + ".jdw-journal");
-            TryDelete(Path.ChangeExtension(path, ".ldb"));
+            await build(writer).ConfigureAwait(false);
         }
-    }
 
-    private static void TryDelete(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
-        }
-        catch (IOException)
-        {
-        }
+        var bytes = await File.ReadAllBytesAsync(path).ConfigureAwait(false);
+        return new MemoryStream(bytes, writable: false);
     }
 
     public static ColumnDefinition[] CdsColumns(bool usePrimaryKeys) =>

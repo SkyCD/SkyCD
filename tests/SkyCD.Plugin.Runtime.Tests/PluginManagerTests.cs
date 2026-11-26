@@ -12,12 +12,20 @@ using SkyCD.SDK.Capabilities.Menu;
 using SkyCD.Plugin.Runtime.Documents;
 using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Plugin.Runtime.Managers;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.Plugin.Runtime.Tests;
 
-public class PluginManagerTests
+public class PluginManagerTests : IDisposable
 {
+    private readonly TestWorkspace workspace = new();
+
+    public void Dispose()
+    {
+        workspace.Dispose();
+    }
+
     [Fact]
     public void BuildFromAssembly_ReturnsPluginAndCapabilities()
     {
@@ -35,30 +43,19 @@ public class PluginManagerTests
     [Fact]
     public void Discover_SkipsIncompatiblePlugin()
     {
-        var root = Path.Combine(Path.GetTempPath(), $"skycd-plugin-compat-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(root);
+        var root = workspace.CreateDirectory($"plugin-compat-{Guid.NewGuid():N}");
 
-        try
-        {
-            var assemblyPath = Assembly.GetExecutingAssembly().Location;
-            File.Copy(assemblyPath, Path.Combine(root, Path.GetFileName(assemblyPath)), overwrite: true);
+        var assemblyPath = Assembly.GetExecutingAssembly().Location;
+        File.Copy(assemblyPath, Path.Combine(root, Path.GetFileName(assemblyPath)), overwrite: true);
 
-            var discovery = new PluginManager(
-                NullLogger<PluginManager>.Instance,
-                new AssembliesListFactory(NullLogger<AssembliesListFactory>.Instance),
-                new DiscoveredPluginFactory(),
-                CreatePluginRepository());
-            discovery.Discover(root, new Version(2, 9, 0));
+        var discovery = new PluginManager(
+            NullLogger<PluginManager>.Instance,
+            new AssembliesListFactory(NullLogger<AssembliesListFactory>.Instance),
+            new DiscoveredPluginFactory(),
+            CreatePluginRepository());
+        discovery.Discover(root, new Version(2, 9, 0));
 
-            Assert.Empty(discovery.Plugins);
-        }
-        finally
-        {
-            if (Directory.Exists(root))
-            {
-                Directory.Delete(root, recursive: true);
-            }
-        }
+        Assert.Empty(discovery.Plugins);
     }
 
     [Fact]
@@ -75,38 +72,26 @@ public class PluginManagerTests
     [Fact]
     public void Discover_PersistsPrimaryExtensionInDescriptor()
     {
-        var root = Path.Combine(Path.GetTempPath(), $"skycd-plugin-icon-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(root);
+        var root = workspace.CreateDirectory($"plugin-icon-{Guid.NewGuid():N}");
 
-        try
-        {
-            var assemblyPath = Assembly.GetExecutingAssembly().Location;
-            File.Copy(assemblyPath, Path.Combine(root, Path.GetFileName(assemblyPath)), overwrite: true);
+        var assemblyPath = Assembly.GetExecutingAssembly().Location;
+        File.Copy(assemblyPath, Path.Combine(root, Path.GetFileName(assemblyPath)), overwrite: true);
 
-            var manager = new PluginManager(
-                NullLogger<PluginManager>.Instance,
-                new AssembliesListFactory(NullLogger<AssembliesListFactory>.Instance),
-                new DiscoveredPluginFactory(),
-                CreatePluginRepository());
-            manager.Discover(root, new Version(3, 0, 0));
+        var manager = new PluginManager(
+            NullLogger<PluginManager>.Instance,
+            new AssembliesListFactory(NullLogger<AssembliesListFactory>.Instance),
+            new DiscoveredPluginFactory(),
+            CreatePluginRepository());
+        manager.Discover(root, new Version(3, 0, 0));
 
-            var descriptor = Assert.Single(manager.GetPluginDescriptors());
-            Assert.Equal("test", descriptor.PrimaryExtension);
-        }
-        finally
-        {
-            if (Directory.Exists(root))
-            {
-                Directory.Delete(root, recursive: true);
-            }
-        }
+        var descriptor = Assert.Single(manager.GetPluginDescriptors());
+        Assert.Equal("test", descriptor.PrimaryExtension);
     }
 
-    private static IRepository<PluginDocument> CreatePluginRepository()
+    private IRepository<PluginDocument> CreatePluginRepository()
     {
         var databaseManager = new DatabaseManager();
-        var directory = Path.Combine(Path.GetTempPath(), "SkyCD", "PluginRuntimeTests", Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(directory);
+        var directory = workspace.CreateDirectory(Path.Combine("plugin-runtime-db", Guid.NewGuid().ToString("N")));
         databaseManager.Connect("default", directory);
         var repositoryManager = new RepositoryManager(databaseManager);
         return (IRepository<PluginDocument>)repositoryManager.For<PluginDocument>();

@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using SkyCD.Core.Plugins.Installation;
 using SkyCD.Plugin.Runtime.Installation;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.Plugin.Runtime.Tests.Installation;
@@ -25,27 +26,13 @@ public sealed class PluginUninstallTests : IDisposable
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
-    private readonly string root = Path.Combine(Path.GetTempPath(), $"skycd-uninstall-{Guid.NewGuid():N}");
+    private readonly TestWorkspace workspace = new();
 
-    public PluginUninstallTests()
-    {
-        Directory.CreateDirectory(root);
-    }
+    private string root => workspace.Root;
 
     public void Dispose()
     {
-        try
-        {
-            Directory.Delete(root, recursive: true);
-        }
-        catch (IOException)
-        {
-            // A locked leftover does not change assertion results.
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // A locked leftover does not change assertion results.
-        }
+        workspace.Dispose();
     }
 
     private string PluginRoot => Path.Combine(root, "plugins");

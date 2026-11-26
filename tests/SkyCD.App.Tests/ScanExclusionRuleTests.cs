@@ -17,8 +17,10 @@ namespace SkyCD.App.Tests;
 
 public sealed class ScanExclusionRuleTests : IDisposable
 {
-    private readonly string root = Path.Combine(Path.GetTempPath(), $"skycd-exclusions-{Guid.NewGuid():N}");
+    private readonly TestWorkspace workspace = new();
     private readonly AppDataSandbox sandbox = new();
+
+    private string root => workspace.Root;
 
     private CatalogScanResult ScanWith(Action<FakeScanFileSystem> populate, ScanTraversalOptions traversal)
     {
@@ -455,5 +457,9 @@ public sealed class ScanExclusionRuleTests : IDisposable
         Assert.True(resetRaised);
     }
 
-    public void Dispose() => sandbox.Dispose();
+    public void Dispose()
+    {
+        sandbox.Dispose();
+        workspace.Dispose();
+    }
 }

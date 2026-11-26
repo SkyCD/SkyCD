@@ -16,6 +16,7 @@ using SkyCD.Plugin.Metadata.AbiWord.Export;
 using SkyCD.Plugin.Metadata.AbiWord.Models;
 using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Presentation.MediaCache;
+using SkyCD.TestSupport;
 using SkyCD.UI.Controls.Preview;
 using Xunit;
 
@@ -32,37 +33,22 @@ public sealed class AbiWordPluginIntegrationTests : IDisposable
         <abiword xmlns="http://www.abisource.com/awml.dtd"><metadata><m key="dc.title">Offline report</m><m key="dc.creator">A. Writer</m></metadata><section><p>body</p></section></abiword>
         """;
 
-    private readonly string databaseDirectory =
-        Path.Combine(Path.GetTempPath(), $"skycd-abiword-plugin-{Guid.NewGuid():N}");
+    private readonly TestWorkspace workspace = new();
 
     private readonly string? previousDatabaseDirectory =
         Environment.GetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY");
 
+    private string databaseDirectory => workspace.Root;
+
     public AbiWordPluginIntegrationTests()
     {
-        Directory.CreateDirectory(databaseDirectory);
         Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", databaseDirectory);
     }
 
     public void Dispose()
     {
         Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", previousDatabaseDirectory);
-
-        try
-        {
-            if (Directory.Exists(databaseDirectory))
-            {
-                Directory.Delete(databaseDirectory, recursive: true);
-            }
-        }
-        catch (IOException)
-        {
-            // Couchbase Lite can release file handles slightly after dispose on some systems.
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // Blob files can stay locked briefly after the database is closed on Windows.
-        }
+        workspace.Dispose();
     }
 
     [Fact]

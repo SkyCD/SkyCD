@@ -4,21 +4,20 @@ using Xunit;
 using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Ai.Provider.Exceptions;
 using SkyCD.Plugin.Ai.Provider.Models;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.Ai.Provider.Tests;
 
 public sealed class AiProviderSettingsStoreTests : IDisposable
 {
-    private readonly string directory = Path.Combine(Path.GetTempPath(),
-        "skycd-ai-provider-tests", Guid.NewGuid().ToString("N"));
+    private readonly TestWorkspace workspace = new();
 
     public void Dispose()
     {
-        if (Directory.Exists(directory))
-        {
-            Directory.Delete(directory, recursive: true);
-        }
+        workspace.Dispose();
     }
+
+    private string directory => workspace.Root;
 
     [Fact]
     public void Read_WhenMissing_ReturnsDefaults()
@@ -81,8 +80,7 @@ public sealed class AiProviderSettingsStoreTests : IDisposable
     [Fact]
     public void Read_WhenJsonInvalid_ThrowsAiProviderException()
     {
-        Directory.CreateDirectory(directory);
-        File.WriteAllText(Path.Combine(directory, "broken.json"), "{ not json");
+        workspace.CreateFile("broken.json", "{ not json");
 
         var store = new AiProviderSettingsStore(Path.Combine(directory, "broken.json"));
 
@@ -92,9 +90,7 @@ public sealed class AiProviderSettingsStoreTests : IDisposable
     [Fact]
     public void Read_WhenFileTooLarge_ThrowsAiProviderException()
     {
-        Directory.CreateDirectory(directory);
-        var path = Path.Combine(directory, "large.json");
-        File.WriteAllBytes(path, new byte[AiProviderSettingsStore.MaximumBytes + 1]);
+        var path = workspace.CreateFile("large.json", new byte[AiProviderSettingsStore.MaximumBytes + 1]);
 
         var store = new AiProviderSettingsStore(path);
 

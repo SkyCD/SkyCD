@@ -7,6 +7,7 @@ using System.Threading;
 using FluentFTP;
 using SkyCD.Presentation.Operations;
 using SkyCD.Presentation.Scanning;
+using SkyCD.TestSupport;
 using SkyCD.UI.Localization;
 using Xunit;
 
@@ -56,9 +57,11 @@ public sealed class FtpsCatalogTransportTests
 
     private sealed class TempTree : IDisposable
     {
+        private readonly TestWorkspace workspace = new();
+
         public TempTree()
         {
-            Root = Path.Combine(Path.GetTempPath(), $"skycd-ftps-{Guid.NewGuid():N}");
+            Root = workspace.Root;
             Directory.CreateDirectory(Path.Combine(Root, "nested", "child"));
             Write("nested/top.txt", 7);
             Write("nested/child/file.txt", 42);
@@ -74,19 +77,7 @@ public sealed class FtpsCatalogTransportTests
             File.SetLastWriteTimeUtc(path, new DateTime(2024, 5, 6, 7, 8, 9, DateTimeKind.Utc));
         }
 
-        public void Dispose()
-        {
-            try
-            {
-                Directory.Delete(Root, recursive: true);
-            }
-            catch (IOException)
-            {
-            }
-            catch (UnauthorizedAccessException)
-            {
-            }
-        }
+        public void Dispose() => workspace.Dispose();
     }
 
     /// <summary>Collects the progress events so retry behaviour can be asserted.</summary>

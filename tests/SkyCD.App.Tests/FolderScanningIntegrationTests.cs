@@ -28,25 +28,14 @@ namespace SkyCD.App.Tests;
 public sealed class FolderScanningIntegrationTests : IDisposable
 {
     private readonly AppDataSandbox sandbox = new();
-    private readonly string scanTestDirectory = Path.Combine(Path.GetTempPath(), $"skycd-scan-source-{Guid.NewGuid():N}");
+    private readonly TestWorkspace workspace = new();
 
-    public FolderScanningIntegrationTests()
-    {
-        Directory.CreateDirectory(scanTestDirectory);
-    }
+    private string scanTestDirectory => workspace.Root;
 
     public void Dispose()
     {
         sandbox.Dispose();
-
-        try
-        {
-            if (Directory.Exists(scanTestDirectory))
-            {
-                Directory.Delete(scanTestDirectory, recursive: true);
-            }
-        }
-        catch { }
+        workspace.Dispose();
     }
 
     [Fact]

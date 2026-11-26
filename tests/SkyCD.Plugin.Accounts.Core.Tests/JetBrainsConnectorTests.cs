@@ -14,6 +14,7 @@ using SkyCD.SDK.Capabilities.Accounts;
 using SkyCD.SDK.Capabilities.Ownership;
 using SkyCD.SDK.OAuth;
 using SkyCD.Plugin.Accounts.JetBrains;
+using SkyCD.TestSupport;
 using Xunit;
 using SkyCD.Plugin.Accounts.JetBrains.Models;
 using SkyCD.Plugin.Accounts.JetBrains.Parsing;
@@ -295,17 +296,17 @@ public sealed class JetBrainsConnectorTests
 
     private sealed class ConnectorFixture : IDisposable
     {
+        private readonly TestWorkspace workspace = new();
+
         public ConnectorFixture(bool connectOnLogin = true)
         {
-            Root = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(Root);
             StorePath = Path.Combine(Root, "jetbrains.json");
             OAuth = new FakeOAuth { ConnectOnLogin = connectOnLogin };
             Handler = new LicenseHandler();
             Connector = CreateConnector((_, _) => Task.CompletedTask);
         }
 
-        public string Root { get; }
+        public string Root => workspace.Root;
         public string StorePath { get; }
         public FakeOAuth OAuth { get; }
         public LicenseHandler Handler { get; }
@@ -334,10 +335,7 @@ public sealed class JetBrainsConnectorTests
         public void Dispose()
         {
             Handler.Dispose();
-            if (Directory.Exists(Root))
-            {
-                Directory.Delete(Root, recursive: true);
-            }
+            workspace.Dispose();
         }
     }
 
@@ -430,38 +428,37 @@ public sealed class JetBrainsConnectorTests
     }
 }
 
-public sealed class JetBrainsIdeDetectorTests
+public sealed class JetBrainsIdeDetectorTests : IDisposable
 {
+    private readonly TestWorkspace workspace = new();
+
+    public void Dispose()
+    {
+        workspace.Dispose();
+    }
+
     [Fact]
     public void Detect_FindsToolboxAndStandaloneInstallsAndKeepsNewest()
     {
-        var root = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(root);
-        try
-        {
-            CreateFile(root, Path.Combine("IntelliJ IDEA Ultimate 2024.1", "bin"), "idea64.exe");
-            CreateFile(root, Path.Combine("JetBrains", "Toolbox", "apps", "IntelliJ IDEA Ultimate", "ch-0",
-                "241.14494.240", "bin"), "idea64.exe");
-            CreateFile(root, Path.Combine("Programs", "WebStorm 2024.2", "bin"), "webstorm64.exe");
+        var root = workspace.Root;
+        CreateFile(root, Path.Combine("IntelliJ IDEA Ultimate 2024.1", "bin"), "idea64.exe");
+        CreateFile(root, Path.Combine("JetBrains", "Toolbox", "apps", "IntelliJ IDEA Ultimate", "ch-0",
+            "241.14494.240", "bin"), "idea64.exe");
+        CreateFile(root, Path.Combine("Programs", "WebStorm 2024.2", "bin"), "webstorm64.exe");
 
-            var installs = new JetBrainsIdeDetector([root], isWindows: true, isMacOS: false).Detect();
+        var installs = new JetBrainsIdeDetector([root], isWindows: true, isMacOS: false).Detect();
 
-            Assert.Equal(2, installs.Count);
-            var idea = installs.Single(install => install.ProductCode == "II");
-            Assert.Equal("241.14494.240", idea.Version);
-            Assert.Equal("2024.2", installs.Single(install => install.ProductCode == "WS").Version);
-        }
-        finally
-        {
-            Directory.Delete(root, recursive: true);
-        }
+        Assert.Equal(2, installs.Count);
+        var idea = installs.Single(install => install.ProductCode == "II");
+        Assert.Equal("241.14494.240", idea.Version);
+        Assert.Equal("2024.2", installs.Single(install => install.ProductCode == "WS").Version);
     }
 
     [Fact]
     public void Detect_MissingRoots_ReturnsEmpty()
     {
         var installs = new JetBrainsIdeDetector(
-            [Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"))],
+            [workspace.GetPath("missing-root")],
             isWindows: true,
             isMacOS: false).Detect();
 

@@ -10,6 +10,7 @@ using SkyCD.SDK.Capabilities.FileFormats;
 using SkyCD.Plugin.FileFormat.PlainText;
 using SkyCD.Plugin.Runtime.Exceptions;
 using SkyCD.Plugin.Runtime.Managers;
+using SkyCD.TestSupport;
 using Xunit;
 using SkyCD.Plugin.FileFormat.PlainText.Models;
 
@@ -296,35 +297,28 @@ public class PlainTextListExportTests
     public async Task FileTarget_WritesAtomicallyWithoutLeftovers()
     {
         var service = CreateService();
-        var directory = Path.Combine(Path.GetTempPath(), "txt-atomic", Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(directory);
-        try
-        {
-            var destination = Path.Combine(directory, "out.txt");
-            await File.WriteAllTextAsync(destination, "OLD");
-            await using (var target = File.Create(destination))
-            {
-                var result = await service.WriteAsync(new FileFormatWriteRequest
-                {
-                    FormatId = "skycd-txt-list",
-                    Target = target,
-                    FileName = "out.txt",
-                    Payload = new PlainTextListExportRequest
-                    {
-                        Rows = new List<Dictionary<string, object?>> { Row("a.txt", "D", "file", 1, null, null, "D") },
-                        Columns = ["Name"]
-                    }
-                });
-                Assert.True(result.Success, $"Export failed: {result.Error}");
-            }
+        using var workspace = new TestWorkspace();
+        var directory = workspace.Root;
 
-            Assert.Contains("a.txt", await File.ReadAllTextAsync(destination));
-            Assert.Empty(Directory.GetFiles(directory, ".*.tmp*"));
-        }
-        finally
+        var destination = workspace.CreateFile("out.txt", "OLD");
+        await using (var target = File.Create(destination))
         {
-            Directory.Delete(directory, recursive: true);
+            var result = await service.WriteAsync(new FileFormatWriteRequest
+            {
+                FormatId = "skycd-txt-list",
+                Target = target,
+                FileName = "out.txt",
+                Payload = new PlainTextListExportRequest
+                {
+                    Rows = new List<Dictionary<string, object?>> { Row("a.txt", "D", "file", 1, null, null, "D") },
+                    Columns = ["Name"]
+                }
+            });
+            Assert.True(result.Success, $"Export failed: {result.Error}");
         }
+
+        Assert.Contains("a.txt", await File.ReadAllTextAsync(destination));
+        Assert.Empty(Directory.GetFiles(directory, ".*.tmp*"));
     }
 
     [Fact]

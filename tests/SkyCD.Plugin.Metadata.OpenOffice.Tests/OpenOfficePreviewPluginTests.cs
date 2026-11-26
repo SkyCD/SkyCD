@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Metadata.OpenOffice.Models;
 using Xunit;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.Metadata.OpenOffice.Tests;
 

@@ -3,6 +3,7 @@ using System.IO;
 using SkyCD.Presentation.Operations;
 using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.App.Tests;
@@ -12,8 +13,8 @@ public class OperationLogCompactTextTests
     private static readonly DateTimeOffset Timestamp = new(2026, 11, 26, 12, 29, 30, 705, TimeSpan.Zero);
     private static readonly string Sep = Path.DirectorySeparatorChar.ToString();
 
-    private static string RootDir(string name) =>
-        Path.Combine(Path.GetTempPath(), "skycd-compact-" + name);
+    private static string RootDir(TestWorkspace workspace, string name) =>
+        workspace.GetPath("skycd-compact-" + name);
 
     private static OperationLogEntry Entry(
         OperationLogLevel level,
@@ -79,7 +80,8 @@ public class OperationLogCompactTextTests
     [Fact]
     public void CompactText_OmitsStageWhileDisplayTextKeepsIt()
     {
-        var root = RootDir("stage");
+        using var workspace = new TestWorkspace();
+        var root = RootDir(workspace, "stage");
         var entry = Entry(
             OperationLogLevel.Information,
             $"Starting folder scan: {root}",
@@ -94,7 +96,8 @@ public class OperationLogCompactTextTests
     [Fact]
     public void SkipReason_AppearsOnceWithRelativePathAfterIt()
     {
-        var root = RootDir("skip");
+        using var workspace = new TestWorkspace();
+        var root = RootDir(workspace, "skip");
         var file = Path.Combine(root, "desktop.ini");
         var entry = Entry(
             OperationLogLevel.ItemSkipped,
@@ -113,7 +116,8 @@ public class OperationLogCompactTextTests
     [Fact]
     public void ChildPath_RendersRelativeToScanRoot()
     {
-        var root = RootDir("child");
+        using var workspace = new TestWorkspace();
+        var root = RootDir(workspace, "child");
         var child = Path.Combine(root, "Screen Recordings");
         var entry = Entry(
             OperationLogLevel.ItemProcessed,
@@ -129,7 +133,8 @@ public class OperationLogCompactTextTests
     [Fact]
     public void DeepChildPath_RendersRelativeWithSubfolders()
     {
-        var root = RootDir("deep");
+        using var workspace = new TestWorkspace();
+        var root = RootDir(workspace, "deep");
         var file = Path.Combine(root, "Sub", "track.mp3");
         var entry = Entry(
             OperationLogLevel.ItemProcessed,
@@ -144,7 +149,8 @@ public class OperationLogCompactTextTests
     [Fact]
     public void ScanRoot_KeepsAbsolutePathExactlyOnce()
     {
-        var root = RootDir("root");
+        using var workspace = new TestWorkspace();
+        var root = RootDir(workspace, "root");
         var entry = Entry(
             OperationLogLevel.Information,
             $"Starting folder scan: {root}",
@@ -158,7 +164,8 @@ public class OperationLogCompactTextTests
     [Fact]
     public void FailureCause_IsSingleLineWithExceptionTypeAndMessage()
     {
-        var root = RootDir("fail");
+        using var workspace = new TestWorkspace();
+        var root = RootDir(workspace, "fail");
         var file = Path.Combine(root, "c.dat");
         var failure = ThrownInvalidOperation("CRC fail");
         var entry = Entry(
@@ -177,7 +184,8 @@ public class OperationLogCompactTextTests
     [Fact]
     public void FailureWithoutException_UsesReason()
     {
-        var root = RootDir("failreason");
+        using var workspace = new TestWorkspace();
+        var root = RootDir(workspace, "failreason");
         var file = Path.Combine(root, "c.dat");
         var entry = Entry(
             OperationLogLevel.ItemFailed,
@@ -193,7 +201,8 @@ public class OperationLogCompactTextTests
     [Fact]
     public void ErrorDetails_AreReducedToFirstLine()
     {
-        var root = RootDir("err");
+        using var workspace = new TestWorkspace();
+        var root = RootDir(workspace, "err");
         var file = Path.Combine(root, "bad.bin");
         var failure = ThrownInvalidOperation("CRC fail");
         var entry = Entry(
@@ -210,7 +219,8 @@ public class OperationLogCompactTextTests
     [Fact]
     public void ViewModel_StampsLearnedScanRootOnLaterEntries()
     {
-        var root = RootDir("stamp");
+        using var workspace = new TestWorkspace();
+        var root = RootDir(workspace, "stamp");
         var vm = new AddingProgressDialogViewModel();
 
         vm.ReportInfo($"Starting folder scan: {root}", itemPath: root);
@@ -229,7 +239,8 @@ public class OperationLogCompactTextTests
     [Fact]
     public void CopyLog_KeepsVerboseLines()
     {
-        var root = RootDir("verbose");
+        using var workspace = new TestWorkspace();
+        var root = RootDir(workspace, "verbose");
         var file = Path.Combine(root, "c.dat");
         var failure = ThrownInvalidOperation("CRC fail");
         var vm = new AddingProgressDialogViewModel();
@@ -252,40 +263,35 @@ public class OperationLogCompactTextTests
     [Fact]
     public void FolderScan_RendersCompactRelativeLines()
     {
-        var root = Path.Combine(Path.GetTempPath(), "skycd-compact-scan-" + Guid.NewGuid().ToString("N"));
+        using var workspace = new TestWorkspace();
+        var root = workspace.Root;
         var sub = Path.Combine(root, "Screen Recordings");
         Directory.CreateDirectory(sub);
         File.WriteAllText(Path.Combine(sub, "clip.txt"), "x");
         var vm = new AddingProgressDialogViewModel();
-        try
+
+        new FolderCatalogScanner().Scan(new FolderScanOptions(root), vm, vm.CancellationToken);
+
+        var start = Assert.Single(
+            vm.LogEntries,
+            entry => entry.Message.StartsWith("Starting folder scan:", StringComparison.Ordinal));
+        Assert.Contains(root, start.CompactText, StringComparison.Ordinal);
+        Assert.Equal(1, CountOccurrences(start.CompactText, root));
+
+        var folder = Assert.Single(
+            vm.LogEntries,
+            entry => entry.Message.StartsWith("Scanning folder:", StringComparison.Ordinal));
+        Assert.Equal($"Scanning folder: .{Sep}Screen Recordings", folder.CompactMessage);
+
+        var file = Assert.Single(
+            vm.LogEntries,
+            entry => entry.Message.StartsWith("Added file:", StringComparison.Ordinal));
+        Assert.Equal($"Added file: .{Sep}Screen Recordings{Sep}clip.txt", file.CompactMessage);
+
+        foreach (var entry in vm.LogEntries)
         {
-            new FolderCatalogScanner().Scan(new FolderScanOptions(root), vm, vm.CancellationToken);
-
-            var start = Assert.Single(
-                vm.LogEntries,
-                entry => entry.Message.StartsWith("Starting folder scan:", StringComparison.Ordinal));
-            Assert.Contains(root, start.CompactText, StringComparison.Ordinal);
-            Assert.Equal(1, CountOccurrences(start.CompactText, root));
-
-            var folder = Assert.Single(
-                vm.LogEntries,
-                entry => entry.Message.StartsWith("Scanning folder:", StringComparison.Ordinal));
-            Assert.Equal($"Scanning folder: .{Sep}Screen Recordings", folder.CompactMessage);
-
-            var file = Assert.Single(
-                vm.LogEntries,
-                entry => entry.Message.StartsWith("Added file:", StringComparison.Ordinal));
-            Assert.Equal($"Added file: .{Sep}Screen Recordings{Sep}clip.txt", file.CompactMessage);
-
-            foreach (var entry in vm.LogEntries)
-            {
-                Assert.DoesNotContain(".705", entry.CompactText, StringComparison.Ordinal);
-                Assert.DoesNotContain('\n', entry.CompactText);
-            }
-        }
-        finally
-        {
-            Directory.Delete(root, true);
+            Assert.DoesNotContain(".705", entry.CompactText, StringComparison.Ordinal);
+            Assert.DoesNotContain('\n', entry.CompactText);
         }
     }
 }

@@ -7,6 +7,7 @@ using SkyCD.SDK.Capabilities.Configuration;
 using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Runtime.Factories;
+using SkyCD.TestSupport;
 using Xunit;
 using SkyCD.Plugin.Metadata.FileMetadata.Models;
 
@@ -60,6 +61,7 @@ public sealed class FileMetadataHostIntegrationTests
     [Fact]
     public async Task WithAPath_TheProviderRunsWithoutReadingTheStream()
     {
+        using var workspace = new TestWorkspace();
         var manager = CreateManager();
         var opened = 0;
         Task<Stream> OpenTracked(CancellationToken _)
@@ -72,7 +74,7 @@ public sealed class FileMetadataHostIntegrationTests
             new MediaItem(".txt", null, 3),
             OpenTracked,
             selection: MediaProviderSelection.StandardMetadata,
-            sourcePath: Path.Combine(Path.GetTempPath(), $"skycd-missing-{Guid.NewGuid():N}.txt"));
+            sourcePath: workspace.GetPath("missing.txt"));
 
         var result = Assert.Single(results);
         Assert.False(result.Failed);

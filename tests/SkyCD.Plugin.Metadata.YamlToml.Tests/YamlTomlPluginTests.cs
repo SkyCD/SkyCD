@@ -12,6 +12,7 @@ using SkyCD.Plugin.Metadata.YamlToml.Models;
 using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.SDK.Capabilities.Media;
 using Xunit;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.Metadata.YamlToml.Tests;
 

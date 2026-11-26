@@ -12,6 +12,7 @@ using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Presentation.MediaCache;
+using SkyCD.TestSupport;
 using SkyCD.UI.Controls.Preview;
 using Xunit;
 using SkyCD.Plugin.Metadata.IWork.Models;
@@ -29,37 +30,22 @@ public sealed class IWorkPluginIntegrationTests : IDisposable
     private const string MediaRootId = "media-root";
     private const string DocumentEntryId = "file-document-1";
 
-    private readonly string databaseDirectory =
-        Path.Combine(Path.GetTempPath(), $"skycd-iwork-plugin-{Guid.NewGuid():N}");
+    private readonly TestWorkspace workspace = new();
 
     private readonly string? previousDatabaseDirectory =
         Environment.GetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY");
 
+    private string databaseDirectory => workspace.Root;
+
     public IWorkPluginIntegrationTests()
     {
-        Directory.CreateDirectory(databaseDirectory);
         Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", databaseDirectory);
     }
 
     public void Dispose()
     {
         Environment.SetEnvironmentVariable("SKYCD_DATABASE_DIRECTORY", previousDatabaseDirectory);
-
-        try
-        {
-            if (Directory.Exists(databaseDirectory))
-            {
-                Directory.Delete(databaseDirectory, recursive: true);
-            }
-        }
-        catch (IOException)
-        {
-            // Couchbase Lite can release file handles slightly after dispose on some systems.
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // Blob files can stay locked briefly after the database is closed on Windows.
-        }
+        workspace.Dispose();
     }
 
     [Fact]

@@ -1,15 +1,18 @@
 using System;
 using System.IO;
 using SkyCD.Presentation.Scanning;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.App.Tests;
 
 public sealed class LinuxOpticalDriveProbeTests : IDisposable
 {
-    private readonly string root = Path.Combine(Path.GetTempPath(), $"skycd-optical-{Guid.NewGuid():N}");
+    private readonly TestWorkspace workspace = new();
     private readonly string sysfs;
     private readonly string devices;
+
+    private string root => workspace.Root;
 
     public LinuxOpticalDriveProbeTests()
     {
@@ -29,17 +32,7 @@ public sealed class LinuxOpticalDriveProbeTests : IDisposable
 
     public void Dispose()
     {
-        try
-        {
-            if (Directory.Exists(root))
-            {
-                Directory.Delete(root, recursive: true);
-            }
-        }
-        catch
-        {
-            // Ignore cleanup errors
-        }
+        workspace.Dispose();
     }
 
     [Fact]

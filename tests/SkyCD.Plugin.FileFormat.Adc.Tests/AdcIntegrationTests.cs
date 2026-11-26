@@ -13,6 +13,7 @@ using SkyCD.Documents.Repository;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.Plugin.FileFormat.Adc.Tests;
@@ -78,48 +79,40 @@ public sealed class AdcIntegrationTests
 
     private static void Persist(IReadOnlyList<CatalogDocument> documents, Action<MainWindowViewModel>? verify = null)
     {
-        var directory = Path.Combine(Path.GetTempPath(), "skycd-adc-" + Guid.NewGuid().ToString("N"));
-        try
-        {
-            using (var database = new Database("catalog", new DatabaseConfiguration { Directory = directory }))
-            {
-                var collection = database.GetDefaultCollection();
-                foreach (var entry in documents)
-                {
-                    using var document = entry.ToMutableDocument(entry.Id);
-                    collection.Save(document);
-                }
-            }
+        using var workspace = new TestWorkspace();
+        var directory = workspace.Root;
 
-            using var reopened = new Database("catalog", new DatabaseConfiguration { Directory = directory });
-            var reopenedCollection = reopened.GetDefaultCollection();
+        using (var database = new Database("catalog", new DatabaseConfiguration { Directory = directory }))
+        {
+            var collection = database.GetDefaultCollection();
             foreach (var entry in documents)
             {
-                using var saved = reopenedCollection.GetDocument(entry.Id);
-                var restored = saved.FromDocument<CatalogDocument>();
-                Assert.NotNull(restored);
-                Assert.Equal(entry.Name, restored.Name);
-                Assert.Equal(entry.ParentId, restored.ParentId);
-                Assert.Equal(entry.Size, restored.Size);
-                Assert.Equal(entry.Type, restored.Type);
+                using var document = entry.ToMutableDocument(entry.Id);
+                collection.Save(document);
             }
-
-            var repository = new CatalogDocumentRepository();
-            repository.Initialize(typeof(CatalogDocument), reopenedCollection.Name, reopenedCollection);
-            var constructor = typeof(MainWindowViewModel)
-                .GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance)
-                .Single(candidate => candidate.GetParameters().Length == 5);
-            using var vm = Assert.IsType<MainWindowViewModel>(constructor.Invoke(
-                [repository, new PropertyValueLocalizer(), new MenuExtensionManager([]), false, null]));
-
-            verify?.Invoke(vm);
         }
-        finally
+
+        using var reopened = new Database("catalog", new DatabaseConfiguration { Directory = directory });
+        var reopenedCollection = reopened.GetDefaultCollection();
+        foreach (var entry in documents)
         {
-            if (Directory.Exists(directory))
-            {
-                Directory.Delete(directory, recursive: true);
-            }
+            using var saved = reopenedCollection.GetDocument(entry.Id);
+            var restored = saved.FromDocument<CatalogDocument>();
+            Assert.NotNull(restored);
+            Assert.Equal(entry.Name, restored.Name);
+            Assert.Equal(entry.ParentId, restored.ParentId);
+            Assert.Equal(entry.Size, restored.Size);
+            Assert.Equal(entry.Type, restored.Type);
         }
+
+        var repository = new CatalogDocumentRepository();
+        repository.Initialize(typeof(CatalogDocument), reopenedCollection.Name, reopenedCollection);
+        var constructor = typeof(MainWindowViewModel)
+            .GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance)
+            .Single(candidate => candidate.GetParameters().Length == 5);
+        using var vm = Assert.IsType<MainWindowViewModel>(constructor.Invoke(
+            [repository, new PropertyValueLocalizer(), new MenuExtensionManager([]), false, null]));
+
+        verify?.Invoke(vm);
     }
 }

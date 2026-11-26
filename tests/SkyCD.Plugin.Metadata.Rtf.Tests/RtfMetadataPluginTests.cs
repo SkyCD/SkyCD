@@ -6,6 +6,7 @@ using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Metadata.Rtf.Exceptions;
 using Xunit;
 using SkyCD.Plugin.Metadata.Rtf.Models;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.Metadata.Rtf.Tests;
 

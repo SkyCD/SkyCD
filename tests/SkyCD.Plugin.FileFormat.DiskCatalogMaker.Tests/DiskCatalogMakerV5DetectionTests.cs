@@ -4,6 +4,7 @@ using System.Text;
 using SkyCD.SDK.Capabilities.FileFormats;
 using SkyCD.Plugin.FileFormat.DiskCatalogMaker;
 using SkyCD.Plugin.Runtime.Managers;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.Plugin.FileFormat.DiskCatalogMaker.Tests;
@@ -103,29 +104,23 @@ public sealed class DiskCatalogMakerV5DetectionTests
     [Fact]
     public void CanHandleFolder_RequiresStructurallyValidCatalogPayload()
     {
-        var root = CreateTemporaryDirectory();
-        try
-        {
-            Assert.False(plugin.CanHandleFolder(root));
+        using var workspace = new TestWorkspace();
+        var root = workspace.Root;
 
-            File.WriteAllBytes(
-                Path.Combine(root, "Catalog.dcm"),
-                new DiskCatalogMakerV5FixtureBuilder().Build());
-            Assert.True(plugin.CanHandleFolder(root));
+        Assert.False(plugin.CanHandleFolder(root));
 
-            File.WriteAllBytes(Path.Combine(root, "Catalog.dcm"), [1, 2, 3, 4]);
-            Assert.False(plugin.CanHandleFolder(root));
-        }
-        finally
-        {
-            Directory.Delete(root, recursive: true);
-        }
+        workspace.CreateFile("Catalog.dcm", new DiskCatalogMakerV5FixtureBuilder().Build());
+        Assert.True(plugin.CanHandleFolder(root));
+
+        workspace.CreateFile("Catalog.dcm", [1, 2, 3, 4]);
+        Assert.False(plugin.CanHandleFolder(root));
     }
 
     [Fact]
     public void CanHandleFolder_RejectsMissingDirectory()
     {
-        Assert.False(plugin.CanHandleFolder(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"))));
+        using var workspace = new TestWorkspace();
+        Assert.False(plugin.CanHandleFolder(workspace.GetPath(Guid.NewGuid().ToString("N"))));
         Assert.False(plugin.CanHandleFolder(string.Empty));
     }
 
@@ -141,26 +136,11 @@ public sealed class DiskCatalogMakerV5DetectionTests
         Assert.Equal("diskcatalogmaker-v5", manager.GetInstanceFor("catalog.dcmf").SupportedFormat.FormatId);
         Assert.Equal("diskcatalogmaker-v5", manager.GetInstanceFor("catalog.dcmd").SupportedFormat.FormatId);
 
-        var root = CreateTemporaryDirectory();
-        try
-        {
-            File.WriteAllBytes(
-                Path.Combine(root, "Catalog.dcm"),
-                new DiskCatalogMakerV5FixtureBuilder().Build());
+        using var workspace = new TestWorkspace();
+        var root = workspace.Root;
+        workspace.CreateFile("Catalog.dcm", new DiskCatalogMakerV5FixtureBuilder().Build());
 
-            var capability = manager.GetInstanceFor(root);
-            Assert.Equal("diskcatalogmaker-v5", capability.SupportedFormat.FormatId);
-        }
-        finally
-        {
-            Directory.Delete(root, recursive: true);
-        }
-    }
-
-    private static string CreateTemporaryDirectory()
-    {
-        var path = Path.Combine(Path.GetTempPath(), "skycd-dcm5-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(path);
-        return path;
+        var capability = manager.GetInstanceFor(root);
+        Assert.Equal("diskcatalogmaker-v5", capability.SupportedFormat.FormatId);
     }
 }

@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.SDK.Capabilities.FileFormats;
 using SkyCD.Plugin.FileFormat.DiskCatalogMaker;
+using SkyCD.TestSupport;
 using Xunit;
 using SkyCD.Plugin.FileFormat.DiskCatalogMaker.Models;
 
@@ -40,130 +41,101 @@ public sealed class DiskCatalogMakerV5PluginTests
     [Fact]
     public async Task ReadAsync_PackageDirectory_ResolvesThumbnailObjects()
     {
-        var root = CreateTemporaryDirectory();
-        try
-        {
-            WritePackage(root, withCatalog: true, withThumbnail: true);
+        using var workspace = new TestWorkspace();
+        var root = workspace.Root;
+        WritePackage(workspace, withCatalog: true, withThumbnail: true);
 
-            var result = await plugin.ReadAsync(new FileFormatReadRequest
-            {
-                FormatId = plugin.SupportedFormat.FormatId,
-                Source = Stream.Null,
-                FileName = root,
-                SourcePath = root
-            });
-
-            Assert.True(result.Success, result.Error);
-            var document = Assert.IsType<DiskCatalogMakerV5ReportDocument>(result.Payload);
-            Assert.Equal(root, document.Summary.PackageRoot);
-            var properties = Properties(Find(document, "item:1:3"));
-            Assert.Equal("Thumbnails/0a/0b/0c/0d.png", properties["Thumbnail"]);
-            Assert.Equal("true", properties["ThumbnailResolved"]);
-        }
-        finally
+        var result = await plugin.ReadAsync(new FileFormatReadRequest
         {
-            Directory.Delete(root, recursive: true);
-        }
+            FormatId = plugin.SupportedFormat.FormatId,
+            Source = Stream.Null,
+            FileName = root,
+            SourcePath = root
+        });
+
+        Assert.True(result.Success, result.Error);
+        var document = Assert.IsType<DiskCatalogMakerV5ReportDocument>(result.Payload);
+        Assert.Equal(root, document.Summary.PackageRoot);
+        var properties = Properties(Find(document, "item:1:3"));
+        Assert.Equal("Thumbnails/0a/0b/0c/0d.png", properties["Thumbnail"]);
+        Assert.Equal("true", properties["ThumbnailResolved"]);
     }
 
     [Fact]
     public async Task ReadAsync_PackageWithoutThumbnailObject_ReportsUnresolvedButSucceeds()
     {
-        var root = CreateTemporaryDirectory();
-        try
-        {
-            WritePackage(root, withCatalog: true, withThumbnail: false);
+        using var workspace = new TestWorkspace();
+        var root = workspace.Root;
+        WritePackage(workspace, withCatalog: true, withThumbnail: false);
 
-            var result = await plugin.ReadAsync(new FileFormatReadRequest
-            {
-                FormatId = plugin.SupportedFormat.FormatId,
-                Source = Stream.Null,
-                SourcePath = root
-            });
-
-            Assert.True(result.Success, result.Error);
-            var document = Assert.IsType<DiskCatalogMakerV5ReportDocument>(result.Payload);
-            Assert.Equal("false", Properties(Find(document, "item:1:3"))["ThumbnailResolved"]);
-        }
-        finally
+        var result = await plugin.ReadAsync(new FileFormatReadRequest
         {
-            Directory.Delete(root, recursive: true);
-        }
+            FormatId = plugin.SupportedFormat.FormatId,
+            Source = Stream.Null,
+            SourcePath = root
+        });
+
+        Assert.True(result.Success, result.Error);
+        var document = Assert.IsType<DiskCatalogMakerV5ReportDocument>(result.Payload);
+        Assert.Equal("false", Properties(Find(document, "item:1:3"))["ThumbnailResolved"]);
     }
 
     [Fact]
     public async Task ReadAsync_CatalogDcmFile_UsesParentDirectoryAsPackageRoot()
     {
-        var root = CreateTemporaryDirectory();
-        try
-        {
-            WritePackage(root, withCatalog: true, withThumbnail: true);
-            var catalogPath = Path.Combine(root, "Catalog.dcm");
+        using var workspace = new TestWorkspace();
+        var root = workspace.Root;
+        WritePackage(workspace, withCatalog: true, withThumbnail: true);
+        var catalogPath = Path.Combine(root, "Catalog.dcm");
 
-            var result = await plugin.ReadAsync(new FileFormatReadRequest
-            {
-                FormatId = plugin.SupportedFormat.FormatId,
-                Source = Stream.Null,
-                FileName = catalogPath,
-                SourcePath = catalogPath
-            });
-
-            Assert.True(result.Success, result.Error);
-            var document = Assert.IsType<DiskCatalogMakerV5ReportDocument>(result.Payload);
-            Assert.Equal(root, document.Summary.PackageRoot);
-            Assert.Equal("true", Properties(Find(document, "item:1:3"))["ThumbnailResolved"]);
-        }
-        finally
+        var result = await plugin.ReadAsync(new FileFormatReadRequest
         {
-            Directory.Delete(root, recursive: true);
-        }
+            FormatId = plugin.SupportedFormat.FormatId,
+            Source = Stream.Null,
+            FileName = catalogPath,
+            SourcePath = catalogPath
+        });
+
+        Assert.True(result.Success, result.Error);
+        var document = Assert.IsType<DiskCatalogMakerV5ReportDocument>(result.Payload);
+        Assert.Equal(root, document.Summary.PackageRoot);
+        Assert.Equal("true", Properties(Find(document, "item:1:3"))["ThumbnailResolved"]);
     }
 
     [Fact]
     public async Task ReadAsync_PackageWithoutCatalog_ReturnsFailure()
     {
-        var root = CreateTemporaryDirectory();
-        try
-        {
-            var result = await plugin.ReadAsync(new FileFormatReadRequest
-            {
-                FormatId = plugin.SupportedFormat.FormatId,
-                Source = Stream.Null,
-                SourcePath = root
-            });
+        using var workspace = new TestWorkspace();
+        var root = workspace.Root;
 
-            Assert.False(result.Success);
-            Assert.Contains("Catalog.dcm", result.Error, StringComparison.Ordinal);
-            Assert.Contains(root, result.Error, StringComparison.Ordinal);
-        }
-        finally
+        var result = await plugin.ReadAsync(new FileFormatReadRequest
         {
-            Directory.Delete(root, recursive: true);
-        }
+            FormatId = plugin.SupportedFormat.FormatId,
+            Source = Stream.Null,
+            SourcePath = root
+        });
+
+        Assert.False(result.Success);
+        Assert.Contains("Catalog.dcm", result.Error, StringComparison.Ordinal);
+        Assert.Contains(root, result.Error, StringComparison.Ordinal);
     }
 
     [Fact]
     public async Task ReadAsync_CorruptCatalog_ReturnsFailureWithDiagnostic()
     {
-        var root = CreateTemporaryDirectory();
-        try
-        {
-            File.WriteAllBytes(Path.Combine(root, "Catalog.dcm"), [1, 2, 3, 4]);
+        using var workspace = new TestWorkspace();
+        var root = workspace.Root;
+        workspace.CreateFile("Catalog.dcm", [1, 2, 3, 4]);
 
-            var result = await plugin.ReadAsync(new FileFormatReadRequest
-            {
-                FormatId = plugin.SupportedFormat.FormatId,
-                Source = Stream.Null,
-                SourcePath = root
-            });
-
-            Assert.False(result.Success);
-            Assert.Contains("shorter than", result.Error, StringComparison.OrdinalIgnoreCase);
-        }
-        finally
+        var result = await plugin.ReadAsync(new FileFormatReadRequest
         {
-            Directory.Delete(root, recursive: true);
-        }
+            FormatId = plugin.SupportedFormat.FormatId,
+            Source = Stream.Null,
+            SourcePath = root
+        });
+
+        Assert.False(result.Success);
+        Assert.Contains("shorter than", result.Error, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -221,18 +193,16 @@ public sealed class DiskCatalogMakerV5PluginTests
         return builder.Build();
     }
 
-    private static void WritePackage(string root, bool withCatalog, bool withThumbnail)
+    private static void WritePackage(TestWorkspace workspace, bool withCatalog, bool withThumbnail)
     {
         if (withCatalog)
         {
-            File.WriteAllBytes(Path.Combine(root, "Catalog.dcm"), BuildCatalog());
+            workspace.CreateFile("Catalog.dcm", BuildCatalog());
         }
 
         if (withThumbnail)
         {
-            var thumbnail = Path.Combine(root, "Thumbnails", "0a", "0b", "0c", "0d.png");
-            Directory.CreateDirectory(Path.GetDirectoryName(thumbnail)!);
-            File.WriteAllBytes(thumbnail, [1, 2, 3]);
+            workspace.CreateFile("Thumbnails/0a/0b/0c/0d.png", [1, 2, 3]);
         }
     }
 
@@ -244,13 +214,6 @@ public sealed class DiskCatalogMakerV5PluginTests
     private static Dictionary<string, object?> Properties(Dictionary<string, object?> row)
     {
         return Assert.IsType<Dictionary<string, object?>>(row["properties"]);
-    }
-
-    private static string CreateTemporaryDirectory()
-    {
-        var path = Path.Combine(Path.GetTempPath(), "skycd-dcm5-pkg-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(path);
-        return path;
     }
 
     private sealed class ProgressCollector : IProgress<int>

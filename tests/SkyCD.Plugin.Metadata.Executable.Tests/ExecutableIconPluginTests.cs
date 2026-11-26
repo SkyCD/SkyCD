@@ -7,6 +7,7 @@ using Xunit;
 using SkyCD.Plugin.Metadata.Executable.Exceptions;
 using SkyCD.Plugin.Metadata.Executable.Models;
 using SkyCD.Plugin.Metadata.Executable.Parsing;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.Metadata.Executable.Tests;
 

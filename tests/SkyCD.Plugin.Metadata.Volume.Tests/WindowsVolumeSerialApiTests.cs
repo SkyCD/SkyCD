@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using SkyCD.TestSupport;
 using Xunit;
 using SkyCD.Plugin.Metadata.Volume.Models;
 using SkyCD.Plugin.Metadata.Volume.Sources;
@@ -20,13 +21,14 @@ public sealed class WindowsVolumeSerialApiTests
         }
 
         const uint semNoOpenFileErrorBox = 0x8000;
+        using var workspace = new TestWorkspace();
         var originalMode = GetThreadErrorMode();
         try
         {
             Assert.True(SetThreadErrorMode(originalMode | semNoOpenFileErrorBox, out _));
             var expectedMode = GetThreadErrorMode();
             var root = missingVolume
-                ? Path.Combine(Path.GetTempPath(), $"skycd-missing-volume-{Guid.NewGuid():N}")
+                ? workspace.GetPath("missing-volume")
                 : Path.GetPathRoot(Path.GetTempPath())!;
 
             var success = new WindowsVolumeSerialApi().TryGetVolumeSerial(root, out _);
@@ -91,7 +93,8 @@ public sealed class WindowsVolumeSerialApiTests
         }
 
         var api = new WindowsVolumeSerialApi();
-        var missing = Path.Combine(Path.GetTempPath(), $"skycd-missing-volume-{Guid.NewGuid():N}");
+        using var workspace = new TestWorkspace();
+        var missing = workspace.GetPath("missing-volume");
 
         Assert.False(api.TryGetVolumeSerial(missing, out var serial));
         Assert.Equal(0u, serial);

@@ -5,6 +5,7 @@ using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.OnlineMetadata.Models;
 using SkyCD.Plugin.Runtime.Factories;
 using Xunit;
+using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.Metadata.Imdb.Tests;
 
@@ -16,7 +17,7 @@ public class ImdbMetadataPluginTests
     public void ReadsJsonLdFacts()
     {
         var facts = new DescriptionFacts();
-        Plugin().Parse(Fixtures.Read("imdb-title.html"), facts);
+        Plugin().Parse(OnlineMetadataFixtures.Read("imdb-title.html"), facts);
 
         Assert.Equal("The Matrix", facts.Get("Title"));
         Assert.Equal("Action|Sci-Fi", facts.Get("Genre"));
@@ -34,7 +35,7 @@ public class ImdbMetadataPluginTests
         var facts = new DescriptionFacts();
         facts.Force("Title", "Existing");
 
-        Plugin().Parse(Fixtures.Read("imdb-title.html"), facts);
+        Plugin().Parse(OnlineMetadataFixtures.Read("imdb-title.html"), facts);
 
         Assert.Equal("Existing", facts.Get("Title"));
     }
@@ -72,7 +73,7 @@ public class ImdbMetadataPluginTests
     [Fact]
     public async Task FetchReturnsFactsAndTheFetchedUrl()
     {
-        var fetcher = new StubFetcher(Fixtures.Read("imdb-title.html"));
+        var fetcher = new StubFetcher(OnlineMetadataFixtures.Read("imdb-title.html"));
         var plugin = new ImdbMetadataPlugin(fetcher);
         var request = new OnlineMetadataRequest("", "https://www.imdb.com/title/tt0133093/", "en");
 

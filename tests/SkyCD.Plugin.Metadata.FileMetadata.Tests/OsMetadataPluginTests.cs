@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.SDK.Capabilities.Media;
+using SkyCD.TestSupport;
 using Xunit;
 using SkyCD.Plugin.Metadata.FileMetadata.Models;
 using SkyCD.Plugin.Metadata.FileMetadata.Parsing;
@@ -35,7 +36,8 @@ public sealed class OsMetadataPluginTests
     [Fact]
     public async Task SourceWithoutReadableProperties_YieldsNoValuesInsteadOfFailing()
     {
-        var missing = Path.Combine(Path.GetTempPath(), $"skycd-missing-{Guid.NewGuid():N}.bin");
+        using var workspace = new TestWorkspace();
+        var missing = workspace.GetPath("missing.bin");
 
         var result = await ReadAsync(missing);
 
@@ -55,7 +57,8 @@ public sealed class OsMetadataPluginTests
     [Fact]
     public async Task Progress_ReachesCompletion()
     {
-        var missing = Path.Combine(Path.GetTempPath(), $"skycd-missing-{Guid.NewGuid():N}.bin");
+        using var workspace = new TestWorkspace();
+        var missing = workspace.GetPath("missing.bin");
         var progress = new RecordingProgress();
 
         await new OsMetadataPlugin().ExtractAsync(
@@ -67,11 +70,12 @@ public sealed class OsMetadataPluginTests
     [Fact]
     public async Task Cancellation_Propagates()
     {
+        using var workspace = new TestWorkspace();
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => new OsMetadataPlugin().ExtractAsync(
-            new LocalMediaContext(Path.GetTempPath(), ".bin", null, 0), null, cancellation.Token));
+            new LocalMediaContext(workspace.GetPath("missing.bin"), ".bin", null, 0), null, cancellation.Token));
     }
 
     [Fact]
@@ -200,26 +204,16 @@ public sealed class OsMetadataPluginTests
 
     private sealed class TemporaryFile : IDisposable
     {
+        private readonly TestWorkspace workspace = new();
+
         public TemporaryFile(string extension)
         {
-            Path = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
-                $"skycd-os-metadata-{Guid.NewGuid():N}" + extension);
-            File.WriteAllBytes(Path, [1, 2, 3]);
+            Path = workspace.CreateFile("metadata" + extension, [1, 2, 3]);
         }
 
         public string Path { get; }
 
-        public void Dispose()
-        {
-            try
-            {
-                File.Delete(Path);
-            }
-            catch (IOException)
-            {
-                // A still-open property store may hold the file briefly; the temp directory is disposable.
-            }
-        }
+        public void Dispose() => workspace.Dispose();
     }
 
     [SupportedOSPlatform("linux")]

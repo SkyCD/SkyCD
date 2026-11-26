@@ -19,5 +19,6 @@
         <ProjectReference Include="..\..\src\SkyCD.Documents\SkyCD.Documents.csproj"/>
         <ProjectReference Include="..\..\src\SkyCD.Presentation\SkyCD.Presentation.csproj"/>
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Metadata.Video\SkyCD.Plugin.Metadata.Video.csproj"/>
+        <ProjectReference Include="../SkyCD.TestSupport/SkyCD.TestSupport.csproj"/>
     </ItemGroup>
 </Project>

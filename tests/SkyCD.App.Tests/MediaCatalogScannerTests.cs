@@ -4,33 +4,20 @@ using System.IO;
 using System.Linq;
 using SkyCD.Documents.Enum;
 using SkyCD.Presentation.Scanning;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.App.Tests;
 
 public sealed class MediaCatalogScannerTests : IDisposable
 {
-    private readonly string testDirectory;
+    private readonly TestWorkspace workspace = new();
 
-    public MediaCatalogScannerTests()
-    {
-        testDirectory = Path.Combine(Path.GetTempPath(), $"skycd-media-scan-test-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(testDirectory);
-    }
+    private string testDirectory => workspace.Root;
 
     public void Dispose()
     {
-        try
-        {
-            if (Directory.Exists(testDirectory))
-            {
-                Directory.Delete(testDirectory, recursive: true);
-            }
-        }
-        catch
-        {
-            // Ignore cleanup errors
-        }
+        workspace.Dispose();
     }
 
     private sealed class FakeDriveProvider(IReadOnlyList<MediaDriveInfo> drives) : IMediaDriveProvider

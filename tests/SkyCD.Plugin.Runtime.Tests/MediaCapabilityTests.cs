@@ -8,6 +8,7 @@ using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Runtime.Collections;
 using SkyCD.Plugin.Runtime.Factories;
+using SkyCD.TestSupport;
 using Xunit;
 
 namespace SkyCD.Plugin.Runtime.Tests;
@@ -140,7 +141,8 @@ public sealed class MediaCapabilityTests
     {
         var provider = new FakeLocalMetadataCapability();
         var manager = new MediaExtensionManager([new MediaProvider("test", "1", provider)]);
-        var path = Path.Combine(Path.GetTempPath(), "evidence.bin");
+        using var workspace = new TestWorkspace();
+        var path = workspace.GetPath("evidence.bin");
 
         var results = await manager.ProcessAsync(new MediaItem(".fake", "application/fake", 3), Open,
             selection: MediaProviderSelection.StandardMetadata, sourcePath: path);
@@ -196,7 +198,8 @@ public sealed class MediaCapabilityTests
     {
         var provider = new FakeLocalPreviewCapability();
         var manager = new MediaExtensionManager([new MediaProvider("test", "1", provider)]);
-        var path = Path.Combine(Path.GetTempPath(), "launcher.desktop");
+        using var workspace = new TestWorkspace();
+        var path = workspace.GetPath("launcher.desktop");
 
         var results = await manager.ProcessAsync(new MediaItem(".fake", "application/fake", 3), Open,
             selection: MediaProviderSelection.StandardMetadata, sourcePath: path);
