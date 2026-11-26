@@ -53,6 +53,7 @@ using SkyCD.Core.Versioning;
 using SkyCD.Presentation.Accounts;
 using SkyCD.Presentation.Operations;
 using SkyCD.Presentation.Catalog;
+using SkyCD.Presentation.Catalog.Split;
 using SkyCD.Presentation.MediaCache;
 using SkyCD.Presentation.Plugins;
 using SkyCD.Presentation.Scanning;
@@ -206,6 +207,7 @@ public partial class MainWindow : Window
             subscribedViewModel.OpenCatalogRequested -= OnOpenCatalogRequested;
             subscribedViewModel.SaveCatalogAsRequested -= OnSaveCatalogAsRequested;
             subscribedViewModel.SaveCatalogRequested -= OnSaveCatalogRequested;
+            subscribedViewModel.SplitCatalogRequested -= OnSplitCatalogRequested;
             subscribedViewModel.AboutRequested -= OnAboutRequested;
             subscribedViewModel.FindCatalogRequested -= OnFindCatalogRequested;
             subscribedViewModel.AdvancedFindRequested -= OnAdvancedFindRequested;
@@ -232,6 +234,7 @@ public partial class MainWindow : Window
             subscribedViewModel.OpenCatalogRequested += OnOpenCatalogRequested;
             subscribedViewModel.SaveCatalogAsRequested += OnSaveCatalogAsRequested;
             subscribedViewModel.SaveCatalogRequested += OnSaveCatalogRequested;
+            subscribedViewModel.SplitCatalogRequested += OnSplitCatalogRequested;
             subscribedViewModel.AboutRequested += OnAboutRequested;
             subscribedViewModel.FindCatalogRequested += OnFindCatalogRequested;
             subscribedViewModel.AdvancedFindRequested += OnAdvancedFindRequested;
@@ -1701,6 +1704,104 @@ public partial class MainWindow : Window
             vm.StatusText = LocalizationService.Current.Format(TextKeys.FailedToSaveCatalog, ex.Message);
             return false;
         }
+    }
+
+    private async void OnSplitCatalogRequested(object? sender, EventArgs e)
+    {
+        if (DataContext is MainWindowViewModel vm)
+        {
+            await SplitCatalogAsync(vm);
+        }
+    }
+
+    private async Task SplitCatalogAsync(MainWindowViewModel vm)
+    {
+        EnsureFileFormatProvidersLoaded();
+        var entries = vm.GetAllCatalogEntries();
+        if (entries.Count == 0)
+        {
+            vm.StatusText = LocalizationService.Current.Get(UiKeys.SplitNoEntries);
+            return;
+        }
+
+        var formats = fileFormatManager.GetSaveFormats()
+            .Where(static format => format.CanRead)
+            .Select(static format => new SplitFormatOption(
+                format.FormatId,
+                format.DisplayName,
+                format.Extensions.Select(static extension => extension.Trim().TrimStart('.'))
+                    .FirstOrDefault(static extension => !string.IsNullOrWhiteSpace(extension)) ?? "dat",
+                format.Extensions.ToArray()))
+            .ToList();
+        if (formats.Count == 0)
+        {
+            vm.StatusText = LocalizationService.Current.Get(TextKeys.SplitNoWritableFormat);
+            return;
+        }
+
+        var defaultFormatId = ResolveSplitFormatId(vm.CurrentCatalogPath, formats);
+        var sourcePath = vm.CurrentCatalogPath;
+        SplitWindow? splitWindow = null;
+        var viewModel = new SplitDialogViewModel(
+            string.IsNullOrWhiteSpace(sourcePath)
+                ? "catalog"
+                : Path.GetFileNameWithoutExtension(sourcePath),
+            entries.Count,
+            string.IsNullOrWhiteSpace(sourcePath)
+                ? string.Empty
+                : Path.GetDirectoryName(sourcePath) ?? string.Empty,
+            formats,
+            defaultFormatId,
+            (request, progress, cancellationToken) =>
+            {
+                var scopeItems = CatalogScopeDataService.Collect(
+                    virtualCollectionRepository.GetOrdered(),
+                    statusVariantRepository.GetOrdered(),
+                    scanExclusionRuleRepository.GetOrdered(),
+                    aiScanExclusionRepository.GetOrdered(),
+                    pluginManager.GetCapabilities<ICatalogAuxiliaryDataProvider>());
+                return new CatalogSplitService(fileFormatManager).SplitAsync(
+                    entries,
+                    scopeItems,
+                    request,
+                    async preview =>
+                    {
+                        var dialog = new SaveDataLossWindow(preview.FormatDisplayName,
+                            CatalogDataLossText.BuildLines(preview.Items));
+                        return await dialog.ShowDialog<bool>(splitWindow!);
+                    },
+                    progress,
+                    cancellationToken);
+            });
+        splitWindow = new SplitWindow { DataContext = viewModel };
+        await splitWindow.ShowDialog(this);
+        if (viewModel.OutcomeMessage is { } outcome)
+        {
+            vm.StatusText = outcome;
+        }
+    }
+
+    private string ResolveSplitFormatId(string? currentCatalogPath, IReadOnlyList<SplitFormatOption> formats)
+    {
+        if (!string.IsNullOrWhiteSpace(currentCatalogPath))
+        {
+            try
+            {
+                var resolved = fileFormatManager.ResolveFormatId(null, currentCatalogPath, forWrite: true);
+                if (formats.Any(option =>
+                        option.FormatId.Equals(resolved, StringComparison.OrdinalIgnoreCase)))
+                {
+                    return resolved;
+                }
+            }
+            catch (Exception exception) when (exception is FileFormatHandlerResolutionException
+                or UnsupportedFileFormatException)
+            {
+                // Fall through to the first writable format below.
+            }
+        }
+
+        return formats[0].FormatId;
     }
 
     private async void OnPropertiesRequested(object? sender, PropertiesDialogRequestedEventArgs e)

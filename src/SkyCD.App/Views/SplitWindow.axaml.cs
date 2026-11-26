@@ -2,18 +2,20 @@ using System;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using SkyCD.Presentation.ViewModels;
+using SkyCD.UI.Localization;
 
-namespace SkyCD.Plugin.Feature.Split.Views;
+namespace SkyCD.App.Views;
 
 /// <summary>
-/// The split form shown inside the host dialog window. The host owns the window, so the view reaches it only to
-/// close it once the parts are written or the user dismisses the form.
+/// The split form. The view owns the window lifetime and the folder picker; the view model owns the
+/// split options, validation and progress.
 /// </summary>
-public partial class SplitEditor : UserControl
+public partial class SplitWindow : Window
 {
     private SplitDialogViewModel? boundViewModel;
 
-    public SplitEditor() => InitializeComponent();
+    public SplitWindow() => InitializeComponent();
 
     protected override void OnDataContextChanged(EventArgs e)
     {
@@ -25,17 +27,17 @@ public partial class SplitEditor : UserControl
 
         if (boundViewModel is not null)
         {
-            boundViewModel.CloseRequested -= CloseHostWindow;
+            boundViewModel.CloseRequested -= CloseWindow;
         }
 
         boundViewModel = DataContext as SplitDialogViewModel;
         if (boundViewModel is not null)
         {
-            boundViewModel.CloseRequested += CloseHostWindow;
+            boundViewModel.CloseRequested += CloseWindow;
         }
     }
 
-    private async void BrowseClicked(object? sender, RoutedEventArgs e)
+    private async void OnBrowseClicked(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not SplitDialogViewModel viewModel)
         {
@@ -50,7 +52,7 @@ public partial class SplitEditor : UserControl
 
         var folders = await picker.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
-            Title = "Choose where the part files are written",
+            Title = LocalizationService.Current.Get(UiKeys.SplitOutputFolder),
             AllowMultiple = false
         });
         if (folders.Count > 0 && folders[0].TryGetLocalPath() is { Length: > 0 } path)
@@ -59,9 +61,9 @@ public partial class SplitEditor : UserControl
         }
     }
 
-    private void CloseClicked(object? sender, RoutedEventArgs e) => CloseHostWindow();
+    private void OnCloseClicked(object? sender, RoutedEventArgs e) => CloseWindow();
 
-    private void CloseHostWindow()
+    private void CloseWindow()
     {
         if (TopLevel.GetTopLevel(this) is Window window)
         {

@@ -149,6 +149,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public event EventHandler? OpenCatalogRequested;
     public event EventHandler? SaveCatalogAsRequested;
     public event EventHandler? SaveCatalogRequested;
+    public event EventHandler? SplitCatalogRequested;
     public event EventHandler? AboutRequested;
     public event EventHandler? FindCatalogRequested;
     public event EventHandler<AdvancedFindDialogRequestedEventArgs>? AdvancedFindRequested;
@@ -1227,6 +1228,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     /// </summary>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveCatalogAsCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SplitCatalogCommand))]
     private bool isSaveAsEnabled = true;
 
     /// <summary>Applies the file-format capabilities the host currently has loaded.</summary>
@@ -1740,6 +1742,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         StatusText = LocalizationService.Current.Format(TextKeys.SavedCatalogAs, GetDisplayFileName(filePath));
         IsDirtyDocument = false;
     }
+
+    [RelayCommand(CanExecute = nameof(IsSaveAsEnabled))]
+    private void SplitCatalog() => SplitCatalogRequested?.Invoke(this, EventArgs.Empty);
 
     [RelayCommand(CanExecute = nameof(IsPropertiesEnabled))]
     private void OpenProperties() => ShowProperties(null);
@@ -4549,6 +4554,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                         Command = SaveCatalogAsCommand,
                         IsEnabled = IsSaveAsEnabled
                     },
+                    new MainMenuItemViewModel
+                    {
+                        Key = "file_split",
+                        Header = LocalizationService.Current.Get(TextKeys.SplitFileMenu),
+                        Command = SplitCatalogCommand,
+                        IsEnabled = IsSaveAsEnabled
+                    },
                     Separator(),
                     ..GetFilePluginMenuItems(),
                     new MainMenuItemViewModel
@@ -4705,7 +4717,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private static readonly HashSet<string> InteractivePluginCommands = new(StringComparer.OrdinalIgnoreCase)
     {
         "motion-detector.capture",
-        "skycd.split",
         "skycd.gendesc.nfo",
         "skycd.gendesc.description"
     };
@@ -4863,6 +4874,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         SetMenuEnabled(byKey, "edit_status", IsDeleteEnabled);
         SetMenuEnabled(byKey, "file_open", IsOpenEnabled);
         SetMenuEnabled(byKey, "file_save_as", IsSaveAsEnabled);
+        SetMenuEnabled(byKey, "file_split", IsSaveAsEnabled);
         var localFileCommands = menuExtensionManager.GetMenuContributions("File")
             .Where(contribution => contribution.RequiresLocalFile)
             .ToArray();
