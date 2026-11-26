@@ -1,103 +1,53 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using Avalonia.Media;
 
 namespace SkyCD.Presentation.ViewModels;
 
+/// <summary>
+/// String-only registry of status-variant icon pack keys (issue #1226). The pack-enum reflection
+/// and brush construction now live behind the App-level <c>StatusIconResolver</c>, where Avalonia
+/// and IconPacks are declared dependencies; view models only pass the pack/key and color strings
+/// around. Keys are registered once at host startup before any icon picker opens.
+/// </summary>
 public static class StatusIconCatalog
 {
-    private static readonly Lazy<IReadOnlyDictionary<string, object>> KindsByKey = new(BuildKindsMap);
-    private static readonly Lazy<IReadOnlyList<string>> Keys = new(() =>
-        Array.AsReadOnly(KindsByKey.Value.Keys
-            .OrderBy(static key => key, StringComparer.OrdinalIgnoreCase)
-            .ToArray()));
+    private static readonly object Gate = new();
+    private static IReadOnlyList<string> keys = Array.Empty<string>();
 
-    public static IReadOnlyList<string> GetAllKeys() => Keys.Value;
-
-    public static bool TryResolveKind(string? key, out object? kind)
+    public static void RegisterKeys(IEnumerable<string> iconKeys)
     {
-        kind = null;
+        ArgumentNullException.ThrowIfNull(iconKeys);
+        lock (Gate)
+        {
+            keys = iconKeys
+                .Where(static key => !string.IsNullOrWhiteSpace(key))
+                .Select(static key => key.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(static key => key, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+        }
+    }
+
+    public static IReadOnlyList<string> GetAllKeys()
+    {
+        lock (Gate)
+        {
+            return keys;
+        }
+    }
+
+    public static bool IsKnownKey(string? key)
+    {
         if (string.IsNullOrWhiteSpace(key))
         {
             return false;
         }
 
-        return KindsByKey.Value.TryGetValue(key.Trim(), out kind);
-    }
-
-    public static IBrush ResolveBrush(string? color)
-    {
-        if (Color.TryParse(color, out var parsed))
+        var trimmed = key.Trim();
+        lock (Gate)
         {
-            return new SolidColorBrush(parsed);
-        }
-
-        return Brushes.White;
-    }
-
-    private static IReadOnlyDictionary<string, object> BuildKindsMap()
-    {
-        TryLoadAssembly("IconPacks.Avalonia");
-        var kinds = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
-        var assemblies = AppDomain.CurrentDomain
-            .GetAssemblies()
-            .Where(static assembly =>
-            {
-                var name = assembly.GetName().Name;
-                return name is not null && name.StartsWith("IconPacks.Avalonia", StringComparison.Ordinal);
-            })
-            .ToArray();
-
-        foreach (var assembly in assemblies)
-        {
-            Type[] types;
-            try
-            {
-                types = assembly.GetTypes();
-            }
-            catch (ReflectionTypeLoadException ex)
-            {
-                types = ex.Types.Where(static type => type is not null).Cast<Type>().ToArray();
-            }
-
-            foreach (var enumType in types.Where(static type => type.IsEnum && type.Name.StartsWith("PackIcon", StringComparison.Ordinal) && type.Name.EndsWith("Kind", StringComparison.Ordinal)))
-            {
-                var packName = enumType.Name["PackIcon".Length..^"Kind".Length];
-                foreach (var rawValue in Enum.GetValues(enumType))
-                {
-                    var valueName = Enum.GetName(enumType, rawValue);
-                    if (string.IsNullOrWhiteSpace(valueName))
-                    {
-                        continue;
-                    }
-
-                    var key = $"{packName}:{valueName}";
-                    kinds.TryAdd(key, rawValue!);
-                }
-            }
-        }
-
-        return kinds;
-    }
-
-    private static void TryLoadAssembly(string assemblyName)
-    {
-        try
-        {
-            var assembly = Assembly.Load(assemblyName);
-            foreach (var reference in assembly.GetReferencedAssemblies())
-            {
-                if (reference.Name is { } name && name.StartsWith("IconPacks.Avalonia.", StringComparison.Ordinal))
-                {
-                    TryLoadAssembly(name);
-                }
-            }
-        }
-        catch
-        {
-            // Keep running with whatever icon packs are already loaded.
+            return keys.Contains(trimmed, StringComparer.OrdinalIgnoreCase);
         }
     }
 }

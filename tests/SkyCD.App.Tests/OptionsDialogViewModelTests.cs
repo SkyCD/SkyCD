@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using SkyCD.App.Icons;
 using SkyCD.Documents;
 using SkyCD.Presentation.Plugins;
 using SkyCD.Presentation.ViewModels;
@@ -11,6 +12,12 @@ namespace SkyCD.App.Tests;
 
 public class OptionsDialogViewModelTests
 {
+    static OptionsDialogViewModelTests()
+    {
+        // The desktop host registers pack keys at startup. These tests read the same catalog.
+        StatusIconCatalog.RegisterKeys(StatusIconResolver.GetAllKeys());
+    }
+
     [Fact]
     public void Constructor_InitializesLanguageSelection()
     {
