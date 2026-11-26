@@ -24,8 +24,13 @@ All fixtures except `wincatalog-real-export-2026-utf8.csv` are synthetic test da
 | `wincatalog-missing-essential-path.csv` | Missing essential path column diagnostic |
 | `wincatalog-utf8-bom.csv` | UTF-8 BOM and Cyrillic names |
 | `wincatalog-ansi-1252.csv` | No-BOM Windows-1252 names, paths and comments |
+| `wincatalog-cp1251.csv` | No-BOM Windows-1251 names, paths and comments |
+| `wincatalog-shift-jis.csv` | No-BOM Shift-JIS names, paths and comments |
+| `wincatalog-gb18030.csv` | No-BOM GB18030 names, paths and comments |
 | `wincatalog-invalid-encoding.csv` | Unsupported/invalid bytes |
 | `wincatalog-quoted-fields.csv` | Quoted separators, quotes and multiline comments |
 | `wincatalog-reordered-columns.csv` | Reordered headers and accented names |
 
-UTF-16 LE/BE with and without BOM, malformed declared encodings and nonzero stream positions are also generated directly in encoding regression tests.
+The legacy code page fixtures hold the bytes of their code page, not UTF-8 look-alikes, so they exercise the
+character encoding detection of the importer. UTF-16 LE/BE with and without BOM, malformed declared encodings
+and nonzero stream positions are also generated directly in encoding regression tests.

@@ -5,13 +5,13 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.SDK.Capabilities.FileFormats;
+using SkyCD.Plugin.EncodingProfiles;
 using SkyCD.Plugin.FileFormat.Csv;
 using SkyCD.Plugin.FileFormat.WinCatalog.Csv.Exceptions;
 using SkyCD.Plugin.FileFormat.Csv.Parsing;
 using SkyCD.Plugin.FileFormat.WinCatalog.Csv.Import;
 using SkyCD.Plugin.FileFormat.WinCatalog.Csv.Models;
 using SkyCD.Plugin.FileFormat.WinCatalog.Models;
-using SkyCD.Plugin.EncodingProfiles;
 
 namespace SkyCD.Plugin.FileFormat.WinCatalog.Csv;
 
@@ -50,13 +50,13 @@ public sealed class WinCatalogCsvPlugin : IFileFormatPluginCapability, IContentA
         try
         {
             var data = ReadAllBytes(stream);
-            var encoding = CharsetEncodingDetector.Detect(data);
+            var encoding = LegacyEncodingDetector.Detect(data);
             if (encoding is null)
             {
                 return false;
             }
 
-            var text = CharsetEncodingDetector.Decode(encoding, data);
+            var text = encoding.Decode(data);
             var headerLine = ReadFirstNonEmptyLine(text);
             if (headerLine is null)
             {
@@ -142,7 +142,7 @@ public sealed class WinCatalogCsvPlugin : IFileFormatPluginCapability, IContentA
         try
         {
             var data = await ReadAllBytesAsync(request.Source, cancellationToken);
-            var encoding = CharsetEncodingDetector.Detect(data);
+            var encoding = LegacyEncodingDetector.Detect(data);
             if (encoding is null)
             {
                 throw new WinCatalogUnsupportedEncodingException();
@@ -150,7 +150,7 @@ public sealed class WinCatalogCsvPlugin : IFileFormatPluginCapability, IContentA
 
             request.Progress?.Report(10);
 
-            var text = CharsetEncodingDetector.Decode(encoding, data);
+            var text = encoding.Decode(data);
 
             using var reader = new StringReader(text);
             var parseResult = await CsvParser.ReadCsvAsync(reader, null, cancellationToken);
@@ -161,8 +161,7 @@ public sealed class WinCatalogCsvPlugin : IFileFormatPluginCapability, IContentA
                 throw new WinCatalogCorruptHeaderException();
             }
 
-            var document = WinCatalogHierarchyBuilder.Build(
-                parseResult.Rows, parseResult.Delimiter, encoding.EncodingName);
+            var document = WinCatalogHierarchyBuilder.Build(parseResult.Rows, parseResult.Delimiter, encoding.DisplayName);
             request.Progress?.Report(100);
 
             return new FileFormatReadResult

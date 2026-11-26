@@ -21,7 +21,9 @@ resolved from assembly metadata; no `plugin.json`).
   rejected as ambiguous with an actionable message.
 - `NeoFinderTextEncodingDetector` / `NeoFinderTextEncodingProfile` — strict
   BOM-first decoding policy (UTF-8/16, Windows-1252 fallback, no lossy
-  decoding), shared between recognition and import.
+  decoding), shared between recognition and import. Both types were replaced
+  in #1224 by the shared `LegacyEncodingDetector`, which resolves the encoding
+  through UTF.Unknown.
 - `NeoFinderTextHierarchyBuilder` — reconstructs media/folder/file hierarchy
   from macOS paths (POSIX and classic `:` separators), groups multi-catalog
   exports per volume/catalog, normalizes Unicode/dates/sizes, and warns
@@ -32,7 +34,8 @@ resolved from assembly metadata; no `plugin.json`).
   `NeoFinderTextUnsupportedEncodingException`,
   `NeoFinderTextAmbiguousLayoutException`.
 - No new NuGet dependencies (reuses `SkyCD.Plugin.Csv` `CsvParser`); license
-  policy unaffected.
+  policy unaffected. #1224 later added the `UTF.Unknown` package (MPL-1.1),
+  which the license gate approves.
 
 ## Integration
 

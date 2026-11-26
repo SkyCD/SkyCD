@@ -14,6 +14,9 @@ namespace SkyCD.Plugin.FileFormat.DiskCatalogMaker.Import;
 /// </summary>
 public static class DiskCatalogMakerHierarchyBuilder
 {
+    /// <summary>The label reported when no encoding was resolved for the export.</summary>
+    private const string UnknownEncoding = "Unknown";
+
     public static DiskCatalogMakerReportDocument Build(
         List<List<string>> rawRows,
         char delimiter,
@@ -105,7 +108,7 @@ public static class DiskCatalogMakerHierarchyBuilder
             UnsupportedFields: unsupportedFields,
             DetectedDelimiter: delimiter,
             DetectedColumns: headerRow,
-            DetectedEncoding: detectedEncoding ?? "Unknown");
+            DetectedEncoding: detectedEncoding ?? UnknownEncoding);
 
         var rowsList = nodesById.Values.ToList();
         return new DiskCatalogMakerReportDocument(rowsList, summary);
