@@ -1,3 +1,32 @@
+AI provider picker artwork
+
+Colibrì desktop icon
+Copyright 2026 Vincenzo Fornaro
+Source: https://github.com/JustVugg/colibri/tree/main/desktop/src-tauri/icons
+License: Apache License 2.0
+https://www.apache.org/licenses/LICENSE-2.0
+
+Jan desktop icon (resized)
+Copyright 2025 Menlo Research
+Source: https://github.com/janhq/jan/blob/main/src-tauri/icons/icon.png
+License: Apache License 2.0
+https://www.apache.org/licenses/LICENSE-2.0
+
+llama.cpp brand icon (resized)
+Source: https://github.com/ggml-org/llama-brand
+License: Creative Commons Attribution-NonCommercial 4.0 International with
+additional permission for redistribution to identify llama.cpp.
+https://github.com/ggml-org/llama-brand/blob/master/BRAND-USAGE.md
+
+LM Studio color app icon (resized)
+Source and brand-use terms: https://lmstudio.ai/brand
+
+Ollama documentation favicon
+Source: https://github.com/ollama/ollama/blob/main/docs/images/favicon.png
+
+vLLM compact logo (resized)
+Source and usage guidelines: https://github.com/vllm-project/media-kit
+
 Twemoji artwork
 Copyright Twitter, Inc. and other contributors.
 Source: https://github.com/jdecked/twemoji

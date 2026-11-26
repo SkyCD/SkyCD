@@ -11,16 +11,28 @@ With the plugin enabled, choose **Use agent** for an installed agent in
 **Tools → Options → ACP agents** and save to activate it for generation.
 Description settings live in **Tools → Options → AI → Description**, and the
 provider connection settings in **AI → Provider**.
-The provider picker shows a 16 px icon before each preset name, in the closed
-field and in every dropdown row. Each preset ships that icon as an embedded PNG
-(`Assets/Providers/{id}.png`, named by `IconKey`) plus a one-to-three letter
-`Monogram`. Official logos are not redistributed: brand guidelines rarely allow
-an unrelated open-source app to ship the artwork, so the mark is a monogram tile
-with one accent per provider. A new preset always adds both. `custom` uses a
-generic provider glyph (a node, not a brand) and the monogram `AI`. If the
-resource is missing or fails to decode, the row draws the monogram on the theme
-accent instead of an empty box. The icon does not change keyboard selection,
-the saved `ProviderId`, or the connection.
+The provider picker shows a 16 px icon before each preset name in the closed
+field and dropdown rows. An `IconKey` identifies an embedded PNG in
+`Assets/Providers/{id}.png`. If artwork is unavailable or fails to load, the
+picker draws the preset's `Monogram` on the theme accent. KoboldCpp uses `KC`,
+LocalAI uses `LA`, and the unbranded custom preset uses `AI`.
+
+Official artwork sources
+
+| Preset | Source |
+| --- | --- |
+| Colibrì | [Desktop icon](https://github.com/JustVugg/colibri/blob/main/desktop/src-tauri/icons/128x128.png), © 2026 Vincenzo Fornaro, [Apache 2.0 notice](https://github.com/JustVugg/colibri/blob/main/NOTICE) |
+| Jan | [Desktop icon](https://github.com/janhq/jan/blob/main/src-tauri/icons/icon.png), © 2025 Menlo Research, [Apache 2.0 terms](https://github.com/janhq/jan/blob/main/LICENSE) |
+| llama.cpp | [ggml-org llama-brand icon](https://github.com/ggml-org/llama-brand/blob/master/logo/png/icon/icon-light-bg.png), [brand-use terms](https://github.com/ggml-org/llama-brand/blob/master/BRAND-USAGE.md) |
+| LM Studio | [Color app icon](https://lmstudio.ai/brand) |
+| Ollama | [Documentation favicon](https://github.com/ollama/ollama/blob/main/docs/images/favicon.png) |
+| vLLM | [Compact logo](https://github.com/vllm-project/media-kit/blob/main/vLLM-Logo.png) |
+
+Jan, llama.cpp, LM Studio, and vLLM artwork was resized proportionally for
+bundling. KoboldCpp's [upstream license](https://github.com/LostRuins/koboldcpp#license)
+and LocalAI's [brand-use terms](https://github.com/mudler/LocalAI/blob/master/BRAND-USAGE.md)
+are why those presets use monograms.
+
 Opening Options on its own preserves the saved generation preference.
 The **AI description configuration** command shows the advanced settings file,
 normally `%APPDATA%/SkyCD/ai-descriptions.json`.

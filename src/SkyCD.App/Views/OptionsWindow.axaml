@@ -6,6 +6,7 @@
         xmlns:media="clr-namespace:SkyCD.SDK.Capabilities.Media;assembly=SkyCD.SDK"
         xmlns:hostmedia="clr-namespace:SkyCD.Plugin.Host.Media;assembly=SkyCD.Plugin.Host"
         xmlns:converters="clr-namespace:SkyCD.App.Converters"
+        xmlns:bindingConverters="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
         xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
         xmlns:lucide="clr-namespace:IconPacks.Avalonia.Lucide;assembly=IconPacks.Avalonia.Lucide"
         xmlns:multiSelect="clr-namespace:SkyCD.UI.Controls.Selectors.MultiSelectDropdown;assembly=SkyCD.UI"
@@ -36,13 +37,15 @@
                 <Panel Width="{DynamicResource SkyIconSize}"
                        Height="{DynamicResource SkyIconSize}">
                     <Border Background="{DynamicResource ThemeAccentBrush}"
+                            IsVisible="{Binding #ProviderIcon.Source, Converter={x:Static bindingConverters:ObjectConverters.IsNull}}"
                             CornerRadius="{DynamicResource SkyCornerRadius}">
                         <Viewbox Margin="{DynamicResource SkyInsetXxs}">
                             <TextBlock Text="{Binding Monogram}"
                                        Foreground="{DynamicResource ThemeForegroundBrush}" />
                         </Viewbox>
                     </Border>
-                    <Image Source="{Binding Converter={x:Static converters:AiProviderIconConverter.Instance}}"
+                    <Image x:Name="ProviderIcon"
+                           Source="{Binding Converter={x:Static converters:AiProviderIconConverter.Instance}}"
                            Stretch="Uniform" />
                 </Panel>
                 <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />

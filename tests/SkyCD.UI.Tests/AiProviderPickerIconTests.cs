@@ -40,12 +40,14 @@ public sealed class AiProviderPickerIconTests
             var picker = window.FindControl<ComboBox>("AiProviderComboBox")!;
             Assert.Contains(Texts(picker), text => text == "LM Studio");
             Assert.NotNull(Icon(picker));
+            Assert.DoesNotContain("LM", Texts(picker));
 
             viewModel.SelectedAiProvider = viewModel.AiProviders.Single(provider => provider.Id == "custom");
             window.UpdateLayout();
             Dispatcher.UIThread.RunJobs();
             Assert.Contains(Texts(picker), text => text == "Custom local OpenAI-compatible");
-            Assert.NotNull(Icon(picker));
+            Assert.Null(Icon(picker));
+            Assert.Contains("AI", Texts(picker));
 
             picker.IsDropDownOpen = true;
             window.UpdateLayout();
@@ -56,7 +58,16 @@ public sealed class AiProviderPickerIconTests
             {
                 var choice = Assert.IsType<AiProviderChoice>(row.DataContext);
                 Assert.Contains(Texts(row), text => text == choice.Name);
-                Assert.NotNull(Icon(row));
+                if (choice.IconKey is null)
+                {
+                    Assert.Null(Icon(row));
+                    Assert.Contains(choice.Monogram, Texts(row));
+                }
+                else
+                {
+                    Assert.NotNull(Icon(row));
+                    Assert.DoesNotContain(choice.Monogram, Texts(row));
+                }
             });
 
             viewModel.AiProviders.Clear();
@@ -79,7 +90,8 @@ public sealed class AiProviderPickerIconTests
     }
 
     private static IEnumerable<string?> Texts(Control root) =>
-        root.GetVisualDescendants().OfType<TextBlock>().Select(block => block.Text);
+        root.GetVisualDescendants().OfType<TextBlock>().Where(block => block.IsEffectivelyVisible)
+            .Select(block => block.Text);
 
     private static Bitmap? Icon(Control root) =>
         root.GetVisualDescendants().OfType<Image>().Select(image => image.Source).OfType<Bitmap>().FirstOrDefault();

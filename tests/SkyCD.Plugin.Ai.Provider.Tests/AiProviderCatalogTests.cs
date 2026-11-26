@@ -70,14 +70,22 @@ public sealed class AiProviderCatalogTests
     }
 
     [Fact]
-    public void EveryPreset_ResolvesAShippedIconAndAMonogram()
+    public void EveryPreset_ProvidesOfficialArtworkOrUsesItsMonogram()
     {
         var assembly = typeof(AiProviderCatalog).Assembly;
         Assert.All(AiProviderCatalog.Providers, provider =>
         {
-            Assert.Equal(AiProviderCatalog.IconResourceName(provider.Id), provider.IconKey);
             Assert.InRange(provider.Monogram.Length, 1, 3);
             Assert.Matches("^[A-Za-z]+$", provider.Monogram);
+            var resourceName = AiProviderCatalog.IconResourceName(provider.Id);
+            if (provider.Id is "custom" or "koboldcpp" or "localai")
+            {
+                Assert.Null(provider.IconKey);
+                Assert.Null(assembly.GetManifestResourceStream(resourceName));
+                return;
+            }
+
+            Assert.Equal(resourceName, provider.IconKey);
             using var stream = assembly.GetManifestResourceStream(provider.IconKey!);
             Assert.NotNull(stream);
             Assert.True(stream!.Length > 32, provider.Id);

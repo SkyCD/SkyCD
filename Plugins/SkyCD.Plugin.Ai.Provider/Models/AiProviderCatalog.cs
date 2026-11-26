@@ -26,15 +26,15 @@ public static class AiProviderCatalog
         Preset("llamacpp", "llama.cpp", 8080, null, false, null, "CPP",
             "https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md#server-specific-params"),
         Preset("koboldcpp", "KoboldCpp", 5001, null, false, null, "KC",
-            "https://github.com/LostRuins/koboldcpp/wiki#can-i-add-authentication"),
+            "https://github.com/LostRuins/koboldcpp/wiki#can-i-add-authentication", hasArtwork: false),
         Preset("jan", "Jan", 1337, null, false, null, "JAN"),
         Preset("localai", "LocalAI", 8080, "llama-3.2-1b-instruct:q4_k_m", false,
             ["llama-3.2-1b-instruct:q4_k_m"], "LA",
-            "https://localai.io/docs/administration/authentication/"),
+            "https://localai.io/docs/administration/authentication/", hasArtwork: false),
         Preset("vllm", "vLLM", 8000, "Qwen/Qwen2.5-1.5B-Instruct", false,
             ["Qwen/Qwen2.5-1.5B-Instruct", "Qwen/Qwen2.5-7B-Instruct"], "VL",
             "https://docs.vllm.ai/en/stable/serving/online_serving/openai_compatible_server/"),
-        Preset("custom", "Custom local OpenAI-compatible", 8000, null, false, null, "AI")
+        Preset("custom", "Custom local OpenAI-compatible", 8000, null, false, null, "AI", hasArtwork: false)
     ];
 
     public static AiProviderChoice Default => Providers[0];
@@ -52,9 +52,10 @@ public static class AiProviderCatalog
     };
 
     private static AiProviderChoice Preset(string id, string name, int port, string? defaultModel, bool canStartServer,
-        IReadOnlyList<string>? suggestedModels, string monogram, string? apiKeyHelpUrl = null) =>
+        IReadOnlyList<string>? suggestedModels, string monogram, string? apiKeyHelpUrl = null,
+        bool hasArtwork = true) =>
         new(id, name, "http", "127.0.0.1", port, defaultModel, canStartServer, suggestedModels, apiKeyHelpUrl,
-            IconResourceName(id), monogram);
+            hasArtwork ? IconResourceName(id) : null, monogram);
 
     /// <summary>Fixed, allowlisted commands used by the Start server action.</summary>
     public static (string Command, string Arguments)? ServerCommand(string providerId) => providerId switch
