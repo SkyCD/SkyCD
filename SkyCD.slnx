@@ -74,6 +74,7 @@
         <Project Path="Plugins/SkyCD.Plugin.Metadata.WordPerfect/SkyCD.Plugin.Metadata.WordPerfect.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Metadata.Works/SkyCD.Plugin.Metadata.Works.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Metadata.Xmp/SkyCD.Plugin.Metadata.Xmp.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.Metadata.YamlToml/SkyCD.Plugin.Metadata.YamlToml.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Sample.Config/SkyCD.Plugin.Sample.Config.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Sample.Menu/SkyCD.Plugin.Sample.Menu.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Sample.Modal/SkyCD.Plugin.Sample.Modal.csproj"/>
@@ -170,6 +171,7 @@
         <Project Path="tests/SkyCD.Plugin.Metadata.WordPerfect.Tests/SkyCD.Plugin.Metadata.WordPerfect.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Metadata.Works.Tests/SkyCD.Plugin.Metadata.Works.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Metadata.Xmp.Tests/SkyCD.Plugin.Metadata.Xmp.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Metadata.YamlToml.Tests/SkyCD.Plugin.Metadata.YamlToml.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Runtime.Tests/SkyCD.Plugin.Runtime.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Sample.Config.Tests/SkyCD.Plugin.Sample.Config.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Sample.Menu.Tests/SkyCD.Plugin.Sample.Menu.Tests.csproj"/>
