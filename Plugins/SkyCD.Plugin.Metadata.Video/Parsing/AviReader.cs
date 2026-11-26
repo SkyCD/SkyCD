@@ -1,7 +1,10 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using MetadataExtractor.Formats.Avi;
 using SkyCD.Plugin.Metadata.Video.Exceptions;
 using SkyCD.Plugin.Metadata.Video.Models;
 
@@ -19,7 +22,6 @@ namespace SkyCD.Plugin.Metadata.Video.Parsing;
 internal static class AviReader
 {
     private const int MaxChunks = 1024;
-    private const int MainHeaderLength = 56;
     private const int StreamHeaderLength = 56;
 
     public static async Task<VideoProbe> ReadAsync(
@@ -37,6 +39,7 @@ internal static class AviReader
 
         var state = new WalkState();
         await WalkAsync(source, 12, source.Length, state, cancellationToken).ConfigureAwait(false);
+        await ApplyMetadataExtractorAsync(source, options, state, cancellationToken).ConfigureAwait(false);
 
         if (!state.SawMainHeader && state.VideoCodec is null)
         {
@@ -111,17 +114,21 @@ internal static class AviReader
 
                 if (listType is "hdrl" or "strl")
                 {
-                    if (listType == "strl")
+                    if (listType == "hdrl")
+                    {
+                        if (state.HdrlStart is null)
+                        {
+                            state.HdrlStart = position;
+                            state.HdrlEnd = payloadEnd;
+                        }
+                    }
+                    else
                     {
                         state.BeginStream();
                     }
 
                     await WalkAsync(source, payloadStart + 4, payloadEnd, state, cancellationToken).ConfigureAwait(false);
                 }
-            }
-            else if (fourCc == "avih")
-            {
-                await ReadMainHeaderAsync(source, payloadStart, payloadEnd, state, cancellationToken).ConfigureAwait(false);
             }
             else if (fourCc == "strh")
             {
@@ -136,42 +143,86 @@ internal static class AviReader
         }
     }
 
-    private static async Task ReadMainHeaderAsync(
+    /// <summary>
+    /// Reads the header list with MetadataExtractor and maps its AVI directory onto the probe.
+    /// Dimensions, frame rate, duration and the video codec come from the parsed RIFF header;
+    /// stream kinds stay with the hand reader below because MetadataExtractor does not report
+    /// which streams are video and which are audio. Anything beyond the options' header-scan
+    /// budget is left unread so a huge header can never cost more than the walk already would.
+    /// </summary>
+    private static async Task ApplyMetadataExtractorAsync(
         VideoSourceReader source,
-        long payloadStart,
-        long payloadEnd,
+        VideoPluginOptions options,
         WalkState state,
         CancellationToken cancellationToken)
     {
-        var length = (int)Math.Min(MainHeaderLength, payloadEnd - payloadStart);
-        var payload = await source.ReadBytesAsync(payloadStart, length, cancellationToken).ConfigureAwait(false);
-        if (payload.Length < 40)
+        if (state.HdrlStart is not { } hdrlStart || state.HdrlEnd is not { } hdrlEnd)
         {
             return;
         }
 
-        state.SawMainHeader = true;
-        VideoBinary.TryU32LE(payload, 0, out var microSecondsPerFrame);
-        VideoBinary.TryU32LE(payload, 16, out var totalFrames);
-        VideoBinary.TryU32LE(payload, 32, out var width);
-        VideoBinary.TryU32LE(payload, 36, out var height);
-
-        state.MicroSecondsPerFrame = microSecondsPerFrame;
-        state.TotalFrames = totalFrames;
-
-        if (width > 0 && width <= 32767)
+        var hdrlLength = hdrlEnd - hdrlStart;
+        if (hdrlLength <= 0 || hdrlLength > options.HeaderScanBytes)
         {
-            state.Width = (int)width;
+            return;
         }
 
-        if (height > 0 && height <= 32767)
+        var hdrl = await source.ReadBytesAsync(hdrlStart, (int)hdrlLength, cancellationToken).ConfigureAwait(false);
+        if (hdrl.Length != hdrlLength)
         {
-            state.Height = (int)height;
+            return;
         }
 
-        if (microSecondsPerFrame > 0)
+        // MetadataExtractor needs the RIFF envelope, so reattach the validated 12-byte header
+        // the walk already consumed. The size field covers the header list plus the form type.
+        var riff = new byte[12 + hdrl.Length];
+        Encoding.ASCII.GetBytes("RIFF").CopyTo(riff, 0);
+        BitConverter.GetBytes(hdrl.Length + 4).CopyTo(riff, 4);
+        Encoding.ASCII.GetBytes("AVI ").CopyTo(riff, 8);
+        hdrl.CopyTo(riff, 12);
+
+        IReadOnlyList<MetadataExtractor.Directory> directories;
+        try
         {
-            state.FrameRate = Math.Round(1_000_000.0 / microSecondsPerFrame, 3);
+            directories = AviMetadataReader.ReadMetadata(new MemoryStream(riff));
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            return;
+        }
+
+        foreach (var directory in directories)
+        {
+            if (directory is not AviDirectory avi)
+            {
+                continue;
+            }
+
+            state.SawMainHeader = true;
+            if (VideoBinary.TryToInt(avi.GetObject(AviDirectory.TagWidth), out var width) && width > 0 && width <= 32767)
+            {
+                state.Width ??= width;
+            }
+
+            if (VideoBinary.TryToInt(avi.GetObject(AviDirectory.TagHeight), out var height) && height > 0 && height <= 32767)
+            {
+                state.Height ??= height;
+            }
+
+            if (VideoBinary.TryToDouble(avi.GetObject(AviDirectory.TagFramesPerSecond), out var framesPerSecond) && framesPerSecond > 0)
+            {
+                state.FrameRate ??= Math.Round(framesPerSecond, 3);
+            }
+
+            if (state.VideoCodec is null && avi.GetObject(AviDirectory.TagVideoCodec) is string codec && codec.Length > 0)
+            {
+                state.VideoCodec = ResolveVideoCodec(codec);
+            }
+
+            if (state.MeDurationSeconds is null && VideoBinary.TryToDuration(avi.GetObject(AviDirectory.TagDuration), out var duration))
+            {
+                state.MeDurationSeconds = duration.TotalSeconds;
+            }
         }
     }
 
@@ -193,7 +244,6 @@ internal static class AviReader
         if (streamType == "vids")
         {
             state.StreamKind = "video";
-            state.VideoCodec = ResolveVideoCodec(Encoding.ASCII.GetString(payload, 4, 4));
         }
         else if (streamType == "auds")
         {
@@ -206,18 +256,15 @@ internal static class AviReader
             return;
         }
 
-        // The video stream's own rate is more accurate than the header's rounded microseconds per frame.
+        // The video stream's own length and rate stay hand-read: they select the stream kind that
+        // MetadataExtractor cannot distinguish, and they feed the duration preference below.
         if (state.StreamKind == "video" &&
             VideoBinary.TryU32LE(payload, 20, out var scale) &&
             VideoBinary.TryU32LE(payload, 24, out var rate) &&
-            scale > 0 && rate > 0)
+            scale > 0 && rate > 0 &&
+            VideoBinary.TryU32LE(payload, 32, out var streamLength) && streamLength > 0)
         {
-            state.FrameRate = Math.Round(rate / (double)scale, 3);
-
-            if (VideoBinary.TryU32LE(payload, 32, out var streamLength) && streamLength > 0)
-            {
-                state.StreamDurationSeconds = streamLength * scale / (double)rate;
-            }
+            state.StreamDurationSeconds = streamLength * scale / (double)rate;
         }
     }
 
@@ -231,33 +278,7 @@ internal static class AviReader
         var length = (int)Math.Min(40, payloadEnd - payloadStart);
         var payload = await source.ReadBytesAsync(payloadStart, length, cancellationToken).ConfigureAwait(false);
 
-        if (state.StreamKind == "video" && payload.Length >= 20)
-        {
-            // BITMAPINFOHEADER: size, width, height (negative means top-down), planes, bit count, compression.
-            if (VideoBinary.TryI32LE(payload, 4, out var width) &&
-                VideoBinary.TryI32LE(payload, 8, out var height))
-            {
-                if (width > 0 && width <= 32767)
-                {
-                    state.Width = width;
-                }
-
-                if (Math.Abs(height) is > 0 and <= 32767)
-                {
-                    state.Height = Math.Abs(height);
-                }
-            }
-
-            if (VideoBinary.TryU32LE(payload, 16, out var compression) && compression != 0)
-            {
-                var fourCc = Encoding.ASCII.GetString(BitConverter.GetBytes(compression), 0, 4).Trim();
-                if (fourCc.Length > 0)
-                {
-                    state.VideoCodec = ResolveVideoCodec(fourCc);
-                }
-            }
-        }
-        else if (state.StreamKind == "audio" && payload.Length >= 18)
+        if (state.StreamKind == "audio" && payload.Length >= 18)
         {
             // WAVEFORMATEX: format tag, channels, sample rate, average bytes per second, block align, bits.
             if (VideoBinary.TryU16LE(payload, 0, out var formatTag))
@@ -313,9 +334,10 @@ internal static class AviReader
         public bool SawMainHeader { get; set; }
         public string? StreamKind { get; set; }
         public string? AudioHandler { get; set; }
-        public uint MicroSecondsPerFrame { get; set; }
-        public uint TotalFrames { get; set; }
+        public long? HdrlStart { get; set; }
+        public long? HdrlEnd { get; set; }
         public double? StreamDurationSeconds { get; set; }
+        public double? MeDurationSeconds { get; set; }
         public double? DurationSeconds { get; set; }
         public double? FrameRate { get; set; }
         public int? Width { get; set; }
@@ -332,7 +354,7 @@ internal static class AviReader
 
         /// <summary>
         /// Prefers the video stream's own sample count and rate, which stay correct when the main header's
-        /// microseconds-per-frame was rounded, and falls back to the header's frame count.
+        /// frame count was rounded, and falls back to the MetadataExtractor duration.
         /// </summary>
         public void ResolveDuration()
         {
@@ -342,9 +364,9 @@ internal static class AviReader
                 return;
             }
 
-            if (TotalFrames > 0 && MicroSecondsPerFrame > 0)
+            if (MeDurationSeconds is > 0)
             {
-                DurationSeconds = TotalFrames * MicroSecondsPerFrame / 1_000_000.0;
+                DurationSeconds = MeDurationSeconds;
             }
         }
     }
