@@ -161,7 +161,9 @@ public sealed class PluginLoadContextTests : IDisposable
             GC.WaitForPendingFinalizers();
         }
 
-        Assert.DoesNotContain(AppDomain.CurrentDomain.GetAssemblies(), assembly =>
+        // AppDomain.GetAssemblies includes every load context. Pollution is a second copy in the
+        // default context, whose location is the file copied under the test root.
+        Assert.DoesNotContain(AssemblyLoadContext.Default.Assemblies, assembly =>
             !string.IsNullOrWhiteSpace(assembly.Location) &&
             assembly.Location.StartsWith(root, StringComparison.OrdinalIgnoreCase));
         Assert.Single(AppDomain.CurrentDomain.GetAssemblies(), assembly =>

@@ -26,7 +26,7 @@ public sealed class PluginLoadContext : AssemblyLoadContext
         "SkyCD.SDK",
     };
 
-    private readonly AssemblyDependencyResolver resolver;
+    private AssemblyDependencyResolver? resolver;
 
     public string PluginDirectory { get; }
 
@@ -39,7 +39,6 @@ public sealed class PluginLoadContext : AssemblyLoadContext
         }
 
         PluginDirectory = Path.GetFullPath(pluginDirectory);
-        resolver = new AssemblyDependencyResolver(PluginDirectory);
     }
 
     public static bool IsSharedHostAssembly(string? assemblyName) =>
@@ -49,7 +48,10 @@ public sealed class PluginLoadContext : AssemblyLoadContext
     public Assembly LoadEntry(string entryAssemblyPath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(entryAssemblyPath);
-        return LoadFromAssemblyPath(Path.GetFullPath(entryAssemblyPath));
+        var fullPath = Path.GetFullPath(entryAssemblyPath);
+        // The resolver reads the entry's .deps.json. A directory path never matches one.
+        resolver ??= new AssemblyDependencyResolver(fullPath);
+        return LoadFromAssemblyPath(fullPath);
     }
 
     protected override Assembly? Load(AssemblyName assemblyName)
@@ -59,7 +61,7 @@ public sealed class PluginLoadContext : AssemblyLoadContext
             return null;
         }
 
-        var path = resolver.ResolveAssemblyToPath(assemblyName);
+        var path = resolver?.ResolveAssemblyToPath(assemblyName);
         if (path is not null)
         {
             return LoadFromAssemblyPath(path);

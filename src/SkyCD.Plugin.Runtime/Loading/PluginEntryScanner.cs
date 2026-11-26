@@ -109,11 +109,20 @@ public static class PluginEntryScanner
             return false;
         }
 
-        return types.Any(static type =>
-            !type.IsAbstract &&
-            type.GetInterfaces().Any(static face =>
-                string.Equals(face.FullName, CapabilityInterfaceFullName, StringComparison.Ordinal)) &&
-            type.GetConstructors().Any(static constructor => constructor.GetParameters().Length == 0));
+        try
+        {
+            // A single unresolved constructor or interface must not abort the directory scan.
+            // MetadataLoadContext throws when a referenced type is missing; that file is not an entry.
+            return types.Any(static type =>
+                !type.IsAbstract &&
+                type.GetInterfaces().Any(static face =>
+                    string.Equals(face.FullName, CapabilityInterfaceFullName, StringComparison.Ordinal)) &&
+                type.GetConstructors().Any(static constructor => constructor.GetParameters().Length == 0));
+        }
+        catch (Exception)
+        {
+            return false;
+        }
     }
 
     internal static bool IsCandidatePluginAssemblyPath(string fullPath)

@@ -108,7 +108,9 @@ public sealed class AssembliesListFactory(ILogger<AssembliesListFactory> logger)
 
         AddIfFile(paths, typeof(object).Assembly.Location);
         AddIfFile(paths, typeof(IPluginCapability).Assembly.Location);
-        foreach (var candidate in Directory.GetFiles(directory, "*.dll", SearchOption.TopDirectoryOnly))
+        // Nested plugin folders carry their own references. MetadataLoadContext only resolves
+        // paths listed here, so a top-level-only set hides every capability below the root.
+        foreach (var candidate in Directory.GetFiles(directory, "*.dll", SearchOption.AllDirectories))
         {
             AddIfFile(paths, Path.GetFullPath(candidate));
         }
