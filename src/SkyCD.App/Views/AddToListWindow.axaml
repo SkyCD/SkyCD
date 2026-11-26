@@ -147,9 +147,12 @@
             -->
             <StackPanel x:Name="NameLocationBlock"
                         IsVisible="{Binding IsNameEntryVisible}"
-                        Spacing="{DynamicResource SkySpaceXs}">
-                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectMediaName}}" />
-                <TextBox Classes="source-field" Text="{Binding MediaName}" />
+                        Margin="{DynamicResource SkyGapBottomXs}"
+                        Spacing="{DynamicResource SkySpaceSm}">
+                <StackPanel Spacing="{DynamicResource SkySpaceXs}">
+                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectMediaName}}" />
+                    <TextBox Classes="source-field" Text="{Binding MediaName}" />
+                </StackPanel>
                 <StackPanel IsVisible="{Binding IsLocationPickerVisible}" Spacing="{DynamicResource SkySpaceXs}">
                     <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.PhysicalLocation}}" />
                     <ComboBox Classes="source-field"
@@ -224,50 +227,58 @@
                                    TextWrapping="Wrap" />
                     </StackPanel>
 
-                    <StackPanel Grid.Row="1" IsVisible="{Binding IsSourceFolder}" Spacing="{DynamicResource SkySpaceXs}" VerticalAlignment="Top">
-                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectFolder}}" />
-                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                            <TextBox Classes="source-field" Text="{Binding SourceValue}" />
-                            <Button Grid.Column="1"
-                                    Classes="source-field"
-                                    Content="..."
-                                    Width="28"
-                                    Click="OnBrowseFolderClicked" />
-                        </Grid>
-                        <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.AddFolders}}"
-                                  IsChecked="{Binding IncludeSubfolders}" />
-                        <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.AddFiles}}"
-                                  IsChecked="{Binding IncludeFiles}" />
-                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectedRootAlwaysAdded}}"
-                                   Foreground="#666666"
-                                   TextWrapping="Wrap" />
+                    <StackPanel Grid.Row="1" IsVisible="{Binding IsSourceFolder}" Spacing="{DynamicResource SkySpaceSm}" VerticalAlignment="Top">
+                        <StackPanel Spacing="{DynamicResource SkySpaceXs}">
+                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectFolder}}" />
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                                <TextBox Classes="source-field" Text="{Binding SourceValue}" />
+                                <Button Grid.Column="1"
+                                        Classes="source-field"
+                                        Content="..."
+                                        Width="28"
+                                        Click="OnBrowseFolderClicked" />
+                            </Grid>
+                        </StackPanel>
+                        <StackPanel Spacing="{DynamicResource SkySpaceXs}">
+                            <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.AddFolders}}"
+                                      IsChecked="{Binding IncludeSubfolders}" />
+                            <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.AddFiles}}"
+                                      IsChecked="{Binding IncludeFiles}" />
+                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectedRootAlwaysAdded}}"
+                                       Foreground="#666666"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
                     </StackPanel>
 
                     <StackPanel Grid.Row="1" IsVisible="{Binding IsSourceInternet}" Spacing="{DynamicResource SkySpaceXs}" VerticalAlignment="Top">
-                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                            <ComboBox x:Name="InternetProtocolComboBox"
-                                      Classes="source-field"
-                                      ItemsSource="{Binding InternetProtocols}"
-                                      SelectedItem="{Binding InternetProtocol}"
-                                      AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.InternetProtocol}}"
-                                      HorizontalAlignment="Stretch">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate x:DataType="x:String">
-                                        <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}">
-                                            <iconPacks:PackIconControl Width="16" Height="16"
-                                                                       Kind="{Binding Converter={StaticResource InternetProtocolIcon}}"
-                                                                       VerticalAlignment="Center" />
-                                            <TextBlock Text="{Binding}" VerticalAlignment="Center" />
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
-                            <Button Grid.Column="1"
-                                    x:Name="PasteInternetUrlButton"
-                                    IsEnabled="False"
-                                    Content="{i18n:Translate {x:Static i18n:UiKeys.PasteInternetUrl}}"
-                                    Click="OnPasteInternetUrlClicked" />
-                        </Grid>
+                        <StackPanel Spacing="{DynamicResource SkySpaceXs}">
+                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.InternetProtocol}}" />
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                                <ComboBox x:Name="InternetProtocolComboBox"
+                                          Classes="source-field"
+                                          ItemsSource="{Binding InternetProtocols}"
+                                          SelectedItem="{Binding InternetProtocol}"
+                                          AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.InternetProtocol}}"
+                                          HorizontalAlignment="Stretch">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate x:DataType="x:String">
+                                            <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}">
+                                                <iconPacks:PackIconControl Width="16" Height="16"
+                                                                           Kind="{Binding Converter={StaticResource InternetProtocolIcon}}"
+                                                                           VerticalAlignment="Center" />
+                                                <TextBlock Text="{Binding}" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                                <Button Grid.Column="1"
+                                        x:Name="PasteInternetUrlButton"
+                                        Classes="source-field"
+                                        IsEnabled="False"
+                                        Content="{i18n:Translate {x:Static i18n:UiKeys.PasteInternetUrl}}"
+                                        Click="OnPasteInternetUrlClicked" />
+                            </Grid>
+                        </StackPanel>
                         <Grid ColumnDefinitions="*,72" RowDefinitions="Auto,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}" RowSpacing="{DynamicResource SkySpaceXs}">
                             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.InternetHost}}" />
                             <TextBlock Grid.Column="1" Text="{i18n:Translate {x:Static i18n:UiKeys.Port}}" />
