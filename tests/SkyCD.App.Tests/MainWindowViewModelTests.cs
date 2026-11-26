@@ -1543,6 +1543,7 @@ public class MainWindowViewModelTests
             vm.OpenCatalogCommand,
             vm.SaveCatalogCommand,
             vm.SaveCatalogAsCommand,
+            vm.ExportCatalogCommand,
             vm.SplitCatalogCommand,
             vm.OpenPropertiesCommand,
             vm.ExitApplicationCommand
@@ -1559,6 +1560,7 @@ public class MainWindowViewModelTests
             localization.Get(TextKeys.Open),
             localization.Get(TextKeys.Save),
             localization.Get(TextKeys.SaveAs),
+            localization.Get(TextKeys.ExportFileMenu),
             localization.Get(TextKeys.SplitFileMenu),
             localization.Get(TextKeys.Properties),
             localization.Get(TextKeys.Exit)
