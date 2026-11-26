@@ -36,7 +36,7 @@
                     </DataTemplate>
                 </ComboBox.ItemTemplate>
             </ComboBox>
-            <TextBlock Text="{Binding ErrorText}" TextWrapping="Wrap" Foreground="#B00000" />
+            <TextBlock Text="{Binding ErrorText}" TextWrapping="Wrap" Foreground="{DynamicResource SkyErrorForeground}" />
         </StackPanel>
     </DockPanel>
 </Window>
