@@ -1,0 +1,42 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:i18n="clr-namespace:SkyCD.UI.Localization;assembly=SkyCD.UI"
+        xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
+        xmlns:export="clr-namespace:SkyCD.Presentation.Catalog.Export;assembly=SkyCD.Presentation"
+        x:Class="SkyCD.App.Views.ExportWindow"
+        x:DataType="vm:ExportDialogViewModel"
+        Width="480"
+        Height="220"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        CanMinimize="False"
+        ShowInTaskbar="False"
+        Icon="/Assets/skycd.ico"
+        Title="{i18n:Translate {x:Static i18n:UiKeys.ExportDialogTitle}}">
+
+    <DockPanel Margin="{DynamicResource SkyInsetMd}">
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right"
+                    Spacing="{DynamicResource SkySpaceSm}"
+                    Margin="{DynamicResource SkyGapTopMd}">
+            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.ExportAction}}"
+                    Command="{Binding ExportCommand}" MinWidth="90" IsDefault="True" />
+            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Cancel}}"
+                    MinWidth="90" IsCancel="True" Click="OnCloseClicked" />
+        </StackPanel>
+
+        <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
+            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ExportFormat}}" />
+            <ComboBox ItemsSource="{Binding Formats}"
+                      SelectedItem="{Binding SelectedExportFormat, Mode=TwoWay}"
+                      AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.ExportFormat}}"
+                      HorizontalAlignment="Stretch">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="export:ExportFormatOption">
+                        <TextBlock Text="{Binding DisplayName}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+            <TextBlock Text="{Binding ErrorText}" TextWrapping="Wrap" Foreground="#B00000" />
+        </StackPanel>
+    </DockPanel>
+</Window>

@@ -149,6 +149,12 @@ public static class TextKeys
     public const string FailedToSaveCatalogAccessDenied = "core.text.FailedToSaveCatalogAccessDenied";
     public const string FailedToSaveCatalogNoWritableFileFormatCheckPluginSettings = "core.text.FailedToSaveCatalogNoWritableFileFormatCheckPluginSettings";
     public const string SaveCatalogAs = "core.text.SaveCatalogAs";
+    public const string ExportFileMenu = "core.text.ExportFileMenu";
+    public const string ExportCatalog = "core.text.ExportCatalog";
+    public const string ExportedCatalogTo = "core.text.ExportedCatalogTo";
+    public const string FailedToExportCatalog = "core.text.FailedToExportCatalog";
+    public const string FailedToExportCatalogAccessDenied = "core.text.FailedToExportCatalogAccessDenied";
+    public const string FailedToExportCatalogNoExportFormatCheckPluginSettings = "core.text.FailedToExportCatalogNoExportFormatCheckPluginSettings";
     public const string ReadingDirectoryFromRemoteServer = "core.text.ReadingDirectoryFromRemoteServer";
     public const string ReadingSourceFolder = "core.text.ReadingSourceFolder";
     public const string ReadingMediaMetadata = "core.text.ReadingMediaMetadata";

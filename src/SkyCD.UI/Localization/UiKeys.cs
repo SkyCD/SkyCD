@@ -578,4 +578,8 @@ public static class UiKeys
     public const string SplitCancelled = "core.ui.SplitCancelled";
     public const string SplitFailed = "core.ui.SplitFailed";
     public const string SplitAction = "core.ui.SplitAction";
+    public const string ExportDialogTitle = "core.ui.ExportDialogTitle";
+    public const string ExportFormat = "core.ui.ExportFormat";
+    public const string ExportAction = "core.ui.ExportAction";
+    public const string ExportNoFormat = "core.ui.ExportNoFormat";
 }
