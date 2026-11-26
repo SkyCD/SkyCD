@@ -39,6 +39,14 @@ public sealed class OptionsContributedPageLayoutTests
                 .FirstOrDefault(border => ReferenceEquals(border, capability.Content));
             Assert.NotNull(rendered);
             Assert.True(rendered!.IsEffectivelyVisible);
+
+            // Issue #1213: the host section no longer prints the page title above the content.
+            var section = window.GetVisualDescendants().OfType<ContentControl>()
+                .First(control => ReferenceEquals(control.Content, capability.Content))
+                .Parent as Grid;
+            Assert.NotNull(section);
+            Assert.DoesNotContain(section!.GetVisualDescendants().OfType<TextBlock>(),
+                text => text.IsEffectivelyVisible && text.Text == "Locations");
         }
         finally
         {

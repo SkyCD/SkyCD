@@ -86,6 +86,7 @@
         <converters:IconGlyphToSymbolConverter x:Key="IconGlyphToSymbolConverter" />
         <converters:LanguageFlagImageConverter x:Key="LanguageFlagImageConverter" />
         <converters:StatusBadgeIconConverter x:Key="StatusBadgeIconConverter" />
+        <converters:StatusIconTileConverter x:Key="StatusIconTileConverter" />
         <converters:AcpAgentIconConverter x:Key="AcpAgentIconConverter" />
         <converters:AcpAgentSelectionConverter x:Key="AcpAgentSelectionConverter" />
         <converters:ToolbarIconConverter x:Key="ToolbarIconConverter" />
@@ -1045,15 +1046,9 @@
 
                     <Grid Grid.Row="2"
                           IsVisible="{Binding ShowStatusesSection}"
-                          RowDefinitions="Auto,Auto,*,Auto"
+                          RowDefinitions="Auto,*,Auto"
                           RowSpacing="{DynamicResource SkySpaceSm}">
-                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ItemStatuses}}" FontSize="{DynamicResource SkyFontBody}" />
-                            <Border Grid.Column="1" Height="1" Background="{DynamicResource ThemeBorderLowBrush}" VerticalAlignment="Center" />
-                        </Grid>
-
                         <StackPanel Orientation="Horizontal"
-                                    Grid.Row="1"
                                     HorizontalAlignment="Right"
                                     Spacing="{DynamicResource SkySpaceSm}">
                             <Button Content="↺"
@@ -1076,7 +1071,7 @@
 
                         <Border BorderBrush="{DynamicResource ThemeBorderLowBrush}"
                                 BorderThickness="1"
-                                Grid.Row="2">
+                                Grid.Row="1">
                             <Grid RowDefinitions="Auto,*">
                                 <Border BorderBrush="{DynamicResource ThemeBorderLowBrush}" BorderThickness="0,0,0,1" Padding="{DynamicResource SkyRowPadding}">
                                     <Grid ColumnDefinitions="2*,220,2*,140" ColumnSpacing="{DynamicResource SkySpaceSm}">
@@ -1113,6 +1108,14 @@
                                                                                 Content="{Binding ., Converter={StaticResource StatusBadgeIconConverter}}" />
                                                             </DataTemplate>
                                                         </multiSelect:MultiSelectDropdown.ItemPreviewTemplate>
+                                                        <multiSelect:MultiSelectDropdown.ItemTileTemplate>
+                                                            <DataTemplate x:DataType="x:String">
+                                                                <ContentControl Width="16" Height="16"
+                                                                                HorizontalContentAlignment="Stretch"
+                                                                                VerticalContentAlignment="Stretch"
+                                                                                Content="{Binding ., Converter={StaticResource StatusIconTileConverter}}" />
+                                                            </DataTemplate>
+                                                        </multiSelect:MultiSelectDropdown.ItemTileTemplate>
                                                     </multiSelect:MultiSelectDropdown>
                                                     <multiSelect:MultiSelectDropdown Grid.Column="2"
                                                                                      ItemsSource="{Binding TypeOptions}"
@@ -1129,7 +1132,7 @@
                         </Border>
 
                         <Border IsVisible="{Binding ShowStatusAlert}"
-                                Grid.Row="3"
+                                Grid.Row="2"
                                 Background="{DynamicResource SkyAlertErrorBackground}"
                                 BorderBrush="{DynamicResource SkyAlertErrorBorder}"
                                 BorderThickness="1"
@@ -1143,14 +1146,9 @@
 
                     <Grid Grid.Row="2"
                           IsVisible="{Binding ShowCustomPropertiesSection}"
-                          RowDefinitions="Auto,Auto,*,Auto"
+                          RowDefinitions="Auto,*,Auto"
                           RowSpacing="{DynamicResource SkySpaceSm}">
-                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.CustomProperties}}" FontSize="{DynamicResource SkyFontBody}" />
-                            <Border Grid.Column="1" Height="1" Background="{DynamicResource ThemeBorderLowBrush}" VerticalAlignment="Center" />
-                        </Grid>
-
-                        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
                             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.CustomPropertiesDescription}}"
                                        TextWrapping="Wrap"
                                        VerticalAlignment="Center" />
@@ -1175,7 +1173,7 @@
 
                         <Border BorderBrush="{DynamicResource ThemeBorderLowBrush}"
                                 BorderThickness="1"
-                                Grid.Row="2">
+                                Grid.Row="1">
                             <Grid RowDefinitions="Auto,*">
                                 <Border BorderBrush="{DynamicResource ThemeBorderLowBrush}" BorderThickness="0,0,0,1" Padding="{DynamicResource SkyRowPadding}">
                                     <Grid ColumnDefinitions="*,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
@@ -1205,7 +1203,7 @@
                         </Border>
 
                         <Border IsVisible="{Binding ShowCustomPropertyAlert}"
-                                Grid.Row="3"
+                                Grid.Row="2"
                                 Background="{DynamicResource SkyAlertErrorBackground}"
                                 BorderBrush="{DynamicResource SkyAlertErrorBorder}"
                                 BorderThickness="1"
@@ -1218,18 +1216,9 @@
                     </Grid>
                     <Grid Grid.Row="2"
                           IsVisible="{Binding ShowCollectionsSection}"
-                          RowDefinitions="Auto,Auto,*,Auto"
+                          RowDefinitions="Auto,*,Auto"
                           RowSpacing="{DynamicResource SkySpaceSm}">
-                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Collections}}"
-                                       FontSize="{DynamicResource SkyFontBody}" />
-                            <Border Grid.Column="1"
-                                    Height="1"
-                                    Background="{DynamicResource ThemeBorderLowBrush}"
-                                    VerticalAlignment="Center" />
-                        </Grid>
-
-                        <StackPanel Grid.Row="1" Spacing="{DynamicResource SkySpaceXs}">
+                        <StackPanel Spacing="{DynamicResource SkySpaceXs}">
                             <StackPanel Orientation="Horizontal"
                                         HorizontalAlignment="Right"
                                         Spacing="{DynamicResource SkySpaceSm}">
@@ -1267,7 +1256,7 @@
                             </Border>
                         </StackPanel>
 
-                        <Grid Grid.Row="2" ColumnDefinitions="3*,2*" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                        <Grid Grid.Row="1" ColumnDefinitions="3*,2*" ColumnSpacing="{DynamicResource SkySpaceSm}">
                             <Border BorderBrush="{DynamicResource ThemeBorderLowBrush}" BorderThickness="1">
                                 <Grid RowDefinitions="Auto,*">
                                     <Border BorderBrush="{DynamicResource ThemeBorderLowBrush}"
@@ -1504,25 +1493,15 @@
                             </Border>
                         </Grid>
 
-                        <TextBlock Grid.Row="3"
+                        <TextBlock Grid.Row="2"
                                    Text="{Binding CollectionsPage.StatusText}"
                                    TextWrapping="Wrap" />
                     </Grid>
                     <Grid Grid.Row="2"
                           IsVisible="{Binding ShowAccountsSection}"
-                          RowDefinitions="Auto,*"
+                          RowDefinitions="*"
                           RowSpacing="{DynamicResource SkySpaceSm}">
-                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Accounts}}"
-                                       FontSize="{DynamicResource SkyFontBody}" />
-                            <Border Grid.Column="1"
-                                    Height="1"
-                                    Background="{DynamicResource ThemeBorderLowBrush}"
-                                    VerticalAlignment="Center" />
-                        </Grid>
-
-                        <Border Grid.Row="1"
-                                BorderBrush="{DynamicResource ThemeBorderLowBrush}"
+                        <Border BorderBrush="{DynamicResource ThemeBorderLowBrush}"
                                 BorderThickness="1">
                             <Grid RowDefinitions="Auto,*">
                                 <Border BorderBrush="{DynamicResource ThemeBorderLowBrush}"
@@ -1593,8 +1572,7 @@
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
                                 </ListBox>
-                                <StackPanel Grid.Row="1"
-                                            IsVisible="{Binding !HasAccounts}"
+                                <StackPanel IsVisible="{Binding !HasAccounts}"
                                             Spacing="{DynamicResource SkySpaceXs}"
                                             HorizontalAlignment="Center"
                                             VerticalAlignment="Center">
@@ -1613,21 +1591,12 @@
                     </Grid>
                     <Grid Grid.Row="2"
                           IsVisible="{Binding ShowContributedOptionsPageSection}"
-                          RowDefinitions="Auto,Auto,*"
+                          RowDefinitions="Auto,*"
                           RowSpacing="{DynamicResource SkySpaceSm}">
-                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                            <TextBlock Text="{Binding SelectedContributedPage.Title}"
-                                       FontSize="{DynamicResource SkyFontBody}" />
-                            <Border Grid.Column="1"
-                                    Height="1"
-                                    Background="{DynamicResource ThemeBorderLowBrush}"
-                                    VerticalAlignment="Center" />
-                        </Grid>
-                        <TextBlock Grid.Row="1"
-                                   Text="{Binding SelectedContributedPage.Error}"
+                        <TextBlock Text="{Binding SelectedContributedPage.Error}"
                                    IsVisible="{Binding SelectedContributedPage.HasError}"
                                    TextWrapping="Wrap" />
-                        <ContentControl Grid.Row="2"
+                        <ContentControl Grid.Row="1"
                                         Content="{Binding SelectedContributedPage.Content}"
                                         IsVisible="{Binding SelectedContributedPage.HasContent}"
                                         HorizontalContentAlignment="Stretch"
@@ -1891,19 +1860,13 @@
                     </Grid>
                     <Grid Grid.Row="2"
                           IsVisible="{Binding ShowDetailsColumnsSection}"
-                          RowDefinitions="Auto,Auto,Auto,*"
+                          RowDefinitions="Auto,Auto,*"
                           RowSpacing="{DynamicResource SkySpaceSm}">
-                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.DetailsColumns}}" FontSize="{DynamicResource SkyFontBody}" />
-                            <Border Grid.Column="1" Height="1" Background="{DynamicResource ThemeBorderLowBrush}" VerticalAlignment="Center" />
-                        </Grid>
-
-                        <TextBlock Grid.Row="1"
-                                   Text="{i18n:Translate {x:Static i18n:UiKeys.DetailsColumnsDescription}}"
+                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.DetailsColumnsDescription}}"
                                    TextWrapping="Wrap"
                                    Opacity="0.8" />
 
-                        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}">
+                        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}">
                             <Button Content="↑"
                                     FontSize="{DynamicResource SkyFontSubtitle}"
                                     Width="34"
@@ -1918,7 +1881,7 @@
                                     ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.MoveDown}}" />
                         </StackPanel>
 
-                        <Border Grid.Row="3"
+                        <Border Grid.Row="2"
                                 BorderBrush="{DynamicResource ThemeBorderLowBrush}"
                                 BorderThickness="1">
                             <ListBox ItemsSource="{Binding DetailsColumns}"
@@ -1949,18 +1912,12 @@
                     </Grid>
                     <Grid Grid.Row="2"
                           IsVisible="{Binding ShowToolbarSection}"
-                          RowDefinitions="Auto,Auto,*"
+                          RowDefinitions="Auto,*"
                           RowSpacing="{DynamicResource SkySpaceSm}">
-                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Toolbar}}" FontSize="{DynamicResource SkyFontBody}" />
-                            <Border Grid.Column="1" Height="1" Background="{DynamicResource ThemeBorderLowBrush}" VerticalAlignment="Center" />
-                        </Grid>
-
-                        <TextBlock Grid.Row="1"
-                                   Text="{i18n:Translate {x:Static i18n:UiKeys.CustomizeToolbarHint}}"
+                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.CustomizeToolbarHint}}"
                                    TextWrapping="Wrap" />
 
-                        <Grid Grid.Row="2" ColumnDefinitions="*,Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                        <Grid Grid.Row="1" ColumnDefinitions="*,Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
                             <DockPanel Grid.Column="0">
                                 <TextBlock DockPanel.Dock="Top"
                                            Text="{i18n:Translate {x:Static i18n:UiKeys.ToolbarCommands}}"
@@ -2057,13 +2014,6 @@
                                       VerticalScrollBarVisibility="Auto"
                                       HorizontalScrollBarVisibility="Disabled">
                             <StackPanel Spacing="{DynamicResource SkySpaceSm}">
-                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiDescription}}"
-                                               FontSize="{DynamicResource SkyFontBody}"
-                                               FontWeight="SemiBold" />
-                                    <Border Grid.Column="1" Height="1" Background="{DynamicResource ThemeBorderLowBrush}" VerticalAlignment="Center" />
-                                </Grid>
-
                                 <Grid
                                       ColumnSpacing="{DynamicResource SkySpaceSm}"
                                       IsVisible="{Binding ShowAiDescriptionImplementationSection}">
@@ -2178,13 +2128,6 @@
                                   VerticalScrollBarVisibility="Auto"
                                   HorizontalScrollBarVisibility="Disabled">
                         <StackPanel Spacing="{DynamicResource SkySpaceSm}">
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiProviderCategory}}"
-                                           FontSize="{DynamicResource SkyFontBody}"
-                                           FontWeight="SemiBold" />
-                                <Border Grid.Column="1" Height="1" Background="{DynamicResource ThemeBorderLowBrush}" VerticalAlignment="Center" />
-                            </Grid>
-
                             <Border BorderBrush="{DynamicResource ThemeBorderLowBrush}"
                                     BorderThickness="1"
                                     CornerRadius="{DynamicResource SkyCornerRadius}"
@@ -2341,23 +2284,12 @@
                     </ScrollViewer>
                     <Grid Grid.Row="2"
                           IsVisible="{Binding ShowMcpToolsSection}"
-                          RowDefinitions="Auto,Auto,Auto,*"
+                          RowDefinitions="Auto,Auto,*"
                           RowSpacing="{DynamicResource SkySpaceSm}">
-                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.McpTools}}"
-                                       FontSize="{DynamicResource SkyFontBody}"
-                                       FontWeight="SemiBold" />
-                            <Border Grid.Column="1"
-                                    Height="1"
-                                    Background="{DynamicResource ThemeBorderLowBrush}"
-                                    VerticalAlignment="Center" />
-                        </Grid>
-
-                        <search:SearchTextBox Grid.Row="1"
-                                                 PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.SearchMcpTools}}"
+                        <search:SearchTextBox PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.SearchMcpTools}}"
                                                  Text="{Binding McpToolSearchText, UpdateSourceTrigger=PropertyChanged}" />
 
-                        <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                        <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
                             <TextBlock Text="{Binding McpExposedSummary}"
                                        Foreground="{DynamicResource ThemeForegroundLowBrush}"
                                        VerticalAlignment="Center" />
@@ -2369,7 +2301,7 @@
                                     Command="{Binding ClearMcpToolsCommand}" />
                         </Grid>
 
-                        <Grid Grid.Row="3" RowDefinitions="*,Auto" RowSpacing="{DynamicResource SkySpaceSm}">
+                        <Grid Grid.Row="2" RowDefinitions="*,Auto" RowSpacing="{DynamicResource SkySpaceSm}">
                             <Border BorderBrush="{DynamicResource ThemeBorderLowBrush}"
                                     BorderThickness="1"
                                     CornerRadius="{DynamicResource SkyCornerRadius}"

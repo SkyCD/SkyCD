@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using SkyCD.SDK.Capabilities.FileFormats;
+using SkyCD.TestSupport;
 using Xunit;
 using SkyCD.Plugin.FileFormat.DiskCatalogMaker.Models;
 
@@ -124,5 +125,41 @@ public sealed class DiskCatalogMakerEncodingTests
         Assert.Equal(3, document.Rows.Count);
         Assert.Contains(document.Rows, row => Equals(row["name"], "caf?.txt"));
         Assert.DoesNotContain(document.Rows, row => row.Values.Any(value => value?.ToString()?.Contains('\uFFFD') == true));
+    }
+
+    [Fact]
+    public async Task EmptyInput_ReportsActionableEncodingError()
+    {
+        var plugin = new DiskCatalogMakerPlugin();
+        using var stream = new MemoryStream();
+
+        var result = await plugin.ReadAsync(
+            new FileFormatReadRequest { FormatId = "diskcatalogmaker-text", Source = stream });
+
+        Assert.False(result.Success);
+        Assert.Contains("UTF-8", result.Error);
+        Assert.Contains("not decoded with a lossy fallback", result.Error);
+    }
+
+    [Theory]
+    [MemberData(nameof(LegacyEncodingSamples.Cases), MemberType = typeof(LegacyEncodingSamples))]
+    public async Task Import_DetectsAndPreservesLegacyEncodings(
+        string encodingName,
+        bool includeByteOrderMark,
+        string expectedComment)
+    {
+        var report = $"Name\tPath\tSize\tKind\tComments\r\nfile.txt\t/Volumes/Archive/file.txt\t100\tPlain text\t{expectedComment}\r\n";
+        using var stream = new MemoryStream(LegacyEncodingSamples.Encode(encodingName, includeByteOrderMark, report));
+        var plugin = new DiskCatalogMakerPlugin();
+
+        Assert.True(plugin.CanHandleContent(stream));
+        var result = await plugin.ReadAsync(
+            new FileFormatReadRequest { FormatId = "diskcatalogmaker-text", Source = stream });
+
+        Assert.True(result.Success, result.Error);
+        var document = Assert.IsType<DiskCatalogMakerReportDocument>(result.Payload);
+        var file = Assert.Single(document.Rows, row => Equals(row["name"], "file.txt"));
+        var properties = Assert.IsType<System.Collections.Generic.Dictionary<string, object?>>(file["properties"]);
+        Assert.Equal(expectedComment, properties["Comments"]);
     }
 }

@@ -90,6 +90,12 @@
           "System.Diagnostics.EventLog": "11.0.0"
         }
       },
+      "System.Reflection.MetadataLoadContext": {
+        "type": "Direct",
+        "requested": "[10.0.15, )",
+        "resolved": "10.0.15",
+        "contentHash": "BmEkRBijFmPeMP9xuJIUcRaTjCB8UXLdWeivMLTDZd1HS6DKGynBJJNPrlAeIboz8UFD4uhzzq3z5Xwy3v1XuA=="
+      },
       "Avalonia.BuildServices": {
         "type": "Transitive",
         "resolved": "11.3.2",
