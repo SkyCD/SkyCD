@@ -11,6 +11,7 @@
         xmlns:multiSelect="clr-namespace:SkyCD.UI.Controls.Selectors.MultiSelectDropdown;assembly=SkyCD.UI"
         xmlns:colorSelect="clr-namespace:SkyCD.UI.Controls.Selectors.ColorPaletteDropdown;assembly=SkyCD.UI"
         xmlns:actions="clr-namespace:SkyCD.UI.Controls.Actions;assembly=SkyCD.UI"
+        xmlns:search="clr-namespace:SkyCD.UI.Controls.SearchTextBox;assembly=SkyCD.UI"
         x:Class="SkyCD.App.Views.OptionsWindow"
         x:DataType="vm:OptionsDialogViewModel"
         Width="760"
@@ -153,8 +154,8 @@
                     Padding="{DynamicResource SkyInsetSm}"
                     Grid.RowSpan="2">
                 <Grid RowDefinitions="Auto,*,Auto" RowSpacing="{DynamicResource SkySpaceSm}">
-                    <TextBox PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.Search}}"
-                             Text="{Binding SettingsSearchText, UpdateSourceTrigger=PropertyChanged}" />
+                    <search:SearchTextBox PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.Search}}"
+                                                 Text="{Binding SettingsSearchText, UpdateSourceTrigger=PropertyChanged}" />
 
                     <ListBox Grid.Row="1"
                              x:Name="SettingsCategoriesList"
@@ -205,17 +206,9 @@
                       RowDefinitions="Auto,*"
                       RowSpacing="{DynamicResource SkySpaceSm}">
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                        <TextBox Text="{Binding PluginSearchText, UpdateSourceTrigger=PropertyChanged}"
-                                 PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.FilterPlugins}}"
-                                 AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.FilterPlugins}}">
-                            <TextBox.InnerLeftContent>
-                                <iconPacks:PackIconControl Kind="{x:Static lucide:PackIconLucideKind.Search}"
-                                                           Width="14"
-                                                           Height="14"
-                                                           Margin="{DynamicResource SkyGapLeftSm}"
-                                                           Foreground="{DynamicResource ThemeForegroundLowBrush}" />
-                            </TextBox.InnerLeftContent>
-                        </TextBox>
+                        <search:SearchTextBox Text="{Binding PluginSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                                 PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.FilterPlugins}}"
+                                                 AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.FilterPlugins}}" />
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{DynamicResource SkySpaceXs}">
                             <Button Content="{i18n:Translate {x:Static i18n:UiKeys.PluginUpdateAll}}"
                                     Command="{Binding UpdateAllPluginsCommand}"
@@ -1388,9 +1381,9 @@
                                           ColumnDefinitions="*,Auto"
                                           ColumnSpacing="{DynamicResource SkySpaceSm}"
                                           Margin="{DynamicResource SkyRowPadding}">
-                                        <TextBox Text="{Binding CollectionsPage.MemberFilterText}"
-                                                 PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.FilterMembers}}"
-                                                 AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.FilterMembers}}" />
+                                        <search:SearchTextBox Text="{Binding CollectionsPage.MemberFilterText}"
+                                                                 PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.FilterMembers}}"
+                                                                 AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.FilterMembers}}" />
                                         <StackPanel Grid.Column="1"
                                                     Orientation="Horizontal"
                                                     Spacing="{DynamicResource SkySpaceXs}">
@@ -1604,10 +1597,10 @@
                     </Grid>
                     <Grid Grid.Row="2" IsVisible="{Binding ShowAcpSection}"
                           RowDefinitions="Auto,*,Auto">
-                        <TextBox Margin="{DynamicResource SkyGapBottomMd}"
-                                 PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.SearchAcpAgents}}"
-                                 Text="{Binding AcpSearchText, UpdateSourceTrigger=PropertyChanged}"
-                                 IsEnabled="{Binding !IsAcpLoading}" />
+                        <search:SearchTextBox Margin="{DynamicResource SkyGapBottomMd}"
+                                                 PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.SearchAcpAgents}}"
+                                                 Text="{Binding AcpSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                                 IsEnabled="{Binding !IsAcpLoading}" />
 
                         <Border Grid.Row="1" BorderBrush="{DynamicResource TabCardBorderBrush}"
                                 BorderThickness="1" CornerRadius="6">
@@ -2256,9 +2249,9 @@
                                     VerticalAlignment="Center" />
                         </Grid>
 
-                        <TextBox Grid.Row="1"
-                                 PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.SearchMcpTools}}"
-                                 Text="{Binding McpToolSearchText, UpdateSourceTrigger=PropertyChanged}" />
+                        <search:SearchTextBox Grid.Row="1"
+                                                 PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.SearchMcpTools}}"
+                                                 Text="{Binding McpToolSearchText, UpdateSourceTrigger=PropertyChanged}" />
 
                         <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
                             <TextBlock Text="{Binding McpExposedSummary}"

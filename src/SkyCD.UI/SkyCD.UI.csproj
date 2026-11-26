@@ -8,6 +8,9 @@
         <PackageReference Include="Avalonia" Version="12.1.6"/>
         <PackageReference Include="YamlDotNet" Version="18.1.0"/>
         <PackageReference Include="SmartFormat" Version="3.6.2"/>
+        <!-- Issue #1184: the shared search field draws the same Lucide glyph the app already uses. -->
+        <PackageReference Include="IconPacks.Avalonia" Version="2.0.0"/>
+        <PackageReference Include="IconPacks.Avalonia.Lucide" Version="2.0.0"/>
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\SkyCD.SDK\SkyCD.SDK.csproj"/>

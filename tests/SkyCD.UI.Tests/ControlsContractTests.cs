@@ -11,12 +11,15 @@ using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using IconPacks.Avalonia;
+using IconPacks.Avalonia.Lucide;
 using SkyCD.App.Views;
 using SkyCD.Documents;
 using SkyCD.Documents.Collections;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.UI.Controls.Lists;
 using SkyCD.UI.Controls.Properties;
+using SkyCD.UI.Controls.SearchTextBox;
 using SkyCD.UI.Controls.StatusBar;
 using SkyCD.UI.Controls.Toolbars;
 using SkyCD.UI.Localization;
@@ -640,5 +643,50 @@ public class ControlsContractTests
         Assert.True(button.IsEnabled);
         button.Command.Execute(null);
         Assert.True(executed);
+    }
+
+    [AvaloniaFact]
+    public void SearchTextBox_DrawsTheSharedSearchGlyph()
+    {
+        // Issue #1184: every search field shows the same magnifier at the same size, gap and
+        // foreground. Each instance builds its own icon so two search fields never share one.
+        var first = new SearchTextBox { Text = "query", PlaceholderText = "Search" };
+        var second = new SearchTextBox();
+
+        var firstIcon = Assert.IsType<PackIconControl>(first.InnerLeftContent);
+        var secondIcon = Assert.IsType<PackIconControl>(second.InnerLeftContent);
+        Assert.NotSame(firstIcon, secondIcon);
+        Assert.Equal(PackIconLucideKind.Search, firstIcon.Kind);
+
+        var window = new Window
+        {
+            Content = new StackPanel
+            {
+                Children = { first, second, new TextBox { Text = "plain" } }
+            }
+        };
+        try
+        {
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal(14, firstIcon.Width);
+            Assert.Equal(14, firstIcon.Height);
+            Assert.Equal(new Thickness(8, 0, 0, 0), firstIcon.Margin);
+            Assert.Equal(
+                Application.Current!.FindResource("ThemeForegroundLowBrush"),
+                firstIcon.GetValue(PackIconControl.ForegroundProperty));
+
+            // The icon shares the plain input inset, so both fields measure the same height.
+            var plain = window.GetVisualDescendants().OfType<TextBox>().Single(box => box is not SearchTextBox);
+            Assert.Equal(plain.Bounds.Height, first.Bounds.Height, 0.5);
+
+            Assert.Equal("query", first.Text);
+            Assert.Equal("Search", first.PlaceholderText);
+        }
+        finally
+        {
+            window.Close();
+        }
     }
 }

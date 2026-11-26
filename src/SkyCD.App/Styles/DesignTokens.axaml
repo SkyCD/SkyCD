@@ -32,6 +32,14 @@
     <Thickness x:Key="SkyComboBoxContentPadding">8,4</Thickness>
 
     <!--
+        Text inputs share one inner inset (issue #1184). The icon of a search field sits on the
+        same inset as plain input text, so the glyph and the text start at one shared edge.
+    -->
+    <Thickness x:Key="SkyInputPadding">8,4</Thickness>
+    <!-- The Lucide search glyph every search field draws (issue #1184). -->
+    <x:Double x:Key="SkySearchIconSize">14</x:Double>
+
+    <!--
         The inset vocabulary (issue #999). Margin and Padding take one of these keys, or a plain 0
         when a surface inherits an inset it does not want; never a number. SkyInset* dresses all four
         sides. SkyGap* keeps the same ramp but zeroes the sides that must not move, because XAML

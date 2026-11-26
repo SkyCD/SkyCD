@@ -16,6 +16,15 @@
     <Style Selector="TextBox">
         <Setter Property="FontFamily" Value="{DynamicResource SkyFontFamily}" />
         <Setter Property="FontSize" Value="{DynamicResource SkyFontSecondary}" />
+        <!-- Issue #1184: every text input shares one inner inset with the search fields. -->
+        <Setter Property="Padding" Value="{DynamicResource SkyInputPadding}" />
+    </Style>
+    <!--
+        Issue #1184: the editable ComboBox text reads through the same inset. The template binds
+        the inner field to the ComboBox padding, so the editable state owns the token instead.
+    -->
+    <Style Selector="ComboBox[IsEditable=True]">
+        <Setter Property="Padding" Value="{DynamicResource SkyInputPadding}" />
     </Style>
     <Style Selector="ComboBox">
         <Setter Property="FontFamily" Value="{DynamicResource SkyFontFamily}" />
