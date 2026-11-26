@@ -15,8 +15,9 @@ using Xunit;
 namespace SkyCD.App.Tests;
 
 /// <summary>
-/// Issue #1202: plugin failures name the plugin and collapse per fingerprint; preview failures
-/// and unavailable decoders never fail the entry.
+/// Issue #1202: plugin failures name the plugin and collapse per fingerprint. A preview that
+/// throws is still recorded so a failed refresh can keep the previous capture. An unavailable
+/// decoder is a warning and does not run.
 /// </summary>
 public sealed class PluginFailureReportingTests
 {
@@ -120,7 +121,7 @@ public sealed class PluginFailureReportingTests
     }
 
     [Fact]
-    public async Task ThrowingPreview_DoesNotFailEntryButPublishes()
+    public async Task ThrowingPreview_RecordsTheFailureAndNamesThePlugin()
     {
         var received = new List<PluginFailure>();
         void Handler(PluginFailure failure) => received.Add(failure);
@@ -134,7 +135,8 @@ public sealed class PluginFailureReportingTests
                 new MediaItem(".mp4", "video/mp4", 10),
                 _ => Task.FromResult<Stream>(new MemoryStream(new byte[10])));
 
-            Assert.DoesNotContain(results, static result => result.Failed);
+            var failed = Assert.Single(results, static result => result.Failed);
+            Assert.Equal("test.preview", failed.PluginId);
             var failure = Assert.Single(received, f => f.PluginId == "test.preview");
             Assert.Equal("InvalidOperationException", failure.ExceptionType);
             Assert.Contains("preview failure", failure.Reason ?? string.Empty, StringComparison.Ordinal);

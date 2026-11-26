@@ -108,15 +108,10 @@ public sealed class MediaExtensionManager
                 var itemName = sourcePath is null ? null : Path.GetFileName(sourcePath);
                 PluginFailure.Publish(provider.Capability.GetType(), "media", exception, provider.PluginId,
                     FirstLine(exception.Message), itemName);
-                if (IsOptionalPreview(provider))
-                {
-                    // A failed preview must not turn the entry outcome into Failed: posters are
-                    // optional and the docs promise "no preview stored" in that case (issue #1202).
-                    // The published failure still reaches the log once per plugin (see the dialog's
-                    // fingerprint collapse), so triage is preserved without per-file error spam.
-                    continue;
-                }
-
+                // Record the provider failure even for an optional preview. The cache treats a failed
+                // refresh as "keep the previous capture", and callers tell a timed-out poster from a
+                // stored one by this result. The dialog still collapses the published failure by
+                // fingerprint, so a missing poster does not spam one error line per file.
                 results.Add((int.MinValue, Failure(provider, timeout.IsCancellationRequested)));
             }
         }
@@ -396,9 +391,6 @@ public sealed class MediaExtensionManager
 
     private static MediaProviderResult Failure(MediaProvider provider, bool timedOut) =>
         new(provider.PluginId, provider.PluginVersion, provider.Capability.GetType().FullName!, null, null, null, true, timedOut);
-
-    private static bool IsOptionalPreview(MediaProvider provider) =>
-        provider.Capability is IMediaPreviewCapability or ILocalMediaPreviewCapability;
 
     private static string FirstLine(string? value)
     {
