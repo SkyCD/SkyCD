@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -125,6 +126,210 @@ public partial class OptionsDialogViewModel
         NotifyAiProviderVisibilityChanged();
     }
 
+    /// <summary>
+    /// Defaults the output language to the active UI language. Called from the constructor after
+    /// <see cref="OptionsDialogViewModel.Languages"/> is populated, so a fresh profile opens with
+    /// a valid selection instead of the hard-coded English fallback.
+    /// </summary>
+    private void InitializeAiProviderLanguageDefault()
+    {
+        AiProviderLanguage = GetUiAiProviderLanguage();
+    }
+
+    /// <summary>
+    /// Rebuilds the output-language list after a UI language change and keeps the selection valid:
+    /// the current value is re-mapped onto the new list instead of being cleared.
+    /// </summary>
+    private void RefreshAiProviderLanguages()
+    {
+        if (AiProviderLanguages.Count == 0)
+        {
+            return;
+        }
+
+        var current = AiProviderLanguage;
+        AiProviderLanguages.Clear();
+        foreach (var language in Languages.Select(static language => language.Name)
+                     .Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            AiProviderLanguages.Add(language);
+        }
+
+        var resolved = ResolveAiProviderLanguage(current);
+        if (!AiProviderLanguages.Contains(resolved, StringComparer.OrdinalIgnoreCase))
+        {
+            AiProviderLanguages.Add(resolved);
+        }
+
+        AiProviderLanguage = resolved;
+    }
+
+    /// <summary>Display name of the active UI culture as listed in <see cref="AiProviderLanguages"/>.</summary>
+    private string GetUiAiProviderLanguage()
+    {
+        var culture = localizationService?.CurrentCulture ?? LocalizationService.Current.CurrentCulture;
+        foreach (var language in Languages)
+        {
+            if (LanguageCultureMatches(language.Name, language.CultureCode, culture))
+            {
+                return language.Name;
+            }
+        }
+
+        return Languages.FirstOrDefault()?.Name ?? AiProviderLanguage;
+    }
+
+    private static bool LanguageCultureMatches(string displayName, string cultureCode, CultureInfo culture)
+    {
+        if (!string.IsNullOrWhiteSpace(cultureCode) &&
+            string.Equals(cultureCode.Trim(), culture.Name, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return TryResolveLanguageCulture(displayName) is { } resolved &&
+               string.Equals(resolved.Name, culture.Name, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Maps a saved language value to a listed entry: exact match first, then a culture-based
+    /// match (so a plain <c>English</c> finds <c>English (US)</c>), otherwise the value is
+    /// returned verbatim so the existing append-if-unknown behavior keeps working.
+    /// </summary>
+    private string ResolveAiProviderLanguage(string? saved)
+    {
+        if (string.IsNullOrWhiteSpace(saved))
+        {
+            return GetUiAiProviderLanguage();
+        }
+
+        var trimmed = saved.Trim();
+        var exact = AiProviderLanguages.FirstOrDefault(entry =>
+            string.Equals(entry, trimmed, StringComparison.OrdinalIgnoreCase));
+        if (exact is not null)
+        {
+            return exact;
+        }
+
+        if (TryResolveLanguageCulture(trimmed) is { } savedCulture)
+        {
+            var byCulture = AiProviderLanguages.FirstOrDefault(entry =>
+                TryResolveLanguageCulture(entry) is { } entryCulture &&
+                string.Equals(entryCulture.Name, savedCulture.Name, StringComparison.OrdinalIgnoreCase));
+            if (byCulture is not null)
+            {
+                return byCulture;
+            }
+        }
+
+        return trimmed;
+    }
+
+    private static readonly Lazy<IReadOnlyList<CultureInfo>> SpecificCultures = new(() =>
+        CultureInfo.GetCultures(CultureTypes.SpecificCultures));
+
+    /// <summary>
+    /// Resolves a language name to a culture: plain English/Lithuanian names, parenthesized or
+    /// dashed display variants (<c>English (US)</c>), culture codes, or the culture whose
+    /// English or native name matches. Returns null when nothing matches.
+    /// </summary>
+    private static CultureInfo? TryResolveLanguageCulture(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return null;
+        }
+
+        var normalized = name.Trim();
+        if (normalized.Equals("English", StringComparison.OrdinalIgnoreCase))
+        {
+            return CultureInfo.GetCultureInfo("en-US");
+        }
+
+        if (normalized.Equals("Lithuanian", StringComparison.OrdinalIgnoreCase))
+        {
+            return CultureInfo.GetCultureInfo("lt-LT");
+        }
+
+        var stripped = StripLanguageSuffix(normalized);
+        if (!stripped.Equals(normalized, StringComparison.Ordinal))
+        {
+            var byBase = TryResolveLanguageCulture(stripped);
+            if (byBase is not null)
+            {
+                return byBase;
+            }
+        }
+
+        if (LanguageCultureResolverLooksLikeCode(normalized))
+        {
+            try
+            {
+                return CultureInfo.GetCultureInfo(normalized);
+            }
+            catch (CultureNotFoundException)
+            {
+                return null;
+            }
+        }
+
+        foreach (var culture in SpecificCultures.Value)
+        {
+            if (MatchesCultureName(normalized, culture))
+            {
+                return culture;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool MatchesCultureName(string normalized, CultureInfo culture)
+    {
+        return MatchesCandidateName(normalized, culture.Name) ||
+               MatchesCandidateName(normalized, culture.EnglishName) ||
+               MatchesCandidateName(normalized, culture.NativeName);
+    }
+
+    private static bool MatchesCandidateName(string normalized, string candidate)
+    {
+        return normalized.Equals(candidate, StringComparison.OrdinalIgnoreCase) ||
+               normalized.Equals(StripLanguageSuffix(candidate), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string StripLanguageSuffix(string name)
+    {
+        var bracket = name.IndexOf('(');
+        if (bracket > 0)
+        {
+            return name[..bracket].Trim();
+        }
+
+        var dash = name.IndexOf('-');
+        return dash > 0 ? name[..dash].Trim() : name;
+    }
+
+    private static bool LanguageCultureResolverLooksLikeCode(string value)
+    {
+        foreach (var part in value.Split('-'))
+        {
+            if (part.Length < 2)
+            {
+                return false;
+            }
+
+            foreach (var character in part)
+            {
+                if (!char.IsLetterOrDigit(character))
+                {
+                    return false;
+                }
+            }
+        }
+
+        return value.Contains('-', StringComparison.Ordinal) || value.Length is 2 or 3;
+    }
+
     private void ApplyAiProviderSettings(AiProviderSettings settings)
     {
         aiProviderSavedSettings = settings;
@@ -140,13 +345,13 @@ public partial class OptionsDialogViewModel
             AiProviderApiKey = settings.ApiKey;
             AiProviderModel = settings.Model;
             AddAiProviderModel(settings.Model);
-            if (!string.IsNullOrWhiteSpace(settings.Language) &&
-                !AiProviderLanguages.Contains(settings.Language, StringComparer.OrdinalIgnoreCase))
+            var resolvedLanguage = ResolveAiProviderLanguage(settings.Language);
+            if (!AiProviderLanguages.Contains(resolvedLanguage, StringComparer.OrdinalIgnoreCase))
             {
-                AiProviderLanguages.Add(settings.Language);
+                AiProviderLanguages.Add(resolvedLanguage);
             }
 
-            AiProviderLanguage = settings.Language;
+            AiProviderLanguage = resolvedLanguage;
             AiProviderResizeLargeImages = settings.ResizeLargeImages;
             AiProviderCanStartServer = SelectedAiProvider?.CanStartServer == true;
             AiProviderConnectionStatus = LocalizationService.Current.Get(UiKeys.AiProviderNotChecked);

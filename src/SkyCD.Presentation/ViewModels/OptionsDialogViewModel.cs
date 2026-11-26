@@ -77,6 +77,7 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         RefreshScanLocalization();
         RefreshFilteredCategories();
         selectedSettingCategory = CurrentCategory;
+        InitializeAiProviderLanguageDefault();
         LocalizationObserver.Observe(this, static vm => vm.RefreshLocalization());
     }
 
@@ -744,6 +745,7 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
     {
         OnPropertyChanged(nameof(SettingCategories));
         McpCopyTooltip = LocalizationService.Current.Get(TextKeys.CopyURL);
+        RefreshAiProviderLanguages();
         RefreshScanLocalization();
         RefreshDetailsColumnsLocalization();
         RefreshCategoriesPreservingSelection();
