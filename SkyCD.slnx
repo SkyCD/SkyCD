@@ -71,6 +71,7 @@
         <Project Path="Plugins/SkyCD.Plugin.Metadata.Text/SkyCD.Plugin.Metadata.Text.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Metadata.TvCom/SkyCD.Plugin.Metadata.TvCom.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Metadata.Video/SkyCD.Plugin.Metadata.Video.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.Metadata.VideoProjects/SkyCD.Plugin.Metadata.VideoProjects.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Metadata.Volume/SkyCD.Plugin.Metadata.Volume.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Metadata.Wikipedia/SkyCD.Plugin.Metadata.Wikipedia.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Metadata.WordPerfect/SkyCD.Plugin.Metadata.WordPerfect.csproj"/>
@@ -170,6 +171,7 @@
         <Project Path="tests/SkyCD.Plugin.Metadata.Text.Tests/SkyCD.Plugin.Metadata.Text.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Metadata.TvCom.Tests/SkyCD.Plugin.Metadata.TvCom.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Metadata.Video.Tests/SkyCD.Plugin.Metadata.Video.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Metadata.VideoProjects.Tests/SkyCD.Plugin.Metadata.VideoProjects.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Metadata.Volume.Tests/SkyCD.Plugin.Metadata.Volume.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Metadata.Wikipedia.Tests/SkyCD.Plugin.Metadata.Wikipedia.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Metadata.WordPerfect.Tests/SkyCD.Plugin.Metadata.WordPerfect.Tests.csproj"/>
