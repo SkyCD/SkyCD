@@ -321,8 +321,8 @@ public sealed class CollectionsDialogViewModelTests : IDisposable
         viewModel.AddSelectedEntriesCommand.Execute(null);
 
         Assert.Equal(["file-a"], stack.Service.GetEntryIds(viewModel.Collections.Single().Id));
-        Assert.Single(viewModel.Members);
-        Assert.Contains("File A", viewModel.StatusText, StringComparison.Ordinal);
+        Assert.Equal("file-a", Assert.Single(viewModel.Members).Id);
+        Assert.Contains("Manual", viewModel.StatusText, StringComparison.Ordinal);
         Assert.True(stack.Undo.CanUndo);
     }
 

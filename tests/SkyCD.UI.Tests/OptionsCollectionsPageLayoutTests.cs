@@ -56,8 +56,21 @@ public sealed class OptionsCollectionsPageLayoutTests
                                  actions.Any(action => ReferenceEquals(action, button.Command)))
                 .ToArray();
 
+            // The confirmation bars start collapsed, so their buttons exist but measure zero until shown.
+            var barCommands = new[]
+            {
+                collections.ConfirmRemoveSelectedMemberCommand,
+                collections.CancelRemoveMemberCommand,
+                collections.ConfirmDeleteCollectionCommand,
+                collections.CancelDeleteCollectionCommand
+            };
+            var visible = buttons
+                .Where(button => !barCommands.Any(action => ReferenceEquals(action, button.Command)))
+                .ToArray();
+
             Assert.Equal(actions.Length, buttons.Length);
-            Assert.All(buttons, button => Assert.True(button.Bounds.Width > 0, "Manager actions must be visible."));
+            Assert.Equal(actions.Length - barCommands.Length, visible.Length);
+            Assert.All(visible, button => Assert.True(button.Bounds.Width > 0, "Manager actions must be visible."));
             Assert.All(buttons, button => Assert.NotNull(button.GetValue(ToolTip.TipProperty)));
             Assert.All(buttons, button => Assert.False(string.IsNullOrWhiteSpace(button.Content as string)));
         }
