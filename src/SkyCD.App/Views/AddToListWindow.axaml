@@ -320,6 +320,27 @@
                     <StackPanel Grid.Row="1" IsVisible="{Binding IsSourceFromAccount}" Spacing="{DynamicResource SkySpaceXs}" VerticalAlignment="Top">
                         <StackPanel IsVisible="{Binding ShowAccountEmptyState}" Spacing="{DynamicResource SkySpaceXs}">
                             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AccountNoConnected}}" TextWrapping="Wrap" />
+                            <ItemsControl ItemsSource="{Binding AvailableAccountConnectors}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:AccountConnectorItemViewModel">
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
+                                            <TextBlock Text="{Binding ProviderName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                            <Button Grid.Column="1"
+                                                    Content="{i18n:Translate {x:Static i18n:UiKeys.AccountConnect}}"
+                                                    Command="{Binding $parent[Window].DataContext.ConnectAccountCommand}"
+                                                    CommandParameter="{Binding Session}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock IsVisible="{Binding AccountConnectError, Converter={x:Static avaloniaConverters:StringConverters.IsNotNullOrEmpty}}"
+                                       Classes="caption"
+                                       Text="{Binding AccountConnectError}"
+                                       TextWrapping="Wrap" />
+                            <TextBlock IsVisible="{Binding IsAccountConnecting}"
+                                       Classes="caption"
+                                       Text="{i18n:Translate {x:Static i18n:UiKeys.AccountWorking}}"
+                                       TextWrapping="Wrap" />
                             <Button Content="{i18n:Translate {x:Static i18n:UiKeys.AccountOpenSettings}}"
                                     HorizontalAlignment="Left"
                                     Click="OnOpenAccountSettingsClicked"
@@ -327,6 +348,10 @@
                         </StackPanel>
                         <StackPanel IsVisible="{Binding ShowAccountPicker}" Spacing="{DynamicResource SkySpaceXs}">
                             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Accounts}}" />
+                            <TextBlock IsVisible="{Binding SelectedAccountNeedsSignIn}"
+                                       Classes="caption"
+                                       Text="{i18n:Translate {x:Static i18n:UiKeys.AccountNotSignedIn}}"
+                                       TextWrapping="Wrap" />
                             <ComboBox Classes="source-field"
                                       ItemsSource="{Binding AccountChoices}"
                                       SelectedItem="{Binding SelectedAccount}"
