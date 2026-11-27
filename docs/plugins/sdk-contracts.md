@@ -127,7 +127,7 @@ are configuration pages too, and `IOptionsPageCapability` no longer exists.
   They may also create/accept a page without accessing `Content` to normalize a settings dictionary.
   `PluginConfigurationManager.SaveSettings` additionally refreshes currently loaded consumers.
 
-See the [Sample Configuration source](https://github.com/SkyCD/SkyCD.Plugin.Sample.Config/tree/main/Configuration) for the editor, lazy control and acceptance callbacks. The four production
+See the [Sample Configuration source](https://github.com/SkyCD/SkyCD.Plugin.Sample.Config/tree/main/src/SkyCD.Plugin.Sample.Config/Configuration) for the editor, lazy control and acceptance callbacks. The four production
 examples are AudioCd, EBook, EComic and Fonts. Discovery remains assembly/capability based.
 
 ## Navigation into contributed pages (SDK 3.0, #1105, #1340)
