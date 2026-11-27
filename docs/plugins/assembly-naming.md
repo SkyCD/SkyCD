@@ -72,7 +72,7 @@ remain acceptable as sample subjects because samples exist to demonstrate a surf
 
 Example: `SkyCD.Plugin.MotionDetector` contributes a capture source to Add To List and imports the
 captured files, so it is `Feature.MotionDetector`, not a menu plugin. `WebBrowser` opens a user-facing tool window, so it
-is `Feature.WebBrowser`.
+is [`Feature.WebBrowser`](https://github.com/SkyCD/SkyCD.Plugin.Feature.WebBrowser), published through the marketplace.
 
 ## Examples
 

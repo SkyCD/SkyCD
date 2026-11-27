@@ -12,6 +12,7 @@
         <PackageReference Include="xunit.runner.visualstudio" Version="4.0.1"/>
     </ItemGroup>
     <ItemGroup>
+        <PackageReference Include="SkyCD.Plugin.Feature.WebBrowser" Version="[3.0.0]"/>
         <PackageReference Include="SkyCD.SDK" Version="[$(SkyCdSdkVersion)]"/>
         <PackageReference Include="SkyCD.Plugin.Sample.Config" Version="[1.0.0]"/>
         <PackageReference Include="SkyCD.Plugin.Sample.Menu" Version="[1.0.0]"/>

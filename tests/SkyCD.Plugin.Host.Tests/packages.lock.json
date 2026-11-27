@@ -18,6 +18,15 @@
           "Microsoft.TestPlatform.TestHost": "18.11.0"
         }
       },
+      "SkyCD.Plugin.Feature.WebBrowser": {
+        "type": "Direct",
+        "requested": "[3.0.0, 3.0.0]",
+        "resolved": "3.0.0",
+        "contentHash": "m6Y9k+ublVWsntIAbaGK90VI+yJO4yCV40tVvYOlKGHHbIXwKAYr7iGl6xncyvov2aPffLQLJhI4XBOjcrSz5w==",
+        "dependencies": {
+          "Avalonia.Controls.WebView": "12.1.2"
+        }
+      },
       "SkyCD.Plugin.Sample.Config": {
         "type": "Direct",
         "requested": "[1.0.0, 1.0.0]",
@@ -100,6 +109,14 @@
         "type": "Transitive",
         "resolved": "11.3.2",
         "contentHash": "qHDToxto1e3hci5YqbG9n0Ty8mlp3zBUN5wT66wKqaDVzXyQ0do3EnRILd4Ke9jpvsktaPpgE0YjEk7hornryQ=="
+      },
+      "Avalonia.Controls.WebView": {
+        "type": "Transitive",
+        "resolved": "12.1.2",
+        "contentHash": "vMP8KLA0avtchWxqP/NAhU6MyTbJcExPGvkj8sW73cn7XvcCSW68XOWG6OEv/G34MAQIBlLChxbhKPJ1C6LWPw==",
+        "dependencies": {
+          "Avalonia": "12.0.0"
+        }
       },
       "Avalonia.Desktop": {
         "type": "Transitive",
