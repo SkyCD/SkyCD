@@ -223,6 +223,19 @@ verifies the ICO and its sizes.
 - Host executes CLI plugin handlers with timeout and exception isolation, including deterministic command collision checks.
 
 ## Sample Plugin
+
+Standalone plugin repositories can run SkyCD's host integration tests against their checked-out
+source. From a plugin checkout beside a SkyCD checkout, run the host's test script with the path
+to the plugin project. For example, from the Sample Modal repository:
+
+```sh
+pwsh -File ../SkyCD/tools/scripts/ci/test-standalone-plugin.ps1 -PluginProject src/SkyCD.Plugin.Sample.Modal/SkyCD.Plugin.Sample.Modal.csproj
+```
+
+The script substitutes a project reference for that plugin's NuGet package in the host tests.
+It also runs the Options tests for Sample Configuration. Ordinary SkyCD test runs continue to
+use the published packages.
+
 - `Plugins/SkyCD.Plugin.FileFormat.Json` compiles against the `SkyCD.SDK` package and demonstrates `IFileFormatPluginCapability`.
 - [Sample Modal](https://github.com/SkyCD/SkyCD.Plugin.Sample.Modal) demonstrates modal registration and typed request/response payload contracts (`IModalPluginCapability`).
 - [Sample Configuration](https://github.com/SkyCD/SkyCD.Plugin.Sample.Config) demonstrates embedded Options drafts (see above).

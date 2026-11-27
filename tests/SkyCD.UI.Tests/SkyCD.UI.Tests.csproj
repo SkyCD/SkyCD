@@ -39,4 +39,5 @@
               DestinationFiles="@(_TwemojiArtwork->'$(OutDir)iconifybundle\%(RecursiveDir)%(Filename)%(Extension)')"
               SkipUnchangedFiles="true"/>
     </Target>
+    <Import Project="../StandalonePluginReference.targets"/>
 </Project>
