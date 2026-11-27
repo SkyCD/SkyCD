@@ -140,8 +140,18 @@ public partial class OptionsDialogViewModel
     /// </summary>
     internal static bool IsExistingPluginFolder(string? path)
     {
-        var folders = (path ?? string.Empty)
-            .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var folders = SplitPluginPath(path);
         return folders.Length > 0 && folders.All(Directory.Exists);
     }
+
+    /// <summary>
+    /// First folder in the field's path-separator list that exists, or null when no entry resolves.
+    /// The Browse picker opens here so it starts from what the user is already looking at.
+    /// </summary>
+    internal static string? ResolvePluginPathStartFolder(string? path) =>
+        SplitPluginPath(path).FirstOrDefault(Directory.Exists);
+
+    private static string[] SplitPluginPath(string? path) =>
+        (path ?? string.Empty)
+            .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 }
