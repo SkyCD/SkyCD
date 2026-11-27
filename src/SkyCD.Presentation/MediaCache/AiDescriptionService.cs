@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,23 +21,33 @@ public sealed class AiDescriptionService
     /// <summary>Bounded parallelism for a batch generation pass.</summary>
     public const int MaxBatchConcurrency = 2;
 
+    /// <summary>Per-source bound for the online metadata lookups a generation pass makes.</summary>
+    public static readonly TimeSpan DefaultOnlineMetadataTimeout = TimeSpan.FromSeconds(10);
+
     private const string ContextFingerprintKey = "AiDescriptionContextFingerprint";
 
     private readonly CatalogDocumentRepository repository;
     private readonly IMediaCacheStore store;
     private readonly IDescriptionGeneratorCapability? capability;
     private readonly Func<AiScanPolicy>? scanPolicyFactory;
+    private readonly IOnlineMetadataService? onlineMetadata;
+    private readonly TimeSpan onlineMetadataTimeout;
 
     public AiDescriptionService(
         CatalogDocumentRepository repository,
         IMediaCacheStore store,
         IDescriptionGeneratorCapability? capability = null,
-        Func<AiScanPolicy>? scanPolicyFactory = null)
+        Func<AiScanPolicy>? scanPolicyFactory = null,
+        IOnlineMetadataService? onlineMetadata = null,
+        TimeSpan? onlineMetadataTimeout = null)
     {
         this.repository = repository ?? throw new ArgumentNullException(nameof(repository));
         this.store = store ?? throw new ArgumentNullException(nameof(store));
         this.capability = capability;
         this.scanPolicyFactory = scanPolicyFactory;
+        this.onlineMetadata = onlineMetadata;
+        this.onlineMetadataTimeout = onlineMetadataTimeout ?? DefaultOnlineMetadataTimeout;
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(this.onlineMetadataTimeout, TimeSpan.Zero);
     }
 
     /// <summary>Reports the configured provider and the context an explicit pass would use.</summary>
@@ -140,12 +152,49 @@ public sealed class AiDescriptionService
             return new AiDescriptionGenerationOutcome(Read(entryId), Skipped: true);
         }
 
+        if (onlineMetadata is { SourceIds.Count: > 0 } sources)
+        {
+            context = await CaptureOnlineMetadataAsync(descriptions, entryId, context, sources, attachOriginalFile,
+                options, cancellationToken).ConfigureAwait(false);
+        }
+
         var description = await capability!
             .GenerateAsync(context, cancellationToken)
             .ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
         descriptions.Save(context, description);
         return new AiDescriptionGenerationOutcome(Read(entryId), Skipped: false);
+    }
+
+    /// <summary>
+    /// Queries every enabled source with the entry title and stores the merged facts before generation, so the
+    /// generator sees them as context parts and description templates can render them from the cache afterwards.
+    /// </summary>
+    private async Task<DescriptionContext> CaptureOnlineMetadataAsync(CatalogDescriptionService descriptions,
+        string entryId, DescriptionContext context, IOnlineMetadataService sources, bool attachOriginalFile,
+        DescriptionContextOptions options, CancellationToken cancellationToken)
+    {
+        var entry = repository.Get(entryId);
+        if (entry is null)
+        {
+            return context;
+        }
+
+        var title = Path.GetFileNameWithoutExtension(entry.Name);
+        var request = new OnlineMetadataRequest(string.IsNullOrWhiteSpace(title) ? entry.Name : title, null,
+            ResolveLookupLanguage());
+        var run = await sources.FetchAsync(sources.SourceIds, request, onlineMetadataTimeout, cancellationToken)
+            .ConfigureAwait(false);
+        descriptions.SaveOnlineMetadata(entryId, context.SourceFingerprint, run, DateTimeOffset.UtcNow);
+        return attachOriginalFile
+            ? descriptions.BuildOriginal(entryId, options)
+            : descriptions.Build(entryId, options);
+    }
+
+    private static string ResolveLookupLanguage()
+    {
+        var language = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+        return language.Length == 2 && !string.Equals(language, "iv", StringComparison.Ordinal) ? language : "en";
     }
 
     /// <summary>

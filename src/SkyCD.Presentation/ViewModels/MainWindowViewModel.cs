@@ -165,6 +165,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private MenuExtensionManager menuExtensionManager;
     private DescriptionExtensionManager descriptionExtensionManager = new([]);
+    private IOnlineMetadataService? onlineMetadataService;
     private AiDescriptionService? aiDescriptionService;
     private CancellationTokenSource? pluginCommandCancellation;
     private MediaMetadataService? mediaMetadataService;
@@ -243,9 +244,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     /// Rebinds the AI description capability after plugins are discovered or reloaded. Descriptions that
     /// were already captured stay readable both with and without a provider.
     /// </summary>
-    public void RefreshDescriptionServices(DescriptionExtensionManager updatedManager)
+    public void RefreshDescriptionServices(DescriptionExtensionManager updatedManager,
+        IOnlineMetadataService? onlineMetadata = null)
     {
         descriptionExtensionManager = updatedManager ?? throw new ArgumentNullException(nameof(updatedManager));
+        onlineMetadataService = onlineMetadata;
         RebuildDescriptionService();
         RebuildMenuItems();
         OnPropertyChanged(nameof(ToolsMenuItems));
@@ -257,7 +260,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         aiDescriptionService = catalogRepository is null
             ? null
             : new AiDescriptionService(catalogRepository, mediaCacheStore, descriptionExtensionManager.Capability,
-                aiScanPolicyFactory);
+                aiScanPolicyFactory, onlineMetadataService);
     }
 
     private void RebuildMenuItems()

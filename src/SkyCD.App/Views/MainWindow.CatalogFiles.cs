@@ -105,7 +105,8 @@ public partial class MainWindow
                 newCatalog.RefreshMediaServices(ServiceProvider.Resolve<MediaExtensionManager>(),
                     ServiceProvider.Resolve<IMediaTargetMetadataProvider>(),
                     ServiceProvider.Resolve<IndexWorkItemSequence>());
-                newCatalog.RefreshDescriptionServices(ServiceProvider.Resolve<DescriptionExtensionManager>());
+                newCatalog.RefreshDescriptionServices(ServiceProvider.Resolve<DescriptionExtensionManager>(),
+                    ServiceProvider.Resolve<OnlineMetadataExtensionManager>());
                 newCatalog.ApplySessionState(vm.CurrentViewMode, vm.CurrentSortMode, vm.IsStatusBarVisible, vm.IsSortDescending);
                 newCatalog.ApplyDetailsColumnSettings(vm.GetDetailsColumnSettings());
             }

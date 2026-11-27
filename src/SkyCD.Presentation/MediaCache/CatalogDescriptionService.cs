@@ -20,6 +20,13 @@ public sealed class CatalogDescriptionService(CatalogDocumentRepository reposito
     public const string Capability = "generated-description";
     public const string DescriptionFieldKey = "AiDescription";
 
+    /// <summary>Host-owned record that holds the facts an online metadata pass captured for one entry.</summary>
+    public const string OnlineMetadataCapability = "online-metadata-facts";
+    public const string OnlineMetadataSchemaId = "skycd.online-metadata.facts";
+    public const string OnlineMetadataPartKind = "online-metadata";
+    public const string OnlineMetadataSourcesKey = "OnlineMetadataSources";
+    public const string OnlineMetadataSourceUrlsKey = "OnlineMetadataSourceUrls";
+
     public DescriptionContext BuildOriginal(string entryId, DescriptionContextOptions options)
     {
         var entry = repository.Get(entryId) ?? throw new DescriptionContextChangedException();
@@ -46,7 +53,11 @@ public sealed class CatalogDescriptionService(CatalogDocumentRepository reposito
 
         var original = new DescriptionOriginalFile(file.FullName, entry.Name, file.Length, file.LastWriteTimeUtc);
         var contextHash = Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(original)));
-        return new DescriptionContext(entryId, MediaSourceFingerprint.ForCatalogEntry(entry, catalog), contextHash, options, [])
+        var fingerprint = MediaSourceFingerprint.ForCatalogEntry(entry, catalog);
+        var parts = OnlineMetadataFactTexts(entryId, fingerprint)
+            .Select(text => new DescriptionContextPart(OnlineMetadataPartKind, "text/plain", text))
+            .ToList();
+        return new DescriptionContext(entryId, fingerprint, contextHash, options, parts)
         {
             OriginalFile = original
         };
@@ -67,8 +78,8 @@ public sealed class CatalogDescriptionService(CatalogDocumentRepository reposito
         }
         if (options.Filename) Text("filename", entry.Name);
         foreach (var record in store.GetRecordsForEntry(entryId)
-            .Where(record => record.PluginId != PluginId && record.Fingerprint == fingerprint
-                && record.State == MediaCacheRecordState.Captured)
+            .Where(record => record.PluginId != PluginId && !IsOnlineMetadataRecord(record) &&
+                record.Fingerprint == fingerprint && record.State == MediaCacheRecordState.Captured)
             .OrderBy(record => record.Id, StringComparer.Ordinal))
         {
             foreach (var field in record.Metadata.OrderBy(field => field.Key, StringComparer.Ordinal))
@@ -92,9 +103,102 @@ public sealed class CatalogDescriptionService(CatalogDocumentRepository reposito
                 }
             }
         }
+        foreach (var text in OnlineMetadataFactTexts(entryId, fingerprint))
+        {
+            Text(OnlineMetadataPartKind, text);
+        }
         var contextHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(parts))));
         return new(entryId, fingerprint, contextHash, options, parts);
     }
+
+    /// <summary>
+    /// Stores the merged facts of one online metadata pass for the entry snapshot. Which sources answered and the
+    /// URLs they fetched are kept in dedicated provenance fields, so the fetched URL never becomes a template fact.
+    /// An empty pass replaces earlier facts instead of leaving a description to render stale values.
+    /// </summary>
+    public void SaveOnlineMetadata(string entryId, string sourceFingerprint, OnlineMetadataRun run,
+        DateTimeOffset capturedAtUtc)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(entryId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourceFingerprint);
+        ArgumentNullException.ThrowIfNull(run);
+
+        var values = run.Facts
+            .Where(pair => !string.IsNullOrWhiteSpace(pair.Key) && !string.IsNullOrWhiteSpace(pair.Value)
+                && !IsOnlineMetadataProvenanceKey(pair.Key))
+            .OrderBy(pair => pair.Key, StringComparer.Ordinal)
+            .Select(pair => TextValue(pair.Key, pair.Value))
+            .ToList();
+        var succeeded = run.Results.Where(result => result.Succeeded).ToArray();
+        var sources = succeeded.Select(result => result.SourceId)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(sourceId => sourceId, StringComparer.Ordinal)
+            .ToArray();
+        if (sources.Length > 0)
+        {
+            values.Add(TextValue(OnlineMetadataSourcesKey, string.Join(", ", sources)));
+        }
+        var urls = succeeded.Select(result => result.SourceUrl).OfType<string>()
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(url => url, StringComparer.Ordinal)
+            .ToArray();
+        if (urls.Length > 0)
+        {
+            values.Add(TextValue(OnlineMetadataSourceUrlsKey, string.Join(" ", urls)));
+        }
+
+        var record = new MediaCacheRecord
+        {
+            Id = MediaCacheRecord.CreateId(sourceFingerprint, MediaCacheRecord.HostPluginId, "1",
+                OnlineMetadataCapability, OnlineMetadataSchemaId, 1),
+            EntryId = entryId,
+            Fingerprint = sourceFingerprint,
+            PluginId = MediaCacheRecord.HostPluginId,
+            PluginVersion = "1",
+            Capability = OnlineMetadataCapability,
+            SchemaId = OnlineMetadataSchemaId,
+            SchemaVersion = 1,
+            State = MediaCacheRecordState.Captured,
+            CapturedAtUtc = capturedAtUtc,
+            LastUsedAtUtc = capturedAtUtc,
+            Metadata = values,
+            SchemaFields = values.Select(value => new MediaMetadataFieldRecord { Key = value.Key, Type = value.Type })
+                .ToList()
+        };
+        store.Save(new MediaCachePayload(record.WithRecalculatedSizes()));
+    }
+
+    /// <summary>True for the host-owned record that stores one entry's online metadata facts.</summary>
+    public static bool IsOnlineMetadataRecord(MediaCacheRecord record) =>
+        record is not null &&
+        string.Equals(record.PluginId, MediaCacheRecord.HostPluginId, StringComparison.Ordinal) &&
+        string.Equals(record.Capability, OnlineMetadataCapability, StringComparison.Ordinal);
+
+    private static bool IsOnlineMetadataProvenanceKey(string key) =>
+        string.Equals(key, OnlineMetadataSourcesKey, StringComparison.Ordinal) ||
+        string.Equals(key, OnlineMetadataSourceUrlsKey, StringComparison.Ordinal);
+
+    private IEnumerable<string> OnlineMetadataFactTexts(string entryId, string fingerprint)
+    {
+        foreach (var record in store.GetRecordsForEntry(entryId)
+            .Where(record => IsOnlineMetadataRecord(record) && record.State == MediaCacheRecordState.Captured &&
+                string.Equals(record.Fingerprint, fingerprint, StringComparison.Ordinal))
+            .OrderBy(record => record.Id, StringComparer.Ordinal))
+        {
+            foreach (var field in record.Metadata.OrderBy(field => field.Key, StringComparer.Ordinal))
+            {
+                if (IsOnlineMetadataProvenanceKey(field.Key))
+                {
+                    continue;
+                }
+
+                yield return field.Key + ": " + Convert.ToString(field.GetPayload(), CultureInfo.InvariantCulture);
+            }
+        }
+    }
+
+    private static MediaMetadataValueRecord TextValue(string key, string value) =>
+        new() { Key = key, Type = MediaMetadataType.Text, Text = value };
 
     public void Save(DescriptionContext context, GeneratedDescription description)
     {

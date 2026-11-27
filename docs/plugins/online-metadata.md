@@ -25,10 +25,12 @@ source that fails or times out contributes no facts and never blocks the others.
 and registration read only assembly metadata and capability properties; no source performs
 network access until a generation pass explicitly asks for it.
 
-Online generators receive the aggregate through `IOnlineMetadataConsumer.InitializeOnlineMetadata`,
-mirroring the storage and dialog consumer hooks. A generator with no installed sources
-reports an unavailable plan and refuses to generate instead of silently producing an empty
-description.
+The AI description pass captures facts host-side. When a generation actually runs and at
+least one source is enabled, `AiDescriptionService` asks the aggregate for the entry title
+and the application language, stores the merged facts as a host-owned media-cache record
+keyed by the entry fingerprint, and adds them to the generator context as `online-metadata`
+parts. Reading a stored description, skipping an unchanged entry and plugin discovery never
+contact a source.
 
 ## Source plugins
 
@@ -55,6 +57,12 @@ name, extension, MIME type and every captured fact. GenDesc templates then choos
 by kind, MIME type, extension, category and language, so the plugin reads no generation
 settings of its own beyond the user template directory.
 
+The stored record keeps the merged facts next to two provenance fields,
+`OnlineMetadataSources` and `OnlineMetadataSourceUrls`. The fetched document URL is recorded
+only there; it is never copied into a fact, a template variable or a generated description.
+An empty pass replaces earlier facts instead of letting a description render stale values.
+
 Because facts are captured before generation, disabling a source plugin changes what the
 cache can contain but never affects an `.nfo` or description rendered from facts that are
-already stored; generation runs offline from local data.
+already stored; generation runs offline from local data. A source that fails or times out
+contributes no facts and never blocks the description pass.

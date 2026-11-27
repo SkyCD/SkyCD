@@ -32,7 +32,8 @@ public partial class MainWindow
             viewModel.RefreshMediaServices(ServiceProvider.Resolve<MediaExtensionManager>(),
                 ServiceProvider.Resolve<IMediaTargetMetadataProvider>(),
                 ServiceProvider.Resolve<IndexWorkItemSequence>());
-            viewModel.RefreshDescriptionServices(descriptionManager);
+            viewModel.RefreshDescriptionServices(descriptionManager,
+                ServiceProvider.Resolve<OnlineMetadataExtensionManager>());
         }
 
         PushFileFormatAvailability();
