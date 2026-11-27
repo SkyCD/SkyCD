@@ -36,6 +36,7 @@ unreleased `3.0.0` major, so no additional major bump is required and no transit
 | `using SkyCD.Plugin.Abstractions.Capabilities;` | `using SkyCD.SDK.Capabilities;` |
 | `[assembly: SkyCD.Plugin.Abstractions.Lifecycle.PluginId("...")]` | `[assembly: SkyCD.SDK.Lifecycle.PluginId("...")]` |
 | `clr-namespace:SkyCD.Plugin.Abstractions.Capabilities.Media;assembly=SkyCD.SDK` | `clr-namespace:SkyCD.SDK.Capabilities.Media;assembly=SkyCD.SDK` |
+| `SkyCD.SDK.Capabilities.Catalog.ToolbarContribution` / `ToolbarButtonContribution` | `SkyCD.SDK.Capabilities.Toolbars.*` |
 
 Only type and namespace names changed. `PluginId`, `FormatId`, attribute values, existing
 `[assembly: PluginId(...)]` strings and persisted plugin state keep their exact values. External authors

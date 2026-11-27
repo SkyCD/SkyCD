@@ -9,6 +9,7 @@ using SkyCD.Documents.Enum;
 using SkyCD.Plugin.Host.Catalog;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.SDK.Capabilities.Catalog;
+using SkyCD.SDK.Capabilities.Toolbars;
 using Xunit;
 
 namespace SkyCD.App.Tests;
