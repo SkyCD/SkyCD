@@ -33,7 +33,7 @@
                        TextWrapping="Wrap" />
             <Button Grid.Column="1"
                     Content="{i18n:Translate {x:Static l:GenDescKeys.Copy}}"
-                    Command="{Binding CopyCommand}"
+                    Click="OnCopyClick"
                     IsDefault="True"
                     MinWidth="88" />
             <Button Grid.Column="2"

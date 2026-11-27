@@ -16,8 +16,8 @@ public class GenDescTemplatesViewModelTests
     static GenDescTemplatesViewModelTests() => GenDescTestLocalization.EnsureRegistered();
 
     private static GenDescTemplatesViewModel Create(string directory,
-        string templateKind = TemplateInfo.DescriptionKind, RecordingFileDialogApi? dialogs = null) =>
-        new(templateKind, dialogs, directory);
+        string templateKind = TemplateInfo.DescriptionKind) =>
+        new(templateKind, directory);
 
     [Fact]
     public void PageListsOnlyItsKindsTemplates()
@@ -193,12 +193,14 @@ public class GenDescTemplatesViewModelTests
     public async Task ExportWritesTheSelectedTemplate()
     {
         using var workspace = new TestWorkspace();
-        var dialogs = new RecordingFileDialogApi { SaveResult = workspace.GetPath("exported.tpl") };
-        var viewModel = Create(workspace.Root, dialogs: dialogs);
+        var picker = new RecordingFilePicker { SaveResult = workspace.GetPath("exported.tpl") };
+        var viewModel = Create(workspace.Root);
 
-        await viewModel.ExportCommand.ExecuteAsync(null);
+        await viewModel.ExportAsync(picker);
 
-        Assert.Single(dialogs.SaveRequests);
+        var request = Assert.Single(picker.SaveRequests);
+        Assert.Equal(".tpl", request.FileType.Pattern.TrimStart('*'));
+        Assert.Equal(viewModel.SelectedTemplate!.Id + ".tpl", request.SuggestedFileName);
         Assert.True(File.Exists(workspace.GetPath("exported.tpl")));
         Assert.Contains("## id=", await File.ReadAllTextAsync(workspace.GetPath("exported.tpl")));
         Assert.Equal(LocalizationService.Current.Format(GenDescKeys.Exported, workspace.GetPath("exported.tpl")),
@@ -212,10 +214,12 @@ public class GenDescTemplatesViewModelTests
         var path = workspace.GetPath("incoming.tpl");
         await File.WriteAllTextAsync(path,
             "## id=imported\n## kind=description\n## category=tv\n## lang=en\n{{ Name }}");
-        var viewModel = Create(workspace.Root, dialogs: new RecordingFileDialogApi { OpenResult = path });
+        var viewModel = Create(workspace.Root);
+        var picker = new RecordingFilePicker { OpenResult = path };
 
-        await viewModel.ImportCommand.ExecuteAsync(null);
+        await viewModel.ImportAsync(picker);
 
+        Assert.Single(picker.OpenRequests);
         Assert.Equal("imported", viewModel.EditorId);
         Assert.Equal("tv", viewModel.EditorCategory);
         Assert.Equal("{{ Name }}", viewModel.EditorBody);
@@ -230,10 +234,10 @@ public class GenDescTemplatesViewModelTests
         Directory.CreateDirectory(sourceDirectory);
         var path = Path.Combine(sourceDirectory, "incoming.tpl");
         await File.WriteAllTextAsync(path, "## id=imported-nfo\n## category=movie\n{{ Name }}");
-        var viewModel = Create(workspace.Root, TemplateInfo.NfoKind,
-            new RecordingFileDialogApi { OpenResult = path });
+        var viewModel = Create(workspace.Root, TemplateInfo.NfoKind);
+        var picker = new RecordingFilePicker { OpenResult = path };
 
-        await viewModel.ImportCommand.ExecuteAsync(null);
+        await viewModel.ImportAsync(picker);
         viewModel.SaveCommand.Execute(null);
 
         Assert.Equal(string.Empty, viewModel.ErrorText);
@@ -246,7 +250,7 @@ public class GenDescTemplatesViewModelTests
         using var workspace = new TestWorkspace();
         var viewModel = Create(workspace.Root);
 
-        await viewModel.ImportCommand.ExecuteAsync(null);
+        await viewModel.ImportAsync(null);
 
         Assert.Equal(LocalizationService.Current.Get(GenDescKeys.NoPicker), viewModel.ErrorText);
     }

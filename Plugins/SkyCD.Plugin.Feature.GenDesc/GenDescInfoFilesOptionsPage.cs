@@ -1,10 +1,8 @@
-using System;
 using SkyCD.Plugin.Feature.GenDesc.Localization;
 using SkyCD.Plugin.Feature.GenDesc.Models;
 using SkyCD.Plugin.Feature.GenDesc.ViewModels;
 using SkyCD.Plugin.Feature.GenDesc.Views;
 using SkyCD.SDK.Capabilities.Options;
-using SkyCD.SDK.Capabilities.Ui;
 using SkyCD.UI.Localization;
 
 namespace SkyCD.Plugin.Feature.GenDesc;
@@ -13,19 +11,13 @@ namespace SkyCD.Plugin.Feature.GenDesc;
 /// Options page editing the templates that produce .nfo info files. It shares the "GenDesc templates" sidebar
 /// group with the post-description page and offers no kind filter of its own.
 /// </summary>
-public sealed class GenDescInfoFilesOptionsPage : IOptionsPageCapability, IHostFileDialogConsumer
+public sealed class GenDescInfoFilesOptionsPage : IOptionsPageCapability
 {
     private const string OptionsPageId = "gendesc-info-files";
     private const int OptionsPageOrder = 50;
 
-    private IHostFileDialogApi? fileDialogs;
-
     /// <summary>Overrides the user template directory in tests; production uses the shared default.</summary>
     internal string? TemplateDirectory { get; set; }
-
-    /// <inheritdoc />
-    public void InitializeFileDialogApi(IHostFileDialogApi fileDialogApi) =>
-        fileDialogs = fileDialogApi ?? throw new ArgumentNullException(nameof(fileDialogApi));
 
     /// <inheritdoc />
     public OptionsPageDescriptor OptionsPage => new(OptionsPageId,
@@ -37,5 +29,5 @@ public sealed class GenDescInfoFilesOptionsPage : IOptionsPageCapability, IHostF
         new GenDescTemplatesView { DataContext = CreateTemplatesViewModel() };
 
     internal GenDescTemplatesViewModel CreateTemplatesViewModel() =>
-        new(TemplateInfo.NfoKind, fileDialogs, TemplateDirectory);
+        new(TemplateInfo.NfoKind, TemplateDirectory);
 }

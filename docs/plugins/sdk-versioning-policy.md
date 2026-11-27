@@ -42,6 +42,16 @@ Only type and namespace names changed. `PluginId`, `FormatId`, attribute values,
 `[assembly: PluginId(...)]` strings and persisted plugin state keep their exact values. External authors
 update the `using` directives, rebuild against `SkyCD.SDK` 3.0 and reinstall the plugin.
 
+## SDK 3.0 removal of the clipboard and file-dialog host services (#1339)
+
+`IClipboardApi` / `IClipboardConsumer` and `IHostFileDialogApi` / `IHostFileDialogConsumer` are removed from
+`SkyCD.SDK`: a plugin already references Avalonia, so it opens pickers through its own top level
+(`TopLevel.StorageProvider`) and sets clipboard text through `TopLevel.Clipboard`. The host keeps supplying
+windows through `IHostDialogApi`, so a command that has no control on screen shows a plugin-owned window
+first and picks from that window. Plugins compiled against the old contracts drop the two consumer
+interfaces and their `InitializeClipboard` / `InitializeFileDialogApi` methods; `Capabilities.Ui` keeps
+dialogs, questions, notifications and the host command API.
+
 ## SDK 2.0 / SkyCD v3 configuration migration (#828)
 
 The SDK major version is now `2.0.0` (previously the implicit `1.0.0`). Configuration is a breaking
