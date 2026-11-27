@@ -4,5 +4,12 @@
         <AssemblyName>$(MSBuildProjectName)</AssemblyName>
         <!-- Emit packages.lock.json for every project so the Trivy license scan can read resolved dependencies. -->
         <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+        <!--
+          An alternate intermediate root (e.g. obj-verify from an isolated build) is not part of the
+          default bin/obj excludes, so its generated AssemblyInfo/AssemblyAttributes files were
+          compiled as source and broke the build with CS0579 (#1317). Keep every obj-* root out of
+          the default item globs, whatever build layout created it.
+        -->
+        <DefaultItemExcludes>$(DefaultItemExcludes);obj-*/**</DefaultItemExcludes>
     </PropertyGroup>
 </Project>
