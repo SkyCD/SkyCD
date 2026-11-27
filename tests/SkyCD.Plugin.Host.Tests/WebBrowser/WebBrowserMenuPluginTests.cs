@@ -8,13 +8,25 @@ using SkyCD.Core.DependencyInjection.Registrators;
 using SkyCD.SDK.Capabilities.Menu;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Runtime.Discovery;
+using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Plugin.Feature.WebBrowser;
 using Xunit;
 
-namespace SkyCD.Plugin.Feature.WebBrowser.Tests;
+namespace SkyCD.Plugin.Host.Tests.WebBrowser;
 
 public sealed class WebBrowserMenuPluginTests
 {
+    [Fact]
+    public void PublishedAssembly_PreservesPluginIdentityAndIcon()
+    {
+        var plugin = new DiscoveredPluginFactory().BuildFromAssembly(typeof(WebBrowserMenuPlugin).Assembly);
+
+        Assert.Equal("SkyCD.Plugin.WebBrowser", plugin.Id);
+        Assert.Equal("SkyCD.Plugin.Feature.WebBrowser.dll", plugin.FileName);
+        Assert.NotEmpty(plugin.IconFrames);
+        Assert.IsType<WebBrowserMenuPlugin>(Assert.Single(plugin.Capabilities));
+    }
+
     [Fact]
     public void PluginCapabilityServiceRegistrator_RegistersMenuCapability()
     {
@@ -27,7 +39,7 @@ public sealed class WebBrowserMenuPluginTests
             Name = "Web Browser Plugin",
             Version = new Version(1, 0, 0),
             MinHostVersion = new Version(3, 0, 0),
-            FileName = "SkyCD.Plugin.WebBrowser.dll",
+            FileName = "SkyCD.Plugin.Feature.WebBrowser.dll",
             Capabilities = [new WebBrowserMenuPlugin()]
         };
 
@@ -49,7 +61,7 @@ public sealed class WebBrowserMenuPluginTests
             Name = "Web Browser Plugin",
             Version = new Version(1, 0, 0),
             MinHostVersion = new Version(3, 0, 0),
-            FileName = "SkyCD.Plugin.WebBrowser.dll",
+            FileName = "SkyCD.Plugin.Feature.WebBrowser.dll",
             Capabilities = [new WebBrowserMenuPlugin()]
         };
 
