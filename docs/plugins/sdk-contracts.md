@@ -72,6 +72,14 @@ host service contracts implemented by the host, not by copied helper source.
     `IOnlineMetadataConsumer.InitializeOnlineMetadata` and `IOnlineMetadataService`, so a
     generator owns templates and rendering, never site parsing or fetching.
   - See [online metadata sources](online-metadata.md) for the shipped source plugins.
+- `IDescriptionGeneratorCapability` (`Capabilities.Media`)
+  - Carries a stable `ImplementationId`, a user-facing `ImplementationName`, the generated-metadata
+    `Schema` and `GenerateAsync(DescriptionContext, CancellationToken)`.
+  - One contract covers template-backed and AI-backed generators; whether a generator calls a model is an
+    implementation detail. The host persists `ImplementationId` to pick among installed generators, so keep
+    it stable, and shows `ImplementationName` in the Options implementation picker.
+  - `IDescriptionGenerationPlanner.GetPlan()` stays optional and provider-neutral: it discloses the
+    configured provider and context limits without contacting it.
 - `IActionProvider` (`Capabilities.Actions`)
   - Returns item-specific `SkyAction` instances through `GetActions(Item)`.
   - `Item` is an SDK context containing a stable identifier and provider metadata;

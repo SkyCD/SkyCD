@@ -3,7 +3,7 @@ using System.Linq;
 using System.Collections.Concurrent;
 using System.Reflection;
 using System.Threading;
-using SkyCD.SDK;
+using SkyCD.SDK.Plugins;
 using SkyCD.SDK.Capabilities.Media;
 using SkyCD.SDK.Capabilities.Volume;
 using SkyCD.Plugin.Host.Volume;

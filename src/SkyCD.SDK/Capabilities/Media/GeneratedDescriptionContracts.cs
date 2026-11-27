@@ -28,9 +28,16 @@ public sealed record DescriptionOriginalFile(string FullPath, string Name, long 
 public sealed record GeneratedDescription(string Text, string Agent, string? Model, string PluginVersion,
     string PromptVersion, string Language, string Origin, string ProcessingDestination, DateTimeOffset GeneratedAtUtc);
 
-/// <summary>Explicit generation is distinct from automatic metadata extraction.</summary>
-public interface IGeneratedDescriptionCapability : IPluginCapability
+/// <summary>
+/// Explicit generation is distinct from automatic metadata extraction. Whether a generator is AI-backed or
+/// template-backed is an implementation detail; the host only sees the stable identity and the contract.
+/// </summary>
+public interface IDescriptionGeneratorCapability : IPluginCapability
 {
+    /// <summary>Stable identifier persisted by the host; it must not change between versions.</summary>
+    string ImplementationId { get; }
+    /// <summary>Short user-facing name shown in the Options implementation picker.</summary>
+    string ImplementationName { get; }
     /// <summary>Versioned generated-metadata schema, independent from user comments.</summary>
     MediaMetadataSchema Schema { get; }
     /// <summary>Runs an explicitly requested generation pass over permitted cached context.</summary>

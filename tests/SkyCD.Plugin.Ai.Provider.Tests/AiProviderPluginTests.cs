@@ -27,7 +27,7 @@ public sealed class AiProviderPluginTests : IDisposable
     {
         var plugin = CreatePlugin();
 
-        Assert.Equal(AiDescriptionImplementationIds.Provider, plugin.ImplementationId);
+        Assert.Equal("provider", plugin.ImplementationId);
         Assert.Equal("AI provider", plugin.ImplementationName);
         Assert.Contains(plugin.Providers, provider => provider.Id == "ollama");
         Assert.Contains(plugin.Providers, provider => provider.Id == "colibri");
