@@ -15,7 +15,6 @@ using SkyCD.Couchbase;
 using SkyCD.Couchbase.Repository;
 using SkyCD.SDK.Capabilities;
 using SkyCD.SDK.Capabilities.Catalog;
-using SkyCD.SDK.Capabilities.Import;
 using SkyCD.SDK.Capabilities.Indexing;
 using SkyCD.SDK.Capabilities.Media;
 using SkyCD.SDK.Capabilities.Volume;

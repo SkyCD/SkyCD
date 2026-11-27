@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using System.Globalization;
 using Avalonia.Data.Converters;
-using SkyCD.SDK.Capabilities.Media;
+using SkyCD.Plugin.Ai.Description.Models;
 
-namespace SkyCD.App.Converters;
+namespace SkyCD.Plugin.Ai.Description.Views;
 
 public sealed class AcpAgentSelectionConverter : IMultiValueConverter
 {

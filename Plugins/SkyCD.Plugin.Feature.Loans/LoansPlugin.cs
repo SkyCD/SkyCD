@@ -16,9 +16,9 @@ using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
 using SkyCD.SDK.Capabilities;
 using SkyCD.SDK.Capabilities.Catalog;
+using SkyCD.SDK.Capabilities.Configuration;
 using SkyCD.SDK.Capabilities.FileFormats;
 using SkyCD.SDK.Capabilities.Toolbars;
-using SkyCD.SDK.Capabilities.Import;
 using SkyCD.SDK.Capabilities.Menu;
 using SkyCD.SDK.Capabilities.Options;
 using SkyCD.SDK.Localization;
@@ -39,7 +39,7 @@ namespace SkyCD.Plugin.Feature.Loans;
 /// </summary>
 public sealed class LoansPlugin : IPluginCapability, ICatalogRepositoryConsumer, ICatalogFeaturePluginCapability,
     ICatalogAuxiliaryDataProvider, ICatalogImportPluginCapability, ICatalogLifecyclePluginCapability,
-    IMenuPluginCapability, IOptionsPageCapability, IOptionsNavigationConsumer, ILocalizationPluginCapability
+    IMenuPluginCapability, IPluginConfigurationCapability, IOptionsNavigationConsumer, ILocalizationPluginCapability
 {
     private const string LendCommandId = "skycd.loans.lend";
     private const string ReturnCommandId = "skycd.loans.return";
@@ -52,7 +52,7 @@ public sealed class LoansPlugin : IPluginCapability, ICatalogRepositoryConsumer,
 
     private readonly Dictionary<string, (string Borrower, bool Overdue)> activeLoans = new(StringComparer.Ordinal);
     private ICatalogRepositoryProvider? provider;
-    private Func<string, Task>? openOptionsPageAsync;
+    private Func<string, Task>? openConfigurationAsync;
     private CatalogDocumentRepository? cachedRepository;
     private CatalogLoanService? cachedService;
 
@@ -71,24 +71,54 @@ public sealed class LoansPlugin : IPluginCapability, ICatalogRepositoryConsumer,
     }
 
     /// <inheritdoc />
-    public void InitializeOptionsNavigation(Func<string, Task> openPageAsync) =>
-        openOptionsPageAsync = openPageAsync;
+    public void InitializeOptionsNavigation(Func<string, Task> openConfiguration) =>
+        openConfigurationAsync = openConfiguration;
 
     /// <inheritdoc />
-    public OptionsPageDescriptor OptionsPage =>
-        new(ContactsPageId, LocalizationService.Current.Get(LoansKeys.Contacts));
+    public IReadOnlyList<PluginConfigurationDescriptor> Configurations =>
+        [new(ContactsPageId, LocalizationService.Current.Get(LoansKeys.Contacts), Order: -30)];
 
     /// <inheritdoc />
-    public object CreateOptionsPage() =>
-        Service() is { } service
-            ? new ContactsView { DataContext = new ContactsDialogViewModel(service, Invalidate) }
-            : new TextBlock
+    public Task<PluginConfigurationPage> CreatePageAsync(PluginConfigurationRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!request.ConfigurationId.Equals(ContactsPageId, StringComparison.OrdinalIgnoreCase))
+        {
+            return Task.FromResult(new PluginConfigurationPage(
+                () => new TextBlock
+                {
+                    Text = $"Unsupported configuration '{request.ConfigurationId}'.",
+                    TextWrapping = TextWrapping.Wrap
+                },
+                _ => Task.FromResult(new PluginConfigurationResult
+                {
+                    Success = false,
+                    Error = $"Unsupported configuration '{request.ConfigurationId}'."
+                })));
+        }
+
+        return Task.FromResult(new PluginConfigurationPage(
+            () => Service() is { } service
+                ? new ContactsView { DataContext = new ContactsDialogViewModel(service, Invalidate) }
+                : new TextBlock
+                {
+                    Text = LocalizationService.Current.Get(LoansKeys.ContactsRequireCatalog),
+                    TextWrapping = TextWrapping.Wrap
+                },
+            token =>
             {
-                Text = LocalizationService.Current.Get(LoansKeys.ContactsRequireCatalog),
-                TextWrapping = TextWrapping.Wrap
-            };
+                token.ThrowIfCancellationRequested();
+                return Task.FromResult(new PluginConfigurationResult
+                {
+                    Success = true,
+                    Settings = request.CurrentSettings
+                });
+            }));
+    }
 
-    private Task OpenContactsAsync() => openOptionsPageAsync?.Invoke(ContactsPageId) ?? Task.CompletedTask;
+    private Task OpenContactsAsync() => openConfigurationAsync?.Invoke(ContactsPageId) ?? Task.CompletedTask;
 
     /// <inheritdoc />
     public void OnCatalogLifecycle(CatalogLifecycle lifecycle, string? catalogPath)

@@ -38,20 +38,31 @@ unreleased `3.0.0` major, so no additional major bump is required and no transit
 | `clr-namespace:SkyCD.Plugin.Abstractions.Capabilities.Media;assembly=SkyCD.SDK` | `clr-namespace:SkyCD.SDK.Capabilities.Media;assembly=SkyCD.SDK` |
 | `SkyCD.SDK.PluginFailure` | `SkyCD.SDK.Plugins.PluginFailure` |
 | `SkyCD.SDK.Capabilities.Catalog.ToolbarContribution` / `ToolbarButtonContribution` | `SkyCD.SDK.Capabilities.Toolbars.*` |
+| `SkyCD.SDK.Capabilities.Import.ICatalogImportPluginCapability` (and `ImportOutcome`) | `SkyCD.SDK.Capabilities.Catalog.*` |
 
 Only type and namespace names changed. `PluginId`, `FormatId`, attribute values, existing
 `[assembly: PluginId(...)]` strings and persisted plugin state keep their exact values. External authors
 update the `using` directives, rebuild against `SkyCD.SDK` 3.0 and reinstall the plugin.
 
-## SDK 3.0 removal of the clipboard and file-dialog host services (#1339)
+## SDK 3.0 Options unification (#1340)
 
-`IClipboardApi` / `IClipboardConsumer` and `IHostFileDialogApi` / `IHostFileDialogConsumer` are removed from
-`SkyCD.SDK`: a plugin already references Avalonia, so it opens pickers through its own top level
-(`TopLevel.StorageProvider`) and sets clipboard text through `TopLevel.Clipboard`. The host keeps supplying
-windows through `IHostDialogApi`, so a command that has no control on screen shows a plugin-owned window
-first and picks from that window. Plugins compiled against the old contracts drop the two consumer
-interfaces and their `InitializeClipboard` / `InitializeFileDialogApi` methods; `Capabilities.Ui` keeps
-dialogs, questions, notifications and the host command API.
+Tools > Options now lists every plugin page through `IPluginConfigurationCapability` only. Plugins may
+contribute several configuration pages, the descriptor gained `Order`, and the page's accept callback is
+the place for plugin-side work (managing host state) as well as settings validation. AI provider and ACP
+agent management moved out of the host into the plugins that own them.
+
+| Previous contract | SDK 3.0 replacement |
+|---|---|
+| `IOptionsPageCapability` / `OptionsPageDescriptor` | `IPluginConfigurationCapability.Configurations` with `PluginConfigurationDescriptor.Order` |
+| `IPluginConfigurationCapability.Configuration` (one page) | `IReadOnlyList<PluginConfigurationDescriptor> Configurations` |
+| Host-owned AI provider settings page (`IAiProviderSettingsCapability`) | Configuration page contributed by `SkyCD.Plugin.Ai.Provider`; settings stay plugin-owned |
+| Host-owned ACP agent settings page (`IAcpAgentSettingsCapability`) | Configuration page contributed by `SkyCD.Plugin.Ai.Description`; settings stay plugin-owned |
+| `AcpAgentChoice` / `AcpAgentSettings` in `SkyCD.SDK.Capabilities.Media` | Plugin-internal records in `SkyCD.Plugin.Ai.Description` |
+
+`IOptionsNavigationConsumer` remains: it still asks the host to open one of the plugin's configuration
+pages by `ConfigurationId`. Persisted plugin settings, configuration IDs and plugin IDs keep their values.
+
+## SDK 3.0 removal of the clipboard and file-dialog host services (#1339)
 
 ## SDK 2.0 / SkyCD v3 configuration migration (#828)
 

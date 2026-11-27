@@ -13,18 +13,22 @@ public partial class OptionsDialogViewModel
 {
     private readonly Dictionary<string, OptionsPluginPage> pluginPages = new(StringComparer.OrdinalIgnoreCase);
     private PluginConfigurationManager? configurationManager;
+    private TimeSpan pluginConfigurationTimeout = TimeSpan.FromMinutes(5);
     private bool disposed;
 
     public void SetPluginConfigurations(PluginConfigurationManager manager, TimeSpan timeout)
     {
         configurationManager = manager;
+        pluginConfigurationTimeout = timeout;
         var registrations = manager.GetRegistrations(includeDisabled: true);
         var available = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var registration in registrations)
         {
-            var key = $"plugin:{registration.PluginId}/{registration.Descriptor.ConfigurationId}";
+            var key = OptionsPluginPage.GetCategoryId(registration.PluginId,
+                registration.Descriptor.ConfigurationId);
             available.Add(key);
-            if (!pluginPages.ContainsKey(key)) pluginPages[key] = new OptionsPluginPage(registration, manager, timeout);
+            if (pluginPages.TryGetValue(key, out var existing)) existing.UpdateRegistration(registration);
+            else pluginPages[key] = new OptionsPluginPage(registration, manager, timeout);
         }
         foreach (var key in pluginPages.Keys.Where(key => !available.Contains(key)).ToArray())
         {
@@ -111,13 +115,18 @@ public partial class OptionsDialogViewModel
     {
         if (disposed) return;
         disposed = true;
+        localizationSubscription.Dispose();
         foreach (var plugin in Plugins) plugin.PropertyChanged -= OnPluginEnabledChanged;
         foreach (var page in pluginPages.Values) page.Dispose();
         pluginPages.Clear();
-        foreach (var page in contributedPages.Values) page.Dispose();
-        contributedPages.Clear();
         DisposePluginPathScan();
         CollectionsPage?.StopWatchingCatalogChanges();
         DisposeMarketplace();
+    }
+
+    /// <summary>Re-reads page descriptors so a language change inside Options retranslates their sidebar entries.</summary>
+    private void RefreshPluginPageDescriptors()
+    {
+        if (configurationManager is not null) SetPluginConfigurations(configurationManager, pluginConfigurationTimeout);
     }
 }
