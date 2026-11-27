@@ -20,9 +20,9 @@
       },
       "SkyCD.Plugin.Feature.WebBrowser": {
         "type": "Direct",
-        "requested": "[1.0.0, 1.0.0]",
-        "resolved": "1.0.0",
-        "contentHash": "RPjo8+ObbP61miE5Qm6AeXI5KyO2LpVpimuEPlzORqIDT1WMujO+KUn6cQHJ92r+kGpkCX/zzvbaD41WGOBK3w==",
+        "requested": "[3.0.0, 3.0.0]",
+        "resolved": "3.0.0",
+        "contentHash": "m6Y9k+ublVWsntIAbaGK90VI+yJO4yCV40tVvYOlKGHHbIXwKAYr7iGl6xncyvov2aPffLQLJhI4XBOjcrSz5w==",
         "dependencies": {
           "Avalonia.Controls.WebView": "12.1.2"
         }

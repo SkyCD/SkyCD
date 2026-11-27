@@ -23,6 +23,9 @@ public sealed class WebBrowserMenuPluginTests
 
         Assert.Equal("SkyCD.Plugin.WebBrowser", plugin.Id);
         Assert.Equal("SkyCD.Plugin.Feature.WebBrowser.dll", plugin.FileName);
+        Assert.Equal(3, plugin.Version.Major);
+        Assert.Equal(new Version(3, 0, 0), plugin.MinHostVersion);
+        Assert.Equal(3, plugin.MaxHostVersion?.Major);
         Assert.NotEmpty(plugin.IconFrames);
         Assert.IsType<WebBrowserMenuPlugin>(Assert.Single(plugin.Capabilities));
     }
@@ -37,7 +40,7 @@ public sealed class WebBrowserMenuPluginTests
         {
             Id = "SkyCD.Plugin.WebBrowser",
             Name = "Web Browser Plugin",
-            Version = new Version(1, 0, 0),
+            Version = new Version(3, 0, 0),
             MinHostVersion = new Version(3, 0, 0),
             FileName = "SkyCD.Plugin.Feature.WebBrowser.dll",
             Capabilities = [new WebBrowserMenuPlugin()]
@@ -59,7 +62,7 @@ public sealed class WebBrowserMenuPluginTests
         {
             Id = "SkyCD.Plugin.WebBrowser",
             Name = "Web Browser Plugin",
-            Version = new Version(1, 0, 0),
+            Version = new Version(3, 0, 0),
             MinHostVersion = new Version(3, 0, 0),
             FileName = "SkyCD.Plugin.Feature.WebBrowser.dll",
             Capabilities = [new WebBrowserMenuPlugin()]
