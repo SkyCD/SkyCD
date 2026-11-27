@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.Logging;
 using SkyCD.SDK.Localization;
+using SkyCD.UI.Localization;
 using SkyCD.Plugin.Runtime.Discovery;
 
 namespace SkyCD.App;

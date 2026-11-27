@@ -43,7 +43,6 @@ using SkyCD.Plugin.Host.Indexing;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.SDK.Capabilities.Media;
-using SkyCD.SDK.Localization;
 using SkyCD.UI.Localization;
 
 namespace SkyCD.App;

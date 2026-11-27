@@ -37,7 +37,7 @@ unreleased `3.0.0` major, so no additional major bump is required and no transit
 | `[assembly: SkyCD.Plugin.Abstractions.Lifecycle.PluginId("...")]` | `[assembly: SkyCD.SDK.Lifecycle.PluginId("...")]` |
 | `clr-namespace:SkyCD.Plugin.Abstractions.Capabilities.Media;assembly=SkyCD.SDK` | `clr-namespace:SkyCD.SDK.Capabilities.Media;assembly=SkyCD.SDK` |
 | `SkyCD.SDK.Capabilities.Capture.*` (`ICaptureSourcePluginCapability`, `ICaptureSourceHostApi`, `CaptureSourceKind`, `CaptureDevice`, `CapturePreviewResult`, `CapturedCatalogFile`, …) | `SkyCD.SDK.Capabilities.Sources.*` (`ISourceFactoryPluginCapability`, `ISourceFactoryHostApi`, `SourceKind`, `SourceDevice`, `SourcePreviewResult`, `SourceFile`, …) |
-| `SkyCD.SDK.Capabilities.Media.IAudioCdMetadataCapability` / `AudioCdDiscRequest` / `AudioCdCapture` / `AudioCdProviderCapture` / `IAudioCdMetadataProvider` and `SkyCD.SDK.Capabilities.Volume.*` (`IVolumeMetadataCapability`, `VolumeMediaContext`, `VolumeDescriptor`, `VolumeExtractionResult`, `IVolumeMetadataProvider`) | `SkyCD.SDK.Capabilities.Media.IMediaTargetMetadataCapability` / `MediaTarget` / `MediaTargetCapture` / `MediaTargetProviderCapture` / `IMediaTargetMetadataProvider`; `Capabilities.Volume` is deleted |
+| `SkyCD.SDK.Capabilities.Media.IAudioCdMetadataCapability` / `AudioCdDiscRequest` / `AudioCdCapture` / `AudioCdProviderCapture` / `IAudioCdMetadataProvider` and `SkyCD.SDK.Capabilities.Volume.*` (`IVolumeMetadataCapability`, `VolumeMediaContext`, `VolumeDescriptor`, `VolumeExtractionResult`, `IVolumeMetadataProvider`) | `SkyCD.SDK.Capabilities.Media.IMediaTargetMetadataCapability` / `MediaTarget` / `MediaTargetCapture`; the host seam `IMediaTargetMetadataProvider` / `MediaTargetProviderCapture` is host-internal (#1355); `Capabilities.Volume` is deleted |
 | `SkyCD.SDK.PluginFailure` | `SkyCD.SDK.Plugins.PluginFailure` |
 | `SkyCD.SDK.Capabilities.Catalog.ToolbarContribution` / `ToolbarButtonContribution` | `SkyCD.SDK.Capabilities.Toolbars.*` |
 | `SkyCD.SDK.Capabilities.Catalog.ILocationApi` (and the location exceptions, `CatalogLocationInfo`) | `SkyCD.SDK.Capabilities.Catalog.Locations.*` |
@@ -128,3 +128,13 @@ description generator, so it moved next to the generator contracts in `Capabilit
 | `GenDescEntryContext` | `DescriptionEntryFacts` |
 | `IGenDescHostApi.GetEntryContextAsync` | `IDescriptionEntryFactsApi.GetEntryFactsAsync` |
 | `IGenDescHostConsumer.InitializeGenDescHost` | `IDescriptionEntryFactsConsumer.InitializeDescriptionEntryFacts` |
+
+## SDK 3.0 host-internal contract trim (#1355)
+
+Two areas named host seams in the authoring package. Plugins never implemented or called either, so they
+moved next to the host code that owns them.
+
+| Previous contract | SDK 3.0 replacement |
+|---|---|
+| `SkyCD.SDK.Capabilities.Media.IMediaTargetMetadataProvider` / `MediaTargetProviderCapture` | `SkyCD.Plugin.Host.Media.*`; plugins implement `IMediaTargetMetadataCapability` over `MediaTarget` |
+| `SkyCD.SDK.Localization.ILocalizationService` / `LanguagePack` | `SkyCD.UI.Localization.*`; plugins keep `ILocalizationPluginCapability`, and `ITranslationProvider` stays in the SDK |

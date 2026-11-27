@@ -8,6 +8,7 @@ using SkyCD.Documents;
 using SkyCD.Documents.Collections;
 using SkyCD.Documents.Enum;
 using SkyCD.SDK.Capabilities.Media;
+using SkyCD.Plugin.Host.Media;
 using SkyCD.Presentation.MediaCache;
 using SkyCD.TestSupport;
 using SkyCD.UI.Controls.Preview;
