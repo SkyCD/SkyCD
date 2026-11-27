@@ -79,6 +79,26 @@ public class AddToListWindowLayoutTests
     }
 
     [Fact]
+    public void DestinationDescription_IsPartOfTheSelectedFolderOption()
+    {
+        // Issue #1314: the destination used to float as a dim line under both radios. It now renders
+        // as the selected-folder option's own second line, so it lives and hides with that option.
+        var destinationSection = GetDestinationSection(GetContentColumn());
+        var group = Assert.Single(destinationSection.Elements(Avalonia + "StackPanel"),
+            panel => (string?)panel.Attribute(Xaml2006 + "Name") == "TargetPlacementGroup");
+
+        var caption = Assert.Single(destinationSection.Descendants(Avalonia + "TextBlock"),
+            textBlock => (string?)textBlock.Attribute(Xaml2006 + "Name") == "TargetParentDescriptionText");
+        var owner = Assert.Single(caption.Ancestors(Avalonia + "RadioButton"));
+        Assert.Equal("SelectedFolder", (string?)owner.Attribute("CommandParameter"));
+        Assert.Equal("{Binding HasTargetParentDescription}", (string?)caption.Attribute("IsVisible"));
+        Assert.Equal("{Binding TargetParentDescription}", (string?)caption.Attribute("Text"));
+
+        // No detached description sits between the options and the action row.
+        Assert.DoesNotContain(group.Elements(Avalonia + "TextBlock"), _ => true);
+    }
+
+    [Fact]
     public void SourcePanel_FillsTheStarRowAndScrollsInsideItsBorder()
     {
         var column = GetContentColumn();

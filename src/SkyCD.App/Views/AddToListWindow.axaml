@@ -614,16 +614,24 @@
                                  IsChecked="{Binding IsTargetNewMedia, Mode=OneWay}"
                                  Command="{Binding SelectTargetCommand}"
                                  CommandParameter="NewMedia" />
-                    <RadioButton Content="{i18n:Translate {x:Static i18n:UiKeys.ToSelectedMediaFolder}}"
-                                 IsChecked="{Binding IsTargetSelectedFolder, Mode=OneWay}"
+                    <!--
+                        The destination reads as the option's own second line so the value stays
+                        attached to the choice that owns it (#1314), and vanishes with the choice.
+                    -->
+                    <RadioButton IsChecked="{Binding IsTargetSelectedFolder, Mode=OneWay}"
                                  Command="{Binding SelectTargetCommand}"
-                                 CommandParameter="SelectedFolder" />
-                    <TextBlock x:Name="TargetParentDescriptionText"
-                               Margin="{DynamicResource SkyGapTopXs}"
-                               Opacity="0.8"
-                               TextWrapping="Wrap"
-                               IsVisible="{Binding HasTargetParentDescription}"
-                               Text="{Binding TargetParentDescription}" />
+                                 CommandParameter="SelectedFolder">
+                        <StackPanel>
+                            <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.ToSelectedMediaFolder}}"
+                                       TextWrapping="Wrap" />
+                            <TextBlock x:Name="TargetParentDescriptionText"
+                                       Classes="caption"
+                                       Margin="{DynamicResource SkyGapTopXxs}"
+                                       TextWrapping="Wrap"
+                                       IsVisible="{Binding HasTargetParentDescription}"
+                                       Text="{Binding TargetParentDescription}" />
+                        </StackPanel>
+                    </RadioButton>
                 </StackPanel>
 
                 <StackPanel x:Name="DialogActions"
