@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using SkyCD.Plugin.Feature.GenDesc.Localization;
 using SkyCD.Plugin.Feature.GenDesc.Models;
 using SkyCD.Plugin.Feature.GenDesc.ViewModels;
-using SkyCD.SDK.Capabilities.GenDesc;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.SDK.Capabilities.Menu;
 using SkyCD.TestSupport;
 using SkyCD.UI.Localization;
@@ -29,10 +29,10 @@ public class GenDescPluginTests
                 : new Dictionary<string, string> { ["EntryId"] = entryId }
         };
 
-    private static GenDescPlugin Plugin(IGenDescHostApi host, string templateDirectory)
+    private static GenDescPlugin Plugin(IDescriptionEntryFactsApi host, string templateDirectory)
     {
         var plugin = new GenDescPlugin { TemplateDirectory = templateDirectory };
-        plugin.InitializeGenDescHost(host);
+        plugin.InitializeDescriptionEntryFacts(host);
         return plugin;
     }
 
@@ -99,7 +99,7 @@ public class GenDescPluginTests
     public async Task UnknownCommandsAreIgnored()
     {
         using var workspace = new TestWorkspace();
-        var plugin = Plugin(new FakeGenDescHostApi(GenDescTestData.Movie()), workspace.Root);
+        var plugin = Plugin(new FakeDescriptionEntryFactsApi(GenDescTestData.Movie()), workspace.Root);
         var host = new RecordingHostCommandApi();
 
         await plugin.ExecuteMenuCommandAsync("skycd.gendesc.other", Context(host));
@@ -111,7 +111,7 @@ public class GenDescPluginTests
     public async Task MissingSelectionIsReported()
     {
         using var workspace = new TestWorkspace();
-        var plugin = Plugin(new FakeGenDescHostApi(GenDescTestData.Movie()), workspace.Root);
+        var plugin = Plugin(new FakeDescriptionEntryFactsApi(GenDescTestData.Movie()), workspace.Root);
         var host = new RecordingHostCommandApi();
 
         await plugin.ExecuteMenuCommandAsync(NfoCommand, Context(host, entryId: null));
@@ -135,7 +135,7 @@ public class GenDescPluginTests
     public async Task UnavailableEntriesAreReported()
     {
         using var workspace = new TestWorkspace();
-        var fakeHost = new FakeGenDescHostApi((GenDescEntryContext?)null);
+        var fakeHost = new FakeDescriptionEntryFactsApi((DescriptionEntryFacts?)null);
         var plugin = Plugin(fakeHost, workspace.Root);
         var host = new RecordingHostCommandApi();
 
@@ -149,7 +149,7 @@ public class GenDescPluginTests
     public async Task NfoIsWrittenToTheChosenPath()
     {
         using var workspace = new TestWorkspace();
-        var plugin = Plugin(new FakeGenDescHostApi(GenDescTestData.Movie()), workspace.GetPath("templates"));
+        var plugin = Plugin(new FakeDescriptionEntryFactsApi(GenDescTestData.Movie()), workspace.GetPath("templates"));
         var dialogs = new RecordingFileDialogApi { SaveResult = workspace.GetPath("out.nfo") };
         plugin.InitializeFileDialogApi(dialogs);
         var host = new RecordingHostCommandApi();
@@ -170,7 +170,7 @@ public class GenDescPluginTests
     public async Task CancellingTheSaveDialogWritesNothing()
     {
         using var workspace = new TestWorkspace();
-        var plugin = Plugin(new FakeGenDescHostApi(GenDescTestData.Movie()), workspace.GetPath("templates"));
+        var plugin = Plugin(new FakeDescriptionEntryFactsApi(GenDescTestData.Movie()), workspace.GetPath("templates"));
         plugin.InitializeFileDialogApi(new RecordingFileDialogApi { SaveResult = null });
         var host = new RecordingHostCommandApi();
 
@@ -184,7 +184,7 @@ public class GenDescPluginTests
     public async Task MissingFileDialogApiIsReported()
     {
         using var workspace = new TestWorkspace();
-        var plugin = Plugin(new FakeGenDescHostApi(GenDescTestData.Movie()), workspace.GetPath("templates"));
+        var plugin = Plugin(new FakeDescriptionEntryFactsApi(GenDescTestData.Movie()), workspace.GetPath("templates"));
         var host = new RecordingHostCommandApi();
 
         await plugin.ExecuteMenuCommandAsync(NfoCommand, Context(host));
@@ -196,7 +196,7 @@ public class GenDescPluginTests
     public async Task DescriptionOpensAHostWindow()
     {
         using var workspace = new TestWorkspace();
-        var plugin = Plugin(new FakeGenDescHostApi(GenDescTestData.Movie()), workspace.GetPath("templates"));
+        var plugin = Plugin(new FakeDescriptionEntryFactsApi(GenDescTestData.Movie()), workspace.GetPath("templates"));
         var dialogs = new RecordingDialogApi();
         plugin.InitializeDialogApi(dialogs);
         var host = new RecordingHostCommandApi();
@@ -221,7 +221,7 @@ public class GenDescPluginTests
             "## id=default-description-movie\n## kind=description\n## category=movie\n## lang=en\n## mime=video/*\n## ext=.mkv\n{{ if Year }}broken");
         await File.WriteAllTextAsync(Path.Combine(directory, "default-description-movie-lt.tpl"),
             "## id=default-description-movie-lt\n## kind=description\n## category=movie\n## lang=lt\n## mime=video/*\n## ext=.mkv\n{{ if Year }}broken");
-        var plugin = Plugin(new FakeGenDescHostApi(GenDescTestData.Movie()), directory);
+        var plugin = Plugin(new FakeDescriptionEntryFactsApi(GenDescTestData.Movie()), directory);
         plugin.InitializeDialogApi(new RecordingDialogApi());
         var host = new RecordingHostCommandApi();
 

@@ -8,7 +8,7 @@ using SkyCD.Plugin.OnlineMetadata.Models;
 using SkyCD.Plugin.Feature.GenDesc.Exceptions;
 using SkyCD.Plugin.Feature.GenDesc.Models;
 using SkyCD.Plugin.Feature.GenDesc.Parsing;
-using SkyCD.SDK.Capabilities.GenDesc;
+using SkyCD.SDK.Capabilities.Media;
 
 namespace SkyCD.Plugin.Feature.GenDesc.Rendering;
 
@@ -20,7 +20,7 @@ public static class GenDescRenderer
 {
     public static GenDescResult Render(
         TemplateStore store,
-        GenDescEntryContext context,
+        DescriptionEntryFacts context,
         string kind,
         string? language = null,
         string? templateId = null)
@@ -64,7 +64,7 @@ public static class GenDescRenderer
     }
 
     /// <summary>Builds a context for a plain file path, used by the CLI where no catalog is open.</summary>
-    public static async Task<GenDescEntryContext> FromFileAsync(string filePath)
+    public static async Task<DescriptionEntryFacts> FromFileAsync(string filePath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
         var file = new FileInfo(filePath);
@@ -89,6 +89,6 @@ public static class GenDescRenderer
             ["Directory"] = file.DirectoryName ?? string.Empty,
             ["LastWriteTime"] = file.LastWriteTimeUtc.ToString("O", CultureInfo.InvariantCulture)
         };
-        return new GenDescEntryContext(file.Name, extension, facts["MimeType"], facts);
+        return new DescriptionEntryFacts(file.Name, extension, facts["MimeType"], facts);
     }
 }

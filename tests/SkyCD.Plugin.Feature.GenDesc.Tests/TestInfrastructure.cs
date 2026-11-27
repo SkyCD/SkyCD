@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Feature.GenDesc.Localization;
-using SkyCD.SDK.Capabilities.GenDesc;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.SDK.Capabilities.Menu;
 using SkyCD.SDK.Capabilities.Ui;
 using SkyCD.SDK.Localization;
@@ -47,20 +47,20 @@ internal sealed class RecordingHostCommandApi : IHostCommandApi
     }
 }
 
-internal sealed class FakeGenDescHostApi : IGenDescHostApi
+internal sealed class FakeDescriptionEntryFactsApi : IDescriptionEntryFactsApi
 {
-    private readonly Func<string, GenDescEntryContext?> resolve;
+    private readonly Func<string, DescriptionEntryFacts?> resolve;
 
-    public FakeGenDescHostApi(GenDescEntryContext? context)
+    public FakeDescriptionEntryFactsApi(DescriptionEntryFacts? context)
         : this(_ => context)
     {
     }
 
-    public FakeGenDescHostApi(Func<string, GenDescEntryContext?> resolve) => this.resolve = resolve;
+    public FakeDescriptionEntryFactsApi(Func<string, DescriptionEntryFacts?> resolve) => this.resolve = resolve;
 
     public string? LastEntryId { get; private set; }
 
-    public Task<GenDescEntryContext?> GetEntryContextAsync(string entryId,
+    public Task<DescriptionEntryFacts?> GetEntryFactsAsync(string entryId,
         CancellationToken cancellationToken = default)
     {
         LastEntryId = entryId;
@@ -115,7 +115,7 @@ internal sealed class RecordingClipboardApi : IClipboardApi
 
 internal static class GenDescTestData
 {
-    public static GenDescEntryContext Movie(string fileName = "Example.Movie.2024.1080p.mkv")
+    public static DescriptionEntryFacts Movie(string fileName = "Example.Movie.2024.1080p.mkv")
     {
         var facts = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -130,6 +130,6 @@ internal static class GenDescTestData
             ["SizeBytes"] = "9126805504",
             ["MimeType"] = "video/x-matroska"
         };
-        return new GenDescEntryContext(fileName, ".mkv", "video/x-matroska", facts);
+        return new DescriptionEntryFacts(fileName, ".mkv", "video/x-matroska", facts);
     }
 }

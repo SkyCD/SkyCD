@@ -27,7 +27,6 @@ using SkyCD.Plugin.Runtime.Marketplace.Services;
 using SkyCD.SDK.Plugins;
 using SkyCD.SDK.Capabilities.Capture;
 using SkyCD.SDK.Capabilities.Catalog;
-using SkyCD.SDK.Capabilities.GenDesc;
 using SkyCD.SDK.Capabilities.Options;
 using SkyCD.SDK.Capabilities.Storage;
 using SkyCD.SDK.Capabilities.Ui;
@@ -35,7 +34,7 @@ using SkyCD.Core.DependencyInjection.Registrators;
 using SkyCD.Core.Versioning;
 using SkyCD.Presentation.Capture;
 using SkyCD.Presentation.Catalog;
-using SkyCD.Presentation.GenDesc;
+using SkyCD.Presentation.Descriptions;
 using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.Plugin.Host.Catalog;
@@ -257,7 +256,7 @@ public partial class App : Avalonia.Application
             (Avalonia.Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow);
         var clipboard = new AvaloniaClipboardApi(() =>
             (Avalonia.Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow);
-        var genDescHost = appServiceProvider.Resolve<GenDescHostApi>();
+        var entryFactsApi = appServiceProvider.Resolve<DescriptionEntryFactsApi>();
         var onlineMetadata = ServiceProvider.Resolve<OnlineMetadataExtensionManager>();
         var captureHost = new CaptureSourceHostApi(() => appServiceProvider.Resolve<MainWindowViewModel>());
         var catalogSaveHost = new CatalogSaveHostApi(
@@ -328,9 +327,9 @@ public partial class App : Avalonia.Application
                 catch (Exception exception) { PluginFailure.Publish(consumer.GetType(), "capture", exception); }
             }
 
-            foreach (var consumer in plugin.Capabilities.OfType<IGenDescHostConsumer>())
+            foreach (var consumer in plugin.Capabilities.OfType<IDescriptionEntryFactsConsumer>())
             {
-                try { consumer.InitializeGenDescHost(genDescHost); }
+                try { consumer.InitializeDescriptionEntryFacts(entryFactsApi); }
                 catch (Exception exception) { PluginFailure.Publish(consumer.GetType(), "catalog", exception); }
             }
 
@@ -392,7 +391,7 @@ public partial class App : Avalonia.Application
             registrator.Register<PluginMarketplaceService>(Reuse.Singleton);
             registrator.Register<OpenCatalogState>(Reuse.Singleton);
             registrator.Register<CatalogApiAdapter>(Reuse.Singleton);
-            registrator.Register<GenDescHostApi>(Reuse.Singleton);
+            registrator.Register<DescriptionEntryFactsApi>(Reuse.Singleton);
             registrator.Register<LocationApiAdapter>(Reuse.Singleton);
             registrator.Register<PluginStorageApiFactory>(Reuse.Singleton);
             registrator.Register<PluginRuntimeSynchronizer>(Reuse.Singleton);

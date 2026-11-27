@@ -68,3 +68,14 @@ threading, draft ownership, cancellation and headless use. Other capability sign
 - Runtime discovers plugin classes implementing `IPlugin`.
 - Runtime discovers capabilities by implemented interfaces inheriting `IPluginCapability`.
 - Incompatible plugins are skipped, not crashed.
+
+## SDK 3.0 description entry facts (#1342)
+
+The `Capabilities.GenDesc` area named a single shipped plugin inside the SDK. The helper is generic to any
+description generator, so it moved next to the generator contracts in `Capabilities.Media`.
+
+| Previous contract | SDK 3.0 replacement |
+|---|---|
+| `GenDescEntryContext` | `DescriptionEntryFacts` |
+| `IGenDescHostApi.GetEntryContextAsync` | `IDescriptionEntryFactsApi.GetEntryFactsAsync` |
+| `IGenDescHostConsumer.InitializeGenDescHost` | `IDescriptionEntryFactsConsumer.InitializeDescriptionEntryFacts` |

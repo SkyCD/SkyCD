@@ -8,7 +8,7 @@ using SkyCD.Plugin.Feature.GenDesc.Exceptions;
 using SkyCD.Plugin.Feature.GenDesc.Models;
 using SkyCD.Plugin.Feature.GenDesc.Parsing;
 using SkyCD.Plugin.Feature.GenDesc.Rendering;
-using SkyCD.SDK.Capabilities.GenDesc;
+using SkyCD.SDK.Capabilities.Media;
 
 namespace SkyCD.Plugin.Feature.GenDesc.Cli;
 
@@ -155,7 +155,7 @@ internal static class GenDescCliOperations
             return RenderAttempt.Failed(GenDescCliExitCodes.InvalidArguments);
         }
 
-        GenDescEntryContext context;
+        DescriptionEntryFacts context;
         try
         {
             context = await GenDescRenderer.FromFileAsync(sourcePath);
@@ -185,7 +185,7 @@ internal static class GenDescCliOperations
             merged["MimeType"] = effectiveMime;
         }
 
-        var mergedContext = new GenDescEntryContext(context.FileName, context.Extension, effectiveMime, merged);
+        var mergedContext = new DescriptionEntryFacts(context.FileName, context.Extension, effectiveMime, merged);
         try
         {
             var rendered = GenDescRenderer.Render(GenDescTemplatePaths.LoadAndSeed(templateDirectory), mergedContext,
