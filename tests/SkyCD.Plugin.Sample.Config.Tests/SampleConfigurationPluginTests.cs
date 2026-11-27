@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
 using SkyCD.Couchbase;
 using SkyCD.Couchbase.Repository;
-using SkyCD.SDK;
+using SkyCD.SDK.Plugins;
 using SkyCD.SDK.Capabilities.Configuration;
 using SkyCD.Plugin.Runtime.Configuration;
 using SkyCD.Plugin.Runtime.Documents;

@@ -24,7 +24,7 @@ using SkyCD.Core.DependencyInjection;
 using SkyCD.Plugin.Runtime.Installation;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.Runtime.Marketplace.Services;
-using SkyCD.SDK;
+using SkyCD.SDK.Plugins;
 using SkyCD.SDK.Capabilities.Capture;
 using SkyCD.SDK.Capabilities.Catalog;
 using SkyCD.SDK.Capabilities.GenDesc;
