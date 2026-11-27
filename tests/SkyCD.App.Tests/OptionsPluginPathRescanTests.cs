@@ -18,6 +18,7 @@ public sealed class OptionsPluginPathRescanTests : IDisposable
     private readonly TestWorkspace workspace = new();
     private readonly string storedFolder;
     private readonly string typedFolder;
+    private readonly string otherFolder;
     private readonly string missingFolder;
 
     private string root => workspace.Root;
@@ -26,9 +27,11 @@ public sealed class OptionsPluginPathRescanTests : IDisposable
     {
         storedFolder = Path.Combine(root, "stored");
         typedFolder = Path.Combine(root, "typed");
+        otherFolder = Path.Combine(root, "other");
         missingFolder = Path.Combine(root, "missing");
         Directory.CreateDirectory(storedFolder);
         Directory.CreateDirectory(typedFolder);
+        Directory.CreateDirectory(otherFolder);
     }
 
     public void Dispose() => workspace.Dispose();
@@ -106,6 +109,110 @@ public sealed class OptionsPluginPathRescanTests : IDisposable
         clock.Advance(OptionsDialogViewModel.PluginPathScanDelay * 2);
 
         Assert.Single(scans);
+    }
+
+    [Fact]
+    public void EnterOrLostFocus_RescansEvenWhenTheFolderIsAlreadyTheScannedOne()
+    {
+        using var vm = CreateViewModel(out var clock);
+        var scans = RecordScans(vm);
+        vm.InitializePluginPath(storedFolder);
+        vm.PluginPath = typedFolder;
+        vm.RescanPluginPathCommand.Execute(null);
+        vm.MarkPluginPathScanned(typedFolder);
+
+        vm.RescanPluginPathCommand.Execute(null);
+
+        Assert.Equal([typedFolder, typedFolder], scans);
+
+        clock.Advance(OptionsDialogViewModel.PluginPathScanDelay * 2);
+
+        Assert.Equal(2, scans.Count);
+    }
+
+    [Fact]
+    public void AfterAScan_ANewerFolderStillRequestsItsOwnScan()
+    {
+        using var vm = CreateViewModel(out var clock);
+        var scans = RecordScans(vm);
+        vm.InitializePluginPath(storedFolder);
+        vm.PluginPath = typedFolder;
+        vm.RescanPluginPathCommand.Execute(null);
+        vm.MarkPluginPathScanned(typedFolder);
+
+        vm.PluginPath = otherFolder;
+        clock.Advance(OptionsDialogViewModel.PluginPathScanDelay);
+
+        Assert.Equal([typedFolder, otherFolder], scans);
+    }
+
+    [Fact]
+    public void SupersededScan_AcknowledgedForTheScannedFolder_KeepsTheNewerFolderPending()
+    {
+        using var vm = CreateViewModel(out var clock);
+        var scans = RecordScans(vm);
+        vm.InitializePluginPath(storedFolder);
+        vm.PluginPath = typedFolder;
+        clock.Advance(OptionsDialogViewModel.PluginPathScanDelay);
+        Assert.Equal([typedFolder], scans);
+
+        // The user typed on while the typed-folder scan was still running; the host acknowledges the
+        // scan for the folder it actually enumerated, not for the live field text.
+        vm.PluginPath = otherFolder;
+        vm.MarkPluginPathScanned(typedFolder);
+        clock.Advance(OptionsDialogViewModel.PluginPathScanDelay);
+
+        Assert.Equal([typedFolder, otherFolder], scans);
+    }
+
+    [Fact]
+    public void RetracingTheFolderPath_RescansTheEarlierFolderAgain()
+    {
+        using var vm = CreateViewModel(out var clock);
+        var scans = RecordScans(vm);
+        vm.InitializePluginPath(storedFolder);
+        vm.PluginPath = typedFolder;
+        clock.Advance(OptionsDialogViewModel.PluginPathScanDelay);
+        vm.MarkPluginPathScanned(typedFolder);
+        vm.PluginPath = otherFolder;
+        clock.Advance(OptionsDialogViewModel.PluginPathScanDelay);
+        vm.MarkPluginPathScanned(otherFolder);
+
+        vm.PluginPath = typedFolder;
+        clock.Advance(OptionsDialogViewModel.PluginPathScanDelay);
+
+        Assert.Equal([typedFolder, otherFolder, typedFolder], scans);
+    }
+
+    [Fact]
+    public void TypingBackToTheScannedFolder_DoesNotRequestAScan()
+    {
+        using var vm = CreateViewModel(out var clock);
+        var scans = RecordScans(vm);
+        vm.InitializePluginPath(storedFolder);
+        vm.PluginPath = typedFolder;
+        clock.Advance(OptionsDialogViewModel.PluginPathScanDelay);
+        vm.MarkPluginPathScanned(typedFolder);
+
+        vm.PluginPath = storedFolder;
+        vm.PluginPath = typedFolder;
+        clock.Advance(OptionsDialogViewModel.PluginPathScanDelay);
+
+        Assert.Equal([typedFolder], scans);
+    }
+
+    [Fact]
+    public void ExplicitRescan_OfAFolderThatDoesNotExist_StaysGated()
+    {
+        using var vm = CreateViewModel(out var clock);
+        var scans = RecordScans(vm);
+        vm.InitializePluginPath(storedFolder);
+
+        vm.PluginPath = missingFolder;
+        vm.RescanPluginPathCommand.Execute(null);
+
+        Assert.Empty(scans);
+        Assert.True(vm.HasPluginPathHint);
     }
 
     [Theory]
@@ -193,7 +300,7 @@ public sealed class OptionsPluginPathRescanTests : IDisposable
     private static List<string> RecordScans(OptionsDialogViewModel vm)
     {
         var scans = new List<string>();
-        vm.PluginPathScanRequested += (_, _) => scans.Add(vm.PluginPath);
+        vm.PluginPathScanRequested += (_, e) => scans.Add(e.Path);
         return scans;
     }
 }

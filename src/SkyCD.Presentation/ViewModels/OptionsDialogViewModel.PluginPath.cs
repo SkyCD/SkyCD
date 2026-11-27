@@ -30,9 +30,10 @@ public partial class OptionsDialogViewModel
     public bool HasPluginPathHint => !string.IsNullOrWhiteSpace(PluginPathHint);
 
     /// <summary>
-    /// Raised when the live plugin runtime should be rescanned from <see cref="OptionsDialogViewModel.PluginPath"/>.
+    /// Raised when the live plugin runtime should be rescanned from the folder the request was made for,
+    /// which is not necessarily <see cref="OptionsDialogViewModel.PluginPath"/> by the time it runs.
     /// </summary>
-    public event EventHandler? PluginPathScanRequested;
+    public event EventHandler<PluginPathScanRequestedEventArgs>? PluginPathScanRequested;
 
     /// <summary>
     /// Seeds the folder field when Options opens. The stored folder is the one the runtime already
@@ -47,11 +48,23 @@ public partial class OptionsDialogViewModel
         RefreshPluginPathHint();
     }
 
-    /// <summary>Records the folder the runtime was just rescanned from, which ends any pending debounce.</summary>
+    /// <summary>
+    /// Records the folder the runtime was just rescanned from. The marker follows the discovered folder,
+    /// not the live field: when the field moved on during the scan, the newer folder keeps (or restarts)
+    /// its own pause so it still gets scanned.
+    /// </summary>
     public void MarkPluginPathScanned(string? scannedPath)
     {
-        CancelPendingPluginPathScan();
         scannedPluginPath = scannedPath ?? string.Empty;
+        if (string.Equals(PluginPath, scannedPluginPath, StringComparison.Ordinal))
+        {
+            CancelPendingPluginPathScan();
+        }
+        else if (!disposed)
+        {
+            SchedulePluginPathScan();
+        }
+
         RefreshPluginPathHint();
     }
 
@@ -60,7 +73,7 @@ public partial class OptionsDialogViewModel
     private void RescanPluginPath()
     {
         CancelPendingPluginPathScan();
-        RequestPluginPathScan();
+        RequestPluginPathScan(PluginPath, explicitRequest: true);
     }
 
     /// <summary>
@@ -75,7 +88,7 @@ public partial class OptionsDialogViewModel
         RefreshPluginPathHint();
         if (runtimeShowsPreview)
         {
-            PluginPathScanRequested?.Invoke(this, EventArgs.Empty);
+            PluginPathScanRequested?.Invoke(this, new PluginPathScanRequestedEventArgs { Path = persistedPluginPath });
         }
     }
 
@@ -106,27 +119,33 @@ public partial class OptionsDialogViewModel
     private void SchedulePluginPathScan()
     {
         pluginPathScanTimer ??= timeProvider.CreateTimer(
-            static state => ((OptionsDialogViewModel)state!).RequestPluginPathScan(),
+            static state => ((OptionsDialogViewModel)state!).RequestPendingPluginPathScan(),
             this,
             Timeout.InfiniteTimeSpan,
             Timeout.InfiniteTimeSpan);
         pluginPathScanTimer.Change(PluginPathScanDelay, Timeout.InfiniteTimeSpan);
     }
 
-    private void RequestPluginPathScan()
+    /// <summary>Typing pause: the folder current when the pause expires is the one the request is for.</summary>
+    private void RequestPendingPluginPathScan() => RequestPluginPathScan(PluginPath, explicitRequest: false);
+
+    private void RequestPluginPathScan(string path, bool explicitRequest)
     {
         // A folder that does not exist leaves the list as it is; the hint under the field explains why.
-        if (disposed || !IsPluginPathRescanPending)
+        if (disposed || !IsExistingPluginFolder(path))
         {
             return;
         }
 
-        PluginPathScanRequested?.Invoke(this, EventArgs.Empty);
-    }
+        // Only the implicit typing pause deduplicates against the scanned marker; Enter, a lost focus
+        // and the Browse picker must rescan the folder the user asked for even when it is unchanged.
+        if (!explicitRequest && string.Equals(path, scannedPluginPath, StringComparison.Ordinal))
+        {
+            return;
+        }
 
-    private bool IsPluginPathRescanPending =>
-        IsExistingPluginFolder(PluginPath) &&
-        !string.Equals(PluginPath, scannedPluginPath, StringComparison.Ordinal);
+        PluginPathScanRequested?.Invoke(this, new PluginPathScanRequestedEventArgs { Path = path });
+    }
 
     private void CancelPendingPluginPathScan() =>
         pluginPathScanTimer?.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
