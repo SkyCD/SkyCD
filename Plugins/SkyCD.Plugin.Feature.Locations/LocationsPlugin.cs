@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.SDK.Capabilities;
 using SkyCD.SDK.Capabilities.Catalog;
+using SkyCD.SDK.Capabilities.Catalog.Locations;
 using SkyCD.SDK.Capabilities.Options;
 using SkyCD.SDK.Localization;
 using SkyCD.Plugin.Feature.Locations.Models;
