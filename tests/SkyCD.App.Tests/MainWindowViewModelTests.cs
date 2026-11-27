@@ -1581,19 +1581,18 @@ public class MainWindowViewModelTests
     {
         var vm = CreateViewModel();
 
-        // New | Open, Save, Save As | Export, Split | Properties | Exit
+        // New | Open, Save, Save As | Export | Properties | Exit
         var separators = vm.FileMenuItems
             .Select((item, index) => (item, index))
             .Where(entry => entry.item.Header == "-")
             .Select(entry => entry.index)
             .ToArray();
-        Assert.Equal([1, 5, 8, 10], separators);
+        Assert.Equal([1, 5, 8], separators);
 
         var items = vm.FileMenuItems.ToList();
         Assert.Equal("file_export", items[6].Key);
-        Assert.Equal("file_split", items[7].Key);
-        Assert.Equal(LocalizationService.Current.Get(TextKeys.Properties), items[9].Header);
-        Assert.Equal(LocalizationService.Current.Get(TextKeys.Exit), items[11].Header);
+        Assert.Equal(LocalizationService.Current.Get(TextKeys.Properties), items[7].Header);
+        Assert.Equal(LocalizationService.Current.Get(TextKeys.Exit), items[9].Header);
     }
 
     [Fact]
