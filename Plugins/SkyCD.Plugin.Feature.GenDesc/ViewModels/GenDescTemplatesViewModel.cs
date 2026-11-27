@@ -11,8 +11,8 @@ using SkyCD.Plugin.Feature.GenDesc.Exceptions;
 using SkyCD.Plugin.Feature.GenDesc.Localization;
 using SkyCD.Plugin.Feature.GenDesc.Models;
 using SkyCD.Plugin.Feature.GenDesc.Parsing;
+using SkyCD.Plugin.Feature.GenDesc.Views;
 using SkyCD.Plugin.OnlineMetadata.Models;
-using SkyCD.SDK.Capabilities.Ui;
 using SkyCD.UI.Localization;
 
 namespace SkyCD.Plugin.Feature.GenDesc.ViewModels;
@@ -24,16 +24,15 @@ namespace SkyCD.Plugin.Feature.GenDesc.ViewModels;
 public sealed partial class GenDescTemplatesViewModel : ObservableObject
 {
     private static readonly Regex IdPattern = new("^[a-z0-9][a-z0-9._-]*$", RegexOptions.CultureInvariant);
-    private readonly IHostFileDialogApi? fileDialogs;
+    private static readonly GenDescFileType TemplateFileType = new("GenDesc templates", "*.tpl");
     private readonly string directory;
     private readonly string templateKind;
     private TemplateStore store;
     private bool suppressPreview;
 
-    public GenDescTemplatesViewModel(string templateKind, IHostFileDialogApi? fileDialogs, string? directory = null)
+    public GenDescTemplatesViewModel(string templateKind, string? directory = null)
     {
         this.templateKind = TemplateInfo.NormalizeKind(templateKind);
-        this.fileDialogs = fileDialogs;
         this.directory = directory ?? GenDescTemplatePaths.DefaultDirectory;
         Tokens =
         [
@@ -219,18 +218,16 @@ public sealed partial class GenDescTemplatesViewModel : ObservableObject
         RefreshList();
     }
 
-    [RelayCommand]
-    private async Task ImportAsync()
+    public async Task ImportAsync(IGenDescFilePicker? picker)
     {
-        if (fileDialogs is null)
+        if (picker is null)
         {
             ErrorText = LocalizationService.Current.Get(GenDescKeys.NoPicker);
             return;
         }
 
-        var path = await fileDialogs.ShowOpenAsync(new OpenFileRequest(
-            LocalizationService.Current.Get(GenDescKeys.Import),
-            [new FileDialogFilter("GenDesc templates", ["*.tpl"])]));
+        var path = await picker.PickOpenAsync(LocalizationService.Current.Get(GenDescKeys.Import),
+            TemplateFileType);
         if (path is null)
         {
             return;
@@ -261,10 +258,9 @@ public sealed partial class GenDescTemplatesViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
-    private async Task ExportAsync()
+    public async Task ExportAsync(IGenDescFilePicker? picker)
     {
-        if (fileDialogs is null)
+        if (picker is null)
         {
             ErrorText = LocalizationService.Current.Get(GenDescKeys.NoPicker);
             return;
@@ -275,11 +271,8 @@ public sealed partial class GenDescTemplatesViewModel : ObservableObject
             return;
         }
 
-        var path = await fileDialogs.ShowSaveAsync(new SaveFileRequest(
-            LocalizationService.Current.Get(GenDescKeys.Export),
-            template!.Id + ".tpl",
-            ".tpl",
-            [new FileDialogFilter("GenDesc templates", ["*.tpl"])]));
+        var path = await picker.PickSaveAsync(LocalizationService.Current.Get(GenDescKeys.Export),
+            template!.Id + ".tpl", TemplateFileType);
         if (path is null)
         {
             return;

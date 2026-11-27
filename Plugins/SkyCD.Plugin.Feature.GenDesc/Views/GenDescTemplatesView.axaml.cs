@@ -1,6 +1,8 @@
 using System;
 using System.ComponentModel;
+using System.Threading.Tasks;
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using Avalonia.Styling;
 using AvaloniaEdit;
 using AvaloniaEdit.TextMate;
@@ -89,6 +91,23 @@ public partial class GenDescTemplatesView : UserControl
         if (!string.Equals(editor.Document.Text, body, StringComparison.Ordinal))
         {
             editor.Document.Text = body;
+        }
+    }
+
+    private async void OnImportClick(object? sender, RoutedEventArgs e) =>
+        await InvokeAsync(viewModel => viewModel.ImportAsync(CreatePicker()));
+
+    private async void OnExportClick(object? sender, RoutedEventArgs e) =>
+        await InvokeAsync(viewModel => viewModel.ExportAsync(CreatePicker()));
+
+    private IGenDescFilePicker? CreatePicker() =>
+        TopLevel.GetTopLevel(this) is { } topLevel ? new AvaloniaGenDescFilePicker(topLevel) : null;
+
+    private async Task InvokeAsync(Func<GenDescTemplatesViewModel, Task> action)
+    {
+        if (DataContext is GenDescTemplatesViewModel viewModel)
+        {
+            await action(viewModel);
         }
     }
 

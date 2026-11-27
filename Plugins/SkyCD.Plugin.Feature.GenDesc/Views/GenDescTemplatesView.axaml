@@ -147,8 +147,8 @@
                 <Button Content="{i18n:Translate {x:Static l:GenDescKeys.New}}" Command="{Binding NewCommand}" />
                 <Button Content="{i18n:Translate {x:Static l:GenDescKeys.Duplicate}}" Command="{Binding DuplicateCommand}" />
                 <Button Content="{i18n:Translate {x:Static l:GenDescKeys.Delete}}" Command="{Binding DeleteCommand}" />
-                <Button Content="{i18n:Translate {x:Static l:GenDescKeys.Import}}" Command="{Binding ImportCommand}" />
-                <Button Content="{i18n:Translate {x:Static l:GenDescKeys.Export}}" Command="{Binding ExportCommand}" />
+                <Button Content="{i18n:Translate {x:Static l:GenDescKeys.Import}}" Click="OnImportClick" />
+                <Button Content="{i18n:Translate {x:Static l:GenDescKeys.Export}}" Click="OnExportClick" />
                 <Button Content="{i18n:Translate {x:Static l:GenDescKeys.Reload}}" Command="{Binding ReloadCommand}" />
                 <Button Content="{i18n:Translate {x:Static l:GenDescKeys.Save}}" Command="{Binding SaveCommand}" />
             </StackPanel>
