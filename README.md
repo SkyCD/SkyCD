@@ -20,6 +20,11 @@ dotnet test SkyCD.slnx --configuration Release
 dotnet format SkyCD.slnx --verify-no-changes
 ```
 
+Build output is regenerable, so it is always safe to reclaim. Each host copies only its own
+platform's native assets and no native debug symbols, which keeps a Release build of `tests/` around
+15 GB; if the disk still gets tight, `dotnet clean SkyCD.slnx --configuration Release` (or deleting
+`tests/**/bin`) removes it.
+
 ## Local persistence
 SkyCD desktop now stores local data in Couchbase Lite under `%APPDATA%/SkyCD`:
 - `catalog` collection: browser/catalog seed data.

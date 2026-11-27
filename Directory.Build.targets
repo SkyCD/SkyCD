@@ -1,0 +1,38 @@
+<Project>
+    <PropertyGroup>
+        <!--
+          Issue #1319: without a RuntimeIdentifier, NuGet copies the native runtime asset of every RID
+          a package declares, so each test output carried ~40 platform directories and hundreds of MB
+          of native debug symbols. PackageReference items must stay host-independent here (CI restores
+          in locked mode, so packages.lock.json has to be identical on every host); the copy filter
+          below drops the assets of other platforms and every native .pdb instead. crossbuild/publish
+          sets RuntimeIdentifier, where the assets are needed, so the filter only applies to RID-less
+          build and test runs.
+        -->
+        <SkyCDHostRuntimeIdentifier Condition="'$(SkyCDHostRuntimeIdentifier)' == '' and '$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</SkyCDHostRuntimeIdentifier>
+        <SkyCDHostRuntimeIdentifier Condition="'$(SkyCDHostRuntimeIdentifier)' == ''">$(NETCoreSdkRuntimeIdentifier)</SkyCDHostRuntimeIdentifier>
+        <SkyCDHostRuntimeFamily Condition="'$(SkyCDHostRuntimeFamily)' == '' and '$(SkyCDHostRuntimeIdentifier)' != '' and $(SkyCDHostRuntimeIdentifier.StartsWith('win'))">win</SkyCDHostRuntimeFamily>
+        <SkyCDHostRuntimeFamily Condition="'$(SkyCDHostRuntimeFamily)' == '' and '$(SkyCDHostRuntimeIdentifier)' != '' and $(SkyCDHostRuntimeIdentifier.StartsWith('linux'))">linux</SkyCDHostRuntimeFamily>
+        <SkyCDHostRuntimeFamily Condition="'$(SkyCDHostRuntimeFamily)' == '' and '$(SkyCDHostRuntimeIdentifier)' != '' and $(SkyCDHostRuntimeIdentifier.StartsWith('osx'))">osx</SkyCDHostRuntimeFamily>
+        <SkyCDForeignRuntimeDirectories Condition="'$(SkyCDHostRuntimeFamily)' == 'win'">linux|osx|maccatalyst|android|ios|iossimulator|tvos|browser</SkyCDForeignRuntimeDirectories>
+        <SkyCDForeignRuntimeDirectories Condition="'$(SkyCDHostRuntimeFamily)' == 'linux'">win|osx|maccatalyst|android|ios|iossimulator|tvos|browser</SkyCDForeignRuntimeDirectories>
+        <SkyCDForeignRuntimeDirectories Condition="'$(SkyCDHostRuntimeFamily)' == 'osx'">win|linux|maccatalyst|android|ios|iossimulator|tvos|browser</SkyCDForeignRuntimeDirectories>
+    </PropertyGroup>
+
+    <Target Name="SkyCDPruneForeignNativeAssets"
+            AfterTargets="ResolvePackageAssets"
+            BeforeTargets="ResolveLockFileCopyLocalFiles"
+            Condition="'$(SkyCDHostRuntimeFamily)' != '' and '$(RuntimeIdentifier)' == '' and '$(_IsPublishing)' != 'true'">
+        <ItemGroup>
+            <_SkyCDRuntimeCopyItem Include="@(RuntimeTargetsCopyLocalItems)">
+                <_SkyCDRuntimeDirectory>$([System.String]::Copy('%(DestinationSubDirectory)').Replace('\','/'))</_SkyCDRuntimeDirectory>
+            </_SkyCDRuntimeCopyItem>
+            <_SkyCDForeignRuntimeCopyItem Include="@(_SkyCDRuntimeCopyItem)"
+                                          Condition="'%(_SkyCDRuntimeDirectory)' != '' and $([System.Text.RegularExpressions.Regex]::IsMatch('%(_SkyCDRuntimeDirectory)', '^runtimes/($(SkyCDForeignRuntimeDirectories))(-|/|$)'))" />
+            <RuntimeTargetsCopyLocalItems Remove="@(_SkyCDForeignRuntimeCopyItem)" />
+            <_SkyCDNativeSymbolCopyItem Include="@(_SkyCDRuntimeCopyItem)"
+                                        Condition="'%(Extension)' == '.pdb' and $([System.String]::Copy('%(_SkyCDRuntimeDirectory)').StartsWith('runtimes/'))" />
+            <RuntimeTargetsCopyLocalItems Remove="@(_SkyCDNativeSymbolCopyItem)" />
+        </ItemGroup>
+    </Target>
+</Project>

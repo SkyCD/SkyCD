@@ -11,5 +11,7 @@
           the default item globs, whatever build layout created it.
         -->
         <DefaultItemExcludes>$(DefaultItemExcludes);obj-*/**</DefaultItemExcludes>
+        <!-- Tests run in an English build, so localized package resources are pure output bulk (#1319). -->
+        <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     </PropertyGroup>
 </Project>
