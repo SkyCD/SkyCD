@@ -245,11 +245,15 @@ public sealed class AiScanExclusionTests : IDisposable
         Assert.True(resetRaised);
     }
 
-    private sealed class CountingCapability : IGeneratedDescriptionCapability, IDescriptionGenerationPlanner
+    private sealed class CountingCapability : IDescriptionGeneratorCapability, IDescriptionGenerationPlanner
     {
         private int calls;
 
         public int Calls => Volatile.Read(ref calls);
+
+        public string ImplementationId => "counting";
+
+        public string ImplementationName => "Counting";
 
         public MediaMetadataSchema Schema => new("test.ai-scan.schema", 1, []);
 

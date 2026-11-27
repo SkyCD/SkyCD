@@ -5,7 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Avalonia.Controls;
 using SkyCD.Presentation.ViewModels;
-using SkyCD.SDK;
+using SkyCD.SDK.Plugins;
 using SkyCD.SDK.Capabilities.Options;
 using SkyCD.UI.Localization;
 using Xunit;

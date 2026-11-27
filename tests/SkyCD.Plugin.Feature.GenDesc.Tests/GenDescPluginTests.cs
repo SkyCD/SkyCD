@@ -146,42 +146,80 @@ public class GenDescPluginTests
     }
 
     [Fact]
-    public async Task NfoIsWrittenToTheChosenPath()
+    public async Task NfoCommandOpensTheSaveDialog()
     {
         using var workspace = new TestWorkspace();
         var plugin = Plugin(new FakeGenDescHostApi(GenDescTestData.Movie()), workspace.GetPath("templates"));
-        var dialogs = new RecordingFileDialogApi { SaveResult = workspace.GetPath("out.nfo") };
-        plugin.InitializeFileDialogApi(dialogs);
+        var dialogs = new RecordingDialogApi();
+        plugin.InitializeDialogApi(dialogs);
         var host = new RecordingHostCommandApi();
 
         await plugin.ExecuteMenuCommandAsync(NfoCommand, Context(host));
 
-        var request = Assert.Single(dialogs.SaveRequests);
-        Assert.Equal("Example.Movie.2024.1080p.nfo", request.SuggestedFileName);
-        Assert.Equal(".nfo", request.DefaultExtension);
-        Assert.Single(request.Filters!);
-        var written = await File.ReadAllTextAsync(workspace.GetPath("out.nfo"));
-        Assert.Contains("Example Movie", written);
-        Assert.Contains("File: Example.Movie.2024.1080p.mkv", written);
-        Assert.Contains(workspace.GetPath("out.nfo"), Assert.Single(host.Messages));
-    }
-
-    [Fact]
-    public async Task CancellingTheSaveDialogWritesNothing()
-    {
-        using var workspace = new TestWorkspace();
-        var plugin = Plugin(new FakeGenDescHostApi(GenDescTestData.Movie()), workspace.GetPath("templates"));
-        plugin.InitializeFileDialogApi(new RecordingFileDialogApi { SaveResult = null });
-        var host = new RecordingHostCommandApi();
-
-        await plugin.ExecuteMenuCommandAsync(NfoCommand, Context(host));
-
-        Assert.Empty(Directory.GetFiles(workspace.GetPath("templates"), "*.nfo"));
+        var request = Assert.Single(dialogs.Requests);
+        Assert.Equal(LocalizationService.Current.Get(GenDescKeys.SaveNfoTitle) + " - Example.Movie.2024.1080p.mkv",
+            request.Title);
+        Assert.Equal(520, request.Width);
+        Assert.Equal(240, request.Height);
         Assert.Empty(host.Messages);
     }
 
     [Fact]
-    public async Task MissingFileDialogApiIsReported()
+    public async Task NfoSaveDialogWritesTheChosenFile()
+    {
+        using var workspace = new TestWorkspace();
+        var picker = new RecordingFilePicker { SaveResult = workspace.GetPath("out.nfo") };
+        var savedPaths = new List<string>();
+        var viewModel = new NfoSaveDialogViewModel("title", "Example.Movie.2024.1080p.nfo",
+            "Example Movie\nFile: Example.Movie.2024.1080p.mkv", path =>
+            {
+                savedPaths.Add(path);
+                return Task.CompletedTask;
+            });
+
+        await viewModel.SaveAsync(picker);
+
+        var request = Assert.Single(picker.SaveRequests);
+        Assert.Equal("Example.Movie.2024.1080p.nfo", request.SuggestedFileName);
+        Assert.Equal("*.nfo", request.FileType.Pattern);
+        var written = await File.ReadAllTextAsync(workspace.GetPath("out.nfo"));
+        Assert.Contains("Example Movie", written);
+        Assert.Equal(workspace.GetPath("out.nfo"), Assert.Single(savedPaths));
+        Assert.Equal(LocalizationService.Current.Format(GenDescKeys.NfoSaved, workspace.GetPath("out.nfo")),
+            viewModel.StatusText);
+        Assert.Equal(string.Empty, viewModel.ErrorText);
+    }
+
+    [Fact]
+    public async Task CancellingThePickerWritesNothing()
+    {
+        using var workspace = new TestWorkspace();
+        var saved = 0;
+        var viewModel = new NfoSaveDialogViewModel("title", "out.nfo", "content", _ =>
+        {
+            saved++;
+            return Task.CompletedTask;
+        });
+
+        await viewModel.SaveAsync(new RecordingFilePicker { SaveResult = null });
+
+        Assert.Equal(0, saved);
+        Assert.Equal(string.Empty, viewModel.StatusText);
+        Assert.Empty(Directory.GetFiles(workspace.Root, "*.nfo"));
+    }
+
+    [Fact]
+    public async Task NfoSaveDialogWithoutPickerReportsIt()
+    {
+        var viewModel = new NfoSaveDialogViewModel("title", "out.nfo", "content");
+
+        await viewModel.SaveAsync(null);
+
+        Assert.Equal(LocalizationService.Current.Get(GenDescKeys.NoPicker), viewModel.ErrorText);
+    }
+
+    [Fact]
+    public async Task NfoWithoutDialogApiIsReported()
     {
         using var workspace = new TestWorkspace();
         var plugin = Plugin(new FakeGenDescHostApi(GenDescTestData.Movie()), workspace.GetPath("templates"));
@@ -231,14 +269,13 @@ public class GenDescPluginTests
     }
 
     [Fact]
-    public async Task DescriptionViewModelCopiesTheText()
+    public void DescriptionDialogReportsCopied()
     {
-        var clipboard = new RecordingClipboardApi();
-        var viewModel = new DescriptionDialogViewModel("Title", "[b]description[/b]", clipboard);
+        var viewModel = new DescriptionDialogViewModel("Title", "[b]description[/b]");
 
-        await viewModel.CopyCommand.ExecuteAsync(null);
+        viewModel.MarkCopied();
 
-        Assert.Equal("[b]description[/b]", Assert.Single(clipboard.Texts));
+        Assert.Equal("[b]description[/b]", viewModel.Text);
         Assert.Equal(LocalizationService.Current.Get(GenDescKeys.Copied), viewModel.StatusText);
     }
 

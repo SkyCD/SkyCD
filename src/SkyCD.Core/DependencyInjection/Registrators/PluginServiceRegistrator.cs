@@ -33,7 +33,7 @@ using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Core.OAuth;
 using SkyCD.SDK.OAuth;
-using SkyCD.SDK;
+using SkyCD.SDK.Plugins;
 
 namespace SkyCD.Core.DependencyInjection.Registrators;
 
@@ -158,7 +158,7 @@ public sealed class PluginServiceRegistrator
             ifAlreadyRegistered: IfAlreadyRegistered.Replace);
 
         registrator.RegisterInstance(new DescriptionExtensionManager(plugins.SelectMany(plugin =>
-            plugin.Capabilities.OfType<IGeneratedDescriptionCapability>())),
+            plugin.Capabilities.OfType<IDescriptionGeneratorCapability>())),
             ifAlreadyRegistered: IfAlreadyRegistered.Replace);
 
         // Online metadata sources are aggregated host-side so a description generator consumes facts without

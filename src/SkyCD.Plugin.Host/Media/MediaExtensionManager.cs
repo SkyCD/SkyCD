@@ -6,7 +6,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.SDK;
+using SkyCD.SDK.Plugins;
 using SkyCD.SDK.Capabilities;
 using SkyCD.SDK.Capabilities.Configuration;
 using SkyCD.SDK.Capabilities.Media;
