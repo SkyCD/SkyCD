@@ -13,6 +13,15 @@
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="SkyCD.SDK" Version="[$(SkyCdSdkVersion)]"/>
+        <PackageReference Include="SkyCD.Plugin.Sample.Config" Version="[1.0.0]"/>
+        <PackageReference Include="SkyCD.Plugin.Sample.Menu" Version="[1.0.0]"/>
+        <PackageReference Include="SkyCD.Plugin.Sample.Modal" Version="[1.0.0]"/>
+        <ProjectReference Include="..\..\src\SkyCD.Core\SkyCD.Core.csproj"/>
         <ProjectReference Include="..\..\src\SkyCD.Plugin.Host\SkyCD.Plugin.Host.csproj"/>
+        <ProjectReference Include="../SkyCD.TestSupport/SkyCD.TestSupport.csproj"/>
+    </ItemGroup>
+    <ItemGroup>
+        <Compile Remove="Fixtures/**/*.cs"/>
+        <ProjectReference Include="Fixtures/SkyCD.Plugin.Host.ConfigurationFixture/SkyCD.Plugin.Host.ConfigurationFixture.csproj"/>
     </ItemGroup>
 </Project>

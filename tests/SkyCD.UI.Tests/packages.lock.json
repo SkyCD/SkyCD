@@ -37,6 +37,16 @@
           "Microsoft.TestPlatform.TestHost": "18.11.0"
         }
       },
+      "SkyCD.Plugin.Sample.Config": {
+        "type": "Direct",
+        "requested": "[1.0.0, 1.0.0]",
+        "resolved": "1.0.0",
+        "contentHash": "ytCVvpkkLMQ1LzO+Sxj67nU/7cLu/Nl1Mx9Ax8T9/xrDxAQ/vtWmWOqbFIvXCCyv5eEFyTptlrL2bDrPZnJcDA==",
+        "dependencies": {
+          "Avalonia": "12.1.6",
+          "Avalonia.Desktop": "12.1.6"
+        }
+      },
       "xunit.runner.visualstudio": {
         "type": "Direct",
         "requested": "[4.0.1, )",
@@ -1427,14 +1437,6 @@
           "SkyCD.Plugin.Host": "[1.0.0, )",
           "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
           "System.Reflection.MetadataLoadContext": "[10.0.15, )"
-        }
-      },
-      "skycd.plugin.sample.config": {
-        "type": "Project",
-        "dependencies": {
-          "Avalonia": "[12.1.6, )",
-          "Avalonia.Desktop": "[12.1.6, )",
-          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
         }
       },
       "skycd.presentation": {

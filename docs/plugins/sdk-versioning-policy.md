@@ -92,7 +92,7 @@ configuration adapter. Previously released binaries/branches are not modified by
 | Plugin-owned configuration Window / OK / Cancel | Embedded control plus side-effect-free acceptance callback |
 | Immediate persistence after modal OK | Host batch persistence on Options Save, disposal on Cancel/close |
 
-The four production configuration plugins and `Plugins/SkyCD.Plugin.Sample.Config` demonstrate
+The four production configuration plugins and [Sample Configuration](https://github.com/SkyCD/SkyCD.Plugin.Sample.Config) demonstrate
 the new contract. See [SDK contracts](sdk-contracts.md#embedded-options-configuration-sdk-20-migration-828) for
 threading, draft ownership, cancellation and headless use. Other capability signatures are unchanged.
 
