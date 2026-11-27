@@ -103,7 +103,7 @@ public partial class MainWindow
         e.Dialog.ToolbarLayoutApplied += OnOptionsToolbarLayoutApplied;
         try
         {
-            RefreshPlugins(e.Dialog);
+            RefreshPlugins(e.Dialog, e.Dialog.PluginPath);
             e.Dialog.RestoreSettingCategory(options.OptionsCategoryId, options.OptionsTabIndex);
             if (!string.IsNullOrWhiteSpace(e.PreselectCategoryId))
             {
@@ -303,25 +303,29 @@ public partial class MainWindow
             return;
         }
 
-        RefreshPlugins(dialogVm);
+        RefreshPlugins(dialogVm, dialogVm.PluginPath);
     }
 
     /// <summary>Handles the folder field's typing pause, Enter and lost focus.</summary>
-    private void OnPluginPathScanRequested(object? sender, EventArgs e)
+    private void OnPluginPathScanRequested(object? sender, PluginPathScanRequestedEventArgs e)
     {
         if (sender is not OptionsDialogViewModel dialogVm)
         {
             return;
         }
 
+        // The request carries the folder it was made for, so a scan that runs after the user typed
+        // again still enumerates the requested folder instead of the then-current field text.
+        var requestedPath = e.Path;
+
         // The debounce expires on a pool thread, while the list it rebuilds is bound to the UI thread.
         if (Dispatcher.UIThread.CheckAccess())
         {
-            RefreshPlugins(dialogVm);
+            RefreshPlugins(dialogVm, requestedPath);
             return;
         }
 
-        Dispatcher.UIThread.Post(() => RefreshPlugins(dialogVm));
+        Dispatcher.UIThread.Post(() => RefreshPlugins(dialogVm, requestedPath));
     }
 
     private async Task ResetStatusVariantsRequestedAsync(object? sender, Window owner)
@@ -375,11 +379,11 @@ public partial class MainWindow
         dialogVm.SetAiScanExclusions(aiScanExclusionRepository.GetOrdered());
     }
 
-    private void RefreshPlugins(OptionsDialogViewModel dialogVm)
+    private void RefreshPlugins(OptionsDialogViewModel dialogVm, string pluginPath)
     {
         try
         {
-            RefreshPluginsCore(dialogVm);
+            RefreshPluginsCore(dialogVm, pluginPath);
         }
         catch (Exception exception)
         {
@@ -388,16 +392,16 @@ public partial class MainWindow
         }
     }
 
-    private void RefreshPluginsCore(OptionsDialogViewModel dialogVm)
+    private void RefreshPluginsCore(OptionsDialogViewModel dialogVm, string pluginPath)
     {
         dialogVm.CapturePluginStates();
-        pluginManager.Discover(dialogVm.PluginPath, hostVersionProvider.Current);
+        pluginManager.Discover(pluginPath, hostVersionProvider.Current);
         // Discovery builds fresh capability instances, so the host APIs are re-injected before the
         // contributed Options pages use them — otherwise a page like Locations fails with a plugin
         // error every time the list refreshes.
         pluginRuntimeSynchronizer.ReinjectHostApis();
-        // The runtime now reflects this folder: it is the path Cancel has to restore.
-        dialogVm.MarkPluginPathScanned(dialogVm.PluginPath);
+        // The runtime now reflects the discovered folder, not whatever the field shows by now.
+        dialogVm.MarkPluginPathScanned(pluginPath);
         var descriptors = pluginManager.GetPluginDescriptors();
         var discoveredById = pluginManager.AvailablePlugins
             .ToDictionary(static item => item.Id, StringComparer.OrdinalIgnoreCase);
