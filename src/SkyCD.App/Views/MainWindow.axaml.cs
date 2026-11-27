@@ -157,7 +157,6 @@ public partial class MainWindow : Window
             subscribedViewModel.OpenCatalogRequested -= OnOpenCatalogRequested;
             subscribedViewModel.SaveCatalogAsRequested -= OnSaveCatalogAsRequested;
             subscribedViewModel.SaveCatalogRequested -= OnSaveCatalogRequested;
-            subscribedViewModel.SplitCatalogRequested -= OnSplitCatalogRequested;
             subscribedViewModel.ExportCatalogRequested -= OnExportCatalogRequested;
             subscribedViewModel.AboutRequested -= OnAboutRequested;
             subscribedViewModel.FindCatalogRequested -= OnFindCatalogRequested;
@@ -186,7 +185,6 @@ public partial class MainWindow : Window
             subscribedViewModel.OpenCatalogRequested += OnOpenCatalogRequested;
             subscribedViewModel.SaveCatalogAsRequested += OnSaveCatalogAsRequested;
             subscribedViewModel.SaveCatalogRequested += OnSaveCatalogRequested;
-            subscribedViewModel.SplitCatalogRequested += OnSplitCatalogRequested;
             subscribedViewModel.ExportCatalogRequested += OnExportCatalogRequested;
             subscribedViewModel.AboutRequested += OnAboutRequested;
             subscribedViewModel.FindCatalogRequested += OnFindCatalogRequested;

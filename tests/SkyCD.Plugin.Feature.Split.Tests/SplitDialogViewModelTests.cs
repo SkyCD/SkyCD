@@ -4,17 +4,20 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Presentation.Catalog.Split;
-using SkyCD.Presentation.ViewModels;
+using SkyCD.Plugin.Feature.Split.Exceptions;
+using SkyCD.Plugin.Feature.Split.Models;
+using SkyCD.Plugin.Feature.Split.ViewModels;
 using SkyCD.TestSupport;
 using Xunit;
 
-namespace SkyCD.App.Tests;
+namespace SkyCD.Plugin.Feature.Split.Tests;
 
 public class SplitDialogViewModelTests
 {
     private static readonly SplitFormatOption Scd = new("legacy-scd", "Legacy SkyCD", "scd", [".scd"]);
     private static readonly SplitFormatOption Json = new("skycd-json", "SkyCD JSON", "json", [".json"]);
+
+    static SplitDialogViewModelTests() => SplitTestLocalization.EnsureRegistered();
 
     [Fact]
     public void TheDefaultsPointAtTheSourceFolderAndTheDefaultFormatExtension()
@@ -42,7 +45,11 @@ public class SplitDialogViewModelTests
         var output = workspace.CreateDirectory("parts");
         var calls = 0;
         var viewModel = new SplitDialogViewModel("gamez", 13, output, [Scd, Json], "legacy-scd",
-            (_, _, _) => { calls++; return Task.FromResult(new SplitResult([], 0)); })
+            (_, _, _) =>
+            {
+                calls++;
+                return Task.FromResult(new SplitResult([], 0));
+            })
         {
             EntriesPerPart = "many"
         };
@@ -60,7 +67,11 @@ public class SplitDialogViewModelTests
     {
         var calls = 0;
         var viewModel = new SplitDialogViewModel("gamez", 13, "output", [Scd, Json], "legacy-scd",
-            (_, _, _) => { calls++; return Task.FromResult(new SplitResult([], 0)); })
+            (_, _, _) =>
+            {
+                calls++;
+                return Task.FromResult(new SplitResult([], 0));
+            })
         {
             EntriesPerPart = string.Empty
         };
@@ -76,7 +87,11 @@ public class SplitDialogViewModelTests
     {
         var calls = 0;
         var viewModel = new SplitDialogViewModel("gamez", 13, "output", [Scd, Json], "legacy-scd",
-            (_, _, _) => { calls++; return Task.FromResult(new SplitResult([], 0)); })
+            (_, _, _) =>
+            {
+                calls++;
+                return Task.FromResult(new SplitResult([], 0));
+            })
         {
             FileNamePattern = @"..\escape #N.scd"
         };
@@ -92,7 +107,11 @@ public class SplitDialogViewModelTests
     {
         SplitRequest? seen = null;
         var viewModel = new SplitDialogViewModel("gamez", 13, "output", [Scd, Json], "legacy-scd",
-            (request, _, _) => { seen = request; return Task.FromResult(new SplitResult([], 0)); })
+            (request, _, _) =>
+            {
+                seen = request;
+                return Task.FromResult(new SplitResult([], 0));
+            })
         {
             FileNamePattern = "part #N.json"
         };
@@ -210,7 +229,11 @@ public class SplitDialogViewModelTests
     {
         var calls = 0;
         var viewModel = new SplitDialogViewModel("gamez", 13, "output", [], string.Empty,
-            (_, _, _) => { calls++; return Task.FromResult(new SplitResult([], 0)); });
+            (_, _, _) =>
+            {
+                calls++;
+                return Task.FromResult(new SplitResult([], 0));
+            });
 
         await viewModel.SplitCommand.ExecuteAsync(null);
 

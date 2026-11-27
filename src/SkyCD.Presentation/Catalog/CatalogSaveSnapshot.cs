@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using SkyCD.Documents;
 using SkyCD.SDK.Capabilities.FileFormats;
 
-namespace SkyCD.App;
+namespace SkyCD.Presentation.Catalog;
 
 /// <summary>
 /// Builds the single catalog snapshot consumed by both the loss assessment and the write, so the
 /// warning always describes exactly what the writer receives.
 /// </summary>
-internal static class CatalogSaveSnapshot
+public static class CatalogSaveSnapshot
 {
     public static List<Dictionary<string, object?>> BuildRows(IReadOnlyList<CatalogDocument> documents)
     {

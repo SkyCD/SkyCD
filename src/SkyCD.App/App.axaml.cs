@@ -260,6 +260,11 @@ public partial class App : Avalonia.Application
         var genDescHost = appServiceProvider.Resolve<GenDescHostApi>();
         var onlineMetadata = ServiceProvider.Resolve<OnlineMetadataExtensionManager>();
         var captureHost = new CaptureSourceHostApi(() => appServiceProvider.Resolve<MainWindowViewModel>());
+        var catalogSaveHost = new CatalogSaveHostApi(
+            appServiceProvider.Resolve<RepositoryManager>(),
+            appServiceProvider.Resolve<OpenCatalogState>(),
+            () => pluginManager,
+            () => ServiceProvider.Resolve<FileFormatManager>());
 
         foreach (var plugin in pluginManager.Plugins)
         {
@@ -278,6 +283,12 @@ public partial class App : Avalonia.Application
             foreach (var consumer in plugin.Capabilities.OfType<ILocationApiConsumer>())
             {
                 try { consumer.InitializeLocationApi(locationApi); }
+                catch (Exception exception) { PluginFailure.Publish(consumer.GetType(), "catalog", exception); }
+            }
+
+            foreach (var consumer in plugin.Capabilities.OfType<ICatalogSaveHostConsumer>())
+            {
+                try { consumer.InitializeCatalogSaveHost(catalogSaveHost); }
                 catch (Exception exception) { PluginFailure.Publish(consumer.GetType(), "catalog", exception); }
             }
 

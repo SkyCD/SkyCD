@@ -1,7 +1,8 @@
-using SkyCD.Presentation.Catalog.Split;
+using SkyCD.Plugin.Feature.Split.Exceptions;
+using SkyCD.Plugin.Feature.Split.Parsing;
 using Xunit;
 
-namespace SkyCD.App.Tests;
+namespace SkyCD.Plugin.Feature.Split.Tests;
 
 public class SplitPatternTests
 {

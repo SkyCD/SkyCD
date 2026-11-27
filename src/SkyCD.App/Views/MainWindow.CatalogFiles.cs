@@ -19,7 +19,6 @@ using SkyCD.Plugin.Host.Volume;
 using SkyCD.Plugin.Runtime.Exceptions;
 using SkyCD.Presentation.Catalog;
 using SkyCD.Presentation.Catalog.Export;
-using SkyCD.Presentation.Catalog.Split;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.SDK.Capabilities.Catalog;
 using SkyCD.SDK.Capabilities.Media;
@@ -54,17 +53,6 @@ public partial class MainWindow
         if (DataContext is MainWindowViewModel vm)
         {
             await catalogFiles.SaveCatalogAsync(vm, saveAs: true);
-        }
-    }
-
-    private void OnSplitCatalogRequested(object? sender, EventArgs e) =>
-        _ = RunUiActionAsync(SplitCatalogRequestedAsync);
-
-    private async Task SplitCatalogRequestedAsync()
-    {
-        if (DataContext is MainWindowViewModel vm)
-        {
-            await catalogFiles.SplitCatalogAsync(vm);
         }
     }
 
@@ -285,69 +273,6 @@ public partial class MainWindow
             }
         }
 
-        public async Task SplitCatalogAsync(MainWindowViewModel vm)
-        {
-            window.EnsureFileFormatProvidersLoaded();
-            var entries = vm.GetAllCatalogEntries();
-            if (entries.Count == 0)
-            {
-                vm.StatusText = LocalizationService.Current.Get(UiKeys.SplitNoEntries);
-                return;
-            }
-
-            var formats = window.fileFormatManager.GetSaveFormats()
-                .Where(static format => format.CanRead)
-                .Select(static format => new SplitFormatOption(
-                    format.FormatId,
-                    format.DisplayName,
-                    format.Extensions.Select(static extension => extension.Trim().TrimStart('.'))
-                        .FirstOrDefault(static extension => !string.IsNullOrWhiteSpace(extension)) ?? "dat",
-                    format.Extensions.ToArray()))
-                .ToList();
-            if (formats.Count == 0)
-            {
-                vm.StatusText = LocalizationService.Current.Get(TextKeys.SplitNoWritableFormat);
-                return;
-            }
-
-            var defaultFormatId = ResolveSplitFormatId(vm.CurrentCatalogPath, formats);
-            var sourcePath = vm.CurrentCatalogPath;
-            SplitWindow? splitWindow = null;
-            var viewModel = new SplitDialogViewModel(
-                string.IsNullOrWhiteSpace(sourcePath)
-                    ? "catalog"
-                    : Path.GetFileNameWithoutExtension(sourcePath),
-                entries.Count,
-                string.IsNullOrWhiteSpace(sourcePath)
-                    ? string.Empty
-                    : Path.GetDirectoryName(sourcePath) ?? string.Empty,
-                formats,
-                defaultFormatId,
-                (request, progress, cancellationToken) =>
-                {
-                    var scopeItems = CatalogScopeDataService.Collect(
-                        window.virtualCollectionRepository.GetOrdered(),
-                        window.statusVariantRepository.GetOrdered(),
-                        window.scanExclusionRuleRepository.GetOrdered(),
-                        window.aiScanExclusionRepository.GetOrdered(),
-                        window.pluginManager.GetCapabilities<ICatalogAuxiliaryDataProvider>());
-                    return new CatalogSplitService(window.fileFormatManager).SplitAsync(
-                        entries,
-                        scopeItems,
-                        request,
-                        preview => ConfirmSaveDataLossAsync(splitWindow!, preview.FormatDisplayName,
-                            CatalogDataLossText.BuildLines(preview.Items)),
-                        progress,
-                        cancellationToken);
-                });
-            splitWindow = new SplitWindow { DataContext = viewModel };
-            await splitWindow.ShowDialog(window);
-            if (viewModel.OutcomeMessage is { } outcome)
-            {
-                vm.StatusText = outcome;
-            }
-        }
-
         public async Task ExportCatalogAsync(MainWindowViewModel vm)
         {
             window.EnsureFileFormatProvidersLoaded();
@@ -420,29 +345,6 @@ public partial class MainWindow
             {
                 vm.StatusText = LocalizationService.Current.Format(TextKeys.FailedToExportCatalog, ex.Message);
             }
-        }
-
-        private string ResolveSplitFormatId(string? currentCatalogPath, IReadOnlyList<SplitFormatOption> formats)
-        {
-            if (!string.IsNullOrWhiteSpace(currentCatalogPath))
-            {
-                try
-                {
-                    var resolved = window.fileFormatManager.ResolveFormatId(null, currentCatalogPath, forWrite: true);
-                    if (formats.Any(option =>
-                            option.FormatId.Equals(resolved, StringComparison.OrdinalIgnoreCase)))
-                    {
-                        return resolved;
-                    }
-                }
-                catch (Exception exception) when (exception is FileFormatHandlerResolutionException
-                    or UnsupportedFileFormatException)
-                {
-                    // Fall through to the first writable format below.
-                }
-            }
-
-            return formats[0].FormatId;
         }
 
         private static async Task<bool> ConfirmSaveDataLossAsync(

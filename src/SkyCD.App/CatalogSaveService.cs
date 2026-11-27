@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using SkyCD.Documents;
 using SkyCD.SDK.Capabilities.FileFormats;
 using SkyCD.Plugin.Runtime.Managers;
+using SkyCD.Presentation.Catalog;
 
 namespace SkyCD.App;
 

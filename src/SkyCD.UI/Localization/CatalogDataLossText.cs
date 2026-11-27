@@ -1,9 +1,8 @@
 using System;
 using System.Collections.Generic;
 using SkyCD.SDK.Capabilities.FileFormats;
-using SkyCD.UI.Localization;
 
-namespace SkyCD.App;
+namespace SkyCD.UI.Localization;
 
 /// <summary>
 /// Renders loss-assessment items as localized, user-facing dialog lines.

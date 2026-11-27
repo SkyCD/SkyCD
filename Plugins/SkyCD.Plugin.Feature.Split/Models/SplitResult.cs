@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace SkyCD.Presentation.Catalog.Split;
+namespace SkyCD.Plugin.Feature.Split.Models;
 
 /// <summary>The outcome of a split run.</summary>
 /// <param name="Parts">The part files in write order.</param>
