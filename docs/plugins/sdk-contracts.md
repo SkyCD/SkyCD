@@ -78,6 +78,14 @@ host service contracts implemented by the host, not by copied helper source.
     plugin-filled source folder), a nullable `Location` (path, UNC path or URL), the root name and the
     facts the host already knows. `Supports(MediaTarget)` lets one capability serve several kinds, and
     captures are merged into the root catalog entry by the scanning, folder, remote and disc flows.
+- `IDescriptionGeneratorCapability` (`Capabilities.Media`)
+  - Carries a stable `ImplementationId`, a user-facing `ImplementationName`, the generated-metadata
+    `Schema` and `GenerateAsync(DescriptionContext, CancellationToken)`.
+  - One contract covers template-backed and AI-backed generators; whether a generator calls a model is an
+    implementation detail. The host persists `ImplementationId` to pick among installed generators, so keep
+    it stable, and shows `ImplementationName` in the Options implementation picker.
+  - `IDescriptionGenerationPlanner.GetPlan()` stays optional and provider-neutral: it discloses the
+    configured provider and context limits without contacting it.
 - `IActionProvider` (`Capabilities.Actions`)
   - Returns item-specific `SkyAction` instances through `GetActions(Item)`.
   - `Item` is an SDK context containing a stable identifier and provider metadata;

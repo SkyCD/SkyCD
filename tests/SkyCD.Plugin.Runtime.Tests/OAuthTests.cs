@@ -16,7 +16,7 @@ using SkyCD.Core.OAuth;
 using SkyCD.SDK.Capabilities;
 using SkyCD.SDK.OAuth;
 using SkyCD.Plugin.Runtime.Discovery;
-using SkyCD.SDK;
+using SkyCD.SDK.Plugins;
 using SkyCD.TestSupport;
 using Xunit;
 

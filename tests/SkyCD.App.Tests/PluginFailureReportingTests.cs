@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Presentation.Operations;
 using SkyCD.Presentation.ViewModels;
-using SkyCD.SDK;
+using SkyCD.SDK.Plugins;
 using SkyCD.SDK.Capabilities.Media;
 using SkyCD.UI.Localization;
 using Xunit;

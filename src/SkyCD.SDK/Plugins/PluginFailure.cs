@@ -7,7 +7,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 using SkyCD.SDK.Lifecycle;
 
-namespace SkyCD.SDK;
+namespace SkyCD.SDK.Plugins;
 
 /// <summary>
 /// Allowlisted failure metadata. Never contains exception messages or user data: the extra
