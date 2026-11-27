@@ -46,6 +46,30 @@ public sealed class PluginCatalogResolutionTests
     }
 
     [Fact]
+    public async Task RegistrationOnlyFeed_SelectsTheRegisteredPackageContent()
+    {
+        var (catalog, feed) = PluginCatalogFixture.Create();
+        using var _ = catalog;
+        feed.Serve(PluginCatalogFixture.CatalogUrl, PluginCatalogFixture.Catalog(PluginCatalogFixture.SourceAUri));
+        feed.Serve(PluginCatalogFixture.SourceAUri, PluginCatalogFixture.Manifest(PluginCatalogFixture.FeedA,
+            PluginCatalogFixture.Package("SkyCD.Plugin.Example", PluginCatalogFixture.Release("1.0.0"))));
+        feed.Serve(PluginCatalogFixture.FeedA, """
+            { "resources": [{ "@id": "https://feed-a.test/registration/", "@type": "RegistrationsBaseUrl/3.6.0" }] }
+            """);
+        const string asset = "https://releases.test/download/v1.0.0/example.nupkg";
+        feed.Serve("https://feed-a.test/registration/skycd.plugin.example/index.json", $$"""
+            { "items": [{ "items": [{
+                "catalogEntry": { "id": "SkyCD.Plugin.Example", "version": "1.0.0" },
+                "packageContent": "{{asset}}"
+            }] }] }
+            """);
+
+        var result = await catalog.GetCatalogAsync();
+
+        Assert.Equal(new Uri(asset), Assert.Single(result.Snapshot.SelectedPackageContentUris));
+    }
+
+    [Fact]
     public async Task DiscoversPackageContentResourceThroughTheServiceIndex()
     {
         var (catalog, feed) = PluginCatalogFixture.Create();

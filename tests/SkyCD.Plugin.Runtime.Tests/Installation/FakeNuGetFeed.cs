@@ -27,6 +27,7 @@ internal sealed class FakeNuGetFeed : HttpMessageHandler
 
     public List<Uri> RequestedUris { get; } = [];
     public Dictionary<Uri, Uri?> Redirects { get; } = [];
+    public Dictionary<Uri, string> Documents { get; } = [];
 
     /// <summary>Overrides the download response status; <see cref="HttpStatusCode.OK"/> by default.</summary>
     public HttpStatusCode DownloadStatus { get; set; } = HttpStatusCode.OK;
@@ -52,6 +53,11 @@ internal sealed class FakeNuGetFeed : HttpMessageHandler
         if (Redirects.TryGetValue(request.RequestUri, out var target))
         {
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Found) { Headers = { Location = target } });
+        }
+
+        if (Documents.TryGetValue(request.RequestUri, out var document))
+        {
+            return Task.FromResult(Json(document));
         }
 
         if (request.RequestUri.AbsoluteUri == ServiceIndexUrl)

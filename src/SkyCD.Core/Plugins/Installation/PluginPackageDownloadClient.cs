@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -7,6 +8,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Runtime.Installation;
 using SkyCD.Plugin.Runtime.Installation.Exceptions;
+using SkyCD.Plugin.Runtime.Marketplace.Exceptions;
+using SkyCD.Plugin.Runtime.Marketplace.Models;
+using SkyCD.Plugin.Runtime.Marketplace.Services;
 
 namespace SkyCD.Core.Plugins.Installation;
 
@@ -16,8 +20,6 @@ namespace SkyCD.Core.Plugins.Installation;
 /// </summary>
 internal sealed class PluginPackageDownloadClient : IDisposable
 {
-    public const string PackageBaseAddressResourceType = "PackageBaseAddress/3.0.0";
-
     private const int MaxRedirects = 5;
     private readonly HttpClient httpClient;
     private readonly TimeSpan timeout;
@@ -34,6 +36,7 @@ internal sealed class PluginPackageDownloadClient : IDisposable
             ? new HttpClient(new SocketsHttpHandler { AllowAutoRedirect = false })
             : new HttpClient(handler, disposeHandler: false);
         httpClient.Timeout = timeout;
+        httpClient.MaxResponseContentBufferSize = 256 * 1024;
         this.timeout = timeout;
         this.maxPackageBytes = maxPackageBytes;
     }
@@ -47,10 +50,8 @@ internal sealed class PluginPackageDownloadClient : IDisposable
         var packageId = request.NormalizedPackageId;
         var version = request.NormalizedVersion;
         var feedUri = ValidateFeedUri(request);
-        var baseAddress = await ResolvePackageBaseAddressAsync(feedUri, cancellationToken).ConfigureAwait(false);
-        var lowerId = Uri.EscapeDataString(packageId.ToLowerInvariant());
-        var lowerVersion = Uri.EscapeDataString(version.ToLowerInvariant());
-        var packageUri = new Uri(baseAddress, $"{lowerId}/{lowerVersion}/{lowerId}.{lowerVersion}.nupkg");
+        var packageUri = await ResolvePackageUriAsync(feedUri, packageId, version, cancellationToken)
+            .ConfigureAwait(false);
 
         HttpStatusCode statusCode;
         HttpResponseMessage response;
@@ -159,61 +160,57 @@ internal sealed class PluginPackageDownloadClient : IDisposable
         return uri;
     }
 
-    private async Task<Uri> ResolvePackageBaseAddressAsync(Uri feedUri, CancellationToken cancellationToken)
+    private async Task<Uri> ResolvePackageUriAsync(Uri feedUri, string packageId, string version,
+        CancellationToken cancellationToken)
     {
-        JsonDocument document;
         try
         {
-            using var response = await GetFollowingRedirectsAsync(feedUri, HttpCompletionOption.ResponseContentRead,
-                cancellationToken).ConfigureAwait(false);
-            if (response.StatusCode != HttpStatusCode.OK)
+            var serviceIndex = await FetchMetadataAsync(feedUri, cancellationToken).ConfigureAwait(false);
+            var baseAddress = NuGetFeedDocuments.ParsePackageBaseAddress(feedUri, serviceIndex);
+            if (baseAddress is not null)
             {
-                throw new PluginFeedUnavailableException(feedUri.AbsoluteUri,
-                    $"the feed returned HTTP {(int)response.StatusCode}");
-            }
-
-            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-            document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
-        }
-        catch (PluginFeedUnavailableException)
-        {
-            throw;
-        }
-        catch (Exception exception) when (exception is HttpRequestException or JsonException or IOException)
-        {
-            throw new PluginFeedUnavailableException(feedUri.AbsoluteUri, "the service index could not be read");
-        }
-
-        using (document)
-        {
-            if (!document.RootElement.TryGetProperty("resources", out var resources) ||
-                resources.ValueKind != JsonValueKind.Array)
-            {
-                throw new PluginFeedUnavailableException(feedUri.AbsoluteUri, "the service index has no resources");
-            }
-
-            foreach (var resource in resources.EnumerateArray())
-            {
-                if (resource.ValueKind != JsonValueKind.Object ||
-                    !resource.TryGetProperty("@type", out var type) ||
-                    type.ValueKind != JsonValueKind.String ||
-                    !string.Equals(type.GetString(), PackageBaseAddressResourceType, StringComparison.OrdinalIgnoreCase) ||
-                    !resource.TryGetProperty("@id", out var id) ||
-                    id.ValueKind != JsonValueKind.String ||
-                    !Uri.TryCreate(id.GetString(), UriKind.Absolute, out var baseAddress) ||
-                    !IsSafeHttpsUri(baseAddress))
-                {
-                    continue;
-                }
-
-                return baseAddress.AbsoluteUri.EndsWith('/')
+                var root = baseAddress.AbsoluteUri.EndsWith('/')
                     ? baseAddress
                     : new Uri(baseAddress.AbsoluteUri + "/");
+                var lowerId = Uri.EscapeDataString(packageId.ToLowerInvariant());
+                var lowerVersion = Uri.EscapeDataString(version.ToLowerInvariant());
+                return new Uri(root, $"{lowerId}/{lowerVersion}/{lowerId}.{lowerVersion}.nupkg");
             }
+
+            var registration = NuGetFeedDocuments.ParseRegistrationBaseAddress(feedUri, serviceIndex);
+            if (registration is not null && PluginPackageVersion.TryParse(version, out var normalized))
+            {
+                var packages = await NuGetFeedDocuments.ReadRegistrationAsync(registration, packageId,
+                    FetchMetadataAsync, cancellationToken).ConfigureAwait(false);
+                if (packages.TryGetValue(normalized!.Normalized, out var content))
+                {
+                    return content;
+                }
+
+                throw new PluginFeedUnavailableException(feedUri.AbsoluteUri,
+                    "the registration does not list the requested package version");
+            }
+
+            throw new PluginFeedUnavailableException(feedUri.AbsoluteUri,
+                "the service index exposes no supported package content or registration resource");
+        }
+        catch (Exception exception) when (exception is HttpRequestException or JsonException or IOException
+                                          or MalformedNuGetServiceIndexException or PluginSourceProtocolException
+                                          or InvalidOperationException or KeyNotFoundException)
+        {
+            throw new PluginFeedUnavailableException(feedUri.AbsoluteUri, "the NuGet feed metadata could not be read");
+        }
+    }
+
+    private async Task<string> FetchMetadataAsync(Uri uri, CancellationToken cancellationToken)
+    {
+        using var response = await GetFollowingRedirectsAsync(uri, HttpCompletionOption.ResponseContentRead,
+            cancellationToken).ConfigureAwait(false);
+        if (response.StatusCode != HttpStatusCode.OK)
+        {
+            throw new HttpRequestException($"The feed returned HTTP {(int)response.StatusCode}.");
         }
 
-        throw new PluginFeedUnavailableException(feedUri.AbsoluteUri,
-            $"the '{PackageBaseAddressResourceType}' resource is missing or not HTTPS");
+        return await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
     }
 }

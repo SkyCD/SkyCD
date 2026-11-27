@@ -2,18 +2,21 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
 using SkyCD.Plugin.Runtime.Marketplace.Exceptions;
+using SkyCD.Plugin.Runtime.Marketplace.Models;
 
 namespace SkyCD.Plugin.Runtime.Marketplace.Services;
 
 /// <summary>
-/// Shape of the two read-only NuGet v3 documents the catalog needs. Unknown members are ignored so newer
-/// server fields never break parsing.
+/// Reads the NuGet v3 metadata used to discover package versions and download locations.
 /// </summary>
-internal static class NuGetFeedDocuments
+public static class NuGetFeedDocuments
 {
     /// <summary>Relative type of the package content resource in a v3 service index.</summary>
     public const string PackageBaseAddressType = "PackageBaseAddress/3.0.0";
+    private const int MaxExternalRegistrationPages = 16;
 
     private static readonly JsonSerializerOptions Options = new()
     {
@@ -24,6 +27,15 @@ internal static class NuGetFeedDocuments
 
     /// <summary>Returns the absolute package content address, or <see langword="null"/> when absent.</summary>
     public static Uri? ParsePackageBaseAddress(Uri serviceIndexUri, string json)
+        => ParseResource(serviceIndexUri, json, PackageBaseAddressType);
+
+    /// <summary>Prefers registration metadata that supports SemVer 2.0 versions.</summary>
+    public static Uri? ParseRegistrationBaseAddress(Uri serviceIndexUri, string json)
+        => ParseResource(serviceIndexUri, json, "RegistrationsBaseUrl/3.6.0")
+           ?? ParseResource(serviceIndexUri, json, "RegistrationsBaseUrl/3.4.0")
+           ?? ParseResource(serviceIndexUri, json, "RegistrationsBaseUrl/3.0.0");
+
+    private static Uri? ParseResource(Uri serviceIndexUri, string json, string resourceType)
     {
         ServiceIndex? index;
         try
@@ -42,7 +54,9 @@ internal static class NuGetFeedDocuments
 
         foreach (var resource in index.Resources)
         {
-            if (resource is null || !IsPackageBaseAddressResource(resource.Type))
+            if (resource?.Type is not { } type ||
+                (!string.Equals(type, resourceType, StringComparison.OrdinalIgnoreCase) &&
+                 !type.StartsWith(resourceType + "/", StringComparison.OrdinalIgnoreCase)))
             {
                 continue;
             }
@@ -58,8 +72,65 @@ internal static class NuGetFeedDocuments
             return address;
         }
 
-        throw new MalformedNuGetServiceIndexException(serviceIndexUri,
-            $"it exposes no {PackageBaseAddressType} resource");
+        return null;
+    }
+
+    /// <summary>Reads exact-version package URLs from a registration index and its external pages.</summary>
+    public static async Task<Dictionary<string, Uri>> ReadRegistrationAsync(Uri registrationBase, string packageId,
+        Func<Uri, CancellationToken, Task<string>> fetch, CancellationToken cancellationToken)
+    {
+        var root = registrationBase.AbsoluteUri.EndsWith('/')
+            ? registrationBase
+            : new Uri(registrationBase.AbsoluteUri + "/");
+        var id = Uri.EscapeDataString(packageId.ToLowerInvariant());
+        var index = new Uri(root, $"{id}/index.json");
+        using var document = JsonDocument.Parse(await fetch(index, cancellationToken).ConfigureAwait(false));
+        var versions = new Dictionary<string, Uri>(StringComparer.OrdinalIgnoreCase);
+        var externalPages = new HashSet<Uri>();
+        foreach (var page in document.RootElement.GetProperty("items").EnumerateArray())
+        {
+            if (page.TryGetProperty("items", out var entries))
+            {
+                ReadRegistrationEntries(entries, packageId, versions);
+                continue;
+            }
+
+            var pageUri = ReadHttpsUri(page.GetProperty("@id"));
+            if (!externalPages.Add(pageUri) || externalPages.Count > MaxExternalRegistrationPages)
+            {
+                throw new JsonException("The registration index has duplicate or excessive external pages.");
+            }
+
+            using var external = JsonDocument.Parse(await fetch(pageUri, cancellationToken).ConfigureAwait(false));
+            ReadRegistrationEntries(external.RootElement.GetProperty("items"), packageId, versions);
+        }
+
+        return versions;
+    }
+
+    private static void ReadRegistrationEntries(JsonElement entries, string packageId, Dictionary<string, Uri> versions)
+    {
+        foreach (var entry in entries.EnumerateArray())
+        {
+            var metadata = entry.GetProperty("catalogEntry");
+            if (!string.Equals(metadata.GetProperty("id").GetString(), packageId, StringComparison.OrdinalIgnoreCase) ||
+                !PluginPackageVersion.TryParse(metadata.GetProperty("version").GetString(), out var version) ||
+                !versions.TryAdd(version!.Normalized, ReadHttpsUri(entry.GetProperty("packageContent"))))
+            {
+                throw new JsonException("The registration page has a mismatched package ID or invalid release version.");
+            }
+        }
+    }
+
+    private static Uri ReadHttpsUri(JsonElement element)
+    {
+        if (!Uri.TryCreate(element.GetString(), UriKind.Absolute, out var uri) ||
+            uri.Scheme != Uri.UriSchemeHttps || !string.IsNullOrEmpty(uri.UserInfo))
+        {
+            throw new JsonException("Registration URLs must use HTTPS and omit URL credentials.");
+        }
+
+        return uri;
     }
 
     /// <summary>
@@ -100,21 +171,6 @@ internal static class NuGetFeedDocuments
         {
             throw new MalformedNuGetVersionListException(versionListUri);
         }
-    }
-
-    /// <summary>
-    /// A service index may declare a resource type more than once and some servers add a versioned profile
-    /// suffix (for example <c>PackageBaseAddress/3.0.0</c>). Both are accepted.
-    /// </summary>
-    private static bool IsPackageBaseAddressResource(string? type)
-    {
-        if (string.IsNullOrWhiteSpace(type))
-        {
-            return false;
-        }
-
-        return string.Equals(type, PackageBaseAddressType, StringComparison.OrdinalIgnoreCase) ||
-               type.StartsWith(PackageBaseAddressType + "/", StringComparison.OrdinalIgnoreCase);
     }
 
     private sealed class ServiceIndex

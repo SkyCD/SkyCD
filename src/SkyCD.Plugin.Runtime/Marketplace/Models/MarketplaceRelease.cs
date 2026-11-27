@@ -49,12 +49,20 @@ public sealed record MarketplaceRelease
     /// <see langword="null"/> when the feed could not be read or exposes none.</summary>
     public Uri? PackageContentBaseUri { get; init; }
 
+    /// <summary>The exact package URL from NuGet registration metadata, when available.</summary>
+    public Uri? RegisteredPackageContentUri { get; init; }
+
     /// <summary>The package content URL (<c>.nupkg</c>) the NuGet v3 package content resource serves for this
     /// release, or <see langword="null"/> when the feed exposes no package content resource.</summary>
     public Uri? PackageContentUri
     {
         get
         {
+            if (RegisteredPackageContentUri is not null)
+            {
+                return RegisteredPackageContentUri;
+            }
+
             if (PackageContentBaseUri is null)
             {
                 return null;

@@ -105,7 +105,12 @@ content URL is built:
 ```
 
 A version that the feed does not list is reported as `NotPublished` and cannot be installed. If the feed
-cannot be read, or exposes no package content resource, compatibility stays `Unknown` for that refresh.
+cannot be read or exposes neither supported resource, compatibility stays `Unknown` for that refresh.
+
+If the service index omits `PackageBaseAddress`, the marketplace looks for `RegistrationsBaseUrl` and
+reads the package's registration index. Inline and external registration pages can list exact package
+versions and their HTTPS `packageContent` URLs. A registration-only feed can serve these JSON files
+from GitHub and point each version to its public GitHub Release attachment.
 
 ## Compatibility and version selection
 A release is eligible only when every rule passes, in this order:
