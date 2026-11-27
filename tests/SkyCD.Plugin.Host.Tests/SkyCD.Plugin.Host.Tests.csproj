@@ -25,4 +25,5 @@
         <Compile Remove="Fixtures/**/*.cs"/>
         <ProjectReference Include="Fixtures/SkyCD.Plugin.Host.ConfigurationFixture/SkyCD.Plugin.Host.ConfigurationFixture.csproj"/>
     </ItemGroup>
+    <Import Project="../StandalonePluginReference.targets"/>
 </Project>

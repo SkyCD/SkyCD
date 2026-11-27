@@ -1,0 +1,39 @@
+name: Standalone plugin host tests
+
+on:
+  workflow_call:
+    inputs:
+      skycd-ref:
+        description: SkyCD revision providing the test projects and runner
+        type: string
+        default: main
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          path: plugin
+          persist-credentials: false
+      - uses: actions/checkout@v7
+        with:
+          repository: SkyCD/SkyCD
+          ref: ${{ inputs.skycd-ref }}
+          path: skycd
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: skycd/global.json
+      - name: Build the plugin and run the host integration tests
+        shell: pwsh
+        env:
+          NuGetPackageSourceCredentials_skycd: Username=${{ github.actor }};Password=${{ secrets.GITHUB_TOKEN }};ValidAuthenticationTypes=Basic
+        run: |
+          $pluginId = $env:GITHUB_REPOSITORY.Split('/')[1]
+          ./skycd/tools/scripts/ci/test-standalone-plugin.ps1 -PluginProject "plugin/src/$pluginId/$pluginId.csproj"

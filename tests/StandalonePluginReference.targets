@@ -1,0 +1,9 @@
+<Project>
+    <PropertyGroup Condition="'$(SkyCdStandalonePluginProject)' != ''">
+        <NuGetLockFilePath>$(BaseIntermediateOutputPath)standalone-plugin.packages.lock.json</NuGetLockFilePath>
+    </PropertyGroup>
+    <ItemGroup Condition="'$(SkyCdStandalonePluginProject)' != ''">
+        <PackageReference Remove="$(SkyCdStandalonePluginId)"/>
+        <ProjectReference Include="$(SkyCdStandalonePluginProject)"/>
+    </ItemGroup>
+</Project>
