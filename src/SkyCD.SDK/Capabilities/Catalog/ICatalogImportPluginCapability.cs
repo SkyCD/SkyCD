@@ -1,9 +1,8 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.SDK.Capabilities.Catalog;
 
-namespace SkyCD.SDK.Capabilities.Import;
+namespace SkyCD.SDK.Capabilities.Catalog;
 
 /// <summary>
 /// Result of one plugin post-import pass: user-facing warnings and how many entries the plugin acted on.

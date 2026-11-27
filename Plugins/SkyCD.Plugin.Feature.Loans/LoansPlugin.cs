@@ -17,7 +17,6 @@ using SkyCD.Documents.Repository;
 using SkyCD.SDK.Capabilities;
 using SkyCD.SDK.Capabilities.Catalog;
 using SkyCD.SDK.Capabilities.FileFormats;
-using SkyCD.SDK.Capabilities.Import;
 using SkyCD.SDK.Capabilities.Menu;
 using SkyCD.SDK.Capabilities.Options;
 using SkyCD.SDK.Localization;

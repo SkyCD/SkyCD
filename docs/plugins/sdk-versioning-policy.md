@@ -37,6 +37,7 @@ unreleased `3.0.0` major, so no additional major bump is required and no transit
 | `[assembly: SkyCD.Plugin.Abstractions.Lifecycle.PluginId("...")]` | `[assembly: SkyCD.SDK.Lifecycle.PluginId("...")]` |
 | `clr-namespace:SkyCD.Plugin.Abstractions.Capabilities.Media;assembly=SkyCD.SDK` | `clr-namespace:SkyCD.SDK.Capabilities.Media;assembly=SkyCD.SDK` |
 | `SkyCD.SDK.PluginFailure` | `SkyCD.SDK.Plugins.PluginFailure` |
+| `SkyCD.SDK.Capabilities.Import.ICatalogImportPluginCapability` (and `ImportOutcome`) | `SkyCD.SDK.Capabilities.Catalog.*` |
 
 Only type and namespace names changed. `PluginId`, `FormatId`, attribute values, existing
 `[assembly: PluginId(...)]` strings and persisted plugin state keep their exact values. External authors
