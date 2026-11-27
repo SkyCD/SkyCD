@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Loader;
+using System.Threading;
 using Microsoft.Extensions.Logging;
 using SkyCD.Plugin.Runtime.Loading;
 using SkyCD.SDK.Capabilities;
@@ -16,13 +17,15 @@ public sealed class AssembliesListFactory(ILogger<AssembliesListFactory> logger)
     public IReadOnlyCollection<PluginLoadContext> LoadedContexts { get; private set; } = [];
 
     public IReadOnlyCollection<Assembly> BuildFromPaths(
-        IEnumerable<string> directories)
+        IEnumerable<string> directories,
+        CancellationToken cancellationToken = default)
     {
         var assemblies = new List<Assembly>();
         var contexts = new List<PluginLoadContext>();
 
         foreach (var directory in directories.Distinct(StringComparer.OrdinalIgnoreCase))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (!Directory.Exists(directory))
             {
                 logger.LogWarning("Plugin directory not found: {Directory}", directory);
@@ -32,15 +35,15 @@ public sealed class AssembliesListFactory(ILogger<AssembliesListFactory> logger)
             try
             {
                 var resolver = CreateMetadataResolver(directory);
-                foreach (var unreadable in PluginEntryScanner.FindUnreadableAssemblyPaths(directory))
+                foreach (var unreadable in PluginEntryScanner.FindUnreadableAssemblyPaths(directory, cancellationToken))
                 {
                     logger.LogWarning("Skipped '{AssemblyPath}' while scanning plugin assemblies.",
                         unreadable);
                 }
 
-                BuildFromDirectory(directory, resolver, assemblies, contexts);
+                BuildFromDirectory(directory, resolver, assemblies, contexts, cancellationToken);
             }
-            catch (Exception exception)
+            catch (Exception exception) when (exception is not OperationCanceledException)
             {
                 logger.LogWarning(exception, "Skipped plugin directory '{Directory}' while scanning assemblies.",
                     directory);
@@ -55,15 +58,17 @@ public sealed class AssembliesListFactory(ILogger<AssembliesListFactory> logger)
         string directory,
         PathAssemblyResolver resolver,
         List<Assembly> assemblies,
-        List<PluginLoadContext> contexts)
+        List<PluginLoadContext> contexts,
+        CancellationToken cancellationToken)
     {
         // Same-named entries in DIFFERENT folders must all load (side-by-side versions); only
         // same-folder duplicates (case variants) are skipped.
         var seenNamesByFolder = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
         var contextsByFolder = new Dictionary<string, PluginLoadContext>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var entryPath in PluginEntryScanner.FindEntryAssemblyPaths(directory, resolver))
+        foreach (var entryPath in PluginEntryScanner.FindEntryAssemblyPaths(directory, resolver, cancellationToken))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var folder = Path.GetDirectoryName(entryPath) ?? directory;
             if (!seenNamesByFolder.TryGetValue(folder, out var seenNames))
             {

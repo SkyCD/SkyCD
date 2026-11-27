@@ -979,6 +979,10 @@
                             <TextBlock Classes="caption"
                                        Text="{Binding InfoMessage}"
                                        TextWrapping="Wrap" />
+                            <TextBlock Classes="caption"
+                                       IsVisible="{Binding IsPluginPathScanning}"
+                                       Text="{i18n:Translate {x:Static i18n:UiKeys.PluginScanInProgress}}"
+                                       TextWrapping="Wrap" />
                             <TextBlock Foreground="{DynamicResource SkyErrorForeground}"
                                        IsVisible="{Binding HasPluginPathHint}"
                                        Text="{Binding PluginPathHint}"

@@ -8,15 +8,15 @@ using Xunit;
 namespace SkyCD.App.Tests;
 
 /// <summary>
-/// Issue #1104: the Plugins → Settings folder field is wired to the rescan triggers and to the inline
-/// hint that replaces an error dialog for a folder that is missing.
+/// Issue #1104/#1304: the Plugins → Settings folder field commits on Enter and lost focus only, and the
+/// inline hint replaces an error dialog for a folder that is missing.
 /// </summary>
 public sealed class OptionsPluginPathFieldLayoutTests
 {
     private static readonly XNamespace Avalonia = "https://github.com/avaloniaui";
 
     [Fact]
-    public void FolderField_RescansOnLostFocusOnEnterAndWhenTypingPauses()
+    public void FolderField_CommitsOnLostFocusAndEnter()
     {
         var field = GetFolderField();
 
@@ -26,6 +26,16 @@ public sealed class OptionsPluginPathFieldLayoutTests
         var keyBinding = Assert.Single(field.Descendants(Avalonia + "KeyBinding"));
         Assert.Equal("Enter", (string?)keyBinding.Attribute("Gesture"));
         Assert.Equal("{Binding RescanPluginPathCommand}", (string?)keyBinding.Attribute("Command"));
+    }
+
+    [Fact]
+    public void FolderField_ShowsTheBusyStateWhileTheCommittedScanRuns()
+    {
+        var busy = Assert.Single(GetFieldColumn().Elements(Avalonia + "TextBlock"),
+            textBlock => (string?)textBlock.Attribute("Text") ==
+                         "{i18n:Translate {x:Static i18n:UiKeys.PluginScanInProgress}}");
+
+        Assert.Equal("{Binding IsPluginPathScanning}", (string?)busy.Attribute("IsVisible"));
     }
 
     [Fact]

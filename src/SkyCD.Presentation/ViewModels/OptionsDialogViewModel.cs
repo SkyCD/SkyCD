@@ -59,9 +59,8 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         }
     }
 
-    public OptionsDialogViewModel(IEnumerable<string> availableLanguages, TimeProvider? timeProvider = null)
+    public OptionsDialogViewModel(IEnumerable<string> availableLanguages)
     {
-        this.timeProvider = timeProvider ?? TimeProvider.System;
         foreach (var language in availableLanguages.Distinct(StringComparer.OrdinalIgnoreCase))
         {
             Languages.Add(LanguageItem.Create(language));
@@ -373,7 +372,7 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         if (!string.IsNullOrWhiteSpace(path))
         {
             PluginPath = path;
-            RefreshPlugins();
+            await CommitPluginPathAsync();
         }
     }
 
@@ -434,6 +433,9 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
 
         AiDescriptionAlertMessage = string.Empty;
         if (!TryCommitPluginRepositories()) return;
+        // OK commits the field like Enter does; the plugin pages below must reflect the typed folder.
+        await CommitPluginPathAsync();
+        if (disposed) return;
         var pluginSettings = await PreparePluginSettingsAsync();
         if (pluginSettings is null || disposed) return;
         if (!TrySaveAiProviderSettings()) return;

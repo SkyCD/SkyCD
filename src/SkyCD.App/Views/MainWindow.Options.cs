@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
-using Avalonia.Threading;
 using DryIoc;
 using Microsoft.Extensions.Logging;
 using SkyCD.App.Icons;
@@ -30,6 +30,9 @@ namespace SkyCD.App.Views;
 
 public partial class MainWindow
 {
+    /// <summary>Serializes discovery passes: the runtime manager is not safe for concurrent scans.</summary>
+    private readonly SemaphoreSlim pluginScanGate = new(1, 1);
+
     private void OnOptionsRequested(object? sender, OptionsDialogRequestedEventArgs e) =>
         _ = RunUiActionAsync(() => OptionsRequestedAsync(e));
 
@@ -79,6 +82,9 @@ public partial class MainWindow
         e.Dialog.SetPluginMarketplace(pluginMarketplaceService);
         e.Dialog.SetPluginUninstaller(pluginUninstaller);
         e.Dialog.SetPluginPathBrowser(() => RunUiActionAsync(() => e.Dialog.BrowsePluginPathAsync(PickPluginFolderAsync)));
+        // Discovery is the dialog's only slow dependency: it runs off the UI thread on commit only.
+        e.Dialog.SetPluginPathScanner((pluginPath, cancellationToken) =>
+            ScanPluginsAsync(e.Dialog, pluginPath, cancellationToken));
         var dialog = new OptionsWindow
         {
             DataContext = e.Dialog,
@@ -96,14 +102,13 @@ public partial class MainWindow
             _ = RunUiActionAsync(() => ResetAiScanExclusionsRequestedAsync(sender, dialog));
 
         e.Dialog.RefreshPluginsRequested += OnRefreshPluginsRequested;
-        e.Dialog.PluginPathScanRequested += OnPluginPathScanRequested;
         e.Dialog.ResetStatusVariantsRequested += OnResetStatusVariantsRequested;
         e.Dialog.ResetScanExclusionRulesRequested += OnResetScanExclusionRulesRequested;
         e.Dialog.ResetAiScanExclusionsRequested += OnResetAiScanExclusionsRequested;
         e.Dialog.ToolbarLayoutApplied += OnOptionsToolbarLayoutApplied;
         try
         {
-            RefreshPlugins(e.Dialog, e.Dialog.PluginPath);
+            await e.Dialog.ReloadPluginsAsync();
             e.Dialog.RestoreSettingCategory(options.OptionsCategoryId, options.OptionsTabIndex);
             if (!string.IsNullOrWhiteSpace(e.PreselectCategoryId))
             {
@@ -186,7 +191,7 @@ public partial class MainWindow
             {
                 // A rescan performed while the dialog was open changed live plugin state; put the stored
                 // folder back so Cancel leaves the running app on the persisted path.
-                e.Dialog.RevertPluginPathPreview();
+                await e.Dialog.RevertPluginPathPreviewAsync();
             }
 
             e.Complete(accepted == true, e.Dialog.PluginPath, e.Dialog.SelectedLanguage.Name);
@@ -194,8 +199,8 @@ public partial class MainWindow
         finally
         {
             e.Dialog.SetPluginPathBrowser(null);
+            e.Dialog.SetPluginPathScanner(null);
             e.Dialog.RefreshPluginsRequested -= OnRefreshPluginsRequested;
-            e.Dialog.PluginPathScanRequested -= OnPluginPathScanRequested;
             e.Dialog.ResetStatusVariantsRequested -= OnResetStatusVariantsRequested;
             e.Dialog.ResetScanExclusionRulesRequested -= OnResetScanExclusionRulesRequested;
             e.Dialog.ResetAiScanExclusionsRequested -= OnResetAiScanExclusionsRequested;
@@ -303,29 +308,8 @@ public partial class MainWindow
             return;
         }
 
-        RefreshPlugins(dialogVm, dialogVm.PluginPath);
-    }
-
-    /// <summary>Handles the folder field's typing pause, Enter and lost focus.</summary>
-    private void OnPluginPathScanRequested(object? sender, PluginPathScanRequestedEventArgs e)
-    {
-        if (sender is not OptionsDialogViewModel dialogVm)
-        {
-            return;
-        }
-
-        // The request carries the folder it was made for, so a scan that runs after the user typed
-        // again still enumerates the requested folder instead of the then-current field text.
-        var requestedPath = e.Path;
-
-        // The debounce expires on a pool thread, while the list it rebuilds is bound to the UI thread.
-        if (Dispatcher.UIThread.CheckAccess())
-        {
-            RefreshPlugins(dialogVm, requestedPath);
-            return;
-        }
-
-        Dispatcher.UIThread.Post(() => RefreshPlugins(dialogVm, requestedPath));
+        // Plugin actions only announce that the folder contents changed; the dialog owns the scan.
+        _ = RunUiActionAsync(() => dialogVm.ReloadPluginsAsync());
     }
 
     private async Task ResetStatusVariantsRequestedAsync(object? sender, Window owner)
@@ -379,45 +363,67 @@ public partial class MainWindow
         dialogVm.SetAiScanExclusions(aiScanExclusionRepository.GetOrdered());
     }
 
-    private void RefreshPlugins(OptionsDialogViewModel dialogVm, string pluginPath)
+    /// <summary>
+    /// One plugin discovery pass for the Options dialog. The walk and metadata reads run off the UI
+    /// thread; the dialog list and pages are rebuilt on the UI thread afterwards. The dialog's token
+    /// cancels the pass when a newer commit supersedes it or the dialog closes.
+    /// </summary>
+    private async Task ScanPluginsAsync(
+        OptionsDialogViewModel dialogVm,
+        string pluginPath,
+        CancellationToken cancellationToken)
     {
         try
         {
-            RefreshPluginsCore(dialogVm, pluginPath);
+            dialogVm.CapturePluginStates();
+            await pluginScanGate.WaitAsync(cancellationToken);
+            try
+            {
+                // The tree walk and metadata reads are the slow part and leave live plugin state alone;
+                // the swap below stays on the UI thread with the list it rebuilds.
+                var discovery = await Task.Run(
+                    () => pluginManager.BuildDiscovery(pluginPath, hostVersionProvider.Current, cancellationToken),
+                    cancellationToken);
+                cancellationToken.ThrowIfCancellationRequested();
+                pluginManager.ApplyDiscovery(discovery);
+
+                // Discovery builds fresh capability instances, so the host APIs are re-injected before the
+                // contributed Options pages use them — otherwise a page like Locations fails with a plugin
+                // error every time the list refreshes.
+                pluginRuntimeSynchronizer.ReinjectHostApis();
+                // The runtime now reflects this folder: it is the path Cancel has to restore.
+                dialogVm.MarkPluginPathScanned(pluginPath);
+                var descriptors = pluginManager.GetPluginDescriptors();
+                var discoveredById = pluginManager.AvailablePlugins
+                    .ToDictionary(static item => item.Id, StringComparer.OrdinalIgnoreCase);
+                var installStates = pluginMarketplaceService.GetInstallStates();
+                var configurationManager = ServiceProvider.Resolve<PluginConfigurationManager>();
+
+                var plugins = descriptors
+                    .Select(descriptor => CreateOptionsPluginItem(descriptor, discoveredById, installStates))
+                    .OrderBy(static plugin => plugin.Name, StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+
+                dialogVm.SetPlugins(plugins);
+                dialogVm.SetPluginOptionsPages(pluginManager.AvailablePlugins.SelectMany(plugin =>
+                    plugin.Capabilities.OfType<IOptionsPageCapability>()
+                        .Select(capability => new OptionsPageProvider(plugin.Id, plugin.Name, capability))));
+                dialogVm.SetPluginConfigurations(configurationManager, PluginConfigurationTimeout);
+            }
+            finally
+            {
+                pluginScanGate.Release();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // A newer commit or a closed dialog superseded this pass; its result must not be applied.
         }
         catch (Exception exception)
         {
             // Keep plugin scan failures on the existing plugin error path.
             logger.LogWarning(exception, "Refreshing the plugin list failed; the Options dialog remains usable.");
         }
-    }
-
-    private void RefreshPluginsCore(OptionsDialogViewModel dialogVm, string pluginPath)
-    {
-        dialogVm.CapturePluginStates();
-        pluginManager.Discover(pluginPath, hostVersionProvider.Current);
-        // Discovery builds fresh capability instances, so the host APIs are re-injected before the
-        // contributed Options pages use them — otherwise a page like Locations fails with a plugin
-        // error every time the list refreshes.
-        pluginRuntimeSynchronizer.ReinjectHostApis();
-        // The runtime now reflects the discovered folder, not whatever the field shows by now.
-        dialogVm.MarkPluginPathScanned(pluginPath);
-        var descriptors = pluginManager.GetPluginDescriptors();
-        var discoveredById = pluginManager.AvailablePlugins
-            .ToDictionary(static item => item.Id, StringComparer.OrdinalIgnoreCase);
-        var installStates = pluginMarketplaceService.GetInstallStates();
-        var configurationManager = ServiceProvider.Resolve<PluginConfigurationManager>();
-
-        var plugins = descriptors
-            .Select(descriptor => CreateOptionsPluginItem(descriptor, discoveredById, installStates))
-            .OrderBy(static plugin => plugin.Name, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-
-        dialogVm.SetPlugins(plugins);
-        dialogVm.SetPluginOptionsPages(pluginManager.AvailablePlugins.SelectMany(plugin =>
-            plugin.Capabilities.OfType<IOptionsPageCapability>()
-                .Select(capability => new OptionsPageProvider(plugin.Id, plugin.Name, capability))));
-        dialogVm.SetPluginConfigurations(configurationManager, PluginConfigurationTimeout);
     }
 
     /// <summary>

@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Loader;
+using System.Threading;
 using Microsoft.Extensions.Logging;
 using SkyCD.Couchbase;
 using SkyCD.Couchbase.Repository;
@@ -52,7 +53,15 @@ public sealed class PluginManager(
             .ToList();
     }
 
-    public void Discover(string? pluginDirectory, Version hostVersion)
+    /// <summary>
+    /// Walks the given folders and returns the discovered plugin set without touching live plugin state.
+    /// This is the expensive part of discovery; a caller that scans interactively can run it off the UI
+    /// thread and then call <see cref="ApplyDiscovery"/> on the UI thread.
+    /// </summary>
+    public PluginDiscovery BuildDiscovery(
+        string? pluginDirectory,
+        Version hostVersion,
+        CancellationToken cancellationToken = default)
     {
         var normalizedDirectories = (pluginDirectory ?? string.Empty)
             .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
@@ -60,14 +69,27 @@ public sealed class PluginManager(
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-        var discovered = DiscoverByAssemblyScan(normalizedDirectories, hostVersion);
+        var discovered = DiscoverByAssemblyScan(normalizedDirectories, hostVersion, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        return new PluginDiscovery(discovered, assembliesListFactory.LoadedContexts);
+    }
 
-        availablePlugins = discovered;
-        UpsertPluginDocuments(MapToPluginDocuments(discovered));
+    /// <summary>Swaps the live plugin set to a completed <see cref="BuildDiscovery"/> result.</summary>
+    public void ApplyDiscovery(PluginDiscovery discovery)
+    {
+        ArgumentNullException.ThrowIfNull(discovery);
+
+        RotateLoadContexts(discovery.LoadedContexts);
+        availablePlugins = discovery.Discovered;
+        UpsertPluginDocuments(MapToPluginDocuments(discovery.Discovered));
         var descriptors = GetPluginDescriptors();
-        plugins.Import(discovered, descriptors);
+        plugins.Import(discovery.Discovered, descriptors);
         PluginsChanged?.Invoke(this, EventArgs.Empty);
     }
+
+    /// <summary>Rebuilds the plugin set from the given folders in one pass.</summary>
+    public void Discover(string? pluginDirectory, Version hostVersion, CancellationToken cancellationToken = default) =>
+        ApplyDiscovery(BuildDiscovery(pluginDirectory, hostVersion, cancellationToken));
 
     public IReadOnlyList<PluginDocument> GetPluginDescriptors()
     {
@@ -146,15 +168,17 @@ public sealed class PluginManager(
 
     private DiscoveredPluginCollection DiscoverByAssemblyScan(
         IEnumerable<string> directories,
-        Version hostVersion)
+        Version hostVersion,
+        CancellationToken cancellationToken)
     {
         var discovered = new DiscoveredPluginCollection();
         var seenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var assemblies = assembliesListFactory.BuildFromPaths(directories);
-        RotateLoadContexts(assembliesListFactory.LoadedContexts);
+        var assemblies = assembliesListFactory.BuildFromPaths(directories, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
 
         foreach (var assembly in assemblies)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var plugin = DiscoverFromAssembly(assembly, hostVersion);
             if (plugin is null)
             {
