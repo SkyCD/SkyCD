@@ -102,12 +102,8 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
     public bool CanConfirm =>
         string.IsNullOrWhiteSpace(ValidationMessage) && (!IsSourceFromAccount || SelectedAccount is { Status.IsConnected: true });
 
-    /// <summary>All discovered connectors for the inline add form in the empty state.</summary>
+    /// <summary>Every discovered connector shown inline so accounts are managed without leaving the dialog.</summary>
     public ObservableCollection<AccountConnectorItemViewModel> AvailableAccountConnectors { get; } = [];
-
-    [ObservableProperty] private bool isAccountConnecting;
-
-    [ObservableProperty] private string? accountConnectError;
 
     /// <summary>True when the dialog was given the open catalog's account folders.</summary>
     public bool HasCatalogAccountFilter => catalogAccountFolders is not null;
@@ -184,9 +180,6 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
 
     /// <summary>An account folder always lands under the chosen destination.</summary>
     public bool IsDestinationSectionVisible => !IsSourceFromAccount && !IsSourceCapture;
-
-    /// <summary>Set when the user asks for the Options accounts section from the empty state.</summary>
-    public bool OpenAccountsRequested { get; private set; }
 
     public bool CanUseMedia => AvailableDrives.Count > 0;
 
@@ -368,10 +361,15 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
     /// </summary>
     public async Task RefreshAccountsAsync(CancellationToken cancellationToken = default)
     {
+        await RefreshAccountChoicesAsync(cancellationToken);
+        await RefreshAvailableConnectorsAsync(cancellationToken);
+    }
+
+    private async Task RefreshAccountChoicesAsync(CancellationToken cancellationToken)
+    {
         if (catalogAccountFolders is not null)
         {
             await RefreshAccountsFromCatalogAsync(catalogAccountFolders, cancellationToken);
-            await RefreshAvailableConnectorsAsync(cancellationToken);
             return;
         }
 
@@ -394,7 +392,6 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
         }
 
         ApplyAccountChoices(choices);
-        await RefreshAvailableConnectorsAsync(cancellationToken);
     }
 
     private async Task RefreshAccountsFromCatalogAsync(
@@ -475,13 +472,19 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
         RecomputeValidation();
     }
 
-    /// <summary>Refreshes the inline add form connectors (all discovered sessions).</summary>
+    /// <summary>Refreshes the inline account connectors (all discovered sessions).</summary>
     public async Task RefreshAvailableConnectorsAsync(CancellationToken cancellationToken = default)
     {
+        foreach (var connector in AvailableAccountConnectors)
+        {
+            connector.StatusChanged -= OnConnectorStatusChanged;
+        }
+
         AvailableAccountConnectors.Clear();
         foreach (var session in accountSessions)
         {
             var item = new AccountConnectorItemViewModel(session);
+            item.StatusChanged += OnConnectorStatusChanged;
             AvailableAccountConnectors.Add(item);
             try
             {
@@ -500,43 +503,19 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(AvailableAccountConnectors));
     }
 
-    /// <summary>Connects inline from the From account empty state, then refreshes the picker.</summary>
-    [RelayCommand]
-    private async Task ConnectAccountAsync(IAccountSession? session)
-    {
-        if (session is null || IsAccountConnecting)
-        {
-            return;
-        }
+    /// <summary>A connector signed in, synced or signed out, so the picker follows its new state.</summary>
+    private void OnConnectorStatusChanged(object? sender, EventArgs e) => _ = RefreshAccountChoicesAfterConnectorChangeAsync();
 
-        IsAccountConnecting = true;
-        AccountConnectError = null;
+    private async Task RefreshAccountChoicesAfterConnectorChangeAsync()
+    {
         try
         {
-            var result = await session.ConnectAsync(CancellationToken.None);
-            if (!result.Success)
-            {
-                AccountConnectError = result.Error ?? LocalizationService.Current.Get(UiKeys.AccountSignInFailed);
-                return;
-            }
-
-            await RefreshAccountsAsync();
+            await RefreshAccountChoicesAsync(CancellationToken.None);
         }
-        catch (Exception exception)
+        catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            AccountConnectError = LocalizationService.Current.Format(UiKeys.AccountSignInFailed, exception.Message);
+            // A refresh failure must not surface from a connector command that already succeeded.
         }
-        finally
-        {
-            IsAccountConnecting = false;
-        }
-    }
-
-    [RelayCommand]
-    private void OpenAccountSettings()
-    {
-        OpenAccountsRequested = true;
-        DialogAccepted = false;
     }
 
     public ObservableCollection<DroppedSource> DroppedRoots { get; } = [];
@@ -637,6 +616,11 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
         InternetCredentials.ConfirmCommand.CanExecuteChanged -= OnInternetCredentialsChanged;
         InternetCredentials.PropertyChanged -= OnInternetCredentialPropertyChanged;
         CheckInternetConnectionCommand.Cancel();
+        foreach (var connector in AvailableAccountConnectors)
+        {
+            connector.StatusChanged -= OnConnectorStatusChanged;
+        }
+
         localizationSubscription.Dispose();
     }
 

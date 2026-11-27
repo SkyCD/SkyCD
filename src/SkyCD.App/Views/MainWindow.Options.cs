@@ -20,7 +20,6 @@ using SkyCD.Presentation.MediaCache;
 using SkyCD.Presentation.Plugins;
 using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.ViewModels;
-using SkyCD.SDK.Capabilities.Accounts;
 using SkyCD.SDK.Capabilities.Media;
 using SkyCD.SDK.Capabilities.Options;
 using SkyCD.SDK.Capabilities.Ui;
@@ -61,11 +60,6 @@ public partial class MainWindow
             ServiceProvider.Resolve<DescriptionExtensionManager>().Implementations,
             options.AiDescriptionImplementation);
         e.Dialog.SetAiScanExclusions(aiScanExclusionRepository.GetOrdered());
-        e.Dialog.SetAccountSessions(pluginManager.GetCapabilities<IAccountSession>());
-        if (DataContext is MainWindowViewModel catalogViewModel)
-        {
-            e.Dialog.SetCatalogAccountFolders(catalogViewModel.GetAllCatalogEntries());
-        }
         e.Dialog.AiScanMaxFileSizeMegabytes = ToAiScanMaxFileSizeMegabytes(options.AiScanMaxFileSizeBytes);
         // Discovery must never block opening Options; an unreachable bridge keeps the stored selection intact.
         e.Dialog.InitializeMcpTools(options.ExposedMcpTools);

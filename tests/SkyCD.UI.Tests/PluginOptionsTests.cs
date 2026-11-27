@@ -83,12 +83,12 @@ public sealed class PluginOptionsTests : IDisposable
         var category = TestCategory(vm);
         Assert.Equal("Plugins", category.Title);
         Assert.Equal(1, vm.SettingCategories.Count(c => c.Title == "Plugins"));
-        Assert.All(vm.SettingCategories.Take(13), c => Assert.Null(c.PluginPage));
-        Assert.Equal("scan-completion", vm.SettingCategories[7].Id);
-        Assert.Equal("toolbar", vm.SettingCategories[9].Id);
-        Assert.Equal("mcp", vm.SettingCategories[10].Id);
-        Assert.Equal("acp", vm.SettingCategories[11].Id);
-        Assert.Equal("mcp-tools", vm.SettingCategories[12].Id);
+        Assert.All(vm.SettingCategories.Take(12), c => Assert.Null(c.PluginPage));
+        Assert.Equal("scan-completion", vm.SettingCategories[6].Id);
+        Assert.Equal("toolbar", vm.SettingCategories[8].Id);
+        Assert.Equal("mcp", vm.SettingCategories[9].Id);
+        Assert.Equal("acp", vm.SettingCategories[10].Id);
+        Assert.Equal("mcp-tools", vm.SettingCategories[11].Id);
         vm.SelectedSettingCategory = category;
         Assert.False(vm.ShowPluginListSection);
         Assert.True(vm.ShowPluginSettingsSection);
@@ -117,24 +117,24 @@ public sealed class PluginOptionsTests : IDisposable
     {
         using var vm = CreateViewModel();
         var withoutAi = vm.SettingCategories.ToList();
-        Assert.Equal([0, 1, 3, 4, 13, 6, 14, 15, 7, 9, 2, 5, 12],
-            withoutAi.Take(13).Select(category => category.BuiltInIndex));
-        Assert.Equal(["plugins", "language", "statuses", "custom-properties", "accounts", "scan",
+        Assert.Equal([0, 1, 3, 4, 6, 14, 15, 7, 9, 2, 5, 12],
+            withoutAi.Take(12).Select(category => category.BuiltInIndex));
+        Assert.Equal(["plugins", "language", "statuses", "custom-properties", "scan",
             "scan-rules", "scan-completion", "details-columns", "toolbar", "mcp", "acp", "mcp-tools"],
-            withoutAi.Take(13).Select(category => category.Id));
-        Assert.All(withoutAi.Skip(13), category => Assert.Equal(-1, category.BuiltInIndex));
+            withoutAi.Take(12).Select(category => category.Id));
+        Assert.All(withoutAi.Skip(12), category => Assert.Equal(-1, category.BuiltInIndex));
 
         vm.SetAiDescriptionAvailable(true);
         var categories = vm.SettingCategories.ToList();
-        Assert.Equal([0, 1, 3, 4, 13, 6, 14, 15, 7, 9, 10, 11, 2, 5, 12],
-            categories.Take(15).Select(category => category.BuiltInIndex));
-        Assert.Equal("toolbar", categories[9].Id);
-        Assert.Equal("ai-description", categories[10].Id);
-        Assert.Equal("ai-provider", categories[11].Id);
-        Assert.Equal((2, "mcp"), (categories[12].BuiltInIndex, categories[12].Id));
-        Assert.Equal((5, "acp"), (categories[13].BuiltInIndex, categories[13].Id));
-        Assert.Equal((12, "mcp-tools"), (categories[14].BuiltInIndex, categories[14].Id));
-        Assert.All(categories.Skip(15).Where(category => category.Id != "plugins-settings"), category =>
+        Assert.Equal([0, 1, 3, 4, 6, 14, 15, 7, 9, 10, 11, 2, 5, 12],
+            categories.Take(14).Select(category => category.BuiltInIndex));
+        Assert.Equal("toolbar", categories[8].Id);
+        Assert.Equal("ai-description", categories[9].Id);
+        Assert.Equal("ai-provider", categories[10].Id);
+        Assert.Equal((2, "mcp"), (categories[11].BuiltInIndex, categories[11].Id));
+        Assert.Equal((5, "acp"), (categories[12].BuiltInIndex, categories[12].Id));
+        Assert.Equal((12, "mcp-tools"), (categories[13].BuiltInIndex, categories[13].Id));
+        Assert.All(categories.Skip(14).Where(category => category.Id != "plugins-settings"), category =>
         {
             Assert.Equal(-1, category.BuiltInIndex);
             Assert.NotNull(category.PluginPage);

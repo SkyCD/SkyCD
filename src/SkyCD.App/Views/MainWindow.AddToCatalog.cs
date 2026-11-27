@@ -226,11 +226,6 @@ public partial class MainWindow
         if (accepted != true)
         {
             dialogVm.ClearInternetSecrets();
-            if (dialogVm.OpenAccountsRequested)
-            {
-                vm.ShowAccountSettings();
-            }
-
             return;
         }
 

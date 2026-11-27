@@ -318,15 +318,4 @@ public partial class AddToListWindow : Window
         close.Click += (_, _) => dialog.Close();
         return dialog.ShowDialog(this);
     }
-
-    private void OnOpenAccountSettingsClicked(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is not AddToListDialogViewModel vm)
-        {
-            return;
-        }
-
-        vm.OpenAccountSettingsCommand.Execute(null);
-        Close(false);
-    }
 }

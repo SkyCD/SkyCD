@@ -8,15 +8,13 @@ using SkyCD.UI.Localization;
 
 namespace SkyCD.Presentation.ViewModels;
 
-/// <summary>One discovered account connector on the Options Accounts page.</summary>
+/// <summary>One discovered account connector managed from the Add To List From account section.</summary>
 public partial class AccountConnectorItemViewModel : ObservableObject
 {
     private readonly IAccountSession session;
-    private AccountSessionStatus? statusSnapshot;
 
-    public IAccountSession Session => session;
-
-    public AccountSessionStatus? LastStatus => statusSnapshot;
+    /// <summary>Raised after Connect, Sync or Sign out left this connector in a new state.</summary>
+    public event EventHandler? StatusChanged;
 
     public AccountConnectorItemViewModel(IAccountSession session)
     {
@@ -75,15 +73,6 @@ public partial class AccountConnectorItemViewModel : ObservableObject
         }
     }
 
-    /// <summary>Re-applies the last known state after a language change.</summary>
-    public void Relocalize()
-    {
-        if (statusSnapshot is { } status)
-        {
-            ApplyStatus(status);
-        }
-    }
-
     [RelayCommand(CanExecute = nameof(CanConnect))]
     private Task ConnectAsync() => RunAsync(async cancellationToken =>
     {
@@ -91,10 +80,11 @@ public partial class AccountConnectorItemViewModel : ObservableObject
         if (!result.Success)
         {
             ErrorMessage = result.Error ?? LocalizationService.Current.Get(UiKeys.AccountSignInFailed);
-            return;
+            return false;
         }
 
         ApplyStatus(await session.GetStatusAsync(cancellationToken));
+        return true;
     }, UiKeys.AccountSignInFailed);
 
     [RelayCommand(CanExecute = nameof(CanManage))]
@@ -102,6 +92,7 @@ public partial class AccountConnectorItemViewModel : ObservableObject
     {
         await session.SyncAsync(cancellationToken);
         ApplyStatus(await session.GetStatusAsync(cancellationToken));
+        return true;
     }, UiKeys.AccountSyncFailed);
 
     [RelayCommand(CanExecute = nameof(CanManage))]
@@ -109,9 +100,10 @@ public partial class AccountConnectorItemViewModel : ObservableObject
     {
         await session.SignOutAsync(cancellationToken);
         ApplyStatus(await session.GetStatusAsync(cancellationToken));
+        return true;
     }, UiKeys.AccountSignOutFailed);
 
-    private async Task RunAsync(Func<CancellationToken, Task> action, string failureKey)
+    private async Task RunAsync(Func<CancellationToken, Task<bool>> action, string failureKey)
     {
         if (IsBusy)
         {
@@ -120,9 +112,10 @@ public partial class AccountConnectorItemViewModel : ObservableObject
 
         ErrorMessage = null;
         IsBusy = true;
+        var statusChanged = false;
         try
         {
-            await action(CancellationToken.None);
+            statusChanged = await action(CancellationToken.None);
         }
         catch (OperationCanceledException)
         {
@@ -135,11 +128,15 @@ public partial class AccountConnectorItemViewModel : ObservableObject
         {
             IsBusy = false;
         }
+
+        if (statusChanged)
+        {
+            StatusChanged?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     private void ApplyStatus(AccountSessionStatus status)
     {
-        statusSnapshot = status;
         ProviderName = string.IsNullOrWhiteSpace(status.DisplayName)
             ? LocalizationService.Current.Get(UiKeys.AccountUnknownProvider)
             : status.DisplayName;
