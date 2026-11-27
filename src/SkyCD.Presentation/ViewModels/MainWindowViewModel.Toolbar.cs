@@ -48,7 +48,7 @@ public partial class MainWindowViewModel
         MainMenuItemViewModel Item(string id, string title) => new()
         {
             Header = title,
-            ToggleType = MenuItemToggleType.Radio,
+            ToggleType = MenuItemToggleType.CheckBox,
             IsChecked = id == ActiveToolbarId,
             Command = new RelayCommand(() =>
             {

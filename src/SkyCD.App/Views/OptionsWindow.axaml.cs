@@ -72,7 +72,7 @@ public partial class OptionsWindow : Window
     {
         if (DataContext is OptionsDialogViewModel vm)
         {
-            // Leaving the field ends the typing pause and rescans right away.
+            // Leaving the field commits the typed folder; typing itself never scans.
             vm.RescanPluginPathCommand.Execute(null);
         }
     }

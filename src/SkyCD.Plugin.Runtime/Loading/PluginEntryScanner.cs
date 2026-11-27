@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 
 namespace SkyCD.Plugin.Runtime.Loading;
 
@@ -19,8 +20,12 @@ public static class PluginEntryScanner
     /// Entry-assembly candidates below one discovery root. The enumeration still walks the tree
     /// (build outputs nest under <c>bin/</c>), but every file is metadata-read only; build-output
     /// and reference folders are excluded. Only capability-declaring assemblies are returned.
+    /// The token aborts a walk that a newer scan superseded.
     /// </summary>
-    public static IReadOnlyList<string> FindEntryAssemblyPaths(string directory, PathAssemblyResolver resolver)
+    public static IReadOnlyList<string> FindEntryAssemblyPaths(
+        string directory,
+        PathAssemblyResolver resolver,
+        CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(directory);
         ArgumentNullException.ThrowIfNull(resolver);
@@ -30,30 +35,32 @@ public static class PluginEntryScanner
             return [];
         }
 
-        string[] files;
-        try
-        {
-            files = Directory.GetFiles(directory, "*.dll", SearchOption.AllDirectories);
-        }
-        catch (Exception)
-        {
-            return [];
-        }
+        var files = EnumerateDllFiles(directory, cancellationToken);
 
         using var metadataContext = new MetadataLoadContext(resolver);
-        return files
-            .Select(Path.GetFullPath)
-            .Where(IsCandidatePluginAssemblyPath)
-            .OrderBy(GetPriority)
-            .ThenBy(static path => path, StringComparer.OrdinalIgnoreCase)
-            .Where(path => DeclaresCapabilities(metadataContext, path))
-            .ToList();
+        var entries = new List<string>();
+        foreach (var path in files
+                     .Select(Path.GetFullPath)
+                     .Where(IsCandidatePluginAssemblyPath)
+                     .OrderBy(GetPriority)
+                     .ThenBy(static path => path, StringComparer.OrdinalIgnoreCase))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (DeclaresCapabilities(metadataContext, path))
+            {
+                entries.Add(path);
+            }
+        }
+
+        return entries;
     }
 
     /// <summary>
     /// Files that failed even the metadata read (not valid .NET assemblies). Reported, never executed.
     /// </summary>
-    public static IReadOnlyList<string> FindUnreadableAssemblyPaths(string directory)
+    public static IReadOnlyList<string> FindUnreadableAssemblyPaths(
+        string directory,
+        CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(directory);
         if (!Directory.Exists(directory))
@@ -61,19 +68,12 @@ public static class PluginEntryScanner
             return [];
         }
 
-        string[] files;
-        try
-        {
-            files = Directory.GetFiles(directory, "*.dll", SearchOption.AllDirectories);
-        }
-        catch (Exception)
-        {
-            return [];
-        }
+        var files = EnumerateDllFiles(directory, cancellationToken);
 
         var unreadable = new List<string>();
         foreach (var file in files.Select(Path.GetFullPath).Where(IsCandidatePluginAssemblyPath))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             try
             {
                 _ = AssemblyName.GetAssemblyName(file);
@@ -85,6 +85,26 @@ public static class PluginEntryScanner
         }
 
         return unreadable;
+    }
+
+    private static IReadOnlyList<string> EnumerateDllFiles(string directory, CancellationToken cancellationToken)
+    {
+        var files = new List<string>();
+        try
+        {
+            foreach (var file in Directory.EnumerateFiles(directory, "*.dll", SearchOption.AllDirectories))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                files.Add(file);
+            }
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            // An unreadable subtree leaves the folder without candidates, as before.
+            return [];
+        }
+
+        return files;
     }
 
     internal static bool DeclaresCapabilities(MetadataLoadContext metadataContext, string assemblyPath)

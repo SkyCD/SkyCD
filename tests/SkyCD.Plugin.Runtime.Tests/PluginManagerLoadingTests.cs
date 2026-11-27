@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
+using System.Threading;
 using Microsoft.Extensions.Logging;
 using SkyCD.Couchbase;
 using SkyCD.Couchbase.Repository;
@@ -85,6 +87,29 @@ public sealed class PluginManagerLoadingTests : IDisposable
             entry.LogLevel == LogLevel.Warning &&
             entry.Message.Contains("Skipped", StringComparison.OrdinalIgnoreCase) &&
             entry.Message.Contains("broken.dll", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Discover_WithACancelledToken_LeavesTheDiscoveredSetUnchanged()
+    {
+        var pluginDir = Path.Combine(_root, "good");
+        Directory.CreateDirectory(pluginDir);
+        var assemblyName = Path.GetFileName(Assembly.GetExecutingAssembly().Location);
+        File.Copy(Assembly.GetExecutingAssembly().Location, Path.Combine(pluginDir, assemblyName), overwrite: true);
+
+        var logger = new TestLogger<PluginManager>();
+        var pluginManager = new PluginManager(logger, new AssembliesListFactory(new TestLogger<AssembliesListFactory>()),
+            new DiscoveredPluginFactory(), CreatePluginRepository());
+        pluginManager.Discover(_root, new Version(3, 0, 0));
+        var discoveredBefore = pluginManager.AvailablePlugins.ToArray();
+        Assert.NotEmpty(discoveredBefore);
+
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        Assert.Throws<OperationCanceledException>(() =>
+            pluginManager.Discover(pluginDir, new Version(3, 0, 0), cancellation.Token));
+        Assert.Equal(discoveredBefore, pluginManager.AvailablePlugins);
     }
 
     [Fact]

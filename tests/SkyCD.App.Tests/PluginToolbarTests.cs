@@ -30,12 +30,12 @@ public sealed class PluginToolbarTests
         vm.RefreshCatalogFeatureServices(new CatalogFeatureExtensionManager([plugin]));
 
         var toolbarMenu = Assert.Single(vm.ViewMenuItems, item => item.Key == "view_toolbars");
-        Assert.Equal(MenuItemToggleType.Radio, toolbarMenu.Items[0].ToggleType);
-        Assert.True(toolbarMenu.Items[0].IsChecked);
+        Assert.All(toolbarMenu.Items, item => Assert.Equal(MenuItemToggleType.CheckBox, item.ToggleType));
+        Assert.Same(toolbarMenu.Items[0], Assert.Single(toolbarMenu.Items, item => item.IsChecked));
 
         toolbarMenu.Items[1].Command!.Execute(null);
-        Assert.True(toolbarMenu.Items[1].IsChecked);
-        Assert.False(toolbarMenu.Items[0].IsChecked);
+        Assert.All(toolbarMenu.Items, item => Assert.Equal(MenuItemToggleType.CheckBox, item.ToggleType));
+        Assert.Same(toolbarMenu.Items[1], Assert.Single(toolbarMenu.Items, item => item.IsChecked));
         Assert.Equal(TestFeature.CommandId, Assert.Single(vm.ToolbarEntries).CommandId);
 
         var button = Assert.Single(vm.ToolbarCommands(trackSelection: true));
