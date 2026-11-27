@@ -492,6 +492,63 @@ public sealed class PluginStagedInstallTests : IDisposable
     }
 
     [Fact]
+    public async Task PackageRedirects_FollowRelativeAndCrossOriginHttpsLocations()
+    {
+        var feed = new FakeNuGetFeed();
+        var installer = CreateInstaller(feed);
+        feed.AddPackage(PackageId, "1.0.0", Package(PluginId, "1.0.0"));
+        var id = PackageId.ToLowerInvariant();
+        var path = $"{id}/1.0.0/{id}.1.0.0.nupkg";
+        var packageUri = new Uri(FakeNuGetFeed.PackageBaseAddress, path);
+        var relative = new Uri("/redirect", UriKind.Relative);
+        var asset = new Uri($"https://assets.test/{path}");
+        var serviceIndex = new Uri(FakeNuGetFeed.ServiceIndexUrl);
+        var initialIndex = new Uri("https://publisher.test/nuget");
+        feed.Redirects.Add(initialIndex, serviceIndex);
+        feed.Redirects.Add(packageUri, relative);
+        feed.Redirects.Add(new Uri(packageUri, relative), asset);
+
+        var result = await installer.StageInstallAsync(
+            new PluginPackageRequest(initialIndex.AbsoluteUri, PackageId, "1.0.0"));
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal([initialIndex, serviceIndex, packageUri, new Uri(packageUri, relative), asset], feed.RequestedUris);
+    }
+
+    [Theory]
+    [InlineData("http://assets.test/package.nupkg")]
+    [InlineData("https://user@assets.test/package.nupkg")]
+    [InlineData(null)]
+    public async Task InvalidPackageRedirect_DoesNotSendASecondRequest(string? target)
+    {
+        var feed = new FakeNuGetFeed();
+        var installer = CreateInstaller(feed);
+        var id = PackageId.ToLowerInvariant();
+        var packageUri = new Uri(FakeNuGetFeed.PackageBaseAddress, $"{id}/1.0.0/{id}.1.0.0.nupkg");
+        feed.Redirects.Add(packageUri, target is null ? null : new Uri(target));
+
+        var result = await installer.StageInstallAsync(Request("1.0.0"));
+
+        Assert.Equal(PluginInstallFailureReason.DownloadFailed, result.FailureReason);
+        Assert.Equal([new Uri(FakeNuGetFeed.ServiceIndexUrl), packageUri], feed.RequestedUris);
+    }
+
+    [Fact]
+    public async Task PackageRedirectLoop_StopsAfterFiveRedirects()
+    {
+        var feed = new FakeNuGetFeed();
+        var installer = CreateInstaller(feed);
+        var id = PackageId.ToLowerInvariant();
+        var packageUri = new Uri(FakeNuGetFeed.PackageBaseAddress, $"{id}/1.0.0/{id}.1.0.0.nupkg");
+        feed.Redirects.Add(packageUri, packageUri);
+
+        var result = await installer.StageInstallAsync(Request("1.0.0"));
+
+        Assert.Equal(PluginInstallFailureReason.DownloadFailed, result.FailureReason);
+        Assert.Equal(6, feed.RequestedUris.Count(uri => uri == packageUri));
+    }
+
+    [Fact]
     public async Task InsecureServiceIndex_FailsWithFeedReason_AndNeverDownloads()
     {
         var feed = new FakeNuGetFeed();

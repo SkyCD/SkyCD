@@ -11,14 +11,16 @@ using SkyCD.Plugin.Runtime.Installation.Exceptions;
 namespace SkyCD.Core.Plugins.Installation;
 
 /// <summary>
-/// Downloads one exact package from a NuGet v3 feed over HTTPS. The client rejects insecure URLs, follows no
-/// redirects, enforces a hard size bound while streaming and writes only into the caller-provided staging file.
+/// Downloads one exact package from a NuGet v3 feed over HTTPS. The client follows bounded HTTPS redirects,
+/// enforces a hard size bound while streaming and writes only into the caller-provided staging file.
 /// </summary>
 internal sealed class PluginPackageDownloadClient : IDisposable
 {
     public const string PackageBaseAddressResourceType = "PackageBaseAddress/3.0.0";
 
+    private const int MaxRedirects = 5;
     private readonly HttpClient httpClient;
+    private readonly TimeSpan timeout;
     private readonly long maxPackageBytes;
 
     public PluginPackageDownloadClient(HttpMessageHandler? handler, TimeSpan timeout, long maxPackageBytes)
@@ -32,6 +34,7 @@ internal sealed class PluginPackageDownloadClient : IDisposable
             ? new HttpClient(new SocketsHttpHandler { AllowAutoRedirect = false })
             : new HttpClient(handler, disposeHandler: false);
         httpClient.Timeout = timeout;
+        this.timeout = timeout;
         this.maxPackageBytes = maxPackageBytes;
     }
 
@@ -53,8 +56,8 @@ internal sealed class PluginPackageDownloadClient : IDisposable
         HttpResponseMessage response;
         try
         {
-            response = await httpClient
-                .GetAsync(packageUri, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+            response = await GetFollowingRedirectsAsync(packageUri, HttpCompletionOption.ResponseHeadersRead,
+                    cancellationToken)
                 .ConfigureAwait(false);
             statusCode = response.StatusCode;
         }
@@ -112,10 +115,42 @@ internal sealed class PluginPackageDownloadClient : IDisposable
 
     public void Dispose() => httpClient.Dispose();
 
+    private async Task<HttpResponseMessage> GetFollowingRedirectsAsync(Uri current,
+        HttpCompletionOption completionOption, CancellationToken cancellationToken)
+    {
+        using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutSource.CancelAfter(timeout);
+
+        for (var hops = 0; ; hops++)
+        {
+            var response = await httpClient.GetAsync(current, completionOption, timeoutSource.Token)
+                .ConfigureAwait(false);
+            if (response.StatusCode is not (HttpStatusCode.MovedPermanently or HttpStatusCode.Found
+                or HttpStatusCode.SeeOther or HttpStatusCode.TemporaryRedirect or HttpStatusCode.PermanentRedirect))
+            {
+                return response;
+            }
+
+            using (response)
+            {
+                if (hops >= MaxRedirects || response.Headers.Location is not { } location ||
+                    !Uri.TryCreate(current, location, out var next) || !IsSafeHttpsUri(next))
+                {
+                    throw new HttpRequestException("The feed returned an invalid or excessive redirect.");
+                }
+
+                current = next;
+            }
+        }
+    }
+
+    private static bool IsSafeHttpsUri(Uri uri) =>
+        uri.IsAbsoluteUri && uri.Scheme == Uri.UriSchemeHttps && string.IsNullOrEmpty(uri.UserInfo);
+
     private static Uri ValidateFeedUri(PluginPackageRequest request)
     {
         if (!Uri.TryCreate(request.serviceIndexUrl?.Trim(), UriKind.Absolute, out var uri) ||
-            uri.Scheme != Uri.UriSchemeHttps)
+            !IsSafeHttpsUri(uri))
         {
             throw new PluginFeedUnavailableException(request.serviceIndexUrl ?? string.Empty,
                 "the service index must be an absolute HTTPS URL");
@@ -129,7 +164,8 @@ internal sealed class PluginPackageDownloadClient : IDisposable
         JsonDocument document;
         try
         {
-            using var response = await httpClient.GetAsync(feedUri, cancellationToken).ConfigureAwait(false);
+            using var response = await GetFollowingRedirectsAsync(feedUri, HttpCompletionOption.ResponseContentRead,
+                cancellationToken).ConfigureAwait(false);
             if (response.StatusCode != HttpStatusCode.OK)
             {
                 throw new PluginFeedUnavailableException(feedUri.AbsoluteUri,
@@ -166,7 +202,7 @@ internal sealed class PluginPackageDownloadClient : IDisposable
                     !resource.TryGetProperty("@id", out var id) ||
                     id.ValueKind != JsonValueKind.String ||
                     !Uri.TryCreate(id.GetString(), UriKind.Absolute, out var baseAddress) ||
-                    baseAddress.Scheme != Uri.UriSchemeHttps)
+                    !IsSafeHttpsUri(baseAddress))
                 {
                     continue;
                 }

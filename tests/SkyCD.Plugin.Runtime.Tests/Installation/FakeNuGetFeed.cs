@@ -26,6 +26,7 @@ internal sealed class FakeNuGetFeed : HttpMessageHandler
     public int PackageRequests { get; private set; }
 
     public List<Uri> RequestedUris { get; } = [];
+    public Dictionary<Uri, Uri?> Redirects { get; } = [];
 
     /// <summary>Overrides the download response status; <see cref="HttpStatusCode.OK"/> by default.</summary>
     public HttpStatusCode DownloadStatus { get; set; } = HttpStatusCode.OK;
@@ -48,6 +49,11 @@ internal sealed class FakeNuGetFeed : HttpMessageHandler
         ArgumentNullException.ThrowIfNull(request.RequestUri);
         RequestedUris.Add(request.RequestUri);
 
+        if (Redirects.TryGetValue(request.RequestUri, out var target))
+        {
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Found) { Headers = { Location = target } });
+        }
+
         if (request.RequestUri.AbsoluteUri == ServiceIndexUrl)
         {
             ServiceIndexRequests++;
@@ -63,7 +69,12 @@ internal sealed class FakeNuGetFeed : HttpMessageHandler
         }
 
         PackageRequests++;
-        var relative = request.RequestUri.AbsoluteUri[PackageBaseAddress.AbsoluteUri.Length..];
+        var relative = request.RequestUri.AbsolutePath.TrimStart('/');
+        const string containerPath = "v3/flatcontainer/";
+        if (relative.StartsWith(containerPath, StringComparison.Ordinal))
+        {
+            relative = relative[containerPath.Length..];
+        }
         if (!packages.TryGetValue(relative, out var content))
         {
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
