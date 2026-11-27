@@ -23,13 +23,13 @@ public sealed class AiDescriptionService
 
     private readonly CatalogDocumentRepository repository;
     private readonly IMediaCacheStore store;
-    private readonly IGeneratedDescriptionCapability? capability;
+    private readonly IDescriptionGeneratorCapability? capability;
     private readonly Func<AiScanPolicy>? scanPolicyFactory;
 
     public AiDescriptionService(
         CatalogDocumentRepository repository,
         IMediaCacheStore store,
-        IGeneratedDescriptionCapability? capability = null,
+        IDescriptionGeneratorCapability? capability = null,
         Func<AiScanPolicy>? scanPolicyFactory = null)
     {
         this.repository = repository ?? throw new ArgumentNullException(nameof(repository));

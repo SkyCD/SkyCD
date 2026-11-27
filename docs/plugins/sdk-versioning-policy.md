@@ -37,6 +37,7 @@ unreleased `3.0.0` major, so no additional major bump is required and no transit
 | `[assembly: SkyCD.Plugin.Abstractions.Lifecycle.PluginId("...")]` | `[assembly: SkyCD.SDK.Lifecycle.PluginId("...")]` |
 | `clr-namespace:SkyCD.Plugin.Abstractions.Capabilities.Media;assembly=SkyCD.SDK` | `clr-namespace:SkyCD.SDK.Capabilities.Media;assembly=SkyCD.SDK` |
 | `SkyCD.SDK.PluginFailure` | `SkyCD.SDK.Plugins.PluginFailure` |
+| `SkyCD.SDK.Capabilities.Import.ICatalogImportPluginCapability` (and `ImportOutcome`) | `SkyCD.SDK.Capabilities.Catalog.*` |
 
 Only type and namespace names changed. `PluginId`, `FormatId`, attribute values, existing
 `[assembly: PluginId(...)]` strings and persisted plugin state keep their exact values. External authors
@@ -59,6 +60,8 @@ agent management moved out of the host into the plugins that own them.
 
 `IOptionsNavigationConsumer` remains: it still asks the host to open one of the plugin's configuration
 pages by `ConfigurationId`. Persisted plugin settings, configuration IDs and plugin IDs keep their values.
+
+## SDK 3.0 removal of the clipboard and file-dialog host services (#1339)
 
 ## SDK 2.0 / SkyCD v3 configuration migration (#828)
 
@@ -86,3 +89,17 @@ threading, draft ownership, cancellation and headless use. Other capability sign
 - Runtime discovers plugin classes implementing `IPlugin`.
 - Runtime discovers capabilities by implemented interfaces inheriting `IPluginCapability`.
 - Incompatible plugins are skipped, not crashed.
+
+## SDK 3.0 description generator unification (#1341)
+
+Generated descriptions and the Options implementation identity now share one capability. Replace
+`IGeneratedDescriptionCapability` with `IDescriptionGeneratorCapability` and remove the separate
+`IAiDescriptionImplementationCapability`; the host persists `ImplementationId` for every generator.
+
+| Previous contract | SDK 3.0 replacement |
+|---|---|
+| `IGeneratedDescriptionCapability` | `IDescriptionGeneratorCapability` (adds `ImplementationId`, `ImplementationName`) |
+| `IAiDescriptionImplementationCapability` | Removed; identity lives on `IDescriptionGeneratorCapability` |
+| `AiDescriptionImplementationIds` (SDK) | Host-owned constant set in `SkyCD.Plugin.Host.Media`; each plugin owns its own stable id |
+
+`DescriptionGenerationPlan` and `IDescriptionGenerationPlanner` keep their provider-neutral shape.

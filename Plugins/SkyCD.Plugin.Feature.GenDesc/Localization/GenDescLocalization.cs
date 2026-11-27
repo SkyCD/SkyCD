@@ -55,7 +55,7 @@ internal static class GenDescLocalization
         ["ui.InvalidExtension"] = "Every extension must look like .mkv.",
         ["ui.EmptyBody"] = "The template is empty.",
         ["ui.MissingSelection"] = "Select a template first.",
-        ["ui.NoPicker"] = "This host does not provide file dialogs.",
+        ["ui.NoPicker"] = "No file picker is available here.",
         ["ui.LoadErrors"] = "{0} template file(s) could not be read.",
         ["ui.PreviewFailed"] = "Preview: {0}"
     };
@@ -109,7 +109,7 @@ internal static class GenDescLocalization
         ["ui.InvalidExtension"] = "Kiekvienas plėtinys turi būti .mkv formos.",
         ["ui.EmptyBody"] = "Šablonas tuščias.",
         ["ui.MissingSelection"] = "Pirmiausia pasirinkite šabloną.",
-        ["ui.NoPicker"] = "Ši aplinka neteikia failų dialogų.",
+        ["ui.NoPicker"] = "Čia failų pasirinkimas nepasiekiamas.",
         ["ui.LoadErrors"] = "Nepavyko perskaityti {0} šablono failų.",
         ["ui.PreviewFailed"] = "Peržiūra: {0}"
     };

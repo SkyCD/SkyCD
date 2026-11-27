@@ -13,13 +13,13 @@ using SkyCD.Plugin.Ai.Description.Sources;
 
 namespace SkyCD.Plugin.Ai.Description;
 
-public sealed partial class AiDescriptionPlugin : IGeneratedDescriptionCapability, IDescriptionGenerationPlanner, IAiDescriptionImplementationCapability, IPluginConfigurationCapability
+public sealed partial class AiDescriptionPlugin : IDescriptionGeneratorCapability, IDescriptionGenerationPlanner, IPluginConfigurationCapability
 {
     public const string PluginVersion = "1.0.0";
     private readonly string configurationPath;
     private readonly Func<DescriptionAgentOptions, DescriptionContext, CancellationToken, Task<GeneratedDescription>> generate;
 
-    public string ImplementationId => AiDescriptionImplementationIds.Acp;
+    public string ImplementationId => "acp";
 
     public string ImplementationName => "ACP agent";
 

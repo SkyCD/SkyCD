@@ -9,7 +9,6 @@ using SkyCD.Plugin.Feature.GenDesc.Models;
 using SkyCD.Plugin.Feature.GenDesc.ViewModels;
 using SkyCD.Plugin.Feature.GenDesc.Views;
 using SkyCD.SDK.Capabilities.Configuration;
-using SkyCD.SDK.Capabilities.Ui;
 using SkyCD.UI.Localization;
 
 namespace SkyCD.Plugin.Feature.GenDesc.Configuration;
@@ -18,12 +17,10 @@ namespace SkyCD.Plugin.Feature.GenDesc.Configuration;
 /// Contributes the two GenDesc template pages to Options: info files and torrent-site post descriptions.
 /// Templates are edited and stored by the page itself, so accepting a draft leaves plugin settings unchanged.
 /// </summary>
-public sealed class GenDescConfigurationPlugin : IPluginConfigurationCapability, IHostFileDialogConsumer
+public sealed class GenDescConfigurationPlugin : IPluginConfigurationCapability
 {
     internal const string InfoFilesConfigurationId = "gendesc-info-files";
     internal const string PostDescriptionsConfigurationId = "gendesc-post-descriptions";
-
-    private IHostFileDialogApi? fileDialogs;
 
     /// <inheritdoc />
     public IReadOnlyList<PluginConfigurationDescriptor> Configurations =>
@@ -36,10 +33,6 @@ public sealed class GenDescConfigurationPlugin : IPluginConfigurationCapability,
 
     /// <summary>Overrides the user template directory in tests; production uses the shared default.</summary>
     internal string? TemplateDirectory { get; set; }
-
-    /// <inheritdoc />
-    public void InitializeFileDialogApi(IHostFileDialogApi fileDialogApi) =>
-        fileDialogs = fileDialogApi ?? throw new ArgumentNullException(nameof(fileDialogApi));
 
     /// <inheritdoc />
     public Task<PluginConfigurationPage> CreatePageAsync(PluginConfigurationRequest request,
@@ -71,7 +64,7 @@ public sealed class GenDescConfigurationPlugin : IPluginConfigurationCapability,
     /// <summary>Creates the template editor for the given configuration id, or null for an unknown id.</summary>
     internal GenDescTemplatesViewModel? CreateTemplatesViewModel(string configurationId) =>
         TemplateKind(configurationId) is { } kind
-            ? new GenDescTemplatesViewModel(kind, fileDialogs, TemplateDirectory)
+            ? new GenDescTemplatesViewModel(kind, TemplateDirectory)
             : null;
 
     private static string? TemplateKind(string configurationId) =>

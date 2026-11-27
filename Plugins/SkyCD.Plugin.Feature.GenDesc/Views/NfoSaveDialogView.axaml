@@ -1,0 +1,45 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:i18n="clr-namespace:SkyCD.UI.Localization;assembly=SkyCD.UI"
+        xmlns:l="clr-namespace:SkyCD.Plugin.Feature.GenDesc.Localization"
+        xmlns:vm="clr-namespace:SkyCD.Plugin.Feature.GenDesc.ViewModels"
+        x:Class="SkyCD.Plugin.Feature.GenDesc.Views.NfoSaveDialogView"
+        x:DataType="vm:NfoSaveDialogViewModel"
+        Title="{Binding Title}"
+        Width="520"
+        Height="240"
+        MinWidth="420"
+        MinHeight="200"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False">
+    <Grid RowDefinitions="Auto,*,Auto"
+          Margin="{DynamicResource SkyInsetMd}"
+          RowSpacing="{DynamicResource SkySpaceMd}">
+        <TextBlock Grid.Row="0"
+                   Text="{Binding SuggestedFileName}"
+                   FontFamily="{DynamicResource SkyFontFamilyMono}"
+                   TextWrapping="Wrap" />
+
+        <StackPanel Grid.Row="1" Spacing="{DynamicResource SkySpaceXxs}">
+            <TextBlock Text="{Binding StatusText}"
+                       Foreground="{DynamicResource ThemeForegroundLowBrush}"
+                       TextWrapping="Wrap" />
+            <TextBlock Text="{Binding ErrorText}"
+                       FontWeight="SemiBold"
+                       TextWrapping="Wrap" />
+        </StackPanel>
+
+        <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
+            <Button Grid.Column="1"
+                    Content="{i18n:Translate {x:Static l:GenDescKeys.Save}}"
+                    Click="OnSaveClick"
+                    IsDefault="True"
+                    MinWidth="88" />
+            <Button Grid.Column="2"
+                    Content="{i18n:Translate {x:Static l:GenDescKeys.Close}}"
+                    Click="OnCloseClick"
+                    IsCancel="True"
+                    MinWidth="88" />
+        </Grid>
+    </Grid>
+</Window>
