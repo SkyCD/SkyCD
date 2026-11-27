@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SkyCD.UI.Localization;
@@ -9,30 +10,36 @@ using SkyCD.UI.Localization;
 namespace SkyCD.Presentation.ViewModels;
 
 /// <summary>
-/// Plugins → Settings folder field: rescans the live plugin runtime when typing pauses, when the field
-/// loses focus or on Enter, shows an inline hint instead of an error dialog for a folder that does not
-/// exist, and reverts to the folder the dialog opened with when the dialog is cancelled.
+/// Plugins → Settings folder field: rescans the live plugin runtime only when the edit is committed —
+/// Enter, the Browse picker, a lost focus or the dialog's OK — shows an inline hint instead of an error
+/// dialog for a folder that does not exist, and reverts to the folder the dialog opened with when the
+/// dialog is cancelled.
 /// </summary>
 public partial class OptionsDialogViewModel
 {
-    /// <summary>Typing pause before the folder field is rescanned; short enough to still feel immediate.</summary>
-    internal static readonly TimeSpan PluginPathScanDelay = TimeSpan.FromMilliseconds(500);
-
-    private readonly TimeProvider timeProvider;
     /// <summary>Folder the dialog was opened with, which Cancel must leave the runtime on.</summary>
     private string persistedPluginPath = string.Empty;
     /// <summary>Folder the live plugin runtime was last rescanned from.</summary>
     private string? scannedPluginPath;
-    private ITimer? pluginPathScanTimer;
+    /// <summary>Host-supplied discovery pass; it runs off the UI thread and observes the token.</summary>
+    private Func<string, CancellationToken, Task>? pluginPathScanner;
+    private CancellationTokenSource? pluginPathScanCancellation;
+    private Task currentPluginPathScan = Task.CompletedTask;
+    private string? scanningPluginPath;
 
     [ObservableProperty] private string pluginPathHint = string.Empty;
+
+    /// <summary>True while a discovery pass runs; the folder field shows the localized busy state.</summary>
+    [ObservableProperty] private bool isPluginPathScanning;
 
     public bool HasPluginPathHint => !string.IsNullOrWhiteSpace(PluginPathHint);
 
     /// <summary>
-    /// Raised when the live plugin runtime should be rescanned from <see cref="OptionsDialogViewModel.PluginPath"/>.
+    /// Supplies the host's discovery pass for one committed folder. Without it the field only hints and
+    /// never scans; the host clears it when the dialog closes.
     /// </summary>
-    public event EventHandler? PluginPathScanRequested;
+    public void SetPluginPathScanner(Func<string, CancellationToken, Task>? scanner) =>
+        pluginPathScanner = scanner;
 
     /// <summary>
     /// Seeds the folder field when Options opens. The stored folder is the one the runtime already
@@ -40,96 +47,129 @@ public partial class OptionsDialogViewModel
     /// </summary>
     public void InitializePluginPath(string? storedPluginPath)
     {
-        CancelPendingPluginPathScan();
         persistedPluginPath = storedPluginPath ?? string.Empty;
         scannedPluginPath = persistedPluginPath;
         PluginPath = persistedPluginPath;
         RefreshPluginPathHint();
     }
 
-    /// <summary>Records the folder the runtime was just rescanned from, which ends any pending debounce.</summary>
+    /// <summary>Records the folder the runtime was just rescanned from.</summary>
     public void MarkPluginPathScanned(string? scannedPath)
     {
-        CancelPendingPluginPathScan();
         scannedPluginPath = scannedPath ?? string.Empty;
         RefreshPluginPathHint();
     }
 
-    /// <summary>Rescans immediately: Enter, a lost focus and the Browse picker all end the typing pause.</summary>
+    /// <summary>Enter and a lost focus commit the typed folder to the runtime.</summary>
     [RelayCommand]
-    private void RescanPluginPath()
-    {
-        CancelPendingPluginPathScan();
-        RequestPluginPathScan();
-    }
+    private Task RescanPluginPathAsync() => CommitPluginPathAsync();
+
+    /// <summary>Loads the plugin list when the dialog opens and after plugin actions change the folder contents.</summary>
+    public Task ReloadPluginsAsync() => StartPluginPathScanAsync(force: true);
 
     /// <summary>
-    /// Cancel path: a preview scan performed while the dialog was open changed live plugin state, so the
-    /// field goes back to the stored folder and that folder is rescanned.
+    /// Commits the typed folder. A scan already running for the same folder is awaited instead of
+    /// restarted, so Enter followed by OK does not discover twice.
     /// </summary>
-    public void RevertPluginPathPreview()
+    public Task CommitPluginPathAsync() =>
+        IsPluginPathScanning && string.Equals(scanningPluginPath, PluginPath, StringComparison.Ordinal)
+            ? currentPluginPathScan
+            : StartPluginPathScanAsync(force: false);
+
+    /// <summary>
+    /// Cancel path: a scan performed for a draft folder changes live plugin state, so that scan is
+    /// abandoned first, then the field goes back to the stored folder and that folder is rescanned.
+    /// </summary>
+    public async Task RevertPluginPathPreviewAsync()
     {
+        // A draft scan must not apply a folder the user just cancelled, so let it end before checking
+        // whether the runtime still shows a preview.
+        pluginPathScanCancellation?.Cancel();
+        if (IsPluginPathScanning)
+        {
+            await currentPluginPathScan;
+        }
+
         var runtimeShowsPreview = !string.Equals(scannedPluginPath, persistedPluginPath, StringComparison.Ordinal);
         PluginPath = persistedPluginPath;
-        CancelPendingPluginPathScan();
         RefreshPluginPathHint();
         if (runtimeShowsPreview)
         {
-            PluginPathScanRequested?.Invoke(this, EventArgs.Empty);
+            await StartPluginPathScanAsync(force: true);
         }
     }
 
-    /// <summary>Hands the debounce timer back; a scan already queued on the pool is dropped by <see cref="disposed"/>.</summary>
+    /// <summary>Drops the in-flight scan and its busy state; a scan already queued on the pool observes the token.</summary>
     internal void DisposePluginPathScan()
     {
-        CancelPendingPluginPathScan();
-        pluginPathScanTimer?.Dispose();
-        pluginPathScanTimer = null;
+        pluginPathScanCancellation?.Cancel();
+        pluginPathScanCancellation = null;
+        scanningPluginPath = null;
+        IsPluginPathScanning = false;
     }
 
     partial void OnPluginPathChanged(string value)
     {
         RefreshPluginPathHint();
-        if (string.Equals(value, scannedPluginPath, StringComparison.Ordinal))
-        {
-            CancelPendingPluginPathScan();
-            return;
-        }
-
-        // Every edit restarts the pause, so keystroke-by-keystroke typing supersedes the pending scan
-        // instead of queueing one scan per character.
-        SchedulePluginPathScan();
+        // Typing supersedes the committed folder: the in-flight scan must not keep walking the old tree.
+        pluginPathScanCancellation?.Cancel();
     }
 
     partial void OnPluginPathHintChanged(string value) => OnPropertyChanged(nameof(HasPluginPathHint));
 
-    private void SchedulePluginPathScan()
+    private async Task StartPluginPathScanAsync(bool force)
     {
-        pluginPathScanTimer ??= timeProvider.CreateTimer(
-            static state => ((OptionsDialogViewModel)state!).RequestPluginPathScan(),
-            this,
-            Timeout.InfiniteTimeSpan,
-            Timeout.InfiniteTimeSpan);
-        pluginPathScanTimer.Change(PluginPathScanDelay, Timeout.InfiniteTimeSpan);
-    }
-
-    private void RequestPluginPathScan()
-    {
-        // A folder that does not exist leaves the list as it is; the hint under the field explains why.
-        if (disposed || !IsPluginPathRescanPending)
+        var scanner = pluginPathScanner;
+        if (scanner is null)
         {
             return;
         }
 
-        PluginPathScanRequested?.Invoke(this, EventArgs.Empty);
+        // A folder that does not exist leaves the list as it is; the hint under the field explains why.
+        if (!force && !IsPluginPathRescanPending)
+        {
+            return;
+        }
+
+        // A superseding commit must not let the older result overwrite the newer one.
+        pluginPathScanCancellation?.Cancel();
+        var cancellation = new CancellationTokenSource();
+        pluginPathScanCancellation = cancellation;
+        scanningPluginPath = PluginPath;
+        IsPluginPathScanning = true;
+        currentPluginPathScan = ScanPluginPathCoreAsync(scanner, PluginPath, cancellation);
+        await currentPluginPathScan;
+    }
+
+    private async Task ScanPluginPathCoreAsync(
+        Func<string, CancellationToken, Task> scanner,
+        string path,
+        CancellationTokenSource cancellation)
+    {
+        try
+        {
+            await scanner(path, cancellation.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Superseded by a newer commit or closed with the dialog; the newer scan owns the busy state.
+        }
+        finally
+        {
+            if (ReferenceEquals(pluginPathScanCancellation, cancellation))
+            {
+                pluginPathScanCancellation = null;
+                scanningPluginPath = null;
+                IsPluginPathScanning = false;
+            }
+
+            cancellation.Dispose();
+        }
     }
 
     private bool IsPluginPathRescanPending =>
         IsExistingPluginFolder(PluginPath) &&
         !string.Equals(PluginPath, scannedPluginPath, StringComparison.Ordinal);
-
-    private void CancelPendingPluginPathScan() =>
-        pluginPathScanTimer?.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
 
     private void RefreshPluginPathHint() => PluginPathHint = IsExistingPluginFolder(PluginPath)
         ? string.Empty
