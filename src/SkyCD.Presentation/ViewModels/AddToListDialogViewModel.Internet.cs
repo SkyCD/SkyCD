@@ -162,7 +162,7 @@ public partial class AddToListDialogViewModel
     }
 
     private bool CanCheckInternetConnection() =>
-        InternetProtocol != "sftp" && GetInternetValidationMessage() is null;
+        InternetProtocol != "sftp" && GetInternetValidationFailure() is null;
 
     [RelayCommand(CanExecute = nameof(CanCheckInternetConnection))]
     private async Task CheckInternetConnectionAsync(CancellationToken cancellationToken)
@@ -238,15 +238,23 @@ public partial class AddToListDialogViewModel
             port is >= 1 and <= 65535;
     }
 
-    private string? GetInternetValidationMessage()
+    private (ValidationTarget Target, string Message)? GetInternetValidationFailure()
     {
-        var key = internetLocation is null
-            ? string.IsNullOrWhiteSpace(InternetHost)
+        if (internetLocation is null)
+        {
+            var key = string.IsNullOrWhiteSpace(InternetHost)
                 ? TextKeys.AddressIsRequiredForInternetSource
-                : !TryGetInternetPort(out _) ? UiKeys.InvalidInternetPort : UiKeys.InvalidInternetHost
-            : IsSmbInternetProtocol && internetLocation.Path == "/"
-                ? UiKeys.InternetShareRequired
-                : !InternetCredentials.CanConfirm ? UiKeys.InternetCredentialsRequired : null;
-        return key is null ? null : LocalizationService.Current.Get(key);
+                : !TryGetInternetPort(out _) ? UiKeys.InvalidInternetPort : UiKeys.InvalidInternetHost;
+            return (ValidationTarget.InternetAddress, LocalizationService.Current.Get(key));
+        }
+
+        if (IsSmbInternetProtocol && internetLocation.Path == "/")
+        {
+            return (ValidationTarget.InternetPath, LocalizationService.Current.Get(UiKeys.InternetShareRequired));
+        }
+
+        return InternetCredentials.CanConfirm
+            ? null
+            : (ValidationTarget.InternetCredentials, LocalizationService.Current.Get(UiKeys.InternetCredentialsRequired));
     }
 }

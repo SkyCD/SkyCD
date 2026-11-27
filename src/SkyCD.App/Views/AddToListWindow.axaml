@@ -63,8 +63,6 @@
 
     <Grid x:Name="RootGrid"
           Margin="{DynamicResource SkyWindowPadding}"
-          RowDefinitions="*,Auto"
-         
           ColumnSpacing="{DynamicResource SkySpaceSm}">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="{StaticResource SkyAddToListSourceWidth}" />
@@ -170,7 +168,13 @@
                         Spacing="{DynamicResource SkySpaceSm}">
                 <StackPanel Spacing="{DynamicResource SkySpaceXs}">
                     <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectMediaName}}" />
-                    <TextBox Classes="source-field" Text="{Binding MediaName}" />
+                    <TextBox Classes="source-field" Text="{Binding MediaName}"
+                             AutomationProperties.HelpText="{Binding MediaNameValidationMessage}" />
+                    <TextBlock x:Name="MediaNameValidationText"
+                               Foreground="{DynamicResource SkyErrorForeground}"
+                               Text="{Binding MediaNameValidationMessage}"
+                               TextWrapping="Wrap"
+                               IsVisible="{Binding MediaNameValidationMessage, Converter={x:Static avaloniaConverters:StringConverters.IsNotNullOrEmpty}}" />
                 </StackPanel>
                 <StackPanel IsVisible="{Binding IsLocationPickerVisible}" Spacing="{DynamicResource SkySpaceXs}">
                     <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.PhysicalLocation}}" />
@@ -228,6 +232,7 @@
                         <ComboBox Classes="source-field"
                                   ItemsSource="{Binding AvailableDrives}"
                                   SelectedItem="{Binding SelectedDrive}"
+                                  AutomationProperties.HelpText="{Binding DriveValidationMessage}"
                                   HorizontalAlignment="Stretch">
                             <ComboBox.ItemTemplate>
                                 <DataTemplate>
@@ -235,6 +240,10 @@
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
                         </ComboBox>
+                        <TextBlock Foreground="{DynamicResource SkyErrorForeground}"
+                                   Text="{Binding DriveValidationMessage}"
+                                   TextWrapping="Wrap"
+                                   IsVisible="{Binding DriveValidationMessage, Converter={x:Static avaloniaConverters:StringConverters.IsNotNullOrEmpty}}" />
                         <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.IncludeMediaInfo}}"
                                   IsChecked="{Binding IncludeMediaInfo}" />
                         <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.AddFolders}}"
@@ -250,13 +259,18 @@
                         <StackPanel Spacing="{DynamicResource SkySpaceXs}">
                             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SelectFolder}}" />
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
-                                <TextBox Classes="source-field" Text="{Binding SourceValue}" />
+                                <TextBox Classes="source-field" Text="{Binding SourceValue}"
+                                         AutomationProperties.HelpText="{Binding FolderPathValidationMessage}" />
                                 <Button Grid.Column="1"
                                         Classes="source-field"
                                         Content="..."
                                         Width="28"
                                         Click="OnBrowseFolderClicked" />
                             </Grid>
+                            <TextBlock Foreground="{DynamicResource SkyErrorForeground}"
+                                       Text="{Binding FolderPathValidationMessage}"
+                                       TextWrapping="Wrap"
+                                       IsVisible="{Binding FolderPathValidationMessage, Converter={x:Static avaloniaConverters:StringConverters.IsNotNullOrEmpty}}" />
                         </StackPanel>
                         <StackPanel Spacing="{DynamicResource SkySpaceXs}">
                             <CheckBox Content="{i18n:Translate {x:Static i18n:UiKeys.AddFolders}}"
@@ -302,17 +316,33 @@
                             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.InternetHost}}" />
                             <TextBlock Grid.Column="1" Text="{i18n:Translate {x:Static i18n:UiKeys.Port}}" />
                             <TextBox Grid.Row="1" Classes="source-field" Text="{Binding InternetHost}"
-                                     AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.InternetHost}}" />
+                                     AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.InternetHost}}"
+                                     AutomationProperties.HelpText="{Binding InternetAddressValidationMessage}" />
                             <TextBox Grid.Row="1" Grid.Column="1" Classes="source-field"
                                      Text="{Binding InternetPort}" PlaceholderText="{Binding SuggestedInternetPort}" MaxLength="5"
-                                     AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.Port}}" />
+                                     AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.Port}}"
+                                     AutomationProperties.HelpText="{Binding InternetAddressValidationMessage}" />
                         </Grid>
+                        <TextBlock x:Name="InternetAddressValidationText"
+                                   Foreground="{DynamicResource SkyErrorForeground}"
+                                   Text="{Binding InternetAddressValidationMessage}"
+                                   TextWrapping="Wrap"
+                                   IsVisible="{Binding InternetAddressValidationMessage, Converter={x:Static avaloniaConverters:StringConverters.IsNotNullOrEmpty}}" />
                         <TextBlock IsVisible="{Binding !IsSmbInternetProtocol}"
                                    Text="{i18n:Translate {x:Static i18n:UiKeys.InternetPath}}" />
                         <TextBlock IsVisible="{Binding IsSmbInternetProtocol}"
                                    Text="{i18n:Translate {x:Static i18n:UiKeys.InternetSharePath}}" />
-                        <TextBox Classes="source-field" Text="{Binding InternetPath}" />
+                        <TextBox Classes="source-field" Text="{Binding InternetPath}"
+                                 AutomationProperties.HelpText="{Binding InternetPathValidationMessage}" />
+                        <TextBlock Foreground="{DynamicResource SkyErrorForeground}"
+                                   Text="{Binding InternetPathValidationMessage}"
+                                   TextWrapping="Wrap"
+                                   IsVisible="{Binding InternetPathValidationMessage, Converter={x:Static avaloniaConverters:StringConverters.IsNotNullOrEmpty}}" />
                         <views:RemoteCredentialsForm DataContext="{Binding InternetCredentials}" />
+                        <TextBlock Foreground="{DynamicResource SkyErrorForeground}"
+                                   Text="{Binding InternetCredentialsValidationMessage}"
+                                   TextWrapping="Wrap"
+                                   IsVisible="{Binding InternetCredentialsValidationMessage, Converter={x:Static avaloniaConverters:StringConverters.IsNotNullOrEmpty}}" />
                         <StackPanel Spacing="{DynamicResource SkySpaceXs}" IsVisible="{Binding !InternetCredentials.IsSftp}">
                             <Button Content="{i18n:Translate {x:Static i18n:UiKeys.CheckHostKey}}"
                                     Command="{Binding CheckInternetConnectionCommand}" />
@@ -388,14 +418,11 @@
                         </ItemsControl>
                         <StackPanel IsVisible="{Binding ShowAccountPicker}" Spacing="{DynamicResource SkySpaceXs}">
                             <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.Accounts}}" />
-                            <TextBlock IsVisible="{Binding SelectedAccountNeedsSignIn}"
-                                       Classes="caption"
-                                       Text="{i18n:Translate {x:Static i18n:UiKeys.AccountNotSignedIn}}"
-                                       TextWrapping="Wrap" />
                             <ComboBox Classes="source-field"
                                       ItemsSource="{Binding AccountChoices}"
                                       SelectedItem="{Binding SelectedAccount}"
                                       AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.Accounts}}"
+                                      AutomationProperties.HelpText="{Binding AccountValidationMessage}"
                                       HorizontalAlignment="Stretch">
                                 <ComboBox.ItemTemplate>
                                     <DataTemplate x:DataType="vm:AddToListAccountChoice">
@@ -403,6 +430,10 @@
                                     </DataTemplate>
                                 </ComboBox.ItemTemplate>
                             </ComboBox>
+                            <TextBlock Foreground="{DynamicResource SkyErrorForeground}"
+                                       Text="{Binding AccountValidationMessage}"
+                                       TextWrapping="Wrap"
+                                       IsVisible="{Binding AccountValidationMessage, Converter={x:Static avaloniaConverters:StringConverters.IsNotNullOrEmpty}}" />
                             <TextBlock Classes="caption"
                                        Text="{i18n:Translate {x:Static i18n:UiKeys.AccountAddHint}}"
                                        TextWrapping="Wrap" />
@@ -456,6 +487,7 @@
                                       ItemsSource="{Binding CaptureKinds}"
                                       SelectedItem="{Binding SelectedCaptureKind}"
                                       AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.CaptureSourceType}}"
+                                      AutomationProperties.HelpText="{Binding CaptureTypeValidationMessage}"
                                       HorizontalAlignment="Stretch">
                                 <ComboBox.ItemTemplate>
                                     <DataTemplate x:DataType="capture:CaptureSourceKind">
@@ -463,6 +495,10 @@
                                     </DataTemplate>
                                 </ComboBox.ItemTemplate>
                             </ComboBox>
+                            <TextBlock Foreground="{DynamicResource SkyErrorForeground}"
+                                       Text="{Binding CaptureTypeValidationMessage}"
+                                       TextWrapping="Wrap"
+                                       IsVisible="{Binding CaptureTypeValidationMessage, Converter={x:Static avaloniaConverters:StringConverters.IsNotNullOrEmpty}}" />
                         </StackPanel>
 
                         <StackPanel IsVisible="{Binding ShowCaptureDevicePicker}" Spacing="{DynamicResource SkySpaceXs}">
@@ -471,6 +507,7 @@
                                       ItemsSource="{Binding CaptureDevices}"
                                       SelectedItem="{Binding SelectedCaptureDevice}"
                                       AutomationProperties.Name="{Binding CaptureLocationLabel}"
+                                      AutomationProperties.HelpText="{Binding CaptureLocationValidationMessage}"
                                       HorizontalAlignment="Stretch">
                                 <ComboBox.ItemTemplate>
                                     <DataTemplate x:DataType="capture:CaptureDevice">
@@ -478,6 +515,10 @@
                                     </DataTemplate>
                                 </ComboBox.ItemTemplate>
                             </ComboBox>
+                            <TextBlock Foreground="{DynamicResource SkyErrorForeground}"
+                                       Text="{Binding CaptureLocationValidationMessage}"
+                                       TextWrapping="Wrap"
+                                       IsVisible="{Binding CaptureLocationValidationMessage, Converter={x:Static avaloniaConverters:StringConverters.IsNotNullOrEmpty}}" />
                         </StackPanel>
 
                         <StackPanel IsVisible="{Binding ShowCaptureFilePicker}" Spacing="{DynamicResource SkySpaceXs}">
@@ -485,20 +526,30 @@
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
                                 <TextBox Classes="source-field"
                                          Text="{Binding CaptureLocation}"
-                                         AutomationProperties.Name="{Binding CaptureLocationLabel}" />
+                                         AutomationProperties.Name="{Binding CaptureLocationLabel}"
+                                         AutomationProperties.HelpText="{Binding CaptureLocationValidationMessage}" />
                                 <Button Grid.Column="1"
                                         Classes="source-field"
                                         Content="..."
                                         Width="28"
                                         Click="OnBrowseCaptureSourceClicked" />
                             </Grid>
+                            <TextBlock Foreground="{DynamicResource SkyErrorForeground}"
+                                       Text="{Binding CaptureLocationValidationMessage}"
+                                       TextWrapping="Wrap"
+                                       IsVisible="{Binding CaptureLocationValidationMessage, Converter={x:Static avaloniaConverters:StringConverters.IsNotNullOrEmpty}}" />
                         </StackPanel>
 
                         <StackPanel IsVisible="{Binding ShowCaptureLocationField}" Spacing="{DynamicResource SkySpaceXs}">
                             <TextBlock Text="{Binding CaptureLocationLabel}" />
                             <TextBox Classes="source-field"
                                      Text="{Binding CaptureLocation}"
-                                     AutomationProperties.Name="{Binding CaptureLocationLabel}" />
+                                     AutomationProperties.Name="{Binding CaptureLocationLabel}"
+                                     AutomationProperties.HelpText="{Binding CaptureLocationValidationMessage}" />
+                            <TextBlock Foreground="{DynamicResource SkyErrorForeground}"
+                                       Text="{Binding CaptureLocationValidationMessage}"
+                                       TextWrapping="Wrap"
+                                       IsVisible="{Binding CaptureLocationValidationMessage, Converter={x:Static avaloniaConverters:StringConverters.IsNotNullOrEmpty}}" />
                         </StackPanel>
 
                         <StackPanel Spacing="{DynamicResource SkySpaceXs}">
@@ -517,13 +568,18 @@
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceSm}">
                                 <TextBox Classes="source-field"
                                          Text="{Binding CaptureDestination}"
-                                         AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.CaptureDestination}}" />
+                                         AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.CaptureDestination}}"
+                                         AutomationProperties.HelpText="{Binding CaptureDestinationValidationMessage}" />
                                 <Button Grid.Column="1"
                                         Classes="source-field"
                                         Content="..."
                                         Width="28"
                                         Click="OnBrowseCaptureDestinationClicked" />
                             </Grid>
+                            <TextBlock Foreground="{DynamicResource SkyErrorForeground}"
+                                       Text="{Binding CaptureDestinationValidationMessage}"
+                                       TextWrapping="Wrap"
+                                       IsVisible="{Binding CaptureDestinationValidationMessage, Converter={x:Static avaloniaConverters:StringConverters.IsNotNullOrEmpty}}" />
                             <TextBlock Classes="caption"
                                        Text="{i18n:Translate {x:Static i18n:UiKeys.CaptureDestinationHint}}"
                                        TextWrapping="Wrap" />
@@ -587,13 +643,5 @@
                 </StackPanel>
             </Grid>
         </Grid>
-
-        <TextBlock x:Name="ValidationMessageText"
-                   Grid.Row="1"
-                   Grid.ColumnSpan="2"
-                   MinHeight="14"
-                   Foreground="{DynamicResource SkyErrorForeground}"
-                   Text="{Binding DisplayedValidationMessage}"
-                   TextWrapping="Wrap" />
     </Grid>
 </Window>
