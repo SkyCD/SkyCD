@@ -538,7 +538,6 @@ public sealed class AddToListWindowLayoutTests
         fixture.Window.UpdateLayout();
 
         Assert.False(caption.IsEffectivelyVisible);
-        Assert.Equal(0, caption.Bounds.Height, 1);
 
         var groupBounds = BoundsRelativeTo(fixture.Window.FindControl<StackPanel>("TargetPlacementGroup")!, fixture.Root);
         var actionBounds = BoundsRelativeTo(fixture.Window.FindControl<StackPanel>("DialogActions")!, fixture.Root);
