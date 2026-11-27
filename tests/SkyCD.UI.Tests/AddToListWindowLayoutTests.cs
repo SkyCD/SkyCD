@@ -497,6 +497,7 @@ public sealed class AddToListWindowLayoutTests
         var viewModel = fixture.ViewModel;
         viewModel.SetTargetParent("folder-1", "Concerts");
         Dispatcher.UIThread.RunJobs();
+        fixture.Window.UpdateLayout();
 
         var caption = fixture.Window.FindControl<TextBlock>("TargetParentDescriptionText")!;
         var owner = fixture.Root.GetVisualDescendants().OfType<RadioButton>()
@@ -515,6 +516,7 @@ public sealed class AddToListWindowLayoutTests
 
         viewModel.SetTargetParent("folder-2", "Jazz");
         Dispatcher.UIThread.RunJobs();
+        fixture.Window.UpdateLayout();
         Assert.Contains("Jazz", caption.Text, StringComparison.Ordinal);
     }
 
@@ -533,6 +535,7 @@ public sealed class AddToListWindowLayoutTests
 
         viewModel.SelectTargetCommand.Execute("NewMedia");
         Dispatcher.UIThread.RunJobs();
+        fixture.Window.UpdateLayout();
 
         Assert.False(caption.IsEffectivelyVisible);
         Assert.Equal(0, caption.Bounds.Height, 1);
