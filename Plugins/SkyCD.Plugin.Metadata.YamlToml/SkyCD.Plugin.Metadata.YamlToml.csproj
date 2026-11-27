@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <ItemGroup>
-        <ProjectReference Include="..\..\src\SkyCD.SDK\SkyCD.SDK.csproj"/>
+        <PackageReference Include="SkyCD.SDK" Version="[$(SkyCdSdkVersion)]"/>
     </ItemGroup>
     <ItemGroup>
         <!-- MIT: YAML 1.2 and TOML 1.1 structure readers. Same version as every other OfficeIMO package. -->

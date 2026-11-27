@@ -22,7 +22,7 @@
 - `src/SkyCD.Domain`: core catalog domain model and validation logic.
 - `src/SkyCD.Application`: use-case abstractions and application-level contracts.
 - `src/SkyCD.Infrastructure`: persistence layer (EF Core `SkyCdDbContext`, repositories, migrations).
-- `src/SkyCD.SDK`: the packable plugin-authoring contract surface (assembly/package `SkyCD.SDK`; capability, lifecycle and host-service contracts — file formats, menu, modal, lifecycle). Namespaces match the assembly: `SkyCD.SDK.*`.
+- The [SkyCD.SDK repository](https://github.com/SkyCD/SkyCD.SDK) owns the plugin-authoring contracts consumed through the SkyCD GitHub Packages NuGet feed.
 - `src/SkyCD.Plugin.Runtime`: plugin discovery/loading and compatibility checks.
 - `src/SkyCD.Plugin.Host`: host-side plugin routing/execution services.
 - `Plugins/`: functional plugin implementations discovered from assembly metadata and capabilities.

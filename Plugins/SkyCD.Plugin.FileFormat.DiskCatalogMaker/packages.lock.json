@@ -2,6 +2,12 @@
   "version": 1,
   "dependencies": {
     "net10.0": {
+      "SkyCD.SDK": {
+        "type": "Direct",
+        "requested": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
+        "resolved": "3.0.0-alpha.2",
+        "contentHash": "fxJSzGteGzMd6jW76KOriqaofaYPJWy8DXYvYyxfTkAnhNl7Jd9QYtjOX97Ewe2/mcbX094dQbfdp4G4c/2Ylg=="
+      },
       "UTF.Unknown": {
         "type": "Direct",
         "requested": "[2.8.0, )",
@@ -17,11 +23,8 @@
         "type": "Project",
         "dependencies": {
           "CsvHelper": "[34.0.0, )",
-          "SkyCD.SDK": "[3.0.0, )"
+          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
         }
-      },
-      "skycd.sdk": {
-        "type": "Project"
       }
     }
   }

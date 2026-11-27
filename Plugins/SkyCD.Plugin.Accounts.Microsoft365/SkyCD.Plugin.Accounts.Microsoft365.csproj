@@ -9,7 +9,7 @@
         <Description>Connects to Microsoft 365 through Microsoft Graph to sync subscription records into the accounts catalog.</Description>
     </PropertyGroup>
     <ItemGroup>
-        <ProjectReference Include="../../src/SkyCD.SDK/SkyCD.SDK.csproj"/>
+        <PackageReference Include="SkyCD.SDK" Version="[$(SkyCdSdkVersion)]"/>
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="CommandDotNet" Version="8.1.1"/>

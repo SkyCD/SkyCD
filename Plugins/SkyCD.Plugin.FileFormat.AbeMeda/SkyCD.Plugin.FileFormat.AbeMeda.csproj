@@ -6,7 +6,7 @@
         <Compile Include="..\Shared\EncodingProfiles\LegacyEncodingDetector.cs" Link="Shared\EncodingProfiles\LegacyEncodingDetector.cs" />
     </ItemGroup>
     <ItemGroup>
-        <ProjectReference Include="..\..\src\SkyCD.SDK\SkyCD.SDK.csproj" />
+        <PackageReference Include="SkyCD.SDK" Version="[$(SkyCdSdkVersion)]" />
         <ProjectReference Include="..\SkyCD.Plugin.FileFormat.Csv\SkyCD.Plugin.FileFormat.Csv.csproj" />
         <PackageReference Include="UTF.Unknown" Version="2.8.0" />
     </ItemGroup>

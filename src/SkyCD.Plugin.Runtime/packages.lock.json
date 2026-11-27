@@ -90,6 +90,12 @@
           "System.Diagnostics.EventLog": "11.0.0"
         }
       },
+      "SkyCD.SDK": {
+        "type": "Direct",
+        "requested": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
+        "resolved": "3.0.0-alpha.2",
+        "contentHash": "fxJSzGteGzMd6jW76KOriqaofaYPJWy8DXYvYyxfTkAnhNl7Jd9QYtjOX97Ewe2/mcbX094dQbfdp4G4c/2Ylg=="
+      },
       "System.Reflection.MetadataLoadContext": {
         "type": "Direct",
         "requested": "[10.0.15, )",
@@ -726,11 +732,8 @@
       "skycd.plugin.host": {
         "type": "Project",
         "dependencies": {
-          "SkyCD.SDK": "[3.0.0, )"
+          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
         }
-      },
-      "skycd.sdk": {
-        "type": "Project"
       },
       "skycd.ui": {
         "type": "Project",
@@ -739,7 +742,7 @@
           "IconPacks.Avalonia": "[2.0.0, )",
           "IconPacks.Avalonia.Lucide": "[2.0.0, )",
           "SkyCD.Formatting": "[1.0.0, )",
-          "SkyCD.SDK": "[3.0.0, )",
+          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
           "SmartFormat": "[3.6.2, )",
           "YamlDotNet": "[18.1.0, )"
         }

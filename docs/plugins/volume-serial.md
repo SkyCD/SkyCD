@@ -1,7 +1,7 @@
 # Volume serial number plugin
 
 Implements #642 on the shared medium-level capability contracts
-(`src/SkyCD.SDK/Capabilities/Media/MediaTargetContracts.cs`).
+([MediaTargetContracts.cs](https://github.com/SkyCD/SkyCD.SDK/blob/main/Capabilities/Media/MediaTargetContracts.cs)).
 
 Assembly: `Plugins/SkyCD.Plugin.Metadata.Volume/` → plugin id `SkyCD.Plugin.VolumeSerial`.
 Tests: `tests/SkyCD.Plugin.Metadata.Volume.Tests/`.

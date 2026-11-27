@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <ItemGroup>
-        <ProjectReference Include="..\..\src\SkyCD.SDK\SkyCD.SDK.csproj"/>
+        <PackageReference Include="SkyCD.SDK" Version="[$(SkyCdSdkVersion)]"/>
     </ItemGroup>
     <ItemGroup>
         <!-- MIT: MD4 (eD2k) and Tiger (THEX tree) digests. No transitive dependencies. -->

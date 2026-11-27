@@ -9,7 +9,7 @@
         <Description>Tracks item loans and borrowers and contributes loan badges, columns, search fields and dialog windows to the catalog.</Description>
     </PropertyGroup>
     <ItemGroup>
-        <ProjectReference Include="..\..\src\SkyCD.SDK\SkyCD.SDK.csproj"/>
+        <PackageReference Include="SkyCD.SDK" Version="[$(SkyCdSdkVersion)]"/>
         <ProjectReference Include="..\..\src\SkyCD.Documents\SkyCD.Documents.csproj"/>
         <ProjectReference Include="..\..\src\SkyCD.Couchbase\SkyCD.Couchbase.csproj"/>
         <ProjectReference Include="..\..\src\SkyCD.UI\SkyCD.UI.csproj"/>

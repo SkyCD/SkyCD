@@ -9,7 +9,7 @@
         <Description>Splits the open catalog into numbered part catalogs written in a loaded file format.</Description>
     </PropertyGroup>
     <ItemGroup>
-        <ProjectReference Include="..\..\src\SkyCD.SDK\SkyCD.SDK.csproj"/>
+        <PackageReference Include="SkyCD.SDK" Version="[$(SkyCdSdkVersion)]"/>
         <ProjectReference Include="..\..\src\SkyCD.UI\SkyCD.UI.csproj"/>
     </ItemGroup>
     <ItemGroup>

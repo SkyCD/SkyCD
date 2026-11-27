@@ -9,7 +9,7 @@
         <Description>Generates .nfo files and formatted descriptions from editable templates for torrent and file-sharing sites.</Description>
     </PropertyGroup>
     <ItemGroup>
-        <ProjectReference Include="../../src/SkyCD.SDK/SkyCD.SDK.csproj" />
+        <PackageReference Include="SkyCD.SDK" Version="[$(SkyCdSdkVersion)]" />
         <ProjectReference Include="../../src/SkyCD.UI/SkyCD.UI.csproj" />
     </ItemGroup>
     <ItemGroup>

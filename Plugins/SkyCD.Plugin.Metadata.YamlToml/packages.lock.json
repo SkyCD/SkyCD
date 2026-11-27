@@ -48,13 +48,16 @@
         "resolved": "3.119.4",
         "contentHash": "XOpbx/4CReO2wYsq2s6rbvdauc6dntG4Zv499sHGTJ87bwZaFXszFkwql3+FIZMc8kUPeaj3Mx2ezIJmo8a1Kg=="
       },
+      "SkyCD.SDK": {
+        "type": "Direct",
+        "requested": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
+        "resolved": "3.0.0-alpha.2",
+        "contentHash": "fxJSzGteGzMd6jW76KOriqaofaYPJWy8DXYvYyxfTkAnhNl7Jd9QYtjOX97Ewe2/mcbX094dQbfdp4G4c/2Ylg=="
+      },
       "OfficeIMO.Core": {
         "type": "Transitive",
         "resolved": "3.6.2",
         "contentHash": "g1vThR3DWAIlFBf7NujMtYdWtYVx5bsKPKDU0I1SVCvmDGLEhr1ezPxXlYnBJSOlMagY1WmTuMJPMfGv9NxyCw=="
-      },
-      "skycd.sdk": {
-        "type": "Project"
       }
     }
   }

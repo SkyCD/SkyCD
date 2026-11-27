@@ -9,7 +9,7 @@
         <Description>Contributes motion-detector capture sources to Add To List, detects motion in-process with OpenCV, and imports each captured frame into the open catalog.</Description>
     </PropertyGroup>
     <ItemGroup>
-        <ProjectReference Include="..\..\src\SkyCD.SDK\SkyCD.SDK.csproj"/>
+        <PackageReference Include="SkyCD.SDK" Version="[$(SkyCdSdkVersion)]"/>
         <ProjectReference Include="..\..\src\SkyCD.UI\SkyCD.UI.csproj"/>
     </ItemGroup>
     <ItemGroup>

@@ -18,6 +18,12 @@
           "Microsoft.TestPlatform.TestHost": "18.11.0"
         }
       },
+      "SkyCD.SDK": {
+        "type": "Direct",
+        "requested": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
+        "resolved": "3.0.0-alpha.2",
+        "contentHash": "fxJSzGteGzMd6jW76KOriqaofaYPJWy8DXYvYyxfTkAnhNl7Jd9QYtjOX97Ewe2/mcbX094dQbfdp4G4c/2Ylg=="
+      },
       "xunit": {
         "type": "Direct",
         "requested": "[2.9.3, )",
@@ -912,7 +918,7 @@
       "skycd.plugin.host": {
         "type": "Project",
         "dependencies": {
-          "SkyCD.SDK": "[3.0.0, )"
+          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
         }
       },
       "skycd.plugin.metadata.video": {
@@ -921,7 +927,7 @@
           "MetadataExtractor": "[2.9.3, )",
           "OpenCvSharp4": "[4.13.0.20261107, )",
           "OpenCvSharp4.runtime.win": "[4.13.0.20261107, )",
-          "SkyCD.SDK": "[3.0.0, )"
+          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
         }
       },
       "skycd.plugin.runtime": {
@@ -939,7 +945,7 @@
           "SkyCD.Documents": "[1.0.0, )",
           "SkyCD.Logging": "[1.0.0, )",
           "SkyCD.Plugin.Host": "[1.0.0, )",
-          "SkyCD.SDK": "[3.0.0, )",
+          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
           "System.Reflection.MetadataLoadContext": "[10.0.15, )"
         }
       },
@@ -958,18 +964,15 @@
           "SkyCD.Formatting": "[1.0.0, )",
           "SkyCD.Plugin.Host": "[1.0.0, )",
           "SkyCD.Plugin.Runtime": "[1.0.0, )",
-          "SkyCD.SDK": "[3.0.0, )",
+          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
           "SkyCD.UI": "[1.0.0, )",
           "WebDav.Client": "[2.9.0, )"
         }
       },
-      "skycd.sdk": {
-        "type": "Project"
-      },
       "skycd.testsupport": {
         "type": "Project",
         "dependencies": {
-          "SkyCD.SDK": "[3.0.0, )"
+          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
         }
       },
       "skycd.ui": {
@@ -979,7 +982,7 @@
           "IconPacks.Avalonia": "[2.0.0, )",
           "IconPacks.Avalonia.Lucide": "[2.0.0, )",
           "SkyCD.Formatting": "[1.0.0, )",
-          "SkyCD.SDK": "[3.0.0, )",
+          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
           "SmartFormat": "[3.6.2, )",
           "YamlDotNet": "[18.1.0, )"
         }

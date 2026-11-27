@@ -2,6 +2,7 @@
     <PropertyGroup>
         <!-- Keep the assembly file name identical to the project name so it can never silently diverge. -->
         <AssemblyName>$(MSBuildProjectName)</AssemblyName>
+        <SkyCdSdkVersion>3.0.0-alpha.2</SkyCdSdkVersion>
         <!-- Emit packages.lock.json for every project so the Trivy license scan can read resolved dependencies. -->
         <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
         <!--

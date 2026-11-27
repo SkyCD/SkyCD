@@ -26,6 +26,12 @@
         "resolved": "0.50.8",
         "contentHash": "Loy3gexDEO3smsiokv3553wNDAhWfa6y4f2B8q6Bstc9Xdnmw9nbZtOrlw6YvSbJy6O2yyMgWFINgCazRPZejA=="
       },
+      "SkyCD.SDK": {
+        "type": "Direct",
+        "requested": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
+        "resolved": "3.0.0-alpha.2",
+        "contentHash": "fxJSzGteGzMd6jW76KOriqaofaYPJWy8DXYvYyxfTkAnhNl7Jd9QYtjOX97Ewe2/mcbX094dQbfdp4G4c/2Ylg=="
+      },
       "Hst.Core": {
         "type": "Transitive",
         "resolved": "1.0.104",
@@ -35,9 +41,6 @@
         "type": "Transitive",
         "resolved": "1.2.0",
         "contentHash": "FjF0m6mI8qSvyytDkynJxWSZ6kNU6lE+sHqs6qa6N05gUCSzOkK1gCCvpRtpO9FGG8IJlo2JdH/9gRPBoQG9sg=="
-      },
-      "skycd.sdk": {
-        "type": "Project"
       }
     }
   }

@@ -9,7 +9,7 @@
         <Description>Extracts structural metadata and renders thumbnails for 3D model files.</Description>
     </PropertyGroup>
     <ItemGroup>
-        <ProjectReference Include="../../src/SkyCD.SDK/SkyCD.SDK.csproj"/>
+        <PackageReference Include="SkyCD.SDK" Version="[$(SkyCdSdkVersion)]"/>
         <PackageReference Include="SharpGLTF.Core" Version="1.0.7"/>
         <PackageReference Include="SkiaSharp" Version="3.119.4"/>
         <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.4"/>

@@ -12,6 +12,12 @@
           "OfficeIMO.Rtf": "3.6.2"
         }
       },
+      "SkyCD.SDK": {
+        "type": "Direct",
+        "requested": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
+        "resolved": "3.0.0-alpha.2",
+        "contentHash": "fxJSzGteGzMd6jW76KOriqaofaYPJWy8DXYvYyxfTkAnhNl7Jd9QYtjOX97Ewe2/mcbX094dQbfdp4G4c/2Ylg=="
+      },
       "OfficeIMO.Core": {
         "type": "Transitive",
         "resolved": "3.6.2",
@@ -24,9 +30,6 @@
         "dependencies": {
           "OfficeIMO.Core": "3.6.2"
         }
-      },
-      "skycd.sdk": {
-        "type": "Project"
       }
     }
   }

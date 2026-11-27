@@ -7,6 +7,6 @@
     </PropertyGroup>
     <ItemGroup>
         <!-- The published plugin-authoring contract only: no plugin, host or third-party implementation types. -->
-        <ProjectReference Include="..\..\src\SkyCD.SDK\SkyCD.SDK.csproj"/>
+        <PackageReference Include="SkyCD.SDK" Version="[$(SkyCdSdkVersion)]"/>
     </ItemGroup>
 </Project>

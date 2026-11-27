@@ -13,6 +13,12 @@
           "System.Linq.Async": "7.0.1"
         }
       },
+      "SkyCD.SDK": {
+        "type": "Direct",
+        "requested": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
+        "resolved": "3.0.0-alpha.2",
+        "contentHash": "fxJSzGteGzMd6jW76KOriqaofaYPJWy8DXYvYyxfTkAnhNl7Jd9QYtjOX97Ewe2/mcbX094dQbfdp4G4c/2Ylg=="
+      },
       "System.ComponentModel.Annotations": {
         "type": "Transitive",
         "resolved": "5.0.0",
@@ -35,9 +41,6 @@
         "dependencies": {
           "System.Interactive.Async": "7.0.1"
         }
-      },
-      "skycd.sdk": {
-        "type": "Project"
       }
     }
   }

@@ -9,7 +9,7 @@
         <Description>Connects to a JetBrains Account to sync license records into the accounts catalog.</Description>
     </PropertyGroup>
     <ItemGroup>
-        <ProjectReference Include="../../src/SkyCD.SDK/SkyCD.SDK.csproj"/>
+        <PackageReference Include="SkyCD.SDK" Version="[$(SkyCdSdkVersion)]"/>
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="CommandDotNet" Version="8.1.1"/>

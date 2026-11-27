@@ -9,7 +9,7 @@
         <Description>Reads bounded project facts from Adobe Premiere Pro (.prproj), After Effects (.aep, .aepx) and DaVinci Resolve (.drp, .drt) projects: application version, timelines, tracks, clips, frame rate, duration and referenced media counts, without opening the referenced media.</Description>
     </PropertyGroup>
     <ItemGroup>
-        <ProjectReference Include="..\..\src\SkyCD.SDK\SkyCD.SDK.csproj"/>
+        <PackageReference Include="SkyCD.SDK" Version="[$(SkyCdSdkVersion)]"/>
     </ItemGroup>
     <ItemGroup>
         <AssemblyMetadata Include="AuthorUrl" Value="https://sourceforge.net/projects/skycd/"/>

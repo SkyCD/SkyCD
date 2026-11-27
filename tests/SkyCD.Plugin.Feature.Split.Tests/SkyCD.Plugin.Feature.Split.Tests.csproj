@@ -14,7 +14,7 @@
     <ItemGroup>
         <ProjectReference Include="..\..\src\SkyCD.Plugin.Host\SkyCD.Plugin.Host.csproj"/>
         <ProjectReference Include="..\..\src\SkyCD.Presentation\SkyCD.Presentation.csproj"/>
-        <ProjectReference Include="..\..\src\SkyCD.SDK\SkyCD.SDK.csproj"/>
+        <PackageReference Include="SkyCD.SDK" Version="[$(SkyCdSdkVersion)]"/>
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Feature.Split\SkyCD.Plugin.Feature.Split.csproj"/>
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Json\SkyCD.Plugin.FileFormat.Json.csproj"/>
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.LegacySkyCD\SkyCD.Plugin.FileFormat.LegacySkyCD.csproj"/>

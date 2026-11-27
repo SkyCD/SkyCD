@@ -10,7 +10,7 @@
         <Description>Read-only import of MyCatalogue (*.mdb) catalogs.</Description>
     </PropertyGroup>
     <ItemGroup>
-        <ProjectReference Include="../../src/SkyCD.SDK/SkyCD.SDK.csproj" />
+        <PackageReference Include="SkyCD.SDK" Version="[$(SkyCdSdkVersion)]" />
         <PackageReference Include="JustyBase.UCanAccess.File" Version="1.1.0" />
     </ItemGroup>
     <ItemGroup>

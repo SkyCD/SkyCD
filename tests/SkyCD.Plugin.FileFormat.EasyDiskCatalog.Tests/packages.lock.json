@@ -53,6 +53,11 @@
           "Microsoft.TestPlatform.ObjectModel": "18.11.0"
         }
       },
+      "SkyCD.SDK": {
+        "type": "Transitive",
+        "resolved": "3.0.0-alpha.2",
+        "contentHash": "fxJSzGteGzMd6jW76KOriqaofaYPJWy8DXYvYyxfTkAnhNl7Jd9QYtjOX97Ewe2/mcbX094dQbfdp4G4c/2Ylg=="
+      },
       "SQLite3MC.PCLRaw.bundle": {
         "type": "Transitive",
         "resolved": "2.7.1",
@@ -124,16 +129,13 @@
         "type": "Project",
         "dependencies": {
           "SQLite3MC.PCLRaw.bundle": "[2.7.1, )",
-          "SkyCD.SDK": "[3.0.0, )"
+          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
         }
-      },
-      "skycd.sdk": {
-        "type": "Project"
       },
       "skycd.testsupport": {
         "type": "Project",
         "dependencies": {
-          "SkyCD.SDK": "[3.0.0, )"
+          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
         }
       }
     }
