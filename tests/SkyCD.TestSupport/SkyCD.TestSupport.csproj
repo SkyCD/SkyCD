@@ -6,7 +6,7 @@
         <IsPackable>false</IsPackable>
     </PropertyGroup>
     <ItemGroup>
-        <!-- The published plugin-authoring contract only: no plugin, host or third-party implementation types. -->
         <PackageReference Include="SkyCD.SDK" Version="[$(SkyCdSdkVersion)]"/>
+        <PackageReference Include="SkyCD.Testing" Version="[3.0.0-alpha.1]"/>
     </ItemGroup>
 </Project>
