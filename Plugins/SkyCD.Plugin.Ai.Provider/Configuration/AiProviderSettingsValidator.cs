@@ -1,5 +1,4 @@
 using System;
-using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Ai.Provider.Exceptions;
 using SkyCD.Plugin.Ai.Provider.Models;
 

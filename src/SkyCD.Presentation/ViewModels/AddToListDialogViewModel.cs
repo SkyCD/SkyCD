@@ -2,7 +2,7 @@ using SkyCD.Documents;
 using SkyCD.Presentation.Accounts;
 using SkyCD.Presentation.Scanning;
 using SkyCD.SDK.Capabilities.Accounts;
-using SkyCD.SDK.Capabilities.Capture;
+using SkyCD.SDK.Capabilities.Sources;
 using SkyCD.UI.Localization;
 using System;
 using System.Collections.Generic;
@@ -28,7 +28,7 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
         AddToListSourceMode initialSourceMode = AddToListSourceMode.Media,
         IReadOnlyList<LocationItemViewModel>? locationOptions = null,
         IReadOnlyList<IAccountSession>? accountSessions = null,
-        IReadOnlyList<ICaptureSourcePluginCapability>? captureProviders = null)
+        IReadOnlyList<ISourceFactoryPluginCapability>? captureProviders = null)
     {
         this.driveProvider = driveProvider ?? new SystemMediaDriveProvider();
         this.accountSessions = accountSessions ?? [];
@@ -126,17 +126,17 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
     public bool IsSourceCapture => SourceMode == AddToListSourceMode.CaptureSource;
 
     /// <summary>Plugin-provided capture source types; the button only appears while at least one is enabled.</summary>
-    public ObservableCollection<ICaptureSourcePluginCapability> CaptureProviders { get; } = [];
+    public ObservableCollection<ISourceFactoryPluginCapability> CaptureProviders { get; } = [];
 
-    [ObservableProperty] private ICaptureSourcePluginCapability? selectedCaptureProvider;
+    [ObservableProperty] private ISourceFactoryPluginCapability? selectedCaptureProvider;
 
-    public ObservableCollection<CaptureSourceKind> CaptureKinds { get; } = [];
+    public ObservableCollection<SourceKind> CaptureKinds { get; } = [];
 
-    [ObservableProperty] private CaptureSourceKind? selectedCaptureKind;
+    [ObservableProperty] private SourceKind? selectedCaptureKind;
 
-    public ObservableCollection<CaptureDevice> CaptureDevices { get; } = [];
+    public ObservableCollection<SourceDevice> CaptureDevices { get; } = [];
 
-    [ObservableProperty] private CaptureDevice? selectedCaptureDevice;
+    [ObservableProperty] private SourceDevice? selectedCaptureDevice;
 
     [ObservableProperty] private string captureLocation = string.Empty;
 
@@ -690,7 +690,7 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
         RecomputeValidation();
     }
 
-    partial void OnSelectedCaptureProviderChanged(ICaptureSourcePluginCapability? value)
+    partial void OnSelectedCaptureProviderChanged(ISourceFactoryPluginCapability? value)
     {
         CaptureKinds.Clear();
         CaptureDevices.Clear();
@@ -707,7 +707,7 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
         NotifyCaptureStateChanged();
     }
 
-    partial void OnSelectedCaptureKindChanged(CaptureSourceKind? value)
+    partial void OnSelectedCaptureKindChanged(SourceKind? value)
     {
         CaptureDevices.Clear();
         CaptureLocation = string.Empty;
@@ -729,7 +729,7 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
         NotifyCaptureStateChanged();
     }
 
-    partial void OnSelectedCaptureDeviceChanged(CaptureDevice? value) => RecomputeValidation();
+    partial void OnSelectedCaptureDeviceChanged(SourceDevice? value) => RecomputeValidation();
 
     partial void OnCaptureLocationChanged(string value) => RecomputeValidation();
 
@@ -751,7 +751,7 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
         _ => CaptureLocation.Trim()
     };
 
-    public CaptureSourceDraft CreateCaptureDraft() => new(
+    public SourceDraft CreateCaptureDraft() => new(
         SelectedCaptureKind?.Id ?? string.Empty,
         ResolveCaptureLocation(),
         CaptureDestination.Trim(),
@@ -761,7 +761,7 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
             : CaptureLabel.Trim());
 
     /// <summary>Captures one frame through the plugin so its detector overlay can be inspected inline.</summary>
-    public async Task<CapturePreviewResult?> CapturePreviewAsync(CancellationToken cancellationToken = default)
+    public async Task<SourcePreviewResult?> CapturePreviewAsync(CancellationToken cancellationToken = default)
     {
         if (SelectedCaptureProvider is not { } provider || SelectedCaptureKind is not { } kind)
         {
@@ -774,7 +774,7 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
         try
         {
             var result = await provider.CapturePreviewAsync(
-                new CaptureSourceConfiguration(
+                new SourceConfiguration(
                     string.Empty,
                     kind.Id,
                     ResolveCaptureLocation(),
@@ -801,7 +801,7 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>Persists the configured source through the selected plugin, which owns its capture loop.</summary>
-    public Task<CaptureSourceConfiguration> AddCaptureSourceAsync(CancellationToken cancellationToken = default)
+    public Task<SourceConfiguration> AddCaptureSourceAsync(CancellationToken cancellationToken = default)
     {
         if (SelectedCaptureProvider is not { } provider)
         {

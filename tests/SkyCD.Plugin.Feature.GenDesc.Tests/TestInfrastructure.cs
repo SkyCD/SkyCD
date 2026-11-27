@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Feature.GenDesc.Localization;
+using SkyCD.Plugin.Feature.GenDesc.Views;
 using SkyCD.SDK.Capabilities.Media;
 using SkyCD.SDK.Capabilities.Menu;
 using SkyCD.SDK.Capabilities.Ui;
@@ -68,25 +69,25 @@ internal sealed class FakeDescriptionEntryFactsApi : IDescriptionEntryFactsApi
     }
 }
 
-internal sealed class RecordingFileDialogApi : IHostFileDialogApi
+internal sealed class RecordingFilePicker : IGenDescFilePicker
 {
-    public List<OpenFileRequest> OpenRequests { get; } = [];
+    public List<(string Title, GenDescFileType FileType)> OpenRequests { get; } = [];
 
-    public List<SaveFileRequest> SaveRequests { get; } = [];
+    public List<(string Title, string SuggestedFileName, GenDescFileType FileType)> SaveRequests { get; } = [];
 
     public string? OpenResult { get; set; }
 
     public string? SaveResult { get; set; }
 
-    public Task<string?> ShowOpenAsync(OpenFileRequest request)
+    public Task<string?> PickOpenAsync(string title, GenDescFileType fileType)
     {
-        OpenRequests.Add(request);
+        OpenRequests.Add((title, fileType));
         return Task.FromResult(OpenResult);
     }
 
-    public Task<string?> ShowSaveAsync(SaveFileRequest request)
+    public Task<string?> PickSaveAsync(string title, string suggestedFileName, GenDescFileType fileType)
     {
-        SaveRequests.Add(request);
+        SaveRequests.Add((title, suggestedFileName, fileType));
         return Task.FromResult(SaveResult);
     }
 }
@@ -98,17 +99,6 @@ internal sealed class RecordingDialogApi : IHostDialogApi
     public Task ShowAsync(HostWindowRequest request)
     {
         Requests.Add(request);
-        return Task.CompletedTask;
-    }
-}
-
-internal sealed class RecordingClipboardApi : IClipboardApi
-{
-    public List<string> Texts { get; } = [];
-
-    public Task SetTextAsync(string text)
-    {
-        Texts.Add(text);
         return Task.CompletedTask;
     }
 }

@@ -5,7 +5,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.SDK.Plugins;
 using SkyCD.SDK.Capabilities.Catalog;
-using SkyCD.SDK.Capabilities.Import;
 
 namespace SkyCD.Plugin.Host.Catalog;
 

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Xunit;
 using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Ai.Provider.Exceptions;
+using SkyCD.Plugin.Ai.Provider.Models;
 using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.Ai.Provider.Tests;
@@ -27,7 +28,7 @@ public sealed class AiProviderPluginTests : IDisposable
     {
         var plugin = CreatePlugin();
 
-        Assert.Equal(AiDescriptionImplementationIds.Provider, plugin.ImplementationId);
+        Assert.Equal("provider", plugin.ImplementationId);
         Assert.Equal("AI provider", plugin.ImplementationName);
         Assert.Contains(plugin.Providers, provider => provider.Id == "ollama");
         Assert.Contains(plugin.Providers, provider => provider.Id == "colibri");

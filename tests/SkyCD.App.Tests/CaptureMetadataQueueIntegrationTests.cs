@@ -13,6 +13,7 @@ using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.SDK.Capabilities.Menu;
+using SkyCD.SDK.Capabilities.Sources;
 using SkyCD.TestSupport;
 using Xunit;
 
@@ -91,7 +92,7 @@ public sealed class CaptureMetadataQueueIntegrationTests : IDisposable
         using var viewModel = context.CreateViewModel();
         viewModel.CurrentCatalogPath = Path.Combine(context.MediaDirectory, "captures.scd");
 
-        await viewModel.ImportCapturedFilesAsync([BuildCapturedFile(context)]);
+        await viewModel.ImportSourceFilesAsync([BuildCapturedFile(context)]);
 
         var catalog = context.Catalog.GetAll();
         var capture = Assert.Single(catalog, entry =>
@@ -116,7 +117,7 @@ public sealed class CaptureMetadataQueueIntegrationTests : IDisposable
         using var viewModel = context.CreateViewModel();
 
         await Assert.ThrowsAsync<MotionCaptureCatalogUnavailableException>(
-            () => viewModel.ImportCapturedFilesAsync([BuildCapturedFile(context)]));
+            () => viewModel.ImportSourceFilesAsync([BuildCapturedFile(context)]));
 
         Assert.False(viewModel.IsCaptureCatalogOpen);
         Assert.Empty(context.Queue.GetPending());
@@ -124,7 +125,7 @@ public sealed class CaptureMetadataQueueIntegrationTests : IDisposable
 
     private const string MediaSourcePathPropertyKey = "FullName";
 
-    private static CapturedCatalogFile BuildCapturedFile(TestContext context)
+    private static SourceFile BuildCapturedFile(TestContext context)
     {
         var path = Path.Combine(context.MediaDirectory, "frame-1.jpg");
         if (!File.Exists(path))
@@ -133,7 +134,7 @@ public sealed class CaptureMetadataQueueIntegrationTests : IDisposable
         }
 
         var info = new FileInfo(path);
-        return new CapturedCatalogFile(
+        return new SourceFile(
             "Motion",
             info.LastWriteTime.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
             info.Name,

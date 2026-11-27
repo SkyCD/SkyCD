@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Feature.GenDesc.Exceptions;
@@ -25,7 +24,7 @@ namespace SkyCD.Plugin.Feature.GenDesc;
 /// template editors live in the Options dialog as two pages, one per output kind.
 /// </summary>
 public sealed class GenDescPlugin : IMenuPluginCapability, IDescriptionEntryFactsConsumer, IHostDialogConsumer,
-    IHostFileDialogConsumer, IClipboardConsumer, ILocalizationPluginCapability
+    ILocalizationPluginCapability
 {
     private const string NfoCommandId = "skycd.gendesc.nfo";
     private const string DescriptionCommandId = "skycd.gendesc.description";
@@ -33,8 +32,6 @@ public sealed class GenDescPlugin : IMenuPluginCapability, IDescriptionEntryFact
 
     private IDescriptionEntryFactsApi? entryFacts;
     private IHostDialogApi? dialogApi;
-    private IHostFileDialogApi? fileDialogs;
-    private IClipboardApi? clipboard;
 
     /// <summary>Overrides the user template directory in tests; production uses the shared default.</summary>
     internal string? TemplateDirectory { get; set; }
@@ -46,14 +43,6 @@ public sealed class GenDescPlugin : IMenuPluginCapability, IDescriptionEntryFact
     /// <inheritdoc />
     public void InitializeDialogApi(IHostDialogApi dialogApi) =>
         this.dialogApi = dialogApi ?? throw new ArgumentNullException(nameof(dialogApi));
-
-    /// <inheritdoc />
-    public void InitializeFileDialogApi(IHostFileDialogApi fileDialogApi) =>
-        fileDialogs = fileDialogApi ?? throw new ArgumentNullException(nameof(fileDialogApi));
-
-    /// <inheritdoc />
-    public void InitializeClipboard(IClipboardApi clipboard) =>
-        this.clipboard = clipboard ?? throw new ArgumentNullException(nameof(clipboard));
 
     /// <inheritdoc />
     public IReadOnlyCollection<MenuContribution> GetMenuContributions() =>
@@ -130,34 +119,18 @@ public sealed class GenDescPlugin : IMenuPluginCapability, IDescriptionEntryFact
     private async Task SaveNfoAsync(MenuCommandContext context, DescriptionEntryFacts entry, GenDescResult result,
         CancellationToken cancellationToken)
     {
-        if (fileDialogs is null)
+        if (dialogApi is null)
         {
             await NotifyAsync(context, LocalizationService.Current.Get(GenDescKeys.HostUnavailable), cancellationToken);
             return;
         }
 
+        var title = LocalizationService.Current.Get(GenDescKeys.SaveNfoTitle) + " - " + entry.FileName;
         var suggestedName = Path.GetFileNameWithoutExtension(entry.FileName) + ".nfo";
-        var target = await fileDialogs.ShowSaveAsync(new SaveFileRequest(
-            LocalizationService.Current.Get(GenDescKeys.SaveNfoTitle),
-            suggestedName,
-            ".nfo",
-            [new FileDialogFilter("NFO", ["*.nfo"])]));
-        if (string.IsNullOrWhiteSpace(target))
-        {
-            return;
-        }
-
-        try
-        {
-            await File.WriteAllTextAsync(target, result.Text, new UTF8Encoding(false), cancellationToken);
-            await NotifyAsync(context, LocalizationService.Current.Format(GenDescKeys.NfoSaved, target,
-                result.Template.Id), cancellationToken);
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-        {
-            await NotifyAsync(context, LocalizationService.Current.Format(GenDescKeys.GenerationFailed,
-                exception.Message), cancellationToken);
-        }
+        var viewModel = new NfoSaveDialogViewModel(title, suggestedName, result.Text,
+            path => NotifyAsync(context, LocalizationService.Current.Format(GenDescKeys.NfoSaved, path),
+                cancellationToken));
+        await dialogApi.ShowAsync(new HostWindowRequest(title, 520, 240, () => new NfoSaveDialogView(viewModel)));
     }
 
     private async Task ShowDescriptionAsync(DescriptionEntryFacts entry, GenDescResult result)
@@ -169,10 +142,7 @@ public sealed class GenDescPlugin : IMenuPluginCapability, IDescriptionEntryFact
 
         var title = LocalizationService.Current.Get(GenDescKeys.DescriptionTitle) + " - " + entry.FileName;
         await dialogApi.ShowAsync(new HostWindowRequest(title, 640, 520, () =>
-            new DescriptionDialogView
-            {
-                DataContext = new DescriptionDialogViewModel(title, result.Text, clipboard)
-            }));
+            new DescriptionDialogView(title, result.Text)));
     }
 
     private static Task NotifyAsync(MenuCommandContext context, string message, CancellationToken cancellationToken) =>

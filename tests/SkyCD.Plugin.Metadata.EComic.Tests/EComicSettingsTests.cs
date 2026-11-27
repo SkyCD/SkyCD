@@ -160,7 +160,7 @@ public sealed class EComicSettingsTests
     [Fact]
     public void ConfigurationPlugin_DescribesItsSurface()
     {
-        var descriptor = new EComicConfigurationPlugin().Configuration;
+        var descriptor = Assert.Single(new EComicConfigurationPlugin().Configurations);
 
         Assert.Equal("ecomic.settings", descriptor.ConfigurationId);
         Assert.Equal("eComic", descriptor.Title);

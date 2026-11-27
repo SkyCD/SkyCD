@@ -5,11 +5,15 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.SDK.Capabilities.Media;
+using Avalonia.Controls;
 using SkyCD.Plugin.Ai.Provider.Configuration;
 using SkyCD.Plugin.Ai.Provider.Exceptions;
 using SkyCD.Plugin.Ai.Provider.Models;
 using SkyCD.Plugin.Ai.Provider.Sources;
+using SkyCD.Plugin.Ai.Provider.Views;
+using SkyCD.SDK.Capabilities.Configuration;
+using SkyCD.SDK.Capabilities.Media;
+using SkyCD.UI.Localization;
 
 namespace SkyCD.Plugin.Ai.Provider;
 
@@ -18,10 +22,13 @@ namespace SkyCD.Plugin.Ai.Provider;
 /// provider-neutral description contract with the ACP plugin, so host-side scan exclusions and file-size
 /// limits apply to either implementation.
 /// </summary>
-public sealed class AiProviderPlugin : IGeneratedDescriptionCapability, IDescriptionGenerationPlanner,
-    IAiProviderSettingsCapability, IAiDescriptionImplementationCapability
+public sealed class AiProviderPlugin : IDescriptionGeneratorCapability, IDescriptionGenerationPlanner,
+    IPluginConfigurationCapability
 {
     public const string PluginVersion = "1.0.0";
+
+    /// <summary>Configuration page that edits the provider connection.</summary>
+    public const string SettingsConfigurationId = "ai-provider";
 
     private static readonly DescriptionContextOptions ContextOptions =
         new(Filename: true, Metadata: false, Text: true, Images: true, Audio: false,
@@ -40,11 +47,44 @@ public sealed class AiProviderPlugin : IGeneratedDescriptionCapability, IDescrip
         client = new AiProviderClient(httpClient);
     }
 
-    public string ImplementationId => AiDescriptionImplementationIds.Provider;
+    public string ImplementationId => "provider";
 
     public string ImplementationName => "AI provider";
 
     public IReadOnlyList<AiProviderChoice> Providers => AiProviderCatalog.Providers;
+
+    /// <inheritdoc />
+    public IReadOnlyList<PluginConfigurationDescriptor> Configurations =>
+        [new(SettingsConfigurationId, LocalizationService.Current.Get(UiKeys.AiProviderCategory), Order: -10)];
+
+    /// <inheritdoc />
+    public Task<PluginConfigurationPage> CreatePageAsync(PluginConfigurationRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!request.ConfigurationId.Equals(SettingsConfigurationId, StringComparison.OrdinalIgnoreCase))
+        {
+            var error = $"Unsupported configuration '{request.ConfigurationId}'.";
+            return Task.FromResult(new PluginConfigurationPage(
+                () => new TextBlock
+                {
+                    Text = error,
+                    TextWrapping = Avalonia.Media.TextWrapping.Wrap
+                },
+                _ => Task.FromResult(new PluginConfigurationResult { Success = false, Error = error })));
+        }
+
+        var viewModel = new AiProviderSettingsPageViewModel(this, request.CurrentSettings);
+        return Task.FromResult(new PluginConfigurationPage(
+            () => new AiProviderSettingsView(viewModel),
+            token =>
+            {
+                token.ThrowIfCancellationRequested();
+                return Task.FromResult(viewModel.Accept());
+            },
+            () => viewModel.Dispose()));
+    }
 
     public MediaMetadataSchema Schema => new("skycd.ai-description.metadata", 1,
         new[]

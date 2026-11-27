@@ -25,14 +25,15 @@ using SkyCD.Plugin.Runtime.Installation;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.Runtime.Marketplace.Services;
 using SkyCD.SDK.Plugins;
-using SkyCD.SDK.Capabilities.Capture;
+using SkyCD.SDK.Capabilities.Sources;
 using SkyCD.SDK.Capabilities.Catalog;
+using SkyCD.SDK.Capabilities.Catalog.Locations;
 using SkyCD.SDK.Capabilities.Options;
 using SkyCD.SDK.Capabilities.Storage;
 using SkyCD.SDK.Capabilities.Ui;
 using SkyCD.Core.DependencyInjection.Registrators;
 using SkyCD.Core.Versioning;
-using SkyCD.Presentation.Capture;
+using SkyCD.Presentation.Sources;
 using SkyCD.Presentation.Catalog;
 using SkyCD.Presentation.Descriptions;
 using SkyCD.Presentation.Scanning;
@@ -252,13 +253,9 @@ public partial class App : Avalonia.Application
         var storageFactory = appServiceProvider.Resolve<PluginStorageApiFactory>();
         var dialogApi = new AvaloniaHostDialogApi(() =>
             (Avalonia.Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow);
-        var fileDialogApi = new AvaloniaHostFileDialogApi(() =>
-            (Avalonia.Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow);
-        var clipboard = new AvaloniaClipboardApi(() =>
-            (Avalonia.Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow);
         var entryFactsApi = appServiceProvider.Resolve<DescriptionEntryFactsApi>();
         var onlineMetadata = ServiceProvider.Resolve<OnlineMetadataExtensionManager>();
-        var captureHost = new CaptureSourceHostApi(() => appServiceProvider.Resolve<MainWindowViewModel>());
+        var captureHost = new SourceFactoryHostApi(() => appServiceProvider.Resolve<MainWindowViewModel>());
         var catalogSaveHost = new CatalogSaveHostApi(
             appServiceProvider.Resolve<RepositoryManager>(),
             appServiceProvider.Resolve<OpenCatalogState>(),
@@ -309,21 +306,9 @@ public partial class App : Avalonia.Application
                 catch (Exception exception) { PluginFailure.Publish(consumer.GetType(), "options", exception); }
             }
 
-            foreach (var consumer in plugin.Capabilities.OfType<IHostFileDialogConsumer>())
+            foreach (var consumer in plugin.Capabilities.OfType<ISourceFactoryHostConsumer>())
             {
-                try { consumer.InitializeFileDialogApi(fileDialogApi); }
-                catch (Exception exception) { PluginFailure.Publish(consumer.GetType(), "modal", exception); }
-            }
-
-            foreach (var consumer in plugin.Capabilities.OfType<IClipboardConsumer>())
-            {
-                try { consumer.InitializeClipboard(clipboard); }
-                catch (Exception exception) { PluginFailure.Publish(consumer.GetType(), "modal", exception); }
-            }
-
-            foreach (var consumer in plugin.Capabilities.OfType<ICaptureSourceHostConsumer>())
-            {
-                try { consumer.InitializeCaptureHost(captureHost); }
+                try { consumer.InitializeSourceFactoryHost(captureHost); }
                 catch (Exception exception) { PluginFailure.Publish(consumer.GetType(), "capture", exception); }
             }
 
@@ -352,7 +337,7 @@ public partial class App : Avalonia.Application
             }
 
             var owner = desktop.Windows.FirstOrDefault(window => window.IsActive) ?? mainWindow;
-            return mainWindow.ShowContributedOptionsAsync(OptionsContributedPage.GetCategoryId(pluginId, pageId), owner);
+            return mainWindow.ShowContributedOptionsAsync(OptionsPluginPage.GetCategoryId(pluginId, pageId), owner);
         }).ConfigureAwait(false);
     }
 
