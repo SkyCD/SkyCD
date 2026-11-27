@@ -269,7 +269,7 @@ public sealed class DiskCatalogMakerHierarchyTests
         var fixturePath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "DiskCatalogMaker", "diskcatalogmaker-standard-en.txt");
         await using var stream = File.OpenRead(fixturePath);
         var seen = new List<int>();
-        var progress = new Progress<int>(seen.Add);
+        var progress = new SynchronousProgress(seen.Add);
 
         var result = await plugin.ReadAsync(new FileFormatReadRequest
         {
@@ -382,5 +382,10 @@ public sealed class DiskCatalogMakerHierarchyTests
         Assert.Equal("2026-01-06 10:00:00", DiskCatalogMakerHierarchyBuilder.NormalizeDate("06.01.2026 10:00:00"));
         Assert.Equal("2026-01-06 10:30:00", DiskCatalogMakerHierarchyBuilder.NormalizeDate("2026-01-06 10:30:00"));
         Assert.Equal("not a date", DiskCatalogMakerHierarchyBuilder.NormalizeDate("not a date"));
+    }
+
+    private sealed class SynchronousProgress(Action<int> report) : IProgress<int>
+    {
+        public void Report(int value) => report(value);
     }
 }
