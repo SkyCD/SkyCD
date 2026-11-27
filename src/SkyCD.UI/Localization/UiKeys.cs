@@ -390,9 +390,6 @@ public static class UiKeys
     public const string CollectionEntries = "core.ui.CollectionEntries";
     public const string NoCollections = "core.ui.NoCollections";
     public const string Accounts = "core.ui.Accounts";
-    public const string AccountsIntro = "core.ui.AccountsIntro";
-    public const string AccountsEmpty = "core.ui.AccountsEmpty";
-    public const string AccountsEmptyHint = "core.ui.AccountsEmptyHint";
     public const string AccountConnect = "core.ui.AccountConnect";
     public const string AccountSync = "core.ui.AccountSync";
     public const string AccountSignOut = "core.ui.AccountSignOut";
@@ -408,7 +405,6 @@ public static class UiKeys
     public const string AccountStatusError = "core.ui.AccountStatusError";
     public const string AccountUnknownProvider = "core.ui.AccountUnknownProvider";
     public const string AccountWorking = "core.ui.AccountWorking";
-    public const string AccountOpenSettings = "core.ui.AccountOpenSettings";
     public const string AccountNoConnected = "core.ui.AccountNoConnected";
     public const string AccountAddHint = "core.ui.AccountAddHint";
     public const string AccountProductsHeader = "core.ui.AccountProductsHeader";

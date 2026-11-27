@@ -29,7 +29,7 @@ public sealed class OptionsDialogViewModelOptionsPagesTests
         var collections = Array.IndexOf(ids, OptionsDialogViewModel.CollectionsCategoryId);
         var page = Array.IndexOf(ids, PageId(capability));
         Assert.True(page > collections);
-        Assert.Equal(3 + 1 + 1 + 1, page); // plugins, language, statuses, custom-properties, collections, accounts, page, scan
+        Assert.Equal(3 + 1 + 1, page); // plugins, language, statuses, custom-properties, collections, page, scan
         Assert.Equal("scan", ids[page + 1]);
     }
 

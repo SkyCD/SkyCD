@@ -118,7 +118,6 @@ public partial class OptionsDialogViewModel
         contributedPages.Clear();
         DisposePluginPathScan();
         CollectionsPage?.StopWatchingCatalogChanges();
-        DisposeAccounts();
         DisposeMarketplace();
     }
 }

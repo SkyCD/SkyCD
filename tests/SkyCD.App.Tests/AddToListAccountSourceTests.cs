@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.SDK.Capabilities.Accounts;
+using SkyCD.UI.Localization;
 using Xunit;
 
 namespace SkyCD.App.Tests;
@@ -12,6 +13,8 @@ public class AddToListAccountSourceTests
     private sealed class FakeAccountSession(AccountSessionStatus status) : IAccountSession
     {
         public bool SignedOut { get; private set; }
+
+        public bool Synced { get; private set; }
 
         public Task<AccountConnectionResult> ConnectAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(new AccountConnectionResult { Success = true, AccountId = status.AccountId });
@@ -25,7 +28,11 @@ public class AddToListAccountSourceTests
             return Task.CompletedTask;
         }
 
-        public Task SyncAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task SyncAsync(CancellationToken cancellationToken = default)
+        {
+            Synced = true;
+            return Task.CompletedTask;
+        }
     }
 
     private static AccountSessionStatus ConnectedStatus() => new()
@@ -91,14 +98,72 @@ public class AddToListAccountSourceTests
     }
 
     [Fact]
-    public void OpenAccountSettings_SignalsTheHost()
+    public async Task DisconnectedConnector_OffersConnectOnly()
     {
-        using var vm = new AddToListDialogViewModel();
+        var session = new FakeAccountSession(ConnectedStatus() with { IsConnected = false });
+        using var vm = new AddToListDialogViewModel(accountSessions: [session])
+        {
+            SourceMode = AddToListSourceMode.FromAccount
+        };
 
-        vm.OpenAccountSettingsCommand.Execute(null);
+        await vm.RefreshAccountsAsync();
 
-        Assert.True(vm.OpenAccountsRequested);
-        Assert.False(vm.DialogAccepted);
+        var connector = Assert.Single(vm.AvailableAccountConnectors);
+        Assert.True(connector.ShowConnect);
+        Assert.False(connector.ShowManage);
+        Assert.Equal(LocalizationService.Current.Get(UiKeys.AccountNotSignedIn), connector.StateText);
+    }
+
+    [Fact]
+    public async Task ConnectedConnector_OffersSyncAndSignOut()
+    {
+        var session = new FakeAccountSession(ConnectedStatus());
+        using var vm = new AddToListDialogViewModel(accountSessions: [session])
+        {
+            SourceMode = AddToListSourceMode.FromAccount
+        };
+
+        await vm.RefreshAccountsAsync();
+
+        var connector = Assert.Single(vm.AvailableAccountConnectors);
+        Assert.False(connector.ShowConnect);
+        Assert.True(connector.ShowManage);
+    }
+
+    [Fact]
+    public async Task SyncConnector_RunsWithoutLeavingTheDialog()
+    {
+        var session = new FakeAccountSession(ConnectedStatus());
+        using var vm = new AddToListDialogViewModel(accountSessions: [session])
+        {
+            SourceMode = AddToListSourceMode.FromAccount
+        };
+        await vm.RefreshAccountsAsync();
+
+        await vm.AvailableAccountConnectors[0].SyncCommand.ExecuteAsync(null);
+
+        Assert.True(session.Synced);
+    }
+
+    [Fact]
+    public async Task SignOutConnector_ReturnsItToTheConnectStateAndDropsTheChoice()
+    {
+        var session = new FakeAccountSession(ConnectedStatus());
+        using var vm = new AddToListDialogViewModel(accountSessions: [session])
+        {
+            SourceMode = AddToListSourceMode.FromAccount
+        };
+        await vm.RefreshAccountsAsync();
+        Assert.Single(vm.AccountChoices);
+
+        await vm.AvailableAccountConnectors[0].SignOutCommand.ExecuteAsync(null);
+
+        Assert.True(session.SignedOut);
+        Assert.True(vm.AvailableAccountConnectors[0].ShowConnect);
+        Assert.False(vm.AvailableAccountConnectors[0].ShowManage);
+        Assert.Empty(vm.AccountChoices);
+        Assert.True(vm.ShowAccountEmptyState);
+        Assert.False(vm.CanConfirm);
     }
 
     [Fact]
