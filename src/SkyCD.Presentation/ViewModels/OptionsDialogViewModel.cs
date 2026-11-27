@@ -371,9 +371,9 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private Task BrowsePluginPath() => browsePluginPath?.Invoke() ?? Task.CompletedTask;
 
-    public async Task BrowsePluginPathAsync(Func<Task<string?>> pickFolder)
+    public async Task BrowsePluginPathAsync(Func<string?, Task<string?>> pickFolder)
     {
-        var path = await pickFolder();
+        var path = await pickFolder(ResolvePluginPathStartFolder(PluginPath));
         if (!string.IsNullOrWhiteSpace(path))
         {
             PluginPath = path;

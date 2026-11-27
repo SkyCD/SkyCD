@@ -278,12 +278,26 @@ public partial class MainWindow
     }
 
 
-    private async Task<string?> PickPluginFolderAsync()
+    private async Task<string?> PickPluginFolderAsync(string? startFolder)
     {
+        IStorageFolder? suggestedStartLocation = null;
+        if (!string.IsNullOrEmpty(startFolder))
+        {
+            try
+            {
+                suggestedStartLocation = await StorageProvider.TryGetFolderFromPathAsync(startFolder);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                // A folder the storage provider cannot open only leaves the picker on its default location.
+            }
+        }
+
         var picked = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
             Title = LocalizationService.Current.Get(TextKeys.SelectPlugInDirectory),
-            AllowMultiple = false
+            AllowMultiple = false,
+            SuggestedStartLocation = suggestedStartLocation
         });
         return picked.FirstOrDefault()?.TryGetLocalPath();
     }
