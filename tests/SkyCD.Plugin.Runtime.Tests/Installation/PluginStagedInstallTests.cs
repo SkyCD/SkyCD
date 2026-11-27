@@ -492,6 +492,35 @@ public sealed class PluginStagedInstallTests : IDisposable
     }
 
     [Fact]
+    public async Task RegistrationOnlyFeed_StagesPackageContentFromAnExternalPageAndRedirect()
+    {
+        var feed = new FakeNuGetFeed();
+        var installer = CreateInstaller(feed);
+        var id = PackageId.ToLowerInvariant();
+        var path = $"{id}/1.0.0/{id}.1.0.0.nupkg";
+        var asset = new Uri("https://releases.test/download/v1.0.0/package.nupkg");
+        var storage = new Uri($"https://assets.test/{path}");
+        feed.AddPackage(PackageId, "1.0.0", Package(PluginId, "1.0.0"));
+        feed.Documents.Add(new Uri(FakeNuGetFeed.ServiceIndexUrl), """
+            { "resources": [{ "@id": "https://feed.test/registration/", "@type": "RegistrationsBaseUrl/3.6.0" }] }
+            """);
+        var index = new Uri($"https://feed.test/registration/{id}/index.json");
+        var page = new Uri($"https://feed.test/registration/{id}/page.json");
+        feed.Documents.Add(index, $$"""
+            { "items": [{ "@id": "{{page}}" }] }
+            """);
+        feed.Documents.Add(page, $$"""
+            { "items": [{ "catalogEntry": { "id": "{{PackageId}}", "version": "1.0.0" }, "packageContent": "{{asset}}" }] }
+            """);
+        feed.Redirects.Add(asset, storage);
+
+        var result = await installer.StageInstallAsync(Request("1.0.0"));
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal([new Uri(FakeNuGetFeed.ServiceIndexUrl), index, page, asset, storage], feed.RequestedUris);
+    }
+
+    [Fact]
     public async Task PackageRedirects_FollowRelativeAndCrossOriginHttpsLocations()
     {
         var feed = new FakeNuGetFeed();

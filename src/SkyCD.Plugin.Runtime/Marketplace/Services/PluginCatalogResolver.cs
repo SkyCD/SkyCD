@@ -434,6 +434,7 @@ internal sealed class PluginCatalogResolver
                 SourceUri = sourceUri,
                 FeedUri = feed ?? Placeholder,
                 PackageContentBaseUri = versions.BaseAddress,
+                RegisteredPackageContentUri = versions.Registration?.GetValueOrDefault(release.Version.Normalized),
                 PackageId = package.Id,
                 Version = release.Version,
                 MinHostVersion = release.MinHostVersion,
@@ -472,7 +473,17 @@ internal sealed class PluginCatalogResolver
             var baseAddress = NuGetFeedDocuments.ParsePackageBaseAddress(feed, serviceIndex);
             if (baseAddress is null)
             {
-                return FeedVersions.Unlisted();
+                var registration = NuGetFeedDocuments.ParseRegistrationBaseAddress(feed, serviceIndex);
+                if (registration is null)
+                {
+                    return FeedVersions.Unlisted();
+                }
+
+                var content = await NuGetFeedDocuments.ReadRegistrationAsync(registration, packageId,
+                    (uri, token) => Fetcher.GetStringAsync(uri, options.MaxFeedDocumentBytes, token),
+                    cancellationToken).ConfigureAwait(false);
+                return new FeedVersions(feed.AbsoluteUri, null, new HashSet<string>(content.Keys, content.Comparer),
+                    null, content);
             }
 
             var rootUri = baseAddress.AbsoluteUri.EndsWith('/')
@@ -602,13 +613,13 @@ internal sealed class PluginCatalogResolver
         int Generation);
 
     private sealed record FeedVersions(string? Feed, Uri? BaseAddress, HashSet<string> Versions,
-        FeedAvailability? State)
+        FeedAvailability? State, IReadOnlyDictionary<string, Uri>? Registration = null)
     {
         /// <summary>The feed cannot confirm anything: no package content resource (or no usable feed URL).</summary>
         public static FeedVersions Unlisted()
         {
             return new FeedVersions(null, null, [], FeedAvailability.Failed(
-                "the feed exposes no PackageBaseAddress/3.0.0 (package content) resource."));
+                "the feed exposes no package content or registration resource."));
         }
 
         public static FeedVersions Failed(Uri feed)
