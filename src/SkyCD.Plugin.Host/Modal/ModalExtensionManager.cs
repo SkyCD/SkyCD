@@ -6,7 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.SDK.Capabilities.Modal;
 using SkyCD.Plugin.Host.Exceptions;
-using SkyCD.SDK;
+using SkyCD.SDK.Plugins;
 
 namespace SkyCD.Plugin.Host.Modal;
 

@@ -72,7 +72,7 @@ public sealed class AiDescriptionTests : IDisposable
             "content-based AI description", destination, DateTimeOffset.UtcNow));
     }
 
-    private sealed class FakeCapability : IGeneratedDescriptionCapability, IDescriptionGenerationPlanner
+    private sealed class FakeCapability : IDescriptionGeneratorCapability, IDescriptionGenerationPlanner
     {
         private readonly Func<DescriptionContext, CancellationToken, Task<GeneratedDescription>>? generate;
         private readonly DescriptionGenerationPlan plan;
@@ -89,6 +89,10 @@ public sealed class AiDescriptionTests : IDisposable
         }
 
         public int Calls => Volatile.Read(ref calls);
+
+        public string ImplementationId => "fake";
+
+        public string ImplementationName => "Fake";
 
         public MediaMetadataSchema Schema => new("test.description.schema", 1, []);
 

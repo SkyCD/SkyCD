@@ -14,7 +14,7 @@ public sealed record DescriptionGenerationPlan(
     string? UnavailableReason = null);
 
 /// <summary>
-/// Optional provider-neutral disclosure for <see cref="IGeneratedDescriptionCapability"/> implementations
+/// Optional provider-neutral disclosure for <see cref="IDescriptionGeneratorCapability"/> implementations
 /// that can describe their configuration without starting a session or sending any context.
 /// </summary>
 public interface IDescriptionGenerationPlanner

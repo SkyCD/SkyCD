@@ -55,7 +55,7 @@ public partial class MainWindow
             : options.Browser.DetailsColumns);
         LoadScanOptionsIntoDialog(e.Dialog, options);
         e.Dialog.SetMediaEjectionSupported(mediaEjector.IsPlatformSupported);
-        e.Dialog.SetAiDescriptionAvailable(pluginManager.GetCapabilities<IGeneratedDescriptionCapability>().Any());
+        e.Dialog.SetAiDescriptionAvailable(pluginManager.GetCapabilities<IDescriptionGeneratorCapability>().Any());
         e.Dialog.SetAiDescriptionImplementations(
             ServiceProvider.Resolve<DescriptionExtensionManager>().Implementations,
             options.AiDescriptionImplementation);

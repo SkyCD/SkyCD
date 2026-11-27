@@ -1,7 +1,7 @@
 using System;
 using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
-using SkyCD.SDK;
+using SkyCD.SDK.Plugins;
 using SkyCD.SDK.Capabilities.Options;
 using SkyCD.UI.Localization;
 

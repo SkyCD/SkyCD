@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.SDK.Capabilities.Menu;
-using SkyCD.SDK;
+using SkyCD.SDK.Plugins;
 
 namespace SkyCD.Plugin.Host.Menu;
 

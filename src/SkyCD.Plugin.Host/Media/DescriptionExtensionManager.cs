@@ -9,25 +9,24 @@ namespace SkyCD.Plugin.Host.Media;
 public sealed record AiDescriptionImplementationChoice(string Id, string Name);
 
 /// <summary>
-/// Host facade for the selectable AI description capabilities. The optional capability stays absent when
-/// no provider is enabled, so stored descriptions remain readable without one. When several
-/// implementations are installed, the host-selected one wins and falls back to the first available.
+/// Host facade for the selectable description generators. The optional capability stays absent when no
+/// generator is enabled, so stored descriptions remain readable without one. When several implementations
+/// are installed, the host-selected one wins and falls back to the first available.
 /// </summary>
 public sealed class DescriptionExtensionManager
 {
-    private readonly IReadOnlyList<IGeneratedDescriptionCapability> capabilities;
+    private readonly IReadOnlyList<IDescriptionGeneratorCapability> capabilities;
     private string? selectedImplementationId;
 
-    public DescriptionExtensionManager(IEnumerable<IGeneratedDescriptionCapability> capabilities)
+    public DescriptionExtensionManager(IEnumerable<IDescriptionGeneratorCapability> capabilities)
     {
         ArgumentNullException.ThrowIfNull(capabilities);
         this.capabilities = capabilities.ToArray();
         Capability = this.capabilities.FirstOrDefault();
     }
 
-    /// <summary>Selectable implementations; capabilities without an identity cannot be chosen explicitly.</summary>
+    /// <summary>Selectable implementations, one per stable implementation id.</summary>
     public IReadOnlyList<AiDescriptionImplementationChoice> Implementations => capabilities
-        .OfType<IAiDescriptionImplementationCapability>()
         .Select(static capability => new AiDescriptionImplementationChoice(
             capability.ImplementationId, capability.ImplementationName))
         .DistinctBy(static choice => choice.Id, StringComparer.OrdinalIgnoreCase)
@@ -37,12 +36,10 @@ public sealed class DescriptionExtensionManager
     public string? SelectedImplementationId => selectedImplementationId;
 
     /// <summary>The effective implementation id, including the first-available fallback.</summary>
-    public string? ActiveImplementationId => Capability is IAiDescriptionImplementationCapability identified
-        ? identified.ImplementationId
-        : null;
+    public string? ActiveImplementationId => Capability?.ImplementationId;
 
     /// <summary>The capability used for generation; never null while an implementation is installed.</summary>
-    public IGeneratedDescriptionCapability? Capability { get; private set; }
+    public IDescriptionGeneratorCapability? Capability { get; private set; }
 
     public bool IsAvailable => Capability is not null;
 
@@ -56,8 +53,7 @@ public sealed class DescriptionExtensionManager
         Capability = selectedImplementationId is null
             ? capabilities.FirstOrDefault()
             : capabilities.FirstOrDefault(capability =>
-                  capability is IAiDescriptionImplementationCapability identified &&
-                  string.Equals(identified.ImplementationId, selectedImplementationId,
+                  string.Equals(capability.ImplementationId, selectedImplementationId,
                       StringComparison.OrdinalIgnoreCase))
               ?? capabilities.FirstOrDefault();
     }
