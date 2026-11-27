@@ -34,7 +34,7 @@ using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Core.OAuth;
 using SkyCD.SDK.OAuth;
-using SkyCD.SDK;
+using SkyCD.SDK.Plugins;
 
 namespace SkyCD.Core.DependencyInjection.Registrators;
 
