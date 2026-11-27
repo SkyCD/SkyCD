@@ -29,8 +29,8 @@ plugin folders.
 ## Publisher Package Layout
 
 The catalog stages the exact version named by `PluginPackageRequest`: a NuGet v3 service index URL
-(exposing `PackageBaseAddress/3.0.0`), package id and version. Downloads use HTTPS without redirects and are
-size-bounded.
+(exposing `PackageBaseAddress/3.0.0`), package id and version. The installer follows up to five HTTPS redirects
+per request, rejects URL credentials at every hop, and enforces the package size limit across redirected downloads.
 
 - Prefer `lib/<tfm>/` content; packages without a `lib/` folder may use `tools/<tfm>/any/`.
 - Every file in the selected folder is extracted; entry names, duplicates, symlinks and path traversal are
