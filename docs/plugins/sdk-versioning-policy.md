@@ -117,3 +117,14 @@ Generated descriptions and the Options implementation identity now share one cap
 | `AiDescriptionImplementationIds` (SDK) | Host-owned constant set in `SkyCD.Plugin.Host.Media`; each plugin owns its own stable id |
 
 `DescriptionGenerationPlan` and `IDescriptionGenerationPlanner` keep their provider-neutral shape.
+
+## SDK 3.0 description entry facts (#1342)
+
+The `Capabilities.GenDesc` area named a single shipped plugin inside the SDK. The helper is generic to any
+description generator, so it moved next to the generator contracts in `Capabilities.Media`.
+
+| Previous contract | SDK 3.0 replacement |
+|---|---|
+| `GenDescEntryContext` | `DescriptionEntryFacts` |
+| `IGenDescHostApi.GetEntryContextAsync` | `IDescriptionEntryFactsApi.GetEntryFactsAsync` |
+| `IGenDescHostConsumer.InitializeGenDescHost` | `IDescriptionEntryFactsConsumer.InitializeDescriptionEntryFacts` |

@@ -6,7 +6,7 @@ using SkyCD.Plugin.Feature.GenDesc.Exceptions;
 using SkyCD.Plugin.Feature.GenDesc.Models;
 using SkyCD.Plugin.Feature.GenDesc.Parsing;
 using SkyCD.Plugin.Feature.GenDesc.Rendering;
-using SkyCD.SDK.Capabilities.GenDesc;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.TestSupport;
 using Xunit;
 
@@ -20,7 +20,7 @@ public class GenDescRendererTests
         string mime = "video/*", string extensions = ".mkv", string body = "{{ default(\"Title\", Name) }}") =>
         new(id, kind, category, language, TemplateInfo.DefaultSite, "1", mime, extensions, body);
 
-    private static GenDescEntryContext MovieContext(params (string Key, string Value)[] extra)
+    private static DescriptionEntryFacts MovieContext(params (string Key, string Value)[] extra)
     {
         var facts = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -34,7 +34,7 @@ public class GenDescRendererTests
             facts[pair.Key] = pair.Value;
         }
 
-        return new GenDescEntryContext("Example.Movie.2024.1080p.mkv", ".mkv", "video/x-matroska", facts);
+        return new DescriptionEntryFacts("Example.Movie.2024.1080p.mkv", ".mkv", "video/x-matroska", facts);
     }
 
     [Fact]
@@ -67,7 +67,7 @@ public class GenDescRendererTests
     public void MissingTitleFallsBackToTheFileNameWithoutExtension()
     {
         var store = Store(Template("title", TemplateInfo.DescriptionKind, "movie", body: "{{ Title }}"));
-        var context = new GenDescEntryContext("Some.File.mkv", ".mkv", "video/x-matroska",
+        var context = new DescriptionEntryFacts("Some.File.mkv", ".mkv", "video/x-matroska",
             new Dictionary<string, string>());
 
         var result = GenDescRenderer.Render(store, context, TemplateInfo.DescriptionKind, "en");

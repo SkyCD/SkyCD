@@ -11,20 +11,20 @@ using SkyCD.Documents.Enum;
 using SkyCD.Formatting;
 using SkyCD.Presentation.Catalog;
 using SkyCD.Presentation.MediaCache;
-using SkyCD.SDK.Capabilities.GenDesc;
+using SkyCD.SDK.Capabilities.Media;
 
-namespace SkyCD.Presentation.GenDesc;
+namespace SkyCD.Presentation.Descriptions;
 
 /// <summary>
-/// Resolves catalog entries into GenDesc facts. The plugin never touches the catalog or the media cache
+/// Resolves catalog entries into description entry facts. The plugin never touches the catalog or the media cache
 /// directly: entry eligibility, the local-source rule, MIME resolution and metadata merging live here.
 /// </summary>
-public sealed class GenDescHostApi(OpenCatalogState catalogState) : IGenDescHostApi
+public sealed class DescriptionEntryFactsApi(OpenCatalogState catalogState) : IDescriptionEntryFactsApi
 {
     private const string SourcePathKey = "FullName";
 
     /// <inheritdoc />
-    public Task<GenDescEntryContext?> GetEntryContextAsync(string entryId,
+    public Task<DescriptionEntryFacts?> GetEntryFactsAsync(string entryId,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(entryId);
@@ -32,19 +32,19 @@ public sealed class GenDescHostApi(OpenCatalogState catalogState) : IGenDescHost
         var repository = catalogState.Repository;
         if (repository is null)
         {
-            return Task.FromResult<GenDescEntryContext?>(null);
+            return Task.FromResult<DescriptionEntryFacts?>(null);
         }
 
         var entry = repository.Get(entryId);
         if (entry is null || entry.Type != CatalogDocumentType.File)
         {
-            return Task.FromResult<GenDescEntryContext?>(null);
+            return Task.FromResult<DescriptionEntryFacts?>(null);
         }
 
         var catalog = repository.GetAll();
         if (!IsLocalFile(entry, catalog))
         {
-            return Task.FromResult<GenDescEntryContext?>(null);
+            return Task.FromResult<DescriptionEntryFacts?>(null);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -58,7 +58,7 @@ public sealed class GenDescHostApi(OpenCatalogState catalogState) : IGenDescHost
         AddMediaFacts(entry, catalog, repository.Collection?.Database, facts);
 
         var extension = Path.GetExtension(entry.Name);
-        return Task.FromResult<GenDescEntryContext?>(new GenDescEntryContext(
+        return Task.FromResult<DescriptionEntryFacts?>(new DescriptionEntryFacts(
             entry.Name,
             extension.Length == 0 ? string.Empty : extension.ToLowerInvariant(),
             FileMimeTypeResolver.Resolve(entry) ?? string.Empty,

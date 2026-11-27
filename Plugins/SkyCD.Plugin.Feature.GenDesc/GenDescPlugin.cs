@@ -10,7 +10,7 @@ using SkyCD.Plugin.Feature.GenDesc.Parsing;
 using SkyCD.Plugin.Feature.GenDesc.Rendering;
 using SkyCD.Plugin.Feature.GenDesc.ViewModels;
 using SkyCD.Plugin.Feature.GenDesc.Views;
-using SkyCD.SDK.Capabilities.GenDesc;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.SDK.Capabilities.Menu;
 using SkyCD.SDK.Capabilities.Ui;
 using SkyCD.SDK.Localization;
@@ -23,22 +23,22 @@ namespace SkyCD.Plugin.Feature.GenDesc;
 /// enabled only for one selected local file; facts come from the host's catalog entry and metadata cache. The
 /// template editors live in the Options dialog as two pages, one per output kind.
 /// </summary>
-public sealed class GenDescPlugin : IMenuPluginCapability, IGenDescHostConsumer, IHostDialogConsumer,
+public sealed class GenDescPlugin : IMenuPluginCapability, IDescriptionEntryFactsConsumer, IHostDialogConsumer,
     ILocalizationPluginCapability
 {
     private const string NfoCommandId = "skycd.gendesc.nfo";
     private const string DescriptionCommandId = "skycd.gendesc.description";
     private const string FileMenuLocation = "File";
 
-    private IGenDescHostApi? genDescHost;
+    private IDescriptionEntryFactsApi? entryFacts;
     private IHostDialogApi? dialogApi;
 
     /// <summary>Overrides the user template directory in tests; production uses the shared default.</summary>
     internal string? TemplateDirectory { get; set; }
 
     /// <inheritdoc />
-    public void InitializeGenDescHost(IGenDescHostApi genDescHost) =>
-        this.genDescHost = genDescHost ?? throw new ArgumentNullException(nameof(genDescHost));
+    public void InitializeDescriptionEntryFacts(IDescriptionEntryFactsApi entryFacts) =>
+        this.entryFacts = entryFacts ?? throw new ArgumentNullException(nameof(entryFacts));
 
     /// <inheritdoc />
     public void InitializeDialogApi(IHostDialogApi dialogApi) =>
@@ -74,13 +74,13 @@ public sealed class GenDescPlugin : IMenuPluginCapability, IGenDescHostConsumer,
             return;
         }
 
-        if (genDescHost is null)
+        if (entryFacts is null)
         {
             await NotifyAsync(context, LocalizationService.Current.Get(GenDescKeys.HostUnavailable), cancellationToken);
             return;
         }
 
-        var entry = await genDescHost.GetEntryContextAsync(entryId, cancellationToken);
+        var entry = await entryFacts.GetEntryFactsAsync(entryId, cancellationToken);
         if (entry is null)
         {
             await NotifyAsync(context, LocalizationService.Current.Get(GenDescKeys.FileUnavailable), cancellationToken);
@@ -116,7 +116,7 @@ public sealed class GenDescPlugin : IMenuPluginCapability, IGenDescHostConsumer,
     /// <inheritdoc />
     public IReadOnlyDictionary<string, string> GetTranslations() => GenDescLocalization.Translations;
 
-    private async Task SaveNfoAsync(MenuCommandContext context, GenDescEntryContext entry, GenDescResult result,
+    private async Task SaveNfoAsync(MenuCommandContext context, DescriptionEntryFacts entry, GenDescResult result,
         CancellationToken cancellationToken)
     {
         if (dialogApi is null)
@@ -133,7 +133,7 @@ public sealed class GenDescPlugin : IMenuPluginCapability, IGenDescHostConsumer,
         await dialogApi.ShowAsync(new HostWindowRequest(title, 520, 240, () => new NfoSaveDialogView(viewModel)));
     }
 
-    private async Task ShowDescriptionAsync(GenDescEntryContext entry, GenDescResult result)
+    private async Task ShowDescriptionAsync(DescriptionEntryFacts entry, GenDescResult result)
     {
         if (dialogApi is null)
         {
