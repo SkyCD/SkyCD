@@ -138,3 +138,17 @@ moved next to the host code that owns them.
 |---|---|
 | `SkyCD.SDK.Capabilities.Media.IMediaTargetMetadataProvider` / `MediaTargetProviderCapture` | `SkyCD.Plugin.Host.Media.*`; plugins implement `IMediaTargetMetadataCapability` over `MediaTarget` |
 | `SkyCD.SDK.Localization.ILocalizationService` / `LanguagePack` | `SkyCD.UI.Localization.*`; plugins keep `ILocalizationPluginCapability`, and `ITranslationProvider` stays in the SDK |
+
+## SDK 3.0 item action contract removal (#1358)
+
+`IActionProvider` shipped launch/install actions per item, but no host surface ever resolved the contract,
+so a plugin could publish actions the catalog never showed. Per-item host commands come only from
+`ICatalogFeaturePluginCapability` (`EntryCommandContribution`), and the shipped account connectors keep
+launch as their own `launch` CLI command. `IOwnershipProvider` stays: the desktop host calls
+`SyncAsync` through the `IAccountSession` capability that the account connectors implement.
+
+| Previous contract | SDK 3.0 replacement |
+|---|---|
+| `SkyCD.SDK.Capabilities.Actions.IActionProvider` | Removed; contribute item commands through `ICatalogFeaturePluginCapability.GetEntryCommands()` |
+| `SkyCD.SDK.Capabilities.Actions.SkyAction` | Removed; use `EntryCommandContribution` with the plugin's own handler |
+| `SkyCD.SDK.Capabilities.Actions.Item` | Removed; entry commands receive host `CatalogEntry` values |

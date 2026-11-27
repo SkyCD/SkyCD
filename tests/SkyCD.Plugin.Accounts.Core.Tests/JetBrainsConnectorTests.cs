@@ -9,7 +9,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommandDotNet;
 using CommandDotNet.Builders;
-using SkyCD.SDK.Capabilities.Actions;
 using SkyCD.SDK.Capabilities.Accounts;
 using SkyCD.SDK.Capabilities.Ownership;
 using SkyCD.SDK.OAuth;
@@ -204,7 +203,7 @@ public sealed class JetBrainsConnectorTests
     }
 
     [Fact]
-    public async Task ActionProvider_LaunchesInstalledIdeAndSkipsMissingProducts()
+    public async Task LaunchCommand_LaunchesInstalledIdeAndReportsMissingProduct()
     {
         using var fixture = new ConnectorFixture();
         var webStormPath = fixture.Install("WebStorm 2026.1", "webstorm64.exe");
@@ -215,40 +214,17 @@ public sealed class JetBrainsConnectorTests
             return Task.CompletedTask;
         });
 
-        var actions = ((IActionProvider)connector).GetActions(new Item
-        {
-            Id = "webstorm",
-            Properties = new Dictionary<string, string> { ["productCode"] = "WS" }
-        }).ToArray();
+        var (exitCode, output, _) = await CaptureAsync(() => connector.LaunchCommand("WS"));
 
-        var action = Assert.Single(actions);
-        Assert.Equal("launch", action.Id);
-        Assert.Contains("WebStorm", action.Title, StringComparison.Ordinal);
-        await action.ExecuteAsync(CancellationToken.None);
+        Assert.Equal(0, exitCode);
+        Assert.Contains("WebStorm", output, StringComparison.Ordinal);
         Assert.Equal(webStormPath, Assert.Single(launched));
 
-        Assert.Empty(((IActionProvider)connector).GetActions(new Item
-        {
-            Id = "rider",
-            Properties = new Dictionary<string, string> { ["productCode"] = "RD" }
-        }));
-    }
+        var (missingExitCode, _, error) = await CaptureAsync(() => connector.LaunchCommand("RD"));
 
-    [Fact]
-    public async Task ActionProvider_UsesExplicitExecutableProperty()
-    {
-        using var fixture = new ConnectorFixture();
-        var executable = Path.Combine(fixture.Root, "custom-ide.exe");
-        await File.WriteAllTextAsync(executable, string.Empty);
-        var connector = fixture.CreateConnector((_, _) => Task.CompletedTask);
-
-        var action = Assert.Single(((IActionProvider)connector).GetActions(new Item
-        {
-            Id = "custom",
-            Properties = new Dictionary<string, string> { ["jetbrains.executable"] = executable }
-        }));
-
-        Assert.Equal("launch", action.Id);
+        Assert.Equal(2, missingExitCode);
+        Assert.Contains("not installed", error, StringComparison.OrdinalIgnoreCase);
+        Assert.Single(launched);
     }
 
     [Fact]

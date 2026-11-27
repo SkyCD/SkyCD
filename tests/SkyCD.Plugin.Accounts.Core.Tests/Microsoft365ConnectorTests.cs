@@ -9,7 +9,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommandDotNet;
 using CommandDotNet.Builders;
-using SkyCD.SDK.Capabilities.Actions;
 using SkyCD.SDK.Capabilities.Accounts;
 using SkyCD.SDK.Capabilities.Ownership;
 using SkyCD.SDK.OAuth;
@@ -274,7 +273,7 @@ public sealed class Microsoft365ConnectorTests
     }
 
     [Fact]
-    public async Task ActionProvider_LaunchesInstalledOfficeAppAndSkipsMissingProducts()
+    public async Task LaunchCommand_LaunchesInstalledOfficeAppAndReportsMissingProduct()
     {
         using var fixture = new ConnectorFixture();
         var wordPath = fixture.Install("WINWORD.EXE");
@@ -285,40 +284,17 @@ public sealed class Microsoft365ConnectorTests
             return Task.CompletedTask;
         });
 
-        var actions = ((IActionProvider)connector).GetActions(new Item
-        {
-            Id = "word",
-            Properties = new Dictionary<string, string> { ["microsoft365.app"] = "WINWORD" }
-        }).ToArray();
+        var (exitCode, output, _) = await CaptureAsync(() => connector.LaunchCommand("WINWORD"));
 
-        var action = Assert.Single(actions);
-        Assert.Equal("launch", action.Id);
-        Assert.Contains("Word", action.Title, StringComparison.Ordinal);
-        await action.ExecuteAsync(CancellationToken.None);
+        Assert.Equal(0, exitCode);
+        Assert.Contains("Word", output, StringComparison.Ordinal);
         Assert.Equal(wordPath, Assert.Single(launched));
 
-        Assert.Empty(((IActionProvider)connector).GetActions(new Item
-        {
-            Id = "excel",
-            Properties = new Dictionary<string, string> { ["app"] = "EXCEL" }
-        }));
-    }
+        var (missingExitCode, _, error) = await CaptureAsync(() => connector.LaunchCommand("EXCEL"));
 
-    [Fact]
-    public async Task ActionProvider_UsesExplicitExecutableProperty()
-    {
-        using var fixture = new ConnectorFixture();
-        var executable = Path.Combine(fixture.Root, "custom-office.exe");
-        await File.WriteAllTextAsync(executable, string.Empty);
-        var connector = fixture.CreateConnector((_, _) => Task.CompletedTask);
-
-        var action = Assert.Single(((IActionProvider)connector).GetActions(new Item
-        {
-            Id = "custom",
-            Properties = new Dictionary<string, string> { ["microsoft365.executable"] = executable }
-        }));
-
-        Assert.Equal("launch", action.Id);
+        Assert.Equal(2, missingExitCode);
+        Assert.Contains("not installed", error, StringComparison.OrdinalIgnoreCase);
+        Assert.Single(launched);
     }
 
     [Fact]

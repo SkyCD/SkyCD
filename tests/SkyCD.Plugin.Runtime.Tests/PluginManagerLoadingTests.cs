@@ -11,7 +11,6 @@ using SkyCD.Plugin.Runtime.Documents;
 using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.SDK.Capabilities.Accounts;
-using SkyCD.SDK.Capabilities.Actions;
 using SkyCD.SDK.Capabilities.Ownership;
 using SkyCD.SDK.Capabilities.FileFormats;
 using SkyCD.SDK.Capabilities.Media;
@@ -44,7 +43,6 @@ public sealed class PluginManagerLoadingTests : IDisposable
         Assert.Contains(pluginManager.Plugins, plugin => plugin.Id == "tests.runtime.assembly-plugin");
         Assert.Single(pluginManager.GetCapabilities<IOwnershipProvider>());
         Assert.Single(pluginManager.GetCapabilities<IAccountConnector>());
-        Assert.Single(pluginManager.GetCapabilities<IActionProvider>());
         Assert.NotEmpty(pluginManager.GetCapabilities<IFileFormatPluginCapability>());
         var metadataCapabilities = pluginManager.GetCapabilities<IMediaMetadataCapability>();
         Assert.Contains(metadataCapabilities, capability => capability is FakeMediaCapability);
@@ -58,7 +56,6 @@ public sealed class PluginManagerLoadingTests : IDisposable
 
         Assert.Empty(pluginManager.GetCapabilities<IOwnershipProvider>());
         Assert.Empty(pluginManager.GetCapabilities<IAccountConnector>());
-        Assert.Empty(pluginManager.GetCapabilities<IActionProvider>());
         Assert.Empty(pluginManager.GetCapabilities<IFileFormatPluginCapability>());
         Assert.Empty(pluginManager.GetCapabilities<IMediaMetadataCapability>());
         Assert.Empty(pluginManager.GetCapabilities<IMediaPreviewCapability>());

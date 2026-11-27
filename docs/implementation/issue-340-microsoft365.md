@@ -2,8 +2,8 @@
 
 `SkyCD.Plugin.Accounts.Microsoft365` adds an OAuth-first Microsoft 365 connector.
 The existing sync provider keeps normalizing offline imports; a new connector
-capability implements `IOAuthClient`, `IAccountConnector`, `IOwnershipProvider`
-and `IActionProvider`, exposing `skycd microsoft365 connect|sync|status|launch|signout`.
+capability implements `IOAuthClient`, `IAccountConnector` and `IOwnershipProvider`,
+exposing `skycd microsoft365 connect|sync|status|launch|signout`.
 
 OAuth uses the Microsoft identity platform public native client flow through the
 host's encrypted session store; only a token-free ownership snapshot is written
@@ -21,6 +21,6 @@ management are explicitly out of scope.
 
 Tests cover OAuth login and sanitized failures, subscription import and
 persistence, Graph fallback and failure handling, renewal/trial/suspension
-states, installed application linking, launch actions, detector behavior and CLI
+states, installed application linking, launch commands, detector behavior and CLI
 routing. Configuration and command details are documented in
 `docs/plugins/accounts.md`.

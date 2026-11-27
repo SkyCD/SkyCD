@@ -9,7 +9,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommandDotNet;
 using SkyCD.SDK.Capabilities.Accounts;
-using SkyCD.SDK.Capabilities.Actions;
 using SkyCD.SDK.Capabilities.Cli;
 using SkyCD.SDK.Capabilities.Ownership;
 using SkyCD.SDK.OAuth;
@@ -22,11 +21,11 @@ namespace SkyCD.Plugin.Accounts.JetBrains;
 
 /// <summary>
 /// OAuth-first JetBrains connector: account sign-in, owned license sync, installed IDE discovery,
-/// ownership status and launch actions. Commands are exposed as <c>skycd jetbrains ...</c>.
+/// ownership status and IDE launch. Commands are exposed as <c>skycd jetbrains ...</c>.
 /// </summary>
 [Command("jetbrains")]
-public sealed class JetBrainsConnector : IOAuthClient, IAccountSession, IActionProvider,
-    ICliPluginCapability, ISupportsJsonOutput
+public sealed class JetBrainsConnector : IOAuthClient, IAccountSession, ICliPluginCapability,
+    ISupportsJsonOutput
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -125,34 +124,6 @@ public sealed class JetBrainsConnector : IOAuthClient, IAccountSession, IActionP
 
         await oauth.SignOutAsync(settings.CreateOAuthProvider(), JetBrainsSettings.DefaultAccountKey,
             cancellationToken).ConfigureAwait(false);
-    }
-
-    IEnumerable<SkyAction> IActionProvider.GetActions(Item item)
-    {
-        ArgumentNullException.ThrowIfNull(item);
-
-        var executable = GetProperty(item, "jetbrains.executable", "executable");
-        if (!string.IsNullOrWhiteSpace(executable) && File.Exists(executable))
-        {
-            yield return CreateLaunchAction(JetBrainsProducts.ResolveName(GetProperty(item, "jetbrains.product",
-                "productCode")), executable);
-            yield break;
-        }
-
-        var productCode = GetProperty(item, "jetbrains.product", "productCode", "product");
-        if (string.IsNullOrWhiteSpace(productCode))
-        {
-            yield break;
-        }
-
-        var install = detector.Detect().FirstOrDefault(candidate =>
-            JetBrainsProducts.MatchesInstalledIde(candidate.ProductCode, productCode));
-        if (install is null)
-        {
-            yield break;
-        }
-
-        yield return CreateLaunchAction(install.ProductName, install.ExecutablePath);
     }
 
     [Command("connect")]
@@ -493,25 +464,6 @@ public sealed class JetBrainsConnector : IOAuthClient, IAccountSession, IActionP
         {
             await output.WriteLineAsync($"Installed but not owned: {string.Join(", ", unowned)}");
         }
-    }
-
-    private SkyAction CreateLaunchAction(string productName, string executablePath)
-    {
-        return new SkyAction("launch", $"Launch {productName}",
-            cancellationToken => launchProcess(executablePath, cancellationToken));
-    }
-
-    private static string? GetProperty(Item item, params string[] keys)
-    {
-        foreach (var key in keys)
-        {
-            if (item.Properties.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value))
-            {
-                return value;
-            }
-        }
-
-        return null;
     }
 
     private static string FormatDate(DateTimeOffset? value) =>

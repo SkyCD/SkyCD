@@ -93,11 +93,12 @@ stored — only product, seat, date and note metadata.
 
 ## JetBrains connector
 
-`SkyCD.Plugin.Accounts.Core.JetBrains` additionally implements `IOAuthClient`,
-`IAccountConnector`, `IOwnershipProvider` and `IActionProvider`, so a single
-discovered capability provides the JetBrains-specific connection, ownership and
-launch behavior. OAuth tokens stay in the host's encrypted OAuth store; the
-plugin only persists a token-free ownership snapshot
+`SkyCD.Plugin.Accounts.Core.JetBrains` implements `IOAuthClient`,
+`IAccountConnector` and `IOwnershipProvider`, so a single discovered capability
+provides the JetBrains-specific connection and ownership behavior. The desktop
+host consumes it through `IAccountSession`; launching an installed IDE stays a
+connector command (`skycd jetbrains launch`). OAuth tokens stay in the host's
+encrypted OAuth store; the plugin only persists a token-free ownership snapshot
 (`%LocalAppData%/SkyCD/jetbrains.json`, or `--store`).
 
 ```bash
@@ -124,8 +125,8 @@ Endpoints are public-native-client defaults and can be overridden with
 ## Microsoft 365 connector
 
 `SkyCD.Plugin.Accounts.Core.Microsoft365` implements the same `IOAuthClient`,
-`IAccountConnector`, `IOwnershipProvider` and `IActionProvider` capabilities. It
-signs in through the Microsoft identity platform, reads company subscriptions
+`IAccountConnector` and `IOwnershipProvider` capabilities. It signs in through
+the Microsoft identity platform, reads company subscriptions
 from Microsoft Graph, and detects classic Office applications installed through
 Click-to-Run on Windows. Scope is limited to Microsoft 365 subscriptions and
 installable Office applications: Microsoft Store package parsing, Xbox and Azure
