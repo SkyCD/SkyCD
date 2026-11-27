@@ -1,4 +1,4 @@
-namespace SkyCD.SDK.Capabilities.Catalog;
+namespace SkyCD.SDK.Capabilities.Catalog.Locations;
 
 /// <summary>
 /// Optional capability hook the host calls to hand a plugin the storage-location API before its services

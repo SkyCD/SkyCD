@@ -27,6 +27,7 @@ using SkyCD.Plugin.Runtime.Marketplace.Services;
 using SkyCD.SDK.Plugins;
 using SkyCD.SDK.Capabilities.Sources;
 using SkyCD.SDK.Capabilities.Catalog;
+using SkyCD.SDK.Capabilities.Catalog.Locations;
 using SkyCD.SDK.Capabilities.GenDesc;
 using SkyCD.SDK.Capabilities.Options;
 using SkyCD.SDK.Capabilities.Storage;
