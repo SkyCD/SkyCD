@@ -18,7 +18,7 @@ using SkyCD.Presentation.Operations;
 using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.SDK.Capabilities.Accounts;
-using SkyCD.SDK.Capabilities.Capture;
+using SkyCD.SDK.Capabilities.Sources;
 using SkyCD.UI.Localization;
 
 namespace SkyCD.App.Views;
@@ -205,7 +205,7 @@ public partial class MainWindow
             mediaDriveProvider,
             locationOptions: vm.GetLocationChoices(),
             accountSessions: pluginManager.GetCapabilities<IAccountSession>(),
-            captureProviders: pluginManager.GetCapabilities<ICaptureSourcePluginCapability>());
+            captureProviders: pluginManager.GetCapabilities<ISourceFactoryPluginCapability>());
         dialogVm.SetTargetParent(targetParent.ParentId, targetParent.DisplayName);
         if (droppedSources is { Count: > 0 })
         {

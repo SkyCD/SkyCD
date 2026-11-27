@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using OpenCvSharp;
 using SkyCD.Plugin.Feature.MotionDetector.Detectors;
 using SkyCD.Plugin.Feature.MotionDetector.Models;
-using SkyCD.SDK.Capabilities.Capture;
+using SkyCD.SDK.Capabilities.Sources;
 using SkyCD.UI.Localization;
 
 namespace SkyCD.Plugin.Feature.MotionDetector.Capture;
@@ -15,8 +15,8 @@ internal static class CapturePreviewer
     private const int WarmupFrames = 12;
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(15);
 
-    public static async Task<CapturePreviewResult> CaptureAsync(CaptureSourceConfiguration source,
-        CaptureDetectorSettings settings, CancellationToken cancellationToken)
+    public static async Task<SourcePreviewResult> CaptureAsync(SourceConfiguration source,
+        SourceDetectorSettings settings, CancellationToken cancellationToken)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(Timeout);
@@ -27,17 +27,17 @@ internal static class CapturePreviewer
         }
         catch (OperationCanceledException)
         {
-            return CapturePreviewResult.Failed(
+            return SourcePreviewResult.Failed(
                 LocalizationService.Current.Get(MotionDetectorKeys.PreviewFailed));
         }
     }
 
-    private static CapturePreviewResult Capture(CaptureSourceConfiguration source,
-        CaptureDetectorSettings settings, CancellationToken cancellationToken)
+    private static SourcePreviewResult Capture(SourceConfiguration source,
+        SourceDetectorSettings settings, CancellationToken cancellationToken)
     {
         if (!CaptureConnection.TryOpen(source, out var connection, out var error) || connection is null)
         {
-            return CapturePreviewResult.Failed(error ??
+            return SourcePreviewResult.Failed(error ??
                 LocalizationService.Current.Get(MotionDetectorKeys.SourceOpenFailed));
         }
 
@@ -75,13 +75,13 @@ internal static class CapturePreviewer
 
             if (best.Empty())
             {
-                return CapturePreviewResult.Failed(
+                return SourcePreviewResult.Failed(
                     LocalizationService.Current.Get(MotionDetectorKeys.SourceStreamEnded));
             }
 
             DetectorOverlay.Draw(best, settings.DetectorId, bestOutcome);
             Cv2.ImEncode(".png", best, out var image);
-            return CapturePreviewResult.Captured(image);
+            return SourcePreviewResult.Captured(image);
         }
     }
 }

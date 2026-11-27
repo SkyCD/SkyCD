@@ -8,6 +8,7 @@ using SkyCD.Documents.Collections;
 using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
 using SkyCD.SDK.Capabilities.Catalog;
+using SkyCD.SDK.Capabilities.Catalog.Locations;
 using SkyCD.SDK.Capabilities.Configuration;
 using SkyCD.SDK.Capabilities.Menu;
 using SkyCD.Plugin.Feature.Locations.Models;
