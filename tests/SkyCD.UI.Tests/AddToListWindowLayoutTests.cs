@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Media;
@@ -24,8 +25,9 @@ namespace SkyCD.UI.Tests;
 
 /// <summary>
 /// Issues #823 and #826: the Add To List dialog keeps one fixed size while the source type is
-/// switched. The source content flexes; the OK/Cancel row and the validation row stay anchored,
-/// and the bordered source column stretches to the bottom of the content area.
+/// switched. The source content flexes, the OK/Cancel row stays anchored, and the bordered source
+/// column stretches to the bottom of the content area. Issue #1313 moved validation errors out of a
+/// window footer and inline beside the failing field.
 /// </summary>
 public sealed class AddToListWindowLayoutTests
 {
@@ -171,7 +173,6 @@ public sealed class AddToListWindowLayoutTests
         var contentColumn = fixture.Window.FindControl<Grid>("ContentColumn")!;
         var ok = FindButton(fixture.Root, UiKeys.Ok);
         var cancel = FindButton(fixture.Root, UiKeys.Cancel);
-        var message = fixture.Window.FindControl<TextBlock>("ValidationMessageText")!;
         foreach (var mode in SourceModes.Concat(SourceModes))
         {
             fixture.ViewModel.SelectSourceCommand.Execute(mode.ToString());
@@ -180,7 +181,6 @@ public sealed class AddToListWindowLayoutTests
             var visibleContent = sourceHost.Children.OfType<Control>().Where(control => control.IsVisible).ToList();
             var okBounds = BoundsRelativeTo(ok, fixture.Root);
             var cancelBounds = BoundsRelativeTo(cancel, fixture.Root);
-            var messageBounds = BoundsRelativeTo(message, fixture.Root);
             // Issue #942: the source fields scroll inside their viewport, so the viewport is what has
             // to stay between the name block and the actions.
             var sourceBounds = BoundsRelativeTo(sourceViewer, fixture.Root);
@@ -191,8 +191,6 @@ public sealed class AddToListWindowLayoutTests
             Assert.NotEmpty(visibleContent);
 
             // Everything remains inside the window content area.
-            Assert.True(messageBounds.Bottom <= fixture.Root.Bounds.Height + 1,
-                $"{mode}: validation row is clipped at {messageBounds.Bottom}.");
             Assert.True(okBounds.Bottom <= fixture.Root.Bounds.Height + 1,
                 $"{mode}: OK row is outside the content at {okBounds.Bottom}.");
             Assert.True(cancelBounds.Bottom <= fixture.Root.Bounds.Height + 1,
@@ -200,13 +198,10 @@ public sealed class AddToListWindowLayoutTests
             Assert.True(sourceBounds.Bottom <= okBounds.Top,
                 $"{mode}: source content overlaps the actions ({sourceBounds.Bottom} > {okBounds.Top}).");
 
-            // The validation row keeps its slot below the actions and ends at the content bottom.
-            Assert.True(message.Bounds.Height >= 14, $"{mode}: validation row collapsed to {message.Bounds.Height}.");
-            Assert.True(messageBounds.Top >= okBounds.Bottom, $"{mode}: validation row overlaps the actions.");
-            Assert.Equal(fixture.Root.Bounds.Height, messageBounds.Bottom, 1);
+            // Issue #1313: the actions own the bottom edge; no error footer sits beneath them.
             Assert.Equal(columnBounds.Bottom - 2, okBounds.Bottom, 1);
             Assert.Equal(columnBounds.Bottom - 2, cancelBounds.Bottom, 1);
-            Assert.Equal(columnBounds.Bottom, messageBounds.Top, 1);
+            Assert.Equal(fixture.Root.Bounds.Height, columnBounds.Bottom, 1);
         }
     }
 
@@ -300,31 +295,32 @@ public sealed class AddToListWindowLayoutTests
         }
     }
 
-    [AvaloniaTheory]
-    [InlineData(AddToListSourceMode.Media)]
-    [InlineData(AddToListSourceMode.Folder)]
-    [InlineData(AddToListSourceMode.Internet)]
-    [InlineData(AddToListSourceMode.TitleOnly)]
-    [InlineData(AddToListSourceMode.FromAccount)]
-    [InlineData(AddToListSourceMode.CaptureSource)]
-    public void ValidationRow_SpansBothColumnsBelowTheStretchedPanel(AddToListSourceMode mode)
+    [AvaloniaFact]
+    public void InlineValidationMessage_RendersUnderTheInvalidField()
     {
-        using var fixture = ShowWindow(mode);
-        var panel = fixture.Window.FindControl<Border>("SourcePanel")!;
-        var message = fixture.Window.FindControl<TextBlock>("ValidationMessageText")!;
+        // Issue #1313: the missing host error used to sit in a footer under the destination radios.
+        using var fixture = ShowWindow(AddToListSourceMode.Internet);
+        var host = fixture.Window.GetVisualDescendants().OfType<TextBox>().Single(textBox =>
+            AutomationProperties.GetName(textBox) == LocalizationService.Current.Get(UiKeys.InternetHost));
+        var message = fixture.Window.FindControl<TextBlock>("InternetAddressValidationText")!;
+        var ok = FindButton(fixture.Root, UiKeys.Ok);
 
-        var viewer = fixture.Window.FindControl<ScrollViewer>("SourceFieldsScrollViewer")!;
+        Assert.True(message.IsVisible);
+        Assert.Equal(LocalizationService.Current.Get(TextKeys.AddressIsRequiredForInternetSource), message.Text);
 
-        var panelBounds = BoundsRelativeTo(panel, fixture.Root);
-        var sourceBounds = BoundsRelativeTo(viewer, fixture.Root);
+        var hostBounds = BoundsRelativeTo(host, fixture.Root);
         var messageBounds = BoundsRelativeTo(message, fixture.Root);
+        var okBounds = BoundsRelativeTo(ok, fixture.Root);
 
-        Assert.Equal(0, messageBounds.Left, 1);
-        Assert.Equal(fixture.Root.Bounds.Width, messageBounds.Right, 1);
-        Assert.Equal(panelBounds.Bottom, messageBounds.Top, 1);
-        Assert.True(messageBounds.Top >= sourceBounds.Bottom,
-            "the validation row must stay below the right-hand source content.");
-        Assert.Equal(fixture.Root.Bounds.Height, messageBounds.Bottom, 1);
+        Assert.Equal(hostBounds.Left, messageBounds.Left, 1);
+        Assert.True(messageBounds.Top >= hostBounds.Bottom - 0.5,
+            $"the message at {messageBounds.Top} must sit below its field ending at {hostBounds.Bottom}.");
+        Assert.True(messageBounds.Bottom <= okBounds.Top + 0.5,
+            "the inline message must stay above the actions.");
+
+        fixture.ViewModel.InternetHost = "example.com";
+        Dispatcher.UIThread.RunJobs();
+        Assert.False(message.IsVisible);
     }
 
     [AvaloniaTheory]
@@ -466,13 +462,11 @@ public sealed class AddToListWindowLayoutTests
         var nameBlock = fixture.Window.FindControl<StackPanel>("NameLocationBlock")!;
         var viewer = fixture.Window.FindControl<ScrollViewer>("SourceFieldsScrollViewer")!;
         var visibleContent = sourceHost.Children.OfType<Control>().Single(control => control.IsVisible);
-        var message = fixture.Window.FindControl<TextBlock>("ValidationMessageText")!;
         var ok = FindButton(fixture.Root, UiKeys.Ok);
 
         var contentBounds = BoundsRelativeTo(visibleContent, fixture.Root);
         var nameBounds = BoundsRelativeTo(nameBlock, fixture.Root);
         var viewerBounds = BoundsRelativeTo(viewer, fixture.Root);
-        var messageBounds = BoundsRelativeTo(message, fixture.Root);
         var okBounds = BoundsRelativeTo(ok, fixture.Root);
 
         // The name/Location block keeps the top of the form; the source fields start below it and
@@ -481,11 +475,8 @@ public sealed class AddToListWindowLayoutTests
             $"{mode}: source content starts above the name/Location block ({contentBounds.Top} < {nameBounds.Bottom}).");
         Assert.True(viewerBounds.Bottom <= okBounds.Top + 0.5,
             $"{mode}: source content overlaps the action bar ({viewerBounds.Bottom} > {okBounds.Top}).");
-        Assert.True(okBounds.Bottom <= messageBounds.Top + 0.5,
-            $"{mode}: the validation line overlaps the action bar.");
-        Assert.True(messageBounds.Bottom <= fixture.Root.Bounds.Height + 1,
-            $"{mode}: validation line is clipped at {messageBounds.Bottom}.");
-        Assert.True(message.Bounds.Height >= 14, $"{mode}: validation line collapsed to {message.Bounds.Height}.");
+        Assert.True(okBounds.Bottom <= fixture.Root.Bounds.Height + 1,
+            $"{mode}: the action bar is clipped at {okBounds.Bottom}.");
     }
 
     private static double MeasureNaturalHeight(AddToListSourceMode mode)

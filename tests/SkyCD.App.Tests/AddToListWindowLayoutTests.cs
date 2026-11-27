@@ -113,23 +113,61 @@ public class AddToListWindowLayoutTests
     }
 
     [Fact]
-    public void ValidationMessage_StaysInItsOwnRootRowBelowTheActions()
+    public void ValidationMessages_RenderInlineBesideTheirFields()
     {
+        // Issue #1313: errors moved from a shared window footer to the field that causes them.
         var root = GetRootGrid();
-        var message = GetValidationMessage(root);
-
-        Assert.Equal("1", (string?)message.Attribute("Grid.Row"));
-        Assert.Equal("2", (string?)message.Attribute("Grid.ColumnSpan"));
-        Assert.Contains("ValidationMessage", (string?)message.Attribute("Text"), StringComparison.Ordinal);
-
         var contentColumn = Assert.Single(root.Elements(Avalonia + "Grid"),
             grid => (string?)grid.Attribute(Xaml2006 + "Name") == "ContentColumn");
-        Assert.Equal("Auto,*,Auto", (string?)contentColumn.Attribute("RowDefinitions"));
+        var nameBlock = Assert.Single(contentColumn.Elements(Avalonia + "StackPanel"),
+            panel => (string?)panel.Attribute(Xaml2006 + "Name") == "NameLocationBlock");
+        var sourceRegion = Assert.Single(contentColumn.Elements(Avalonia + "ScrollViewer"));
 
-        var messageIndex = root.Elements().ToList().IndexOf(message);
-        var contentIndex = root.Elements().ToList().IndexOf(contentColumn);
-        Assert.True(contentIndex >= 0 && contentIndex < messageIndex,
-            "the validation line must come after the content so the Auto row below it is never clipped.");
+        Assert.Null(root.Attribute("RowDefinitions"));
+        Assert.DoesNotContain(root.Elements(), element => element.Name == Avalonia + "TextBlock");
+        Assert.DoesNotContain(root.Descendants(Avalonia + "TextBlock"),
+            textBlock => (string?)textBlock.Attribute(Xaml2006 + "Name") == "ValidationMessageText");
+
+        var fieldHosts = new (XElement Host, string Binding)[]
+        {
+            (nameBlock, "MediaNameValidationMessage"),
+            (sourceRegion, "DriveValidationMessage"),
+            (sourceRegion, "FolderPathValidationMessage"),
+            (sourceRegion, "InternetAddressValidationMessage"),
+            (sourceRegion, "InternetPathValidationMessage"),
+            (sourceRegion, "InternetCredentialsValidationMessage"),
+            (sourceRegion, "AccountValidationMessage"),
+            (sourceRegion, "CaptureTypeValidationMessage"),
+            (sourceRegion, "CaptureLocationValidationMessage"),
+            (sourceRegion, "CaptureDestinationValidationMessage"),
+        };
+
+        foreach (var (host, binding) in fieldHosts)
+        {
+            Assert.Contains(host.Descendants(Avalonia + "TextBlock"),
+                textBlock => (string?)textBlock.Attribute("Text") == $"{{Binding {binding}}}");
+        }
+
+        var errorBlocks = root.Descendants(Avalonia + "TextBlock")
+            .Where(textBlock => ((string?)textBlock.Attribute("Text"))
+                ?.EndsWith("ValidationMessage}", StringComparison.Ordinal) == true)
+            .ToList();
+        Assert.True(errorBlocks.Count >= fieldHosts.Length,
+            "every failing field needs its own inline message block.");
+        Assert.All(errorBlocks, textBlock =>
+        {
+            Assert.Equal("{DynamicResource SkyErrorForeground}", (string?)textBlock.Attribute("Foreground"));
+            Assert.Equal("Wrap", (string?)textBlock.Attribute("TextWrapping"));
+            Assert.Contains("IsNotNullOrEmpty", (string?)textBlock.Attribute("IsVisible"), StringComparison.Ordinal);
+        });
+
+        // The visible text is announced through the focusable field as well.
+        Assert.Contains(nameBlock.Descendants(Avalonia + "TextBox"),
+            textBox => (string?)textBox.Attribute("AutomationProperties.HelpText")
+                == "{Binding MediaNameValidationMessage}");
+        Assert.Contains(sourceRegion.Descendants(Avalonia + "TextBox"),
+            textBox => (string?)textBox.Attribute("AutomationProperties.HelpText")
+                == "{Binding InternetAddressValidationMessage}");
     }
 
     [Fact]
@@ -199,10 +237,6 @@ public class AddToListWindowLayoutTests
 
     private static XElement GetSourceRegion(XElement column) =>
         Assert.Single(column.Elements(Avalonia + "ScrollViewer"));
-
-    private static XElement GetValidationMessage(XElement root) =>
-        Assert.Single(root.Elements(Avalonia + "TextBlock"),
-            textBlock => (string?)textBlock.Attribute(Xaml2006 + "Name") == "ValidationMessageText");
 
     private static XElement GetRootGrid()
     {

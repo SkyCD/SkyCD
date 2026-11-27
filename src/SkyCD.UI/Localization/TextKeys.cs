@@ -104,6 +104,7 @@ public static class TextKeys
     public const string MediaNameIsRequiredWhenAddingAsNewMedia = "core.text.MediaNameIsRequiredWhenAddingAsNewMedia";
     public const string MediaNameIsRequiredForMediaSource = "core.text.MediaNameIsRequiredForMediaSource";
     public const string MediaNameIsRequiredForTitleOnly = "core.text.MediaNameIsRequiredForTitleOnly";
+    public const string DriveMustBeSelected = "core.text.DriveMustBeSelected";
     public const string ContentsNotScanned = "core.text.ContentsNotScanned";
     public const string FolderPathIsRequiredForFolderSource = "core.text.FolderPathIsRequiredForFolderSource";
     public const string CaptureDestinationIsRequired = "core.text.CaptureDestinationIsRequired";

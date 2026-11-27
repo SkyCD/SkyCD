@@ -887,91 +887,171 @@ public partial class AddToListDialogViewModel : ObservableObject, IDisposable
 
     partial void OnSourceValueChanged(string value)
     {
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            folderPathWasEntered = true;
+        }
+
         RecomputeValidation();
     }
 
+    private enum ValidationTarget
+    {
+        MediaName,
+        Drive,
+        FolderPath,
+        InternetAddress,
+        InternetPath,
+        InternetCredentials,
+        Account,
+        CaptureType,
+        CaptureLocation,
+        CaptureDestination,
+    }
+
+    private bool folderPathWasEntered;
+    private (ValidationTarget Target, string Message)? validationFailure;
+
+    /// <summary>Inline error under the media-name box (media, title only and "as new media").</summary>
+    public string? MediaNameValidationMessage => MessageFor(ValidationTarget.MediaName);
+
+    /// <summary>Inline error under the drive picker.</summary>
+    public string? DriveValidationMessage => MessageFor(ValidationTarget.Drive);
+
+    /// <summary>
+    /// Inline error under the folder path. An empty path the user never filled stays silent because
+    /// the disabled OK button already communicates it; once anything was entered, clearing shows it.
+    /// </summary>
+    public string? FolderPathValidationMessage =>
+        folderPathWasEntered ? MessageFor(ValidationTarget.FolderPath) : null;
+
+    /// <summary>Inline error under the host/port row.</summary>
+    public string? InternetAddressValidationMessage => MessageFor(ValidationTarget.InternetAddress);
+
+    /// <summary>Inline error under the share and folder path.</summary>
+    public string? InternetPathValidationMessage => MessageFor(ValidationTarget.InternetPath);
+
+    /// <summary>Inline error under the credentials form.</summary>
+    public string? InternetCredentialsValidationMessage => MessageFor(ValidationTarget.InternetCredentials);
+
+    /// <summary>Inline error under the account picker.</summary>
+    public string? AccountValidationMessage => MessageFor(ValidationTarget.Account);
+
+    /// <summary>Inline error under the capture source type picker.</summary>
+    public string? CaptureTypeValidationMessage => MessageFor(ValidationTarget.CaptureType);
+
+    /// <summary>Inline error under the capture location input.</summary>
+    public string? CaptureLocationValidationMessage => MessageFor(ValidationTarget.CaptureLocation);
+
+    /// <summary>Inline error under the capture destination input.</summary>
+    public string? CaptureDestinationValidationMessage => MessageFor(ValidationTarget.CaptureDestination);
+
+    private string? MessageFor(ValidationTarget target) =>
+        validationFailure is { } failure && failure.Target == target ? failure.Message : null;
+
     private void RecomputeValidation()
     {
-        ValidationMessage = GetValidationMessage();
-        OnPropertyChanged(nameof(DisplayedValidationMessage));
+        var failure = FindFirstValidationFailure();
+        ValidationMessage = failure?.Message;
+        if (failure?.Target != validationFailure?.Target || failure?.Message != validationFailure?.Message)
+        {
+            validationFailure = failure;
+            OnPropertyChanged(nameof(MediaNameValidationMessage));
+            OnPropertyChanged(nameof(DriveValidationMessage));
+            OnPropertyChanged(nameof(FolderPathValidationMessage));
+            OnPropertyChanged(nameof(InternetAddressValidationMessage));
+            OnPropertyChanged(nameof(InternetPathValidationMessage));
+            OnPropertyChanged(nameof(InternetCredentialsValidationMessage));
+            OnPropertyChanged(nameof(AccountValidationMessage));
+            OnPropertyChanged(nameof(CaptureTypeValidationMessage));
+            OnPropertyChanged(nameof(CaptureLocationValidationMessage));
+            OnPropertyChanged(nameof(CaptureDestinationValidationMessage));
+        }
+
         ConfirmCommand.NotifyCanExecuteChanged();
     }
 
     /// <summary>
-    /// Footer text; the folder branch stays silent while the folder field is empty because the
-    /// disabled OK button already communicates it, while <see cref="ValidationMessage"/> still gates confirm.
+    /// The first failing field of the current mode owns the single visible message, so a form with
+    /// several problems never stacks errors; <see cref="ValidationMessage"/> still gates confirm.
     /// </summary>
-    public string? DisplayedValidationMessage =>
-        SourceMode == AddToListSourceMode.Folder && string.IsNullOrWhiteSpace(SourceValue)
-            ? null
-            : ValidationMessage;
-
-    private string? GetValidationMessage()
+    private (ValidationTarget Target, string Message)? FindFirstValidationFailure()
     {
         if (TargetPlacement == AddToListTargetPlacement.NewMedia &&
             string.IsNullOrWhiteSpace(MediaName))
         {
-            return LocalizationService.Current.Get(TextKeys.MediaNameIsRequiredWhenAddingAsNewMedia);
+            return (ValidationTarget.MediaName,
+                LocalizationService.Current.Get(TextKeys.MediaNameIsRequiredWhenAddingAsNewMedia));
         }
 
         return SourceMode switch
         {
             AddToListSourceMode.Media => string.IsNullOrWhiteSpace(MediaName)
-                ? LocalizationService.Current.Get(TextKeys.MediaNameIsRequiredForMediaSource)
-                : (SelectedDrive is null && AvailableDrives.Count > 0
-                    ? "A drive must be selected."
-                    : null),
+                ? (ValidationTarget.MediaName,
+                    LocalizationService.Current.Get(TextKeys.MediaNameIsRequiredForMediaSource))
+                : SelectedDrive is null && AvailableDrives.Count > 0
+                    ? (ValidationTarget.Drive,
+                        LocalizationService.Current.Get(TextKeys.DriveMustBeSelected))
+                    : null,
             AddToListSourceMode.Folder => string.IsNullOrWhiteSpace(SourceValue)
-                ? LocalizationService.Current.Get(TextKeys.FolderPathIsRequiredForFolderSource)
+                ? (ValidationTarget.FolderPath,
+                    LocalizationService.Current.Get(TextKeys.FolderPathIsRequiredForFolderSource))
                 : null,
-            AddToListSourceMode.Internet => GetInternetValidationMessage(),
+            AddToListSourceMode.Internet => GetInternetValidationFailure(),
             AddToListSourceMode.TitleOnly => string.IsNullOrWhiteSpace(MediaName)
-                ? LocalizationService.Current.Get(TextKeys.MediaNameIsRequiredForTitleOnly)
+                ? (ValidationTarget.MediaName,
+                    LocalizationService.Current.Get(TextKeys.MediaNameIsRequiredForTitleOnly))
                 : null,
             AddToListSourceMode.FromAccount => SelectedAccount switch
             {
-                null when HasConnectedAccounts => LocalizationService.Current.Get(UiKeys.AccountSelectPrompt),
-                { Status.IsConnected: false } => LocalizationService.Current.Get(UiKeys.AccountNotSignedIn),
+                null when HasConnectedAccounts =>
+                    (ValidationTarget.Account, LocalizationService.Current.Get(UiKeys.AccountSelectPrompt)),
+                { Status.IsConnected: false } =>
+                    (ValidationTarget.Account, LocalizationService.Current.Get(UiKeys.AccountNotSignedIn)),
                 _ => null,
             },
-            AddToListSourceMode.CaptureSource => GetCaptureValidationMessage(),
-            _ => null
+            AddToListSourceMode.CaptureSource => GetCaptureValidationFailure(),
+            _ => null,
         };
     }
 
-    private string? GetCaptureValidationMessage()
+    private (ValidationTarget Target, string Message)? GetCaptureValidationFailure()
     {
         if (SelectedCaptureProvider is null)
         {
-            return LocalizationService.Current.Get(UiKeys.CaptureUnavailable);
+            return (ValidationTarget.CaptureType, LocalizationService.Current.Get(UiKeys.CaptureUnavailable));
         }
 
         if (SelectedCaptureKind is null)
         {
-            return LocalizationService.Current.Get(TextKeys.CaptureSourceTypeRequired);
+            return (ValidationTarget.CaptureType, LocalizationService.Current.Get(TextKeys.CaptureSourceTypeRequired));
         }
 
         var destination = CaptureDestination.Trim();
         if (string.IsNullOrWhiteSpace(destination))
         {
-            return LocalizationService.Current.Get(TextKeys.CaptureDestinationIsRequired);
+            return (ValidationTarget.CaptureDestination,
+                LocalizationService.Current.Get(TextKeys.CaptureDestinationIsRequired));
         }
 
         if (!Path.IsPathFullyQualified(destination))
         {
-            return LocalizationService.Current.Get(TextKeys.CaptureDestinationNotAbsolute);
+            return (ValidationTarget.CaptureDestination,
+                LocalizationService.Current.Get(TextKeys.CaptureDestinationNotAbsolute));
         }
 
         var location = ResolveCaptureLocation();
         if (string.IsNullOrWhiteSpace(location))
         {
-            return LocalizationService.Current.Get(TextKeys.CaptureSourceLocationRequired);
+            return (ValidationTarget.CaptureLocation,
+                LocalizationService.Current.Get(TextKeys.CaptureSourceLocationRequired));
         }
 
         if (SelectedCaptureKind is { UseDevicePicker: false, UseFilePicker: false } &&
             !Uri.TryCreate(location, UriKind.Absolute, out _))
         {
-            return LocalizationService.Current.Get(TextKeys.CaptureSourceUrlInvalid);
+            return (ValidationTarget.CaptureLocation,
+                LocalizationService.Current.Get(TextKeys.CaptureSourceUrlInvalid));
         }
 
         return null;

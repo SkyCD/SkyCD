@@ -114,5 +114,6 @@ public class PerCatalogAddToListTests
         Assert.True(vm.SelectedAccountNeedsSignIn);
         Assert.False(vm.CanConfirm);
         Assert.Equal(LocalizationService.Current.Get(UiKeys.AccountNotSignedIn), vm.ValidationMessage);
+        Assert.Equal(LocalizationService.Current.Get(UiKeys.AccountNotSignedIn), vm.AccountValidationMessage);
     }
 }

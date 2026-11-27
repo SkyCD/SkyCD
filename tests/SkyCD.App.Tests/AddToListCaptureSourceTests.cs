@@ -111,6 +111,8 @@ public class AddToListCaptureSourceTests
 
         Assert.False(vm.CanConfirm);
         Assert.Equal(LocalizationService.Current.Get(TextKeys.CaptureDestinationNotAbsolute), vm.ValidationMessage);
+        Assert.Equal(vm.ValidationMessage, vm.CaptureDestinationValidationMessage);
+        Assert.Null(vm.CaptureLocationValidationMessage);
     }
 
     [Fact]
@@ -120,6 +122,8 @@ public class AddToListCaptureSourceTests
 
         Assert.False(vm.CanConfirm);
         Assert.Equal(LocalizationService.Current.Get(TextKeys.CaptureSourceLocationRequired), vm.ValidationMessage);
+        Assert.Equal(vm.ValidationMessage, vm.CaptureLocationValidationMessage);
+        Assert.Null(vm.CaptureDestinationValidationMessage);
     }
 
     [Fact]
@@ -129,6 +133,7 @@ public class AddToListCaptureSourceTests
 
         Assert.False(vm.CanConfirm);
         Assert.Equal(LocalizationService.Current.Get(TextKeys.CaptureSourceUrlInvalid), vm.ValidationMessage);
+        Assert.Equal(vm.ValidationMessage, vm.CaptureLocationValidationMessage);
     }
 
     [Fact]

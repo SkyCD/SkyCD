@@ -361,11 +361,12 @@ public class AddToListDialogViewModelTests
 
         Assert.False(vm.CanConfirm);
         Assert.Equal("Folder path is required for folder source.", vm.ValidationMessage);
-        Assert.True(string.IsNullOrEmpty(vm.DisplayedValidationMessage));
+        // The never-filled empty folder stays quiet; the disabled OK button already communicates it.
+        Assert.Null(vm.FolderPathValidationMessage);
     }
 
     [Fact]
-    public void DisplayedValidationMessage_MirrorsGateExceptForEmptyFolder()
+    public void FolderPathValidationMessage_AppearsOnlyAfterTheUserClearedATypedPath()
     {
         var folder = new AddToListDialogViewModel
         {
@@ -373,18 +374,14 @@ public class AddToListDialogViewModelTests
             SourceValue = ""
         };
         Assert.NotNull(folder.ValidationMessage);
-        Assert.True(string.IsNullOrEmpty(folder.DisplayedValidationMessage));
+        Assert.Null(folder.FolderPathValidationMessage);
 
         folder.SourceValue = @"C:\Music";
         Assert.Null(folder.ValidationMessage);
-        Assert.Null(folder.DisplayedValidationMessage);
+        Assert.Null(folder.FolderPathValidationMessage);
 
-        var internet = new AddToListDialogViewModel
-        {
-            SourceMode = AddToListSourceMode.Internet,
-            SourceValue = ""
-        };
-        Assert.Equal(internet.ValidationMessage, internet.DisplayedValidationMessage);
+        folder.SourceValue = "";
+        Assert.Equal("Folder path is required for folder source.", folder.FolderPathValidationMessage);
     }
 
     [Fact]
@@ -398,6 +395,102 @@ public class AddToListDialogViewModelTests
 
         Assert.False(vm.CanConfirm);
         Assert.Equal("Address is required for internet source.", vm.ValidationMessage);
+        // The message renders under the host/port row and nothing else is shown at the same time.
+        Assert.Equal(vm.ValidationMessage, vm.InternetAddressValidationMessage);
+        Assert.Null(vm.InternetPathValidationMessage);
+        Assert.Null(vm.InternetCredentialsValidationMessage);
+    }
+
+    [Fact]
+    public void MediaSource_ShowsTheNameErrorUnderTheMediaName()
+    {
+        var drive = new MediaDriveInfo("D:\\", "CD_ROM", "D:\\", DriveType.CDRom, true, 0, 0, 700_000_000);
+        using var vm = new AddToListDialogViewModel(new FakeDriveProvider([drive]))
+        {
+            SourceMode = AddToListSourceMode.Media,
+            MediaName = ""
+        };
+
+        Assert.Equal("Media name is required for media source.", vm.MediaNameValidationMessage);
+        Assert.Null(vm.DriveValidationMessage);
+    }
+
+    [Fact]
+    public void TitleOnlySource_ShowsTheNameErrorUnderTheMediaName()
+    {
+        using var vm = new AddToListDialogViewModel(new FakeDriveProvider([]), AddToListSourceMode.TitleOnly);
+
+        Assert.Equal("A media name is required.", vm.MediaNameValidationMessage);
+
+        vm.MediaName = "Office Backup";
+        Assert.Null(vm.MediaNameValidationMessage);
+    }
+
+    [Fact]
+    public void NewMediaTarget_ShowsTheNameErrorUnderTheMediaName()
+    {
+        var vm = new AddToListDialogViewModel
+        {
+            SourceMode = AddToListSourceMode.Folder,
+            SourceValue = "C:\\Music",
+            TargetPlacement = AddToListTargetPlacement.NewMedia,
+            MediaName = ""
+        };
+
+        Assert.Equal("Media name is required when adding as new media.", vm.MediaNameValidationMessage);
+        Assert.Null(vm.FolderPathValidationMessage);
+    }
+
+    [Fact]
+    public void InternetSource_ShowsTheHostAndPortErrorsUnderTheAddressRow()
+    {
+        using var vm = new AddToListDialogViewModel(new FakeDriveProvider([]), AddToListSourceMode.Internet)
+        {
+            InternetHost = "example.com",
+            InternetPort = "70000",
+        };
+
+        Assert.Equal(LocalizationService.Current.Get(UiKeys.InvalidInternetPort), vm.InternetAddressValidationMessage);
+        Assert.Null(vm.InternetPathValidationMessage);
+        Assert.Null(vm.InternetCredentialsValidationMessage);
+
+        vm.InternetPort = "21";
+        vm.InternetHost = "not a host";
+        Assert.Equal(LocalizationService.Current.Get(UiKeys.InvalidInternetHost), vm.InternetAddressValidationMessage);
+    }
+
+    [Fact]
+    public void InternetSource_ShowsTheSmbShareErrorUnderTheSharePath()
+    {
+        using var vm = new AddToListDialogViewModel(new FakeDriveProvider([]), AddToListSourceMode.Internet)
+        {
+            InternetProtocol = "smb",
+            InternetHost = "example.com",
+        };
+
+        Assert.Equal(LocalizationService.Current.Get(UiKeys.InternetShareRequired), vm.InternetPathValidationMessage);
+        Assert.Null(vm.InternetAddressValidationMessage);
+        Assert.Null(vm.InternetCredentialsValidationMessage);
+
+        vm.InternetPath = "/share";
+        Assert.Null(vm.InternetPathValidationMessage);
+    }
+
+    [Fact]
+    public void InternetSource_ShowsTheCredentialsErrorUnderTheCredentialsForm()
+    {
+        using var vm = new AddToListDialogViewModel(new FakeDriveProvider([]), AddToListSourceMode.Internet)
+        {
+            InternetHost = "example.com",
+        };
+
+        Assert.Equal(LocalizationService.Current.Get(UiKeys.InternetCredentialsRequired),
+            vm.InternetCredentialsValidationMessage);
+        Assert.Null(vm.InternetAddressValidationMessage);
+        Assert.Null(vm.InternetPathValidationMessage);
+
+        vm.InternetCredentials.FtpAuthenticationIndex = 1;
+        Assert.Null(vm.InternetCredentialsValidationMessage);
     }
 
     [Theory]
