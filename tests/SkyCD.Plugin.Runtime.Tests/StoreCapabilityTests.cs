@@ -6,7 +6,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using DryIoc;
 using SkyCD.SDK.Capabilities.Accounts;
-using SkyCD.SDK.Capabilities.Actions;
 using SkyCD.SDK.Capabilities.FileFormats;
 using SkyCD.SDK.Capabilities.Ownership;
 using SkyCD.Plugin.Runtime.Factories;
@@ -28,7 +27,6 @@ public sealed class StoreCapabilityTests
 
         Assert.Same(store, container.ResolveMany<IOwnershipProvider>().Distinct().Single());
         Assert.Same(store, container.ResolveMany<IAccountConnector>().Distinct().Single());
-        Assert.Same(store, container.ResolveMany<IActionProvider>().Distinct().Single());
         Assert.Same(store, container.Resolve<IOwnershipProvider>(serviceKey: typeof(IOwnershipProvider)));
 
         using var cancellation = new CancellationTokenSource();
@@ -36,24 +34,16 @@ public sealed class StoreCapabilityTests
         var connection = await container.ResolveMany<IAccountConnector>().Distinct().Single().ConnectAsync(cancellation.Token);
         Assert.True(connection.Success);
         Assert.Equal("account-341", connection.AccountId);
-        var item = new Item { Id = "game-341" };
-        var actions = container.ResolveMany<IActionProvider>().Distinct().Single().GetActions(item).ToArray();
-        Assert.Equal(new[] { "install", "launch" }, actions.Select(action => action.Id));
-        foreach (var action in actions)
-        {
-            await action.ExecuteAsync(cancellation.Token);
-        }
 
-        Assert.Equal(new[] { "sync", "connect", "install:game-341", "launch:game-341" }, store.Calls);
+        Assert.Equal(new[] { "sync", "connect" }, store.Calls);
         Assert.All(store.Tokens, token => Assert.Equal(cancellation.Token, token));
         cancellation.Cancel();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => store.SyncAsync(cancellation.Token));
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => store.ConnectAsync(cancellation.Token));
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => actions[0].ExecuteAsync(cancellation.Token));
     }
 }
 
-public sealed class StoreCapability : IOwnershipProvider, IAccountConnector, IActionProvider
+public sealed class StoreCapability : IOwnershipProvider, IAccountConnector
 {
     public List<string> Calls { get; } = [];
     public List<CancellationToken> Tokens { get; } = [];
@@ -65,12 +55,6 @@ public sealed class StoreCapability : IOwnershipProvider, IAccountConnector, IAc
         await RecordAsync("connect", cancellationToken);
         return new AccountConnectionResult { Success = true, AccountId = "account-341" };
     }
-
-    public IEnumerable<SkyAction> GetActions(Item item) =>
-    [
-        new("install", "Install", token => RecordAsync($"install:{item.Id}", token)),
-        new("launch", "Launch", token => RecordAsync($"launch:{item.Id}", token))
-    ];
 
     private Task RecordAsync(string operation, CancellationToken token)
     {

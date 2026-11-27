@@ -57,6 +57,8 @@ host service contracts implemented by the host, not by copied helper source.
     an enabled metadata provider.
 - `IOwnershipProvider` (`Capabilities.Ownership`)
   - Synchronizes a store/library through `SyncAsync(CancellationToken)`.
+  - The desktop host calls it through `IAccountSession`, which extends this contract; there is no
+    standalone ownership UI.
 - `IAccountConnector` (`Capabilities.Accounts`)
   - Connects a provider account through `ConnectAsync(CancellationToken)` and returns
     `AccountConnectionResult` with success, an optional account identifier, and an optional error.
@@ -86,14 +88,6 @@ host service contracts implemented by the host, not by copied helper source.
     it stable, and shows `ImplementationName` in the Options implementation picker.
   - `IDescriptionGenerationPlanner.GetPlan()` stays optional and provider-neutral: it discloses the
     configured provider and context limits without contacting it.
-- `IActionProvider` (`Capabilities.Actions`)
-  - Returns item-specific `SkyAction` instances through `GetActions(Item)`.
-  - `Item` is an SDK context containing a stable identifier and provider metadata;
-    it does not depend on persistence or UI models.
-  - Actions have provider-scoped identifiers (for example `install` and `launch`),
-    display titles, and asynchronous handlers receiving host cancellation.
-  - Enumerating actions does not execute them; the host explicitly invokes a selected handler.
-  - These contracts do not add a store UI, credential storage, or an execution scheduler.
 
 ## Embedded Options configuration (SDK 2.0 migration, #828)
 
@@ -214,7 +208,7 @@ verifies the ICO and its sizes.
 - Identity and version constraints come from assembly metadata; no manifest is required.
 - Compatibility gate: plugin loads only when `HostVersion >= MinHostVersion`.
 - Capabilities are discovered by implemented interfaces deriving from `IPluginCapability`.
-- Ownership, account, and action providers use the same discovery, compatibility,
+- Ownership and account providers use the same discovery, compatibility,
   enabled-state, and registration paths as file format capabilities.
 - A class can implement several capability interfaces. Discovery constructs it once,
   and `DiscoveredPlugin.RegisterPluginServices` registers that same instance for each

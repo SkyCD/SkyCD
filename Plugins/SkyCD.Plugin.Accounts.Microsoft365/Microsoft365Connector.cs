@@ -9,7 +9,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommandDotNet;
 using SkyCD.SDK.Capabilities.Accounts;
-using SkyCD.SDK.Capabilities.Actions;
 using SkyCD.SDK.Capabilities.Cli;
 using SkyCD.SDK.Capabilities.Ownership;
 using SkyCD.SDK.OAuth;
@@ -22,11 +21,11 @@ namespace SkyCD.Plugin.Accounts.Microsoft365;
 
 /// <summary>
 /// OAuth-first Microsoft 365 connector: account sign-in, subscription sync, installed Office
-/// discovery, renewal state and launch actions. Commands are exposed as <c>skycd microsoft365 ...</c>.
+/// discovery, renewal state and Office launch. Commands are exposed as <c>skycd microsoft365 ...</c>.
 /// </summary>
 [Command("microsoft365")]
-public sealed class Microsoft365Connector : IOAuthClient, IAccountSession, IActionProvider,
-    ICliPluginCapability, ISupportsJsonOutput
+public sealed class Microsoft365Connector : IOAuthClient, IAccountSession, ICliPluginCapability,
+    ISupportsJsonOutput
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -126,36 +125,6 @@ public sealed class Microsoft365Connector : IOAuthClient, IAccountSession, IActi
 
         await oauth.SignOutAsync(settings.CreateOAuthProvider(), Microsoft365Settings.DefaultAccountKey,
             cancellationToken).ConfigureAwait(false);
-    }
-
-    IEnumerable<SkyAction> IActionProvider.GetActions(Item item)
-    {
-        ArgumentNullException.ThrowIfNull(item);
-
-        var executable = GetProperty(item, "microsoft365.executable", "executable");
-        if (!string.IsNullOrWhiteSpace(executable) && File.Exists(executable))
-        {
-            var name = Microsoft365Products.TryResolveAppCode(executable, out var explicitCode)
-                ? Microsoft365Products.ResolveAppName(explicitCode)
-                : Path.GetFileNameWithoutExtension(executable);
-            yield return CreateLaunchAction(name, executable);
-            yield break;
-        }
-
-        var app = GetProperty(item, "microsoft365.app", "app", "productCode", "product");
-        if (string.IsNullOrWhiteSpace(app) || !Microsoft365Products.TryResolveAppCode(app, out var productCode))
-        {
-            yield break;
-        }
-
-        var install = detector.Detect().FirstOrDefault(candidate =>
-            string.Equals(candidate.ProductCode, productCode, StringComparison.OrdinalIgnoreCase));
-        if (install is null)
-        {
-            yield break;
-        }
-
-        yield return CreateLaunchAction(install.ProductName, install.ExecutablePath);
     }
 
     [Command("connect")]
@@ -505,25 +474,6 @@ public sealed class Microsoft365Connector : IOAuthClient, IAccountSession, IActi
                     .OrderBy(app => app.ProductName, StringComparer.OrdinalIgnoreCase)
                     .Select(app => app.ProductName))}");
         }
-    }
-
-    private SkyAction CreateLaunchAction(string productName, string executablePath)
-    {
-        return new SkyAction("launch", $"Launch {productName}",
-            cancellationToken => launchProcess(executablePath, cancellationToken));
-    }
-
-    private static string? GetProperty(Item item, params string[] keys)
-    {
-        foreach (var key in keys)
-        {
-            if (item.Properties.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value))
-            {
-                return value;
-            }
-        }
-
-        return null;
     }
 
     private static string FormatDate(DateTimeOffset? value) =>
