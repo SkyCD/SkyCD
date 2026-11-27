@@ -12,8 +12,15 @@
         <Authors>SkyCD</Authors>
         <Product>SkyCD SDK</Product>
         <RepositoryUrl>https://github.com/SkyCD/SkyCD</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
         <PackageLicenseExpression>BSD-3-Clause</PackageLicenseExpression>
         <PackageTags>skycd;plugin;sdk;extensibility</PackageTags>
         <Description>The strict plugin-authoring contract surface for SkyCD: capability, lifecycle, host-service and request/result contracts. Contains no third-party helper types; SkiaSharp, XmpCore and other implementation dependencies stay behind host services.</Description>
     </PropertyGroup>
+    <ItemGroup>
+        <None Update="README.md" Pack="true" PackagePath="\" />
+    </ItemGroup>
 </Project>
