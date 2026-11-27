@@ -1,33 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
-namespace SkyCD.SDK.Capabilities.Media;
+namespace SkyCD.Plugin.Ai.Description.Models;
 
-/// <summary>Exposes local ACP provider selection to the host's Options dialog.</summary>
-public interface IAcpAgentSettingsCapability : IPluginCapability
-{
-    /// <summary>Reads the cached registry and local configuration without launching an agent.</summary>
-    AcpAgentSettings GetAgentSettings();
-
-    /// <summary>Downloads and validates the official registry before replacing the offline cache.</summary>
-    Task RefreshRegistryAsync(CancellationToken cancellationToken);
-
-    /// <summary>Installs a registry agent locally and returns its launch configuration.</summary>
-    Task<AcpAgentChoice> InstallAgentAsync(string registryId, CancellationToken cancellationToken);
-
-    /// <summary>Updates an agent previously installed by SkyCD from its registry entry.</summary>
-    Task<AcpAgentChoice> UpdateAgentAsync(string registryId, CancellationToken cancellationToken);
-
-    /// <summary>Removes an agent previously installed by SkyCD.</summary>
-    void UninstallAgent(string registryId);
-
-    /// <summary>Saves the selected provider and activates it when explicitly chosen by the user.</summary>
-    void SaveAgentSettings(AcpAgentChoice agent, bool activate = false);
-}
-
-/// <summary>An agent displayed in the provider picker.</summary>
+/// <summary>An agent displayed in the ACP provider picker.</summary>
 /// <param name="Name">The display name.</param>
 /// <param name="Executable">The detected local executable path, if available.</param>
 /// <param name="Arguments">The arguments used to start the agent.</param>

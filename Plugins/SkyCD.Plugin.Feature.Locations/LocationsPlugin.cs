@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Controls;
 using SkyCD.SDK.Capabilities;
 using SkyCD.SDK.Capabilities.Catalog;
 using SkyCD.SDK.Capabilities.Catalog.Locations;
-using SkyCD.SDK.Capabilities.Options;
+using SkyCD.SDK.Capabilities.Configuration;
 using SkyCD.SDK.Localization;
 using SkyCD.Plugin.Feature.Locations.Models;
 using SkyCD.Plugin.Feature.Locations.Views;
@@ -20,7 +22,7 @@ namespace SkyCD.Plugin.Feature.Locations;
 /// lives in the host's Options dialog as a contributed page rather than a floating window.
 /// </summary>
 public sealed class LocationsPlugin : IPluginCapability, ILocationApiConsumer, ICatalogFeaturePluginCapability,
-    IOptionsPageCapability, ILocalizationPluginCapability
+    IPluginConfigurationCapability, ILocalizationPluginCapability
 {
     private const string OptionsPageId = "locations";
     private const string ColumnKey = "location";
@@ -44,16 +46,49 @@ public sealed class LocationsPlugin : IPluginCapability, ILocationApiConsumer, I
     }
 
     /// <inheritdoc />
-    public OptionsPageDescriptor OptionsPage =>
-        new(OptionsPageId, LocalizationService.Current.Get(LocationsKeys.Locations));
+    public IReadOnlyList<PluginConfigurationDescriptor> Configurations =>
+        [new(OptionsPageId, LocalizationService.Current.Get(LocationsKeys.Locations), Order: -50)];
 
     /// <inheritdoc />
-    public object CreateOptionsPage()
+    public Task<PluginConfigurationPage> CreatePageAsync(PluginConfigurationRequest request,
+        CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(request);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!Offers(request.ConfigurationId))
+        {
+            return Task.FromResult(new PluginConfigurationPage(
+                () => new TextBlock
+                {
+                    Text = $"Unsupported configuration '{request.ConfigurationId}'.",
+                    TextWrapping = Avalonia.Media.TextWrapping.Wrap
+                },
+                _ => Task.FromResult(new PluginConfigurationResult
+                {
+                    Success = false,
+                    Error = $"Unsupported configuration '{request.ConfigurationId}'."
+                })));
+        }
+
         var api = locationApi
             ?? throw new InvalidOperationException("The locations page requires the host location API.");
-        return new LocationsView { DataContext = new LocationsManagerViewModel(api, RaiseDataChanged) };
+        var view = new LocationsView { DataContext = new LocationsManagerViewModel(api, RaiseDataChanged) };
+        return Task.FromResult(new PluginConfigurationPage(
+            () => view,
+            token =>
+            {
+                token.ThrowIfCancellationRequested();
+                return Task.FromResult(new PluginConfigurationResult
+                {
+                    Success = true,
+                    Settings = request.CurrentSettings
+                });
+            }));
     }
+
+    private bool Offers(string configurationId) =>
+        Configurations.Any(descriptor =>
+            descriptor.ConfigurationId.Equals(configurationId, StringComparison.OrdinalIgnoreCase));
 
     /// <inheritdoc />
     public IReadOnlyList<EntryDecoration> GetEntryDecorations(IReadOnlyList<CatalogEntry> entries) => [];

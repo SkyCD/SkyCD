@@ -2,9 +2,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using SkyCD.Plugin.Feature.GenDesc.Configuration;
 using SkyCD.Plugin.Feature.GenDesc.Localization;
 using SkyCD.Plugin.Feature.GenDesc.Models;
 using SkyCD.Plugin.Feature.GenDesc.ViewModels;
+using SkyCD.SDK.Capabilities.Configuration;
 using SkyCD.SDK.Capabilities.GenDesc;
 using SkyCD.SDK.Capabilities.Menu;
 using SkyCD.TestSupport;
@@ -55,35 +57,69 @@ public class GenDescPluginTests
     }
 
     [Fact]
-    public void PageCapabilitiesExposeSplitPagesInOneGroup()
+    public void ConfigurationCapabilityExposesSplitPagesInOneGroup()
     {
         var group = LocalizationService.Current.Get(GenDescKeys.OptionsGroup);
-        var info = new GenDescInfoFilesOptionsPage();
-        var descriptions = new GenDescPostDescriptionsOptionsPage();
+        var capability = new GenDescConfigurationPlugin();
+        var info = capability.Configurations[0];
+        var descriptions = capability.Configurations[1];
 
-        Assert.Equal("gendesc-info-files", info.OptionsPage.PageId);
-        Assert.Equal(LocalizationService.Current.Get(GenDescKeys.InfoFilesTitle), info.OptionsPage.Title);
-        Assert.Equal(50, info.OptionsPage.Order);
-        Assert.Equal(group, info.OptionsPage.Group);
+        Assert.Equal("gendesc-info-files", info.ConfigurationId);
+        Assert.Equal(LocalizationService.Current.Get(GenDescKeys.InfoFilesTitle), info.Title);
+        Assert.Equal(50, info.Order);
+        Assert.Equal(group, info.Group);
 
-        Assert.Equal("gendesc-post-descriptions", descriptions.OptionsPage.PageId);
-        Assert.Equal(LocalizationService.Current.Get(GenDescKeys.PostDescriptionsTitle),
-            descriptions.OptionsPage.Title);
-        Assert.Equal(51, descriptions.OptionsPage.Order);
-        Assert.Equal(group, descriptions.OptionsPage.Group);
+        Assert.Equal("gendesc-post-descriptions", descriptions.ConfigurationId);
+        Assert.Equal(LocalizationService.Current.Get(GenDescKeys.PostDescriptionsTitle), descriptions.Title);
+        Assert.Equal(51, descriptions.Order);
+        Assert.Equal(group, descriptions.Group);
     }
 
     [Fact]
-    public void PageCapabilitiesEditOnlyTheirOwnTemplateKind()
+    public void ConfigurationPagesEditOnlyTheirOwnTemplateKind()
     {
         using var workspace = new TestWorkspace();
-        var info = new GenDescInfoFilesOptionsPage { TemplateDirectory = workspace.Root };
-        var descriptions = new GenDescPostDescriptionsOptionsPage { TemplateDirectory = workspace.Root };
+        var capability = new GenDescConfigurationPlugin { TemplateDirectory = workspace.Root };
 
-        Assert.All(info.CreateTemplatesViewModel().Templates,
-            template => Assert.Equal(TemplateInfo.NfoKind, template.Kind));
-        Assert.All(descriptions.CreateTemplatesViewModel().Templates,
-            template => Assert.Equal(TemplateInfo.DescriptionKind, template.Kind));
+        var info = capability.CreateTemplatesViewModel("gendesc-info-files");
+        var descriptions = capability.CreateTemplatesViewModel("gendesc-post-descriptions");
+
+        Assert.NotNull(info);
+        Assert.NotNull(descriptions);
+        Assert.All(info.Templates, template => Assert.Equal(TemplateInfo.NfoKind, template.Kind));
+        Assert.All(descriptions.Templates, template => Assert.Equal(TemplateInfo.DescriptionKind, template.Kind));
+    }
+
+    [Fact]
+    public async Task ConfigurationPageAcceptsSupportedDraftAndLeavesSettingsUnchanged()
+    {
+        using var workspace = new TestWorkspace();
+        var capability = new GenDescConfigurationPlugin { TemplateDirectory = workspace.Root };
+        var page = await capability.CreatePageAsync(new PluginConfigurationRequest
+        {
+            ConfigurationId = "gendesc-info-files",
+            CurrentSettings = new Dictionary<string, string?> { ["kept"] = "value" }
+        });
+
+        var result = await page.AcceptAsync();
+
+        Assert.True(result.Success);
+        Assert.Equal("value", result.Settings["kept"]);
+    }
+
+    [Fact]
+    public async Task ConfigurationPageRejectsUnknownConfiguration()
+    {
+        var capability = new GenDescConfigurationPlugin();
+        var page = await capability.CreatePageAsync(new PluginConfigurationRequest
+        {
+            ConfigurationId = "gendesc-unknown"
+        });
+
+        var result = await page.AcceptAsync();
+
+        Assert.False(result.Success);
+        Assert.Contains("gendesc-unknown", result.Error);
     }
 
     [Fact]

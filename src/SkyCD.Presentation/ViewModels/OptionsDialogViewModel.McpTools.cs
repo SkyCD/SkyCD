@@ -13,8 +13,8 @@ public partial class OptionsDialogViewModel
 {
     private const string McpToolsCategoryId = "mcp-tools";
 
-    /// <summary>Index of the MCP tool exposure category; it follows the AI provider category.</summary>
-    private const int McpToolsCategoryIndex = AiProviderCategoryIndex + 1;
+    /// <summary>Legacy index of the MCP tool exposure category, kept for stored tab-index fallbacks.</summary>
+    private const int McpToolsCategoryIndex = 12;
 
     public ObservableCollection<McpToolItemViewModel> McpTools { get; } = [];
 

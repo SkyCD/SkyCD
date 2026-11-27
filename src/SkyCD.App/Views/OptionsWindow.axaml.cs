@@ -1,19 +1,13 @@
 using SkyCD.UI.Localization;
 using System;
 using System.ComponentModel;
-using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Interactivity;
 using Avalonia.Input.Platform;
-using Avalonia.Platform.Storage;
+using Avalonia.Interactivity;
 using Avalonia.Threading;
-using Avalonia.VisualTree;
 using SkyCD.Presentation.ViewModels;
-using SkyCD.SDK.Capabilities.Media;
 
 namespace SkyCD.App.Views;
 
@@ -22,25 +16,16 @@ public partial class OptionsWindow : Window
     private const double TargetWidth = 1024;
     private const double TargetHeight = 768;
     private const double ScreenUsageFactor = 0.9;
-    private readonly CancellationTokenSource acpLifetime = new();
     private bool hasOpened;
-    private bool startedAcpLoad;
-    private bool startedAiProviderLoad;
-
-    public IAcpAgentSettingsCapability? AcpSettingsCapability { get; init; }
-
-    public IAiProviderSettingsCapability? AiProviderSettingsCapability { get; init; }
 
     public OptionsWindow()
     {
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
         Opened += OnOpened;
-        Opened += OnLoadAcpAgents;
-        Opened += OnLoadAiProviderSettings;
+        Opened += OnLoadPages;
         Closed += (_, _) =>
         {
-            acpLifetime.Cancel();
             if (DataContext is OptionsDialogViewModel vm)
             {
                 vm.PropertyChanged -= OnViewModelPropertyChanged;
@@ -60,7 +45,6 @@ public partial class OptionsWindow : Window
         {
             vm.PropertyChanged -= OnViewModelPropertyChanged;
             vm.PropertyChanged += OnViewModelPropertyChanged;
-            vm.SelectedContributedPage?.EnsureContent();
             vm.CollectionsPage?.WatchCatalogChanges(action => Dispatcher.UIThread.Post(action));
         }
     }
@@ -76,20 +60,6 @@ public partial class OptionsWindow : Window
         else if (e.PropertyName == nameof(OptionsDialogViewModel.ShowPluginSettingsSection))
         {
             await LoadPluginPageIfVisibleAsync();
-        }
-        else if (e.PropertyName == nameof(OptionsDialogViewModel.ShowContributedOptionsPageSection) &&
-                 DataContext is OptionsDialogViewModel optionsViewModel)
-        {
-            optionsViewModel.SelectedContributedPage?.EnsureContent();
-        }
-        else if (e.PropertyName == nameof(OptionsDialogViewModel.ShowAcpSection))
-        {
-            await LoadAcpAgentsIfVisibleAsync();
-        }
-        else if (e.PropertyName is nameof(OptionsDialogViewModel.ShowAiDescriptionSection)
-                 or nameof(OptionsDialogViewModel.ShowAiProviderSection))
-        {
-            LoadAiProviderSettingsIfVisible();
         }
     }
 
@@ -149,25 +119,9 @@ public partial class OptionsWindow : Window
         }
     }
 
-    private async void OnBrowseAcpAgentClicked(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is not OptionsDialogViewModel { CanChooseAcpAgent: true } vm ||
-            sender is not Button { DataContext: AcpAgentChoice { ExpectedExecutable: { } expected } agent }) return;
-        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
-        {
-            Title = LocalizationService.Current.Format(UiKeys.AcpFindExecutable, expected),
-            AllowMultiple = false,
-            FileTypeFilter = [new FilePickerFileType(expected) { Patterns = [expected] }]
-        });
-        if (files.FirstOrDefault()?.TryGetLocalPath() is { } path)
-            vm.ChooseLocalAcpAgent(agent, path);
-    }
-
-    private async void OnLoadAcpAgents(object? sender, EventArgs e)
+    private async void OnLoadPages(object? sender, EventArgs e)
     {
         hasOpened = true;
-        LoadAiProviderSettingsIfVisible();
-        await LoadAcpAgentsIfVisibleAsync();
         await LoadPluginPageIfVisibleAsync();
     }
 
@@ -175,103 +129,6 @@ public partial class OptionsWindow : Window
     {
         if (hasOpened && DataContext is OptionsDialogViewModel { ShowPluginSettingsSection: true, SelectedPluginPage: { } page })
             await page.LoadAsync();
-    }
-
-    private void OnLoadAiProviderSettings(object? sender, EventArgs e)
-    {
-        hasOpened = true;
-        LoadAiProviderSettingsIfVisible();
-    }
-
-    private void LoadAiProviderSettingsIfVisible()
-    {
-        if (!hasOpened || startedAiProviderLoad || DataContext is not OptionsDialogViewModel { IsAiDescriptionAvailable: true } vm)
-        {
-            return;
-        }
-
-        startedAiProviderLoad = true;
-        vm.LoadAiProviderSettings(AiProviderSettingsCapability);
-    }
-
-    private async Task LoadAcpAgentsIfVisibleAsync()
-    {
-        if (!hasOpened || startedAcpLoad || DataContext is not OptionsDialogViewModel { ShowAcpSection: true } vm)
-            return;
-
-        startedAcpLoad = true;
-        await vm.LoadAcpSettingsAsync(AcpSettingsCapability, refreshRegistry: true, acpLifetime.Token);
-    }
-
-    private async void OnInstallAcpAgentClicked(object? sender, RoutedEventArgs e)
-    {
-        if (sender is not Button { DataContext: AcpAgentChoice agent } || DataContext is not OptionsDialogViewModel vm)
-            return;
-
-        var error = agent.IsManaged
-            ? await vm.UpdateAcpAgentAsync(agent, acpLifetime.Token)
-            : await vm.InstallAcpAgentAsync(agent, acpLifetime.Token);
-        await ShowAcpOperationErrorAsync(agent.IsManaged ? UiKeys.AcpUpdateErrorTitle : UiKeys.AcpInstallErrorTitle,
-            agent.Name, error);
-    }
-
-    private async void OnUninstallAcpAgentClicked(object? sender, RoutedEventArgs e)
-    {
-        if (sender is not Button { DataContext: AcpAgentChoice agent } || DataContext is not OptionsDialogViewModel vm)
-            return;
-
-        var error = await vm.UninstallAcpAgentAsync(agent, acpLifetime.Token);
-        await ShowAcpOperationErrorAsync(UiKeys.AcpUninstallErrorTitle, agent.Name, error);
-    }
-
-    private async Task ShowAcpOperationErrorAsync(string title, string agentName, string? error)
-    {
-        if (error is null || acpLifetime.IsCancellationRequested) return;
-
-        var close = new Button
-        {
-            Content = LocalizationService.Current.Get(UiKeys.Ok),
-            IsDefault = true,
-            IsCancel = true,
-            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right
-        };
-        var dialog = new Window
-        {
-            Title = LocalizationService.Current.Format(title, agentName),
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Width = 440,
-            SizeToContent = SizeToContent.Height,
-            CanResize = false,
-            CanMinimize = false,
-            ShowInTaskbar = false,
-            Content = new StackPanel
-            {
-                Margin = new Thickness(16),
-                Spacing = 14,
-                Children =
-                {
-                    new ScrollViewer
-                    {
-                        MaxHeight = 240,
-                        Content = new SelectableTextBlock
-                        {
-                            Text = error,
-                            TextWrapping = Avalonia.Media.TextWrapping.Wrap
-                        }
-                    },
-                    close
-                }
-            }
-        };
-        close.Click += (_, _) => dialog.Close();
-        await dialog.ShowDialog(this);
-    }
-
-    private void OnSelectAcpAgentClicked(object? sender, RoutedEventArgs e)
-    {
-        if (sender is Button { DataContext: AcpAgentChoice { IsInstalled: true } agent } &&
-            DataContext is OptionsDialogViewModel { CanChooseAcpAgent: true } vm)
-            vm.SelectAcpAgent(agent);
     }
 
     private void OnOpened(object? sender, EventArgs e)

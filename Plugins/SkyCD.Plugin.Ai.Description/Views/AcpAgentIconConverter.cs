@@ -4,7 +4,7 @@ using System.Globalization;
 using Avalonia.Data.Converters;
 using Avalonia.Media;
 
-namespace SkyCD.App.Converters;
+namespace SkyCD.Plugin.Ai.Description.Views;
 
 public sealed class AcpAgentIconConverter : IValueConverter
 {
