@@ -13,8 +13,8 @@ the inline "OpenCV runtime could not be loaded" message instead of failing plugi
 
 ## Capture source
 
-The plugin contributes a capture source type to the **Add To List** dialog. The source button appears only
-while at least one enabled plugin provides `ICaptureSourcePluginCapability`, and disappears again when the
+The plugin contributes a source type to the **Add To List** dialog. The source button appears only
+while at least one enabled plugin provides `ISourceFactoryPluginCapability`, and disappears again when the
 plugin is disabled from Options without restarting the app. Plugin enable state is driven by the activation
 hook: `IActivatablePluginCapability` starts every saved source on activation and stops it on deactivation,
 and repeated discovery passes never start a second loop for one source. Sources pause while no catalog is
@@ -32,7 +32,7 @@ Multiple sources can be configured at once. The plugin owns their configuration:
 each source through `IPluginStorageApi` in the open catalog, and the host keeps no motion-detector state.
 
 Captured frames are written by the plugin into the physical destination folder and reported to the host
-through `ICaptureSourceHostApi.ImportCapturedFilesAsync`. The host creates the catalog entries under
+through `ISourceFactoryHostApi.ImportSourceFilesAsync`. The host creates the catalog entries under
 `<root>/<capture folder>/<yyyy-MM-dd>/`, recalculates ancestor sizes and refreshes the browser.
 
 ## Detectors

@@ -235,8 +235,8 @@ public class OptionsDialogViewModelTests
 
         var filteredIds = vm.FilteredSettingCategories.Select(category => category.Id).ToList();
         Assert.Contains("mcp", filteredIds);
-        Assert.Contains("acp", filteredIds);
         Assert.Contains("mcp-tools", filteredIds);
+        Assert.DoesNotContain("acp", filteredIds);
         Assert.Contains(vm.SidebarEntries, entry =>
             entry.IsGroupHeader && entry.Title == LocalizationService.Current.Get(UiKeys.AiGroup));
     }

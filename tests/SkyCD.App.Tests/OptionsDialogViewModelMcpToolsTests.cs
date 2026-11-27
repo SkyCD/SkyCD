@@ -157,19 +157,17 @@ public sealed class OptionsDialogViewModelMcpToolsTests
     }
 
     [Fact]
-    public void SettingCategories_ListMcpAndAcpUnderAiGroupWithStableIndexesAndOrder()
+    public void SettingCategories_ListMcpPagesUnderAiGroupWithStableIndexesAndOrder()
     {
         var vm = new OptionsDialogViewModel(["English"]);
 
         var categories = vm.SettingCategories.Where(category => category.BuiltInIndex >= 0).ToList();
         var mcp = categories.Single(category => category.Id == "mcp");
-        var acp = categories.Single(category => category.Id == "acp");
 
         Assert.Equal(AiGroup, mcp.Group);
-        Assert.Equal(AiGroup, acp.Group);
         Assert.Equal(2, mcp.BuiltInIndex);
-        Assert.Equal(5, acp.BuiltInIndex);
-        Assert.Equal(["mcp", "acp", "mcp-tools"], categories.TakeLast(3).Select(category => category.Id));
+        Assert.Equal(["mcp", "mcp-tools"], categories.TakeLast(2).Select(category => category.Id));
+        Assert.DoesNotContain(categories, category => category.Id == "acp");
     }
 
     [Fact]
@@ -181,7 +179,7 @@ public sealed class OptionsDialogViewModelMcpToolsTests
             Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader && entry.Title == AiGroup));
         Assert.Equal("toolbar", vm.SidebarEntries[headerIndex - 1].Category?.Id);
         var children = vm.SidebarEntries.Skip(headerIndex + 1).ToList();
-        Assert.Equal(["mcp", "acp", "mcp-tools"], children.Select(entry => entry.Category?.Id));
+        Assert.Equal(["mcp", "mcp-tools"], children.Select(entry => entry.Category?.Id));
         Assert.All(children, child => Assert.Equal(1, child.Depth));
     }
 
@@ -213,17 +211,15 @@ public sealed class OptionsDialogViewModelMcpToolsTests
     }
 
     [Fact]
-    public void SettingsSearch_Acp_KeepsGroupHeaderAndAcpPage()
+    public void SettingsSearch_Acp_NoBuiltInAcpPageRemains()
     {
         var vm = new OptionsDialogViewModel(["English"]);
 
         vm.SettingsSearchText = "ACP";
 
-        var header = Assert.Single(vm.SidebarEntries, entry => entry.IsGroupHeader && entry.Title == AiGroup);
-        Assert.Equal(AiGroup, header.Title);
-        Assert.Equal(["acp"], vm.FilteredSettingCategories.Select(category => category.Id));
-        Assert.Equal("acp", vm.SelectedSettingCategory?.Id);
-        Assert.True(vm.ShowAcpSection);
+        Assert.DoesNotContain(vm.SettingCategories, category => category.Id == "acp");
+        Assert.Empty(vm.FilteredSettingCategories);
+        Assert.True(vm.ShowNoSearchResults);
     }
 
     [Fact]

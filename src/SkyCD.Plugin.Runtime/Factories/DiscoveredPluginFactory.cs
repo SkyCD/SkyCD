@@ -188,7 +188,7 @@ public sealed class DiscoveredPluginFactory
         {
             if (capability is IPluginConfigurationCapability configuration)
             {
-                _ = configuration.Configuration;
+                _ = configuration.Configurations;
             }
 
             return true;
