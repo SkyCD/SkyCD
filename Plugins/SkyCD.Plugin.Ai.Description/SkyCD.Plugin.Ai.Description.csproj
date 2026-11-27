@@ -8,5 +8,15 @@
         <AssemblyTitle>Agent Description Generation</AssemblyTitle>
         <Description>Generates entry descriptions through a locally installed agent client using the Agent Client Protocol.</Description>
     </PropertyGroup>
-    <ItemGroup><ProjectReference Include="../../src/SkyCD.SDK/SkyCD.SDK.csproj" /></ItemGroup>
+    <ItemGroup>
+        <InternalsVisibleTo Include="SkyCD.App.Tests" />
+    </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="../../src/SkyCD.SDK/SkyCD.SDK.csproj" />
+        <ProjectReference Include="../../src/SkyCD.UI/SkyCD.UI.csproj" />
+    </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Avalonia" Version="12.1.6" />
+        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    </ItemGroup>
 </Project>

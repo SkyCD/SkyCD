@@ -28,7 +28,7 @@ using SkyCD.Plugin.Host.Indexing;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.SDK.Capabilities.Menu;
-using SkyCD.SDK.Capabilities.Volume;
+using SkyCD.SDK.Capabilities.Sources;
 using SkyCD.Presentation.Catalog;
 using SkyCD.Presentation.MediaCache;
 using SkyCD.Presentation.Operations;
@@ -74,7 +74,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                         return true;
                     }, null, token, canPublish: canPublish);
                     if (published) RefreshPreview();
-                }, () => !isDisposed && !IsProgressVisible, volumeMetadata: volumeMetadataProvider,
+                }, () => !isDisposed && !IsProgressVisible, mediaTargets: mediaTargetProvider,
                 traversalFactory: scanTraversalFactory);
             backgroundMediaSync.Failed += message => StatusText = $"Background media sync failed: {message}";
             backgroundMediaSync.Start();
@@ -168,7 +168,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private AiDescriptionService? aiDescriptionService;
     private CancellationTokenSource? pluginCommandCancellation;
     private MediaMetadataService? mediaMetadataService;
-    private IVolumeMetadataProvider? volumeMetadataProvider;
+    private IMediaTargetMetadataProvider? mediaTargetProvider;
     private AudioCdMetadataService? audioCdMetadataService;
     private readonly SemaphoreSlim metadataPublicationGate = new(1, 1);
     private readonly CancellationTokenSource metadataLifetime = new();
@@ -189,17 +189,16 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private readonly object viewRefreshLock = new();
 
     public void RefreshMediaServices(MediaExtensionManager updatedManager,
-        IVolumeMetadataProvider? volumeMetadataProvider = null, IndexWorkItemSequence? indexWorkItems = null,
-        IAudioCdMetadataProvider? audioCdMetadataProvider = null)
+        IMediaTargetMetadataProvider? mediaTargets = null, IndexWorkItemSequence? indexWorkItems = null)
     {
         ArgumentNullException.ThrowIfNull(updatedManager);
         mediaMetadataService = new MediaMetadataService(updatedManager, mediaCacheStore, workItems: indexWorkItems);
         RequestCaptureMetadataExtraction();
-        this.volumeMetadataProvider = volumeMetadataProvider;
+        mediaTargetProvider = mediaTargets;
         InvalidateMediaCatalogEffects();
-        audioCdMetadataService = audioCdMetadataProvider is null
+        audioCdMetadataService = mediaTargets is null
             ? null
-            : new AudioCdMetadataService(audioCdMetadataProvider, mediaCacheStore);
+            : new AudioCdMetadataService(mediaTargets, mediaCacheStore);
         if (backgroundMediaSync is not null)
         {
             OnIsBackgroundMediaSyncEnabledChanged(IsBackgroundMediaSyncEnabled);
@@ -594,7 +593,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     /// Writes captured files into the open catalog under the capture folder the plugin reports, then queues
     /// their metadata extraction. Safe to call from a plugin worker thread.
     /// </summary>
-    public async Task ImportCapturedFilesAsync(IReadOnlyList<CapturedCatalogFile> files,
+    public async Task ImportSourceFilesAsync(IReadOnlyList<SourceFile> files,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(files);
@@ -4956,7 +4955,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         finally { pluginCommandCancellation = null; }
     }
 
-    private sealed class ViewModelHostCommandApi(MainWindowViewModel viewModel) : ICatalogCaptureHostApi, IDescriptionHostApi
+    private sealed class ViewModelHostCommandApi(MainWindowViewModel viewModel) : IDescriptionHostApi
     {
         private readonly string? catalogPath = viewModel.CurrentCatalogPath;
         private readonly string? descriptionEntryId = viewModel.GetSelectedBrowserItems() is { Count: 1 } selected ? selected[0].Id : null;
@@ -4984,9 +4983,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 viewModel.RefreshBrowserItemsForSelection();
             });
         }
-
-        public Task ImportCapturedFilesAsync(IReadOnlyList<CapturedCatalogFile> files, CancellationToken cancellationToken = default) =>
-            viewModel.ImportCapturedFilesAsync(files, cancellationToken);
 
         public Task NavigateToNodeAsync(long nodeId, CancellationToken cancellationToken = default)
         {

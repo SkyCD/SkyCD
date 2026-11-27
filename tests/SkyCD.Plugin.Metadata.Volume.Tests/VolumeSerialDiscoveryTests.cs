@@ -1,14 +1,15 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
 using SkyCD.Couchbase;
 using SkyCD.Couchbase.Repository;
 using SkyCD.SDK.Capabilities.FileFormats;
 using SkyCD.Plugin.Runtime.Documents;
 using SkyCD.Plugin.Runtime.Managers;
-using SkyCD.SDK.Capabilities.Volume;
-using SkyCD.Plugin.Host.Volume;
+using SkyCD.SDK.Capabilities.Media;
+using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Runtime.Collections;
 using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.TestSupport;
@@ -27,7 +28,7 @@ public sealed class VolumeSerialDiscoveryTests
         Assert.Equal("Volume Serial Number", plugin.Name);
         Assert.Equal(new Version(1, 0, 0, 0), plugin.Version);
         Assert.Contains(plugin.Capabilities, capability => capability is VolumeSerialPlugin);
-        Assert.Contains(plugin.Capabilities, capability => capability is IVolumeMetadataCapability);
+        Assert.Contains(plugin.Capabilities, capability => capability is IMediaTargetMetadataCapability);
     }
 
     [Fact]
@@ -44,7 +45,7 @@ public sealed class VolumeSerialDiscoveryTests
         descriptor.IsEnabled = true;
         enabled.Import([plugin], [descriptor]);
         Assert.Single(enabled);
-        Assert.Contains(Assert.Single(enabled).Capabilities, capability => capability is IVolumeMetadataCapability);
+        Assert.Contains(Assert.Single(enabled).Capabilities, capability => capability is IMediaTargetMetadataCapability);
     }
 
     [Fact]
@@ -67,7 +68,7 @@ public sealed class VolumeSerialDiscoveryTests
 
         var fallbackIds = manager.GetAvailablePluginIds<IFileFormatPluginCapability>();
         Assert.Empty(fallbackIds);
-        Assert.Contains("SkyCD.Plugin.VolumeSerial", manager.GetAvailablePluginIds<IVolumeMetadataCapability>());
+        Assert.Contains("SkyCD.Plugin.VolumeSerial", manager.GetAvailablePluginIds<IMediaTargetMetadataCapability>());
         manager.SavePluginEnabledStates(fallbackIds.Select(static id => (id, true)));
         manager.Discover(directory, new Version(3, 0, 0));
 
@@ -84,7 +85,7 @@ public sealed class VolumeSerialDiscoveryTests
     }
 
     [Fact]
-    public void DisabledPlugin_CapturesNoVolumeSerial()
+    public async Task DisabledPlugin_CapturesNoVolumeSerial()
     {
         var plugin = new DiscoveredPluginFactory().BuildFromAssembly(typeof(VolumeSerialPlugin).Assembly);
         var descriptor = plugin.ToDocument();
@@ -92,12 +93,13 @@ public sealed class VolumeSerialDiscoveryTests
         descriptor.IsEnabled = false;
         enabled.Import([plugin], [descriptor]);
 
-        var manager = new VolumeExtensionManager(enabled.SelectMany(p => p.Capabilities.OfType<IVolumeMetadataCapability>()
-            .Select(capability => new VolumeProvider(p.Id, p.Version.ToString(), capability))));
-        var values = manager.CaptureVolumeMetadata(new VolumeMediaContext("E:\\", "E:\\"), default);
+        var manager = new MediaTargetExtensionManager(enabled.SelectMany(p => p.Capabilities
+            .OfType<IMediaTargetMetadataCapability>()
+            .Select(capability => new MediaTargetProvider(p.Id, p.Version.ToString(), capability))));
+        var captures = await manager.CaptureAsync(new MediaTarget(MediaTargetKind.Volume, "E:\\", "E:\\"), default);
 
-        Assert.Empty(values);
-        Assert.False(manager.HasVolumeProviders);
+        Assert.Empty(captures);
+        Assert.False(manager.HasProviders);
     }
 
     private static string FindPluginProjectDirectory()

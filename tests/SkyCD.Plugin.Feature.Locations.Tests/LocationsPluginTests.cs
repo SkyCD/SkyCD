@@ -1,14 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Couchbase.Lite;
 using SkyCD.Documents;
 using SkyCD.Documents.Collections;
 using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
 using SkyCD.SDK.Capabilities.Catalog;
+using SkyCD.SDK.Capabilities.Catalog.Locations;
+using SkyCD.SDK.Capabilities.Configuration;
 using SkyCD.SDK.Capabilities.Menu;
-using SkyCD.SDK.Capabilities.Options;
 using SkyCD.Plugin.Feature.Locations.Models;
 using SkyCD.Plugin.Feature.Locations.Views;
 using SkyCD.Plugin.Host.Catalog;
@@ -22,7 +24,7 @@ namespace SkyCD.Plugin.Feature.Locations.Tests;
 public sealed class LocationsPluginTests
 {
     [Fact]
-    public void EnabledPluginContributesLocationColumnSearchFieldAndOptionsPage()
+    public void EnabledPluginContributesLocationColumnSearchFieldAndConfigurationPage()
     {
         using var stack = new Stack();
         var garage = stack.Api.CreateLocation("Garage");
@@ -43,22 +45,23 @@ public sealed class LocationsPluginTests
         Assert.Equal("Garage", field.SelectValue?.Invoke(Entry("file")));
 
         Assert.IsNotAssignableFrom<IMenuPluginCapability>(plugin);
-        var optionsPage = Assert.IsAssignableFrom<IOptionsPageCapability>(plugin);
-        Assert.Equal("locations", optionsPage.OptionsPage.PageId);
+        var configuration = Assert.IsAssignableFrom<IPluginConfigurationCapability>(plugin);
+        Assert.Equal("locations", Assert.Single(configuration.Configurations).ConfigurationId);
         Assert.NotEmpty(plugin.GetTranslations());
     }
 
     [Fact]
-    public void CreateOptionsPage_WithoutLocationApi_ThrowsInvalidOperation()
+    public async Task CreateConfigurationPage_WithoutLocationApi_ThrowsInvalidOperation()
     {
         var plugin = new LocationsPlugin();
 
-        var exception = Assert.Throws<InvalidOperationException>(() => plugin.CreateOptionsPage());
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            plugin.CreatePageAsync(new PluginConfigurationRequest { ConfigurationId = "locations" }));
         Assert.Contains("host location API", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void OptionsPageUsesTheTranslatedTitleAndEmbedsTheManagerView()
+    public async Task ConfigurationPageUsesTheTranslatedTitleAndEmbedsTheManagerView()
     {
         const string translationNamespace = "plugins.skycd.locations";
         using var stack = new Stack();
@@ -66,9 +69,10 @@ public sealed class LocationsPluginTests
         LocalizationService.Current.Register(translationNamespace, plugin);
         try
         {
-            Assert.Equal("Locations", plugin.OptionsPage.Title);
+            Assert.Equal("Locations", Assert.Single(plugin.Configurations).Title);
 
-            var view = Assert.IsType<LocationsView>(plugin.CreateOptionsPage());
+            var page = await plugin.CreatePageAsync(new PluginConfigurationRequest { ConfigurationId = "locations" });
+            var view = Assert.IsType<LocationsView>(page.Content);
             var viewModel = Assert.IsType<LocationsManagerViewModel>(view.DataContext);
             Assert.True(viewModel.IsCatalogOpen);
         }
@@ -76,6 +80,23 @@ public sealed class LocationsPluginTests
         {
             LocalizationService.Current.Unregister(translationNamespace);
         }
+    }
+
+    [Fact]
+    public async Task ConfigurationPageKeepsStoredSettingsOnAccept()
+    {
+        using var stack = new Stack();
+        var plugin = stack.CreatePlugin();
+        var page = await plugin.CreatePageAsync(new PluginConfigurationRequest
+        {
+            ConfigurationId = "locations",
+            CurrentSettings = new Dictionary<string, string?> { ["kept"] = "value" }
+        });
+
+        var result = await page.AcceptAsync();
+
+        Assert.True(result.Success);
+        Assert.Equal("value", result.Settings["kept"]);
     }
 
     [Fact]

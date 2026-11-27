@@ -1,6 +1,7 @@
 # Volume serial number plugin
 
-Implements #642 on the volume-aware capability contracts (`src/SkyCD.SDK/Capabilities/Volume/`).
+Implements #642 on the shared medium-level capability contracts
+(`src/SkyCD.SDK/Capabilities/Media/MediaTargetContracts.cs`).
 
 Assembly: `Plugins/SkyCD.Plugin.Metadata.Volume/` → plugin id `SkyCD.Plugin.VolumeSerial`.
 Tests: `tests/SkyCD.Plugin.Metadata.Volume.Tests/`.
@@ -9,7 +10,7 @@ Tests: `tests/SkyCD.Plugin.Metadata.Volume.Tests/`.
 
 | Capability | Type | Schema |
 |---|---|---|
-| Filesystem volume serial number | `VolumeSerialPlugin : IVolumeMetadataCapability` | `skycd.volume-serial` v1 |
+| Filesystem volume serial number | `VolumeSerialPlugin : IMediaTargetMetadataCapability` | `skycd.volume-serial` v1 |
 
 Discovery uses assembly metadata and implemented capability types only — there is no `plugin.json`.
 The plugin is independently enabled/disabled like every other plugin; when it is disabled or
@@ -18,12 +19,14 @@ unavailable, media scans simply never record a serial.
 ### Capture flow
 
 When the plugin is enabled and **Include Media Info** is selected in the Add To List dialog, the disk
-capture flow asks the volume-aware host seam (`IVolumeMetadataProvider`, implemented by
-`VolumeExtensionManager` over enabled plugin capabilities) for volume facts and stores them as
+capture flow asks the shared media host seam (`IMediaTargetMetadataProvider`, implemented by
+`MediaTargetExtensionManager` over enabled plugin capabilities) for volume facts and stores them as
 properties of the new catalog media root — both when the media is added as a new item and when it is
-added beneath a selected catalog item. Volume facts are never forced through the file-byte
-`MediaItem`/`IMediaSource` metadata contracts; `VolumeMediaContext` addresses the volume by its root
-path.
+added beneath a selected catalog item. The seam asks the plugin only about media it supports
+(`IMediaTargetMetadataCapability.Supports` receives a `MediaTarget` whose kind is
+`MediaTargetKind.Volume` or `MediaTargetKind.OpticalDisc` — a data disc is a volume too — and whose
+`Location` addresses it). Volume facts are never forced through the file-byte
+`MediaItem`/`IMediaSource` metadata contracts.
 
 Capture uses ordinary read-only OS access (`GetVolumeInformationW` on Windows): no elevation and no
 file content reads. The provider observes cancellation, and a failing or removed volume degrades to

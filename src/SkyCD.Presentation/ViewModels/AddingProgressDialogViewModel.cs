@@ -13,7 +13,7 @@ using CommunityToolkit.Mvvm.Input;
 using SkyCD.Presentation.MediaCache;
 using SkyCD.Presentation.Operations;
 using SkyCD.Presentation.Scanning;
-using SkyCD.SDK;
+using SkyCD.SDK.Plugins;
 using SkyCD.UI.Localization;
 
 namespace SkyCD.Presentation.ViewModels;

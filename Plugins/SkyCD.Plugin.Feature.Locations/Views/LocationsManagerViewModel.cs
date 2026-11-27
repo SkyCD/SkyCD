@@ -4,7 +4,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using SkyCD.SDK.Capabilities.Catalog;
+using SkyCD.SDK.Capabilities.Catalog.Locations;
 using SkyCD.Plugin.Feature.Locations.Models;
 using SkyCD.UI.Localization;
 

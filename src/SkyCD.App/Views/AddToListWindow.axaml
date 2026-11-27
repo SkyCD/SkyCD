@@ -3,7 +3,7 @@
         xmlns:i18n="clr-namespace:SkyCD.UI.Localization;assembly=SkyCD.UI"
         xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
         xmlns:accounts="clr-namespace:SkyCD.Presentation.Accounts;assembly=SkyCD.Presentation"
-        xmlns:capture="clr-namespace:SkyCD.SDK.Capabilities.Capture;assembly=SkyCD.SDK"
+        xmlns:sources="clr-namespace:SkyCD.SDK.Capabilities.Sources;assembly=SkyCD.SDK"
         xmlns:avaloniaConverters="using:Avalonia.Data.Converters"
         xmlns:converters="using:SkyCD.App.Converters"
         xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
@@ -474,7 +474,7 @@
                                       AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.CapturePlugin}}"
                                       HorizontalAlignment="Stretch">
                                 <ComboBox.ItemTemplate>
-                                    <DataTemplate x:DataType="capture:ICaptureSourcePluginCapability">
+                                    <DataTemplate x:DataType="sources:ISourceFactoryPluginCapability">
                                         <TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" />
                                     </DataTemplate>
                                 </ComboBox.ItemTemplate>
@@ -490,7 +490,7 @@
                                       AutomationProperties.HelpText="{Binding CaptureTypeValidationMessage}"
                                       HorizontalAlignment="Stretch">
                                 <ComboBox.ItemTemplate>
-                                    <DataTemplate x:DataType="capture:CaptureSourceKind">
+                                    <DataTemplate x:DataType="sources:SourceKind">
                                         <TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" />
                                     </DataTemplate>
                                 </ComboBox.ItemTemplate>
@@ -510,7 +510,7 @@
                                       AutomationProperties.HelpText="{Binding CaptureLocationValidationMessage}"
                                       HorizontalAlignment="Stretch">
                                 <ComboBox.ItemTemplate>
-                                    <DataTemplate x:DataType="capture:CaptureDevice">
+                                    <DataTemplate x:DataType="sources:SourceDevice">
                                         <TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" />
                                     </DataTemplate>
                                 </ComboBox.ItemTemplate>

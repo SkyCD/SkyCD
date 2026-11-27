@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -15,6 +16,7 @@ using Xunit;
 using SkyCD.Plugin.Ai.Description.Exceptions;
 using SkyCD.Plugin.Ai.Description.Models;
 using SkyCD.Plugin.Ai.Description.Sources;
+using SkyCD.Plugin.Ai.Description.Views;
 using SkyCD.TestSupport;
 
 namespace SkyCD.App.Tests;
@@ -43,6 +45,15 @@ public sealed class AcpDescriptionTests
         @params = new { sessionId = "s", update = new { sessionUpdate = "agent_message_chunk", content = new { type = "text", text } } }
     });
     private static string Completed() => Json(new { jsonrpc = "2.0", id = 3, result = new { stopReason = "end_turn" } });
+
+    private static async Task<AcpAgentsPageViewModel> OpenAgentsPageAsync(AiDescriptionPlugin plugin)
+    {
+        var page = new AcpAgentsPageViewModel(plugin.GetAgentSettings, _ => Task.CompletedTask,
+            plugin.InstallAgentAsync, plugin.UpdateAgentAsync, plugin.UninstallAgent, plugin.SaveAgentSettings,
+            new Dictionary<string, string?>());
+        await page.InitializeAsync();
+        return page;
+    }
 
     [Fact]
     public async Task NegotiatesCapabilitiesAndKeepsInjectedFileTextInInertContext()
@@ -300,7 +311,7 @@ public sealed class AcpDescriptionTests
     }
 
     [Fact]
-    public async Task OptionsDetectsLocalAgentAndPersistsSelectionOnlyOnConfirm()
+    public async Task AgentsPageDetectsLocalAgentAndPersistsSelectionOnlyOnAccept()
     {
         using var workspace = new TestWorkspace();
         var directory = new DirectoryInfo(workspace.Root);
@@ -341,37 +352,35 @@ public sealed class AcpDescriptionTests
             }
         }));
 
-        var dialog = new SkyCD.Presentation.ViewModels.OptionsDialogViewModel(new[] { "English" });
-        await dialog.LoadAcpSettingsAsync(plugin);
-        Assert.False(dialog.AcpAgents.Single(agent => agent.Name == "Cached Agent").IsInstalled);
-        var npmAgent = dialog.AcpAgents.Single(agent => agent.Name == "NPM Agent");
+        using var page = await OpenAgentsPageAsync(plugin);
+        Assert.False(page.AcpAgents.Single(agent => agent.Name == "Cached Agent").IsInstalled);
+        var npmAgent = page.AcpAgents.Single(agent => agent.Name == "NPM Agent");
         Assert.Equal(node, npmAgent.Executable);
         Assert.Equal(new[] { npmScript, "--acp" }, npmAgent.Arguments);
         File.WriteAllText(Path.Combine(npmPackage.FullName, "cli.sh"), "#!/bin/sh");
         File.WriteAllText(Path.Combine(npmPackage.FullName, "package.json"),
             Json(new { name = "@test/agent", bin = "cli.sh" }));
         Assert.False(plugin.GetAgentSettings().Agents.Single(agent => agent.Name == "NPM Agent").IsInstalled);
-        dialog.AcpSearchText = "npm";
-        Assert.Equal(npmAgent, Assert.Single(dialog.InstalledAcpAgents));
-        Assert.Empty(dialog.AvailableAcpAgents);
-        dialog.AcpSearchText = string.Empty;
-        var detected = dialog.AcpAgents.Single(agent => agent.Name == "Test Agent");
+        page.AcpSearchText = "npm";
+        Assert.Equal(npmAgent, Assert.Single(page.InstalledAcpAgents));
+        Assert.Empty(page.AvailableAcpAgents);
+        page.AcpSearchText = string.Empty;
+        var detected = page.AcpAgents.Single(agent => agent.Name == "Test Agent");
         Assert.True(detected.IsInstalled);
-        dialog.SelectAcpAgent(npmAgent);
-        Assert.Equal(npmAgent, dialog.AcpCardAgent);
-        dialog.SelectAcpAgent(detected);
-        Assert.Equal(detected, dialog.AcpCardAgent);
+        page.SelectAcpAgent(npmAgent);
+        Assert.Equal(npmAgent, page.AcpCardAgent);
+        page.SelectAcpAgent(detected);
+        Assert.Equal(detected, page.AcpCardAgent);
         Assert.False(File.Exists(configurationPath));
 
-        dialog.ConfirmCommand.Execute(null);
+        Assert.True(page.Accept().Success);
 
-        Assert.True(dialog.DialogAccepted);
         var saved = plugin.GetAgentSettings();
         Assert.Equal(executable, saved.SelectedAgent?.Executable);
         Assert.Equal(new[] { "--acp" }, saved.SelectedAgent?.Arguments);
         Assert.True(plugin.GetPlan().IsEnabled);
-        await dialog.LoadAcpSettingsAsync(plugin);
-        Assert.Equal(executable, dialog.AcpCardAgent?.Executable);
+        using var reloaded = await OpenAgentsPageAsync(plugin);
+        Assert.Equal(executable, reloaded.AcpCardAgent?.Executable);
     }
 
     [Fact]
@@ -403,11 +412,10 @@ public sealed class AcpDescriptionTests
         File.WriteAllText(configuration, Json(new { Executable = executable, Arguments = (string[]?)null }));
         var settings = plugin.GetAgentSettings();
         Assert.Empty(settings.SelectedAgent!.Arguments);
-        var dialog = new SkyCD.Presentation.ViewModels.OptionsDialogViewModel(new[] { "English" });
-        await dialog.LoadAcpSettingsAsync(plugin);
-        Assert.NotEmpty(dialog.AcpAgents);
-        Assert.Equal(executable, dialog.SelectedAcpAgent?.Executable);
-        Assert.Null(dialog.AcpRegistryStatus);
+        var page = await OpenAgentsPageAsync(plugin);
+        Assert.NotEmpty(page.AcpAgents);
+        Assert.Equal(executable, page.SelectedAcpAgent?.Executable);
+        Assert.Null(page.AcpRegistryStatus);
         plugin.SaveAgentSettings(settings.SelectedAgent);
         Assert.Empty(plugin.GetAgentSettings().SelectedAgent!.Arguments);
         if (!OperatingSystem.IsWindows())
@@ -415,16 +423,17 @@ public sealed class AcpDescriptionTests
         Assert.Empty(Directory.GetFiles(directory.FullName, "*.tmp"));
 
         File.Delete(executable);
-        await dialog.LoadAcpSettingsAsync(plugin);
-        var cachedAgent = dialog.AcpAgents.First(agent => agent.Name == "Agent");
+        page.Dispose();
+        page = await OpenAgentsPageAsync(plugin);
+        var cachedAgent = page.AcpAgents.First(agent => agent.Name == "Agent");
         var attached = Path.Combine(directory.FullName, Path.GetFileName(executable));
         File.WriteAllText(attached, "");
         if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(attached, UnixFileMode.UserRead | UnixFileMode.UserExecute);
-        dialog.ChooseLocalAcpAgent(cachedAgent, attached);
-        Assert.Equal(arguments, dialog.SelectedAcpAgent!.Arguments);
-        dialog.ConfirmCommand.Execute(null);
-        Assert.True(dialog.DialogAccepted);
+        page.ChooseLocalAcpAgent(cachedAgent, attached);
+        Assert.Equal(arguments, page.SelectedAcpAgent!.Arguments);
+        Assert.True(page.Accept().Success);
         Assert.Equal(arguments, plugin.GetAgentSettings().SelectedAgent!.Arguments);
+        page.Dispose();
     }
 
     [Theory]
@@ -461,7 +470,7 @@ public sealed class AcpDescriptionTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task OptionsInstallsAndSelectsOnlyAValidRegistryArchive(bool escapesInstallFolder)
+    public async Task AgentsPageInstallsAndSelectsOnlyAValidRegistryArchive(bool escapesInstallFolder)
     {
         using var workspace = new TestWorkspace();
         var directory = new DirectoryInfo(workspace.Root);
@@ -495,47 +504,45 @@ public sealed class AcpDescriptionTests
         var settingsPath = Path.Combine(directory.FullName, "settings.json");
         var plugin = new AiDescriptionPlugin(settingsPath, (_, _, _) =>
             throw new InvalidOperationException("Options must never launch the agent."), client);
-        var dialog = new SkyCD.Presentation.ViewModels.OptionsDialogViewModel(new[] { "English" });
-        await dialog.LoadAcpSettingsAsync(plugin);
-        var agent = Assert.Single(dialog.AvailableAcpAgents);
+        var page = await OpenAgentsPageAsync(plugin);
+        var agent = Assert.Single(page.AvailableAcpAgents);
         Assert.True(agent.CanInstall);
         Assert.False(agent.CanUpdate);
         Assert.False(agent.IsManaged);
         await Assert.ThrowsAsync<DescriptionAgentException>(() => plugin.UpdateAgentAsync(agent.RegistryId!, CancellationToken.None));
         Assert.Throws<DescriptionAgentException>(() => plugin.UninstallAgent(agent.RegistryId!));
         Assert.Equal(executableName, agent.ExpectedExecutable);
-        Assert.Null(dialog.AcpCardAgent);
-        var loadingLabel = dialog.AcpLoadingLabel;
+        Assert.Null(page.AcpCardAgent);
+        var loadingLabel = page.AcpLoadingLabel;
         handler.OnRequest = () =>
         {
-            Assert.True(dialog.IsAcpLoading);
-            Assert.Contains(agent.Name, dialog.AcpLoadingLabel);
-            Assert.NotEqual(loadingLabel, dialog.AcpLoadingLabel);
+            Assert.True(page.IsAcpLoading);
+            Assert.Contains(agent.Name, page.AcpLoadingLabel);
+            Assert.NotEqual(loadingLabel, page.AcpLoadingLabel);
         };
 
-        var error = await dialog.InstallAcpAgentAsync(agent, CancellationToken.None);
+        var error = await page.InstallAcpAgentAsync(agent, CancellationToken.None);
 
-        Assert.False(dialog.IsAcpLoading);
-        Assert.Equal(loadingLabel, dialog.AcpLoadingLabel);
+        Assert.False(page.IsAcpLoading);
+        Assert.Equal(loadingLabel, page.AcpLoadingLabel);
 
         Assert.False(File.Exists(settingsPath));
         if (escapesInstallFolder)
         {
-            Assert.Null(dialog.SelectedAcpAgent);
-            Assert.Empty(dialog.InstalledAcpAgents);
+            Assert.Null(page.SelectedAcpAgent);
+            Assert.Empty(page.InstalledAcpAgents);
             Assert.Contains("outside its install folder", error);
             Assert.Empty(Directory.EnumerateFileSystemEntries(Path.Combine(directory.FullName, "acp-agents")));
             return;
         }
 
-        var installed = Assert.Single(dialog.InstalledAcpAgents);
+        var installed = Assert.Single(page.InstalledAcpAgents);
         Assert.Null(error);
-        Assert.Equal(installed, dialog.SelectedAcpAgent);
-        Assert.Equal(installed, dialog.AcpCardAgent);
-        Assert.Empty(dialog.AvailableAcpAgents);
+        Assert.Equal(installed, page.SelectedAcpAgent);
+        Assert.Equal(installed, page.AcpCardAgent);
+        Assert.Empty(page.AvailableAcpAgents);
         Assert.Equal(new[] { "--acp" }, installed.Arguments);
-        dialog.ConfirmCommand.Execute(null);
-        Assert.True(dialog.DialogAccepted);
+        Assert.True(page.Accept().Success);
         Assert.Equal(installed.Executable, plugin.GetAgentSettings().SelectedAgent?.Executable);
         Assert.True(plugin.GetPlan().IsEnabled);
         Assert.True(installed.IsManaged);
@@ -543,33 +550,36 @@ public sealed class AcpDescriptionTests
         Assert.False(installed.CanUpdate);
 
         await WriteRegistryAsync("1.1.0");
-        await dialog.LoadAcpSettingsAsync(plugin);
-        var outdated = Assert.Single(dialog.InstalledAcpAgents);
+        page.Dispose();
+        page = await OpenAgentsPageAsync(plugin);
+        var outdated = Assert.Single(page.InstalledAcpAgents);
         Assert.True(outdated.CanUpdate);
         Assert.Equal("1.0.0", outdated.DisplayVersion);
         handler.FailDownload = true;
-        Assert.NotNull(await dialog.UpdateAcpAgentAsync(outdated, CancellationToken.None));
+        Assert.NotNull(await page.UpdateAcpAgentAsync(outdated, CancellationToken.None));
         Assert.Equal(installed.Executable, plugin.GetAgentSettings().SelectedAgent?.Executable);
         Assert.True(File.Exists(installed.Executable));
         handler.FailDownload = false;
-        Assert.Null(await dialog.UpdateAcpAgentAsync(outdated, CancellationToken.None));
-        var updated = Assert.Single(dialog.InstalledAcpAgents);
+        Assert.Null(await page.UpdateAcpAgentAsync(outdated, CancellationToken.None));
+        var updated = Assert.Single(page.InstalledAcpAgents);
         Assert.Equal("1.1.0", updated.InstalledVersion);
         Assert.False(updated.CanUpdate);
         Assert.NotEqual(installed.Executable, updated.Executable);
         Assert.False(File.Exists(installed.Executable));
-        Assert.Equal(updated, dialog.AcpCardAgent);
+        Assert.Equal(updated, page.AcpCardAgent);
         Assert.True(plugin.GetPlan().IsEnabled);
 
         File.Delete(registryPath);
-        await dialog.LoadAcpSettingsAsync(plugin);
-        var offline = Assert.Single(dialog.InstalledAcpAgents);
+        page.Dispose();
+        page = await OpenAgentsPageAsync(plugin);
+        var offline = Assert.Single(page.InstalledAcpAgents);
         Assert.True(offline.IsManaged);
-        Assert.Null(await dialog.UninstallAcpAgentAsync(offline, CancellationToken.None));
-        Assert.Empty(dialog.InstalledAcpAgents);
-        Assert.Null(dialog.AcpCardAgent);
+        Assert.Null(await page.UninstallAcpAgentAsync(offline, CancellationToken.None));
+        Assert.Empty(page.InstalledAcpAgents);
+        Assert.Null(page.AcpCardAgent);
         Assert.False(File.Exists(updated.Executable));
         Assert.False(plugin.GetPlan().IsEnabled);
+        page.Dispose();
     }
 
     [Theory]

@@ -21,7 +21,6 @@ using SkyCD.Presentation.Plugins;
 using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.SDK.Capabilities.Media;
-using SkyCD.SDK.Capabilities.Options;
 using SkyCD.SDK.Capabilities.Ui;
 using SkyCD.UI.Dialogs;
 using SkyCD.UI.Localization;
@@ -58,7 +57,7 @@ public partial class MainWindow
             : options.Browser.DetailsColumns);
         LoadScanOptionsIntoDialog(e.Dialog, options);
         e.Dialog.SetMediaEjectionSupported(mediaEjector.IsPlatformSupported);
-        e.Dialog.SetAiDescriptionAvailable(pluginManager.GetCapabilities<IGeneratedDescriptionCapability>().Any());
+        e.Dialog.SetAiDescriptionAvailable(pluginManager.GetCapabilities<IDescriptionGeneratorCapability>().Any());
         e.Dialog.SetAiDescriptionImplementations(
             ServiceProvider.Resolve<DescriptionExtensionManager>().Implementations,
             options.AiDescriptionImplementation);
@@ -87,9 +86,7 @@ public partial class MainWindow
             ScanPluginsAsync(e.Dialog, pluginPath, cancellationToken));
         var dialog = new OptionsWindow
         {
-            DataContext = e.Dialog,
-            AcpSettingsCapability = pluginManager.GetCapabilities<IAcpAgentSettingsCapability>().FirstOrDefault(),
-            AiProviderSettingsCapability = pluginManager.GetCapabilities<IAiProviderSettingsCapability>().FirstOrDefault()
+            DataContext = e.Dialog
         };
 
         void OnResetStatusVariantsRequested(object? sender, EventArgs args) =>
@@ -405,9 +402,6 @@ public partial class MainWindow
                     .ToArray();
 
                 dialogVm.SetPlugins(plugins);
-                dialogVm.SetPluginOptionsPages(pluginManager.AvailablePlugins.SelectMany(plugin =>
-                    plugin.Capabilities.OfType<IOptionsPageCapability>()
-                        .Select(capability => new OptionsPageProvider(plugin.Id, plugin.Name, capability))));
                 dialogVm.SetPluginConfigurations(configurationManager, PluginConfigurationTimeout);
             }
             finally

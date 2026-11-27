@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using OpenCvSharp;
 using SkyCD.Plugin.Feature.MotionDetector.Configuration;
 using SkyCD.Plugin.Feature.MotionDetector.Models;
-using SkyCD.SDK.Capabilities.Capture;
+using SkyCD.SDK.Capabilities.Sources;
 using SkyCD.UI.Localization;
 
 namespace SkyCD.Plugin.Feature.MotionDetector.Capture;
@@ -18,9 +18,9 @@ internal static class DeviceEnumerator
     private static readonly TimeSpan CacheLifetime = TimeSpan.FromSeconds(30);
     private static readonly object Gate = new();
     private static DateTimeOffset cachedAt = DateTimeOffset.MinValue;
-    private static IReadOnlyList<CaptureDevice> cached = [];
+    private static IReadOnlyList<SourceDevice> cached = [];
 
-    public static IReadOnlyList<CaptureDevice> Enumerate()
+    public static IReadOnlyList<SourceDevice> Enumerate()
     {
         lock (Gate)
         {
@@ -35,14 +35,14 @@ internal static class DeviceEnumerator
         }
     }
 
-    private static IReadOnlyList<CaptureDevice> Probe()
+    private static IReadOnlyList<SourceDevice> Probe()
     {
         if (!NativeOpenCv.EnsureLoaded())
         {
             return [];
         }
 
-        var devices = new List<CaptureDevice>();
+        var devices = new List<SourceDevice>();
         for (var index = 0; index < ProbingLimit; index++)
         {
             try
@@ -51,7 +51,7 @@ internal static class DeviceEnumerator
                     OperatingSystem.IsWindows() ? VideoCaptureAPIs.DSHOW : VideoCaptureAPIs.ANY);
                 if (capture.IsOpened() && capture.Grab())
                 {
-                    devices.Add(new CaptureDevice(
+                    devices.Add(new SourceDevice(
                         index.ToString(System.Globalization.CultureInfo.InvariantCulture),
                         LocalizationService.Current.Format(MotionDetectorKeys.DeviceName, index + 1)));
                 }

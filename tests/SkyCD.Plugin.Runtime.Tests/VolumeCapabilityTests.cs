@@ -1,12 +1,13 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Collections.Concurrent;
 using System.Reflection;
 using System.Threading;
-using SkyCD.SDK;
+using System.Threading.Tasks;
+using SkyCD.SDK.Plugins;
 using SkyCD.SDK.Capabilities.Media;
-using SkyCD.SDK.Capabilities.Volume;
-using SkyCD.Plugin.Host.Volume;
+using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Runtime.Collections;
 using SkyCD.Plugin.Runtime.Factories;
 using Xunit;
@@ -15,10 +16,13 @@ namespace SkyCD.Plugin.Runtime.Tests;
 
 public sealed class VolumeCapabilityTests
 {
-    private static readonly VolumeMediaContext Volume = new("E:\\", "E:\\", "DISC", "CDFS");
+    private static readonly MediaTarget Volume = new(MediaTargetKind.Volume, "E:\\", "E:\\");
+
+    private static IReadOnlyList<MediaTargetProviderCapture> Capture(MediaTargetExtensionManager manager) =>
+        manager.CaptureAsync(Volume, default).GetAwaiter().GetResult();
 
     [Fact]
-    public void AssemblyDiscoveryHonorsEnabledStateAndExposesVolumeCapability()
+    public void AssemblyDiscoveryHonorsEnabledStateAndExposesMediaTargetCapability()
     {
         var plugin = new DiscoveredPluginFactory().BuildFromAssembly(Assembly.GetExecutingAssembly());
         Assert.Contains(plugin.Capabilities, capability => capability is FakeVolumeCapability);
@@ -31,22 +35,23 @@ public sealed class VolumeCapabilityTests
 
         descriptor.IsEnabled = true;
         enabled.Import([plugin], [descriptor]);
-        var manager = new VolumeExtensionManager(enabled.SelectMany(p => p.Capabilities.OfType<IVolumeMetadataCapability>()
-            .Select(capability => new VolumeProvider(p.Id, p.Version.ToString(), capability))));
-        var values = manager.CaptureVolumeMetadata(Volume, default);
-        Assert.Equal("fake-serial", Assert.Single(values).Text);
+        var manager = new MediaTargetExtensionManager(enabled.SelectMany(p => p.Capabilities
+            .OfType<IMediaTargetMetadataCapability>()
+            .Select(capability => new MediaTargetProvider(p.Id, p.Version.ToString(), capability))));
+        var capture = Assert.Single(Capture(manager));
+        Assert.Equal("fake-serial", Assert.Single(capture.Capture.Values).Text);
     }
 
     [Fact]
     public void FailingProvider_IsIsolatedAndDoesNotBreakCapture()
     {
-        var manager = new VolumeExtensionManager([
-            new VolumeProvider("a", "1", new FakeVolumeCapability { Fail = true }),
-            new VolumeProvider("b", "1", new FakeVolumeCapability())]);
+        var manager = new MediaTargetExtensionManager([
+            new MediaTargetProvider("a", "1", new FakeVolumeCapability { Fail = true }),
+            new MediaTargetProvider("b", "1", new FakeVolumeCapability())]);
 
-        var values = manager.CaptureVolumeMetadata(Volume, default);
+        var capture = Assert.Single(Capture(manager));
 
-        Assert.Equal("fake-serial", Assert.Single(values).Text);
+        Assert.Equal("fake-serial", Assert.Single(capture.Capture.Values).Text);
     }
 
     [Theory]
@@ -60,101 +65,109 @@ public sealed class VolumeCapabilityTests
                 ? new OperationCanceledException()
                 : new InvalidOperationException("Private descriptor failure")
         };
-        var manager = new VolumeExtensionManager([
-            new VolumeProvider("broken", "1", broken),
-            new VolumeProvider("a", "1", new FakeVolumeCapability { Text = "low" }),
-            new VolumeProvider("z", "1", new FakeVolumeCapability { Text = "high", Priority = 100 })]);
+        var manager = new MediaTargetExtensionManager([
+            new MediaTargetProvider("broken", "1", broken),
+            new MediaTargetProvider("a", "1", new FakeVolumeCapability { Text = "low" }),
+            new MediaTargetProvider("z", "1", new FakeVolumeCapability { Text = "high", Priority = 100 })]);
         var failures = new ConcurrentBag<PluginFailure>();
-        void Capture(PluginFailure failure) => failures.Add(failure);
-        PluginFailure.Reported += Capture;
+        void CaptureFailure(PluginFailure failure) => failures.Add(failure);
+        PluginFailure.Reported += CaptureFailure;
         try
         {
-            Assert.Equal("high", Assert.Single(manager.CaptureVolumeMetadata(Volume, default)).Text);
-            Assert.False(broken.WasExtracted);
-            Assert.Contains(failures, failure => failure.Operation == "volume");
+            var captures = Capture(manager);
+            Assert.Equal(["z", "a"], captures.Select(capture => capture.PluginId));
+            Assert.Equal("high", Assert.Single(captures[0].Capture.Values).Text);
+            Assert.Equal("low", Assert.Single(captures[1].Capture.Values).Text);
+            Assert.False(broken.WasCaptured);
+            Assert.Contains(failures, failure => failure.Operation == "media-target");
         }
         finally
         {
-            PluginFailure.Reported -= Capture;
+            PluginFailure.Reported -= CaptureFailure;
         }
     }
 
     [Fact]
-    public void DescriptorCancellation_PropagatesCallerCancellation()
+    public void DescriptorCancellation_WithoutCallerCancellation_IsIsolated()
     {
-        using var cancellation = new CancellationTokenSource();
-        var manager = new VolumeExtensionManager([
-            new VolumeProvider("a", "1", new FakeVolumeCapability
+        var manager = new MediaTargetExtensionManager([
+            new MediaTargetProvider("a", "1", new FakeVolumeCapability
             {
-                OnDescriptorRead = cancellation.Cancel,
-                DescriptorException = new OperationCanceledException(cancellation.Token)
+                DescriptorException = new OperationCanceledException()
             })]);
 
-        Assert.ThrowsAny<OperationCanceledException>(() => manager.CaptureVolumeMetadata(Volume, cancellation.Token));
+        Assert.Empty(Capture(manager));
     }
 
     [Fact]
-    public void ProvidersKeepCollidingKeysWithDeterministicPrecedence()
+    public void ProvidersKeepDeterministicPrecedence()
     {
-        var manager = new VolumeExtensionManager([
-            new VolumeProvider("z", "2", new FakeVolumeCapability { Text = "z-value" }),
-            new VolumeProvider("a", "1", new FakeVolumeCapability { Text = "a-value" })]);
+        var manager = new MediaTargetExtensionManager([
+            new MediaTargetProvider("z", "2", new FakeVolumeCapability { Text = "z-value" }),
+            new MediaTargetProvider("a", "1", new FakeVolumeCapability { Text = "a-value" })]);
 
-        var values = manager.CaptureVolumeMetadata(Volume, default);
+        var captures = Capture(manager);
 
-        Assert.Equal("a-value", Assert.Single(values).Text);
+        Assert.Equal(["a", "z"], captures.Select(capture => capture.PluginId));
     }
 
     [Fact]
-    public void HigherPriorityProviderWinsCollisionsBeforePluginId()
+    public void HigherPriorityProviderIsOrderedFirst()
     {
-        var manager = new VolumeExtensionManager([
-            new VolumeProvider("a", "1", new FakeVolumeCapability { Text = "low" }),
-            new VolumeProvider("z", "1", new FakeVolumeCapability { Priority = 100, Text = "high" })]);
+        var manager = new MediaTargetExtensionManager([
+            new MediaTargetProvider("a", "1", new FakeVolumeCapability { Text = "low" }),
+            new MediaTargetProvider("z", "1", new FakeVolumeCapability { Priority = 100, Text = "high" })]);
 
-        Assert.Equal("high", Assert.Single(manager.CaptureVolumeMetadata(Volume, default)).Text);
+        var captures = Capture(manager);
+
+        Assert.Equal(["z", "a"], captures.Select(capture => capture.PluginId));
+        Assert.Equal("high", Assert.Single(captures[0].Capture.Values).Text);
     }
 
     [Fact]
-    public void CallerCancellation_IsObserved()
+    public async Task CallerCancellation_IsObserved()
     {
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
-        var manager = new VolumeExtensionManager([new VolumeProvider("a", "1", new FakeVolumeCapability
+        var manager = new MediaTargetExtensionManager([new MediaTargetProvider("a", "1", new FakeVolumeCapability
             { DescriptorException = new InvalidOperationException("Must not read after cancellation") })]);
 
-        Assert.ThrowsAny<OperationCanceledException>(() => manager.CaptureVolumeMetadata(Volume, cancellation.Token));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            manager.CaptureAsync(Volume, cancellation.Token));
     }
 
     [Fact]
-    public void NullVolume_Throws()
+    public async Task NullTarget_Throws()
     {
-        var manager = new VolumeExtensionManager([new VolumeProvider("a", "1", new FakeVolumeCapability())]);
+        var manager = new MediaTargetExtensionManager([new MediaTargetProvider("a", "1", new FakeVolumeCapability())]);
 
-        Assert.Throws<ArgumentNullException>(() => manager.CaptureVolumeMetadata(null!, default));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => manager.CaptureAsync(null!, default));
     }
 
     [Fact]
     public void EmptyProviderList_CapturesNothing()
     {
-        var manager = new VolumeExtensionManager([]);
+        var manager = new MediaTargetExtensionManager([]);
 
-        Assert.False(manager.HasVolumeProviders);
-        Assert.Empty(manager.CaptureVolumeMetadata(Volume, default));
+        Assert.False(manager.HasProviders);
+        Assert.Empty(Capture(manager));
     }
 }
 
-public sealed class FakeVolumeCapability : IVolumeMetadataCapability
+public sealed class FakeVolumeCapability : IMediaTargetMetadataCapability
 {
+    private static readonly MediaMetadataSchema Schema = new("fake", 1,
+        [new MediaMetadataField("fakeSerial", MediaMetadataType.Text)]);
+
     public bool Fail { get; init; }
     public int Priority { get; init; }
     public string Text { get; init; } = "fake-serial";
 
     public Exception? DescriptorException { get; init; }
     public Action? OnDescriptorRead { get; init; }
-    public bool WasExtracted { get; private set; }
+    public bool WasCaptured { get; private set; }
 
-    public VolumeDescriptor Descriptor
+    public MediaTargetDescriptor Descriptor
     {
         get
         {
@@ -164,20 +177,22 @@ public sealed class FakeVolumeCapability : IVolumeMetadataCapability
                 throw DescriptorException;
             }
 
-            return new VolumeDescriptor(new MediaMetadataSchema("fake", 1,
-                [new MediaMetadataField("fakeSerial", MediaMetadataType.Text)]), Priority);
+            return new MediaTargetDescriptor(Priority);
         }
     }
 
-    public VolumeExtractionResult Extract(VolumeMediaContext volume, CancellationToken cancellationToken)
+    public bool Supports(MediaTarget target) => target.Kind == MediaTargetKind.Volume;
+
+    public Task<MediaTargetCapture?> CaptureAsync(MediaTarget target, IProgress<MediaProgress>? progress,
+        CancellationToken cancellationToken)
     {
-        WasExtracted = true;
+        WasCaptured = true;
         if (Fail)
         {
             throw new InvalidOperationException("Private plugin failure");
         }
 
-        return new VolumeExtractionResult(
-            [new MediaMetadataValue("fakeSerial", MediaMetadataType.Text, Text: Text)]);
+        return Task.FromResult<MediaTargetCapture?>(new MediaTargetCapture(Schema,
+            [new MediaMetadataValue("fakeSerial", MediaMetadataType.Text, Text: Text)]));
     }
 }

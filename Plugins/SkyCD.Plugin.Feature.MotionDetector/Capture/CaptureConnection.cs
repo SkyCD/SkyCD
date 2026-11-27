@@ -4,7 +4,7 @@ using System.Threading;
 using OpenCvSharp;
 using SkyCD.Plugin.Feature.MotionDetector.Configuration;
 using SkyCD.Plugin.Feature.MotionDetector.Models;
-using SkyCD.SDK.Capabilities.Capture;
+using SkyCD.SDK.Capabilities.Sources;
 using SkyCD.UI.Localization;
 
 namespace SkyCD.Plugin.Feature.MotionDetector.Capture;
@@ -21,7 +21,7 @@ internal sealed class CaptureConnection : IDisposable
 
     private int disposed;
 
-    public static bool TryOpen(CaptureSourceConfiguration source, out CaptureConnection? connection,
+    public static bool TryOpen(SourceConfiguration source, out CaptureConnection? connection,
         out string? error)
     {
         ArgumentNullException.ThrowIfNull(source);

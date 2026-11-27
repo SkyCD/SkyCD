@@ -50,7 +50,7 @@ plugins, so they are not a runtime dependency and not duplicated as a packaged a
 
 GenDesc no longer configures online sources itself. The facts are captured with the entry by
 the AI description flow and stored with the catalog entry and the media cache, and the host
-implements `IGenDescHostApi` to turn one local file into a `GenDescEntryContext`: its file
+implements `IDescriptionEntryFactsApi` to turn one local file into `DescriptionEntryFacts`: its file
 name, extension, MIME type and every captured fact. GenDesc templates then choose a template
 by kind, MIME type, extension, category and language, so the plugin reads no generation
 settings of its own beyond the user template directory.

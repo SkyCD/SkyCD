@@ -2,8 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using SkyCD.Documents.Enum;
+using SkyCD.Plugin.Host.Media;
 using SkyCD.Presentation.Scanning;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.TestSupport;
 using Xunit;
 
@@ -216,6 +220,60 @@ public sealed class FolderCatalogScannerTests : IDisposable
         {
             Assert.NotEmpty(progressReports);
             Assert.Contains(progressReports, p => p.Percentage == 100);
+        }
+    }
+
+    [Fact]
+    public void Scan_FolderRoot_IsOfferedToMediaTargetsAsFolder()
+    {
+        File.WriteAllText(Path.Combine(testDirectory, "file.txt"), "data");
+        var mediaTargets = new FakeMediaTargetProvider();
+        var scanner = new FolderCatalogScanner(mediaTargets: mediaTargets);
+
+        var documents = scanner.Scan(new FolderScanOptions(testDirectory, RootType: CatalogDocumentType.Media));
+
+        var root = Assert.Single(documents, doc => doc.ParentId == "library");
+        Assert.Equal("captured", root.Properties["FolderFact"]?.ToString());
+        Assert.Equal(MediaTargetKind.Folder, mediaTargets.LastTarget?.Kind);
+        Assert.Equal(testDirectory, mediaTargets.LastTarget?.Location);
+        Assert.Equal(root.Name, mediaTargets.LastTarget?.Name);
+        Assert.Equal(testDirectory, mediaTargets.LastTarget?.Facts?["FullName"]);
+    }
+
+    [Fact]
+    public void Scan_FailingMediaTarget_StillCompletesWithoutCapturedValues()
+    {
+        File.WriteAllText(Path.Combine(testDirectory, "file.txt"), "data");
+        var scanner = new FolderCatalogScanner(mediaTargets: new FakeMediaTargetProvider { Failure = true });
+
+        var documents = scanner.Scan(new FolderScanOptions(testDirectory));
+
+        var root = Assert.Single(documents, doc => doc.ParentId == "library");
+        Assert.False(root.Properties.ContainsKey("FolderFact"));
+        Assert.Contains(documents, doc => doc.Type == CatalogDocumentType.File);
+    }
+
+    private sealed class FakeMediaTargetProvider : IMediaTargetMetadataProvider
+    {
+        public MediaTarget? LastTarget { get; private set; }
+        public bool Failure { get; init; }
+
+        public bool HasProviders => true;
+
+        public Task<IReadOnlyList<MediaTargetProviderCapture>> CaptureAsync(MediaTarget target,
+            CancellationToken cancellationToken)
+        {
+            LastTarget = target;
+            if (Failure)
+            {
+                throw new InvalidOperationException("plugin failure");
+            }
+
+            return Task.FromResult<IReadOnlyList<MediaTargetProviderCapture>>(
+            [
+                new("fake", "1", "fake", new MediaTargetCapture(new MediaMetadataSchema("fake", 1, []),
+                    [new MediaMetadataValue("FolderFact", MediaMetadataType.Text, Text: "captured")]))
+            ]);
         }
     }
 

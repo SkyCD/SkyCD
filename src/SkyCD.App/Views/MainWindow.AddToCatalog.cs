@@ -12,13 +12,14 @@ using Avalonia.VisualTree;
 using SkyCD.Core.DependencyInjection;
 using SkyCD.Documents;
 using SkyCD.Documents.Enum;
-using SkyCD.Plugin.Host.Volume;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Presentation.Accounts;
 using SkyCD.Presentation.Operations;
 using SkyCD.Presentation.Scanning;
+using SkyCD.Plugin.Host.Media;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.SDK.Capabilities.Accounts;
-using SkyCD.SDK.Capabilities.Capture;
+using SkyCD.SDK.Capabilities.Sources;
 using SkyCD.UI.Localization;
 
 namespace SkyCD.App.Views;
@@ -205,7 +206,7 @@ public partial class MainWindow
             mediaDriveProvider,
             locationOptions: vm.GetLocationChoices(),
             accountSessions: pluginManager.GetCapabilities<IAccountSession>(),
-            captureProviders: pluginManager.GetCapabilities<ICaptureSourcePluginCapability>());
+            captureProviders: pluginManager.GetCapabilities<ISourceFactoryPluginCapability>());
         dialogVm.SetTargetParent(targetParent.ParentId, targetParent.DisplayName);
         if (droppedSources is { Count: > 0 })
         {
@@ -280,7 +281,7 @@ public partial class MainWindow
                 includeExtendedInfo: scanErrorOptions.IncludeExtendedInfo);
             dialogVm.ClearInternetSecrets();
 
-            var scanner = new RemoteCatalogScanner();
+            var scanner = new RemoteCatalogScanner(ServiceProvider.Resolve<IMediaTargetMetadataProvider>());
             var progressVm = new AddingProgressDialogViewModel
             {
                 CanCancel = true,
@@ -396,7 +397,7 @@ public partial class MainWindow
                 LocationId: dialogVm.SelectedLocationId);
 
             var scanner = new MediaCatalogScanner(mediaDriveProvider,
-                volumeMetadata: ServiceProvider.Resolve<VolumeExtensionManager>());
+                mediaTargets: ServiceProvider.Resolve<IMediaTargetMetadataProvider>());
             var progressVm = new AddingProgressDialogViewModel
             {
                 CanCancel = true,
@@ -493,7 +494,7 @@ public partial class MainWindow
                 IncludeExtendedInfo: scanErrorOptions.IncludeExtendedInfo,
                 Traversal: scanTraversal);
 
-            var scanner = new FolderCatalogScanner();
+            var scanner = new FolderCatalogScanner(mediaTargets: ServiceProvider.Resolve<IMediaTargetMetadataProvider>());
             var progressVm = new AddingProgressDialogViewModel
             {
                 CanCancel = true,

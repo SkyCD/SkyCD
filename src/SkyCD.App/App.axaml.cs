@@ -24,27 +24,25 @@ using SkyCD.Core.DependencyInjection;
 using SkyCD.Plugin.Runtime.Installation;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.Runtime.Marketplace.Services;
-using SkyCD.SDK;
-using SkyCD.SDK.Capabilities.Capture;
+using SkyCD.SDK.Plugins;
+using SkyCD.SDK.Capabilities.Sources;
 using SkyCD.SDK.Capabilities.Catalog;
-using SkyCD.SDK.Capabilities.GenDesc;
+using SkyCD.SDK.Capabilities.Catalog.Locations;
 using SkyCD.SDK.Capabilities.Options;
 using SkyCD.SDK.Capabilities.Storage;
 using SkyCD.SDK.Capabilities.Ui;
 using SkyCD.Core.DependencyInjection.Registrators;
 using SkyCD.Core.Versioning;
-using SkyCD.Presentation.Capture;
+using SkyCD.Presentation.Sources;
 using SkyCD.Presentation.Catalog;
-using SkyCD.Presentation.GenDesc;
+using SkyCD.Presentation.Descriptions;
 using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.Plugin.Host.Catalog;
 using SkyCD.Plugin.Host.Indexing;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Host.Menu;
-using SkyCD.Plugin.Host.Volume;
 using SkyCD.SDK.Capabilities.Media;
-using SkyCD.SDK.Localization;
 using SkyCD.UI.Localization;
 
 namespace SkyCD.App;
@@ -94,9 +92,8 @@ public partial class App : Avalonia.Application
                 descriptionManager.SelectImplementation(options.AiDescriptionImplementation);
                 mainWindowViewModel.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
                 mainWindowViewModel.RefreshMediaServices(ServiceProvider.Resolve<MediaExtensionManager>(),
-                    ServiceProvider.Resolve<VolumeExtensionManager>(),
-                    ServiceProvider.Resolve<IndexWorkItemSequence>(),
-                    ServiceProvider.Resolve<IAudioCdMetadataProvider>());
+                    ServiceProvider.Resolve<IMediaTargetMetadataProvider>(),
+                    ServiceProvider.Resolve<IndexWorkItemSequence>());
                 mainWindowViewModel.RefreshDescriptionServices(descriptionManager);
                 mainWindowViewModel.RefreshCatalogFeatureServices(ServiceProvider.Resolve<CatalogFeatureExtensionManager>());
                 var mainWindow = appServiceProvider.Resolve<MainWindow>();
@@ -253,13 +250,9 @@ public partial class App : Avalonia.Application
         var storageFactory = appServiceProvider.Resolve<PluginStorageApiFactory>();
         var dialogApi = new AvaloniaHostDialogApi(() =>
             (Avalonia.Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow);
-        var fileDialogApi = new AvaloniaHostFileDialogApi(() =>
-            (Avalonia.Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow);
-        var clipboard = new AvaloniaClipboardApi(() =>
-            (Avalonia.Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow);
-        var genDescHost = appServiceProvider.Resolve<GenDescHostApi>();
+        var entryFactsApi = appServiceProvider.Resolve<DescriptionEntryFactsApi>();
         var onlineMetadata = ServiceProvider.Resolve<OnlineMetadataExtensionManager>();
-        var captureHost = new CaptureSourceHostApi(() => appServiceProvider.Resolve<MainWindowViewModel>());
+        var captureHost = new SourceFactoryHostApi(() => appServiceProvider.Resolve<MainWindowViewModel>());
         var catalogSaveHost = new CatalogSaveHostApi(
             appServiceProvider.Resolve<RepositoryManager>(),
             appServiceProvider.Resolve<OpenCatalogState>(),
@@ -310,27 +303,15 @@ public partial class App : Avalonia.Application
                 catch (Exception exception) { PluginFailure.Publish(consumer.GetType(), "options", exception); }
             }
 
-            foreach (var consumer in plugin.Capabilities.OfType<IHostFileDialogConsumer>())
+            foreach (var consumer in plugin.Capabilities.OfType<ISourceFactoryHostConsumer>())
             {
-                try { consumer.InitializeFileDialogApi(fileDialogApi); }
-                catch (Exception exception) { PluginFailure.Publish(consumer.GetType(), "modal", exception); }
-            }
-
-            foreach (var consumer in plugin.Capabilities.OfType<IClipboardConsumer>())
-            {
-                try { consumer.InitializeClipboard(clipboard); }
-                catch (Exception exception) { PluginFailure.Publish(consumer.GetType(), "modal", exception); }
-            }
-
-            foreach (var consumer in plugin.Capabilities.OfType<ICaptureSourceHostConsumer>())
-            {
-                try { consumer.InitializeCaptureHost(captureHost); }
+                try { consumer.InitializeSourceFactoryHost(captureHost); }
                 catch (Exception exception) { PluginFailure.Publish(consumer.GetType(), "capture", exception); }
             }
 
-            foreach (var consumer in plugin.Capabilities.OfType<IGenDescHostConsumer>())
+            foreach (var consumer in plugin.Capabilities.OfType<IDescriptionEntryFactsConsumer>())
             {
-                try { consumer.InitializeGenDescHost(genDescHost); }
+                try { consumer.InitializeDescriptionEntryFacts(entryFactsApi); }
                 catch (Exception exception) { PluginFailure.Publish(consumer.GetType(), "catalog", exception); }
             }
 
@@ -353,7 +334,7 @@ public partial class App : Avalonia.Application
             }
 
             var owner = desktop.Windows.FirstOrDefault(window => window.IsActive) ?? mainWindow;
-            return mainWindow.ShowContributedOptionsAsync(OptionsContributedPage.GetCategoryId(pluginId, pageId), owner);
+            return mainWindow.ShowContributedOptionsAsync(OptionsPluginPage.GetCategoryId(pluginId, pageId), owner);
         }).ConfigureAwait(false);
     }
 
@@ -392,7 +373,7 @@ public partial class App : Avalonia.Application
             registrator.Register<PluginMarketplaceService>(Reuse.Singleton);
             registrator.Register<OpenCatalogState>(Reuse.Singleton);
             registrator.Register<CatalogApiAdapter>(Reuse.Singleton);
-            registrator.Register<GenDescHostApi>(Reuse.Singleton);
+            registrator.Register<DescriptionEntryFactsApi>(Reuse.Singleton);
             registrator.Register<LocationApiAdapter>(Reuse.Singleton);
             registrator.Register<PluginStorageApiFactory>(Reuse.Singleton);
             registrator.Register<PluginRuntimeSynchronizer>(Reuse.Singleton);

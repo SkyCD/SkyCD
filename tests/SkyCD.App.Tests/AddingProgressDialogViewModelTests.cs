@@ -3,7 +3,7 @@ using SkyCD.Documents.Enum;
 using SkyCD.Presentation.Operations;
 using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.ViewModels;
-using SkyCD.SDK;
+using SkyCD.SDK.Plugins;
 using SkyCD.TestSupport;
 using SkyCD.UI.Localization;
 using Xunit;

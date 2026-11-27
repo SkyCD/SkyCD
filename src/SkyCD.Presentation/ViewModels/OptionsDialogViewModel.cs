@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using System.Globalization;
-using SkyCD.SDK.Localization;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -24,6 +23,7 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
     private readonly Dictionary<string, bool> pendingPluginStates = new(StringComparer.OrdinalIgnoreCase);
     private readonly ILocalizationService? localizationService;
     private readonly CultureInfo? originalLanguage;
+    private readonly IDisposable localizationSubscription;
     private bool isRefreshingLocalization;
 
     public OptionsDialogViewModel()
@@ -76,8 +76,7 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         RefreshScanLocalization();
         RefreshFilteredCategories();
         selectedSettingCategory = CurrentCategory;
-        InitializeAiProviderLanguageDefault();
-        LocalizationObserver.Observe(this, static vm => vm.RefreshLocalization());
+        localizationSubscription = LocalizationObserver.Observe(this, static vm => vm.RefreshLocalization());
     }
 
     public ObservableCollection<CustomPropertyItemViewModel> CustomProperties { get; } = [];
@@ -192,16 +191,6 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
                     CollectionsCategoryIndex));
             }
 
-            // Plugin-contributed pages sit next to Collections so location-style management surfaces live
-            // with the other catalog data pages rather than after the settings/plugin groups.
-            categories.AddRange(contributedPages.Values
-                .Where(page => Plugins.Any(plugin =>
-                    plugin.IsEnabled && plugin.Id.Equals(page.PluginId, StringComparison.OrdinalIgnoreCase)))
-                .OrderBy(static page => page.Order)
-                .ThenBy(static page => page.Title, StringComparer.OrdinalIgnoreCase)
-                .Select(page => new OptionsSettingCategory(page.Id, page.Title, ContributedPage: page,
-                    Group: NormalizeGroup(page.Group))));
-
             var scanGroup = LocalizationService.Current.Get(UiKeys.ScanExclusions);
             categories.AddRange(
             [
@@ -218,35 +207,34 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
                     Group: uiGroup)
             ]);
 
-            // Every AI surface shares one appended group. MCP and ACP agents keep their historical
-            // built-in indexes but are appended here so the group stays below the always-present pages.
+            // Every AI surface shares one appended group. MCP keeps its historical built-in index but is
+            // appended here so the group stays below the always-present pages.
             var aiGroup = LocalizationService.Current.Get(UiKeys.AiGroup);
             if (IsAiDescriptionAvailable)
             {
                 categories.Add(new("ai-description", LocalizationService.Current.Get(UiKeys.AiDescriptionShort),
                     AiDescriptionCategoryIndex, Group: aiGroup));
-                categories.Add(new("ai-provider", LocalizationService.Current.Get(UiKeys.AiProvider),
-                    AiProviderCategoryIndex, Group: aiGroup));
             }
 
             categories.Add(new(McpCategoryId, LocalizationService.Current.Get(TextKeys.MCP), McpCategoryIndex,
-                Group: aiGroup));
-            categories.Add(new(AcpCategoryId, LocalizationService.Current.Get(UiKeys.AcpAgents), AcpCategoryIndex,
                 Group: aiGroup));
 
             // Tool exposure applies to the MCP server itself, so the page stays available without AI plugins.
             categories.Add(new(McpToolsCategoryId, LocalizationService.Current.Get(UiKeys.McpTools),
                 McpToolsCategoryIndex, Group: aiGroup));
 
+            // Every plugin page is a configuration page. Data-management pages (locations, detectors, AI
+            // settings) order themselves before plain settings pages through their descriptor.
             categories.AddRange(pluginPages.Values
                 .Where(page => Plugins.Any(plugin => plugin.IsEnabled && plugin.Id.Equals(page.Registration.PluginId, StringComparison.OrdinalIgnoreCase)))
-                .OrderBy(page => page.Registration.PluginName, StringComparer.OrdinalIgnoreCase)
+                .OrderBy(static page => page.Order)
+                .ThenBy(page => page.Registration.PluginName, StringComparer.OrdinalIgnoreCase)
                 .ThenBy(page => page.Id, StringComparer.OrdinalIgnoreCase)
                 .Select(page => new OptionsSettingCategory(
                     page.Id,
-                    page.Registration.Descriptor.Title,
+                    page.Title,
                     PluginPage: page,
-                    Group: NormalizeGroup(page.Registration.Descriptor.Group))));
+                    Group: NormalizeGroup(page.Group))));
 
             // The settings page lives in the Plugins group; keeping it last keeps the legacy index mapping intact.
             categories.Add(new(PluginsSettingsCategoryId, LocalizationService.Current.Get(UiKeys.Settings),
@@ -318,12 +306,12 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         ShowPluginInfoSection ||
         ShowLanguageSection ||
         ShowMcpSection ||
-        ShowStatusesSection || ShowCustomPropertiesSection || ShowAcpSection || ShowScanSection ||
+        ShowStatusesSection || ShowCustomPropertiesSection || ShowScanSection ||
         ShowScanRulesSection || ShowScanCompletionSection ||
         ShowDetailsColumnsSection || ShowToolbarSection ||
-        ShowAiDescriptionSection || ShowAiProviderSection || ShowMcpToolsSection ||
+        ShowAiDescriptionSection || ShowMcpToolsSection ||
         ShowPluginSettingsSection || ShowPluginsSettingsSection ||
-        ShowCollectionsSection || ShowContributedOptionsPageSection;
+        ShowCollectionsSection;
 
     public string McpBaseUrl => $"http://127.0.0.1:{McpPort}/mcp";
 
@@ -438,8 +426,6 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         if (disposed) return;
         var pluginSettings = await PreparePluginSettingsAsync();
         if (pluginSettings is null || disposed) return;
-        if (!TrySaveAiProviderSettings()) return;
-        if (!TrySaveAcpSettings()) return;
         if (!SavePluginSettings(pluginSettings)) return;
         if (GetToolbarLayout() is { } toolbarLayout)
         {
@@ -767,9 +753,9 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
     {
         OnPropertyChanged(nameof(SettingCategories));
         McpCopyTooltip = LocalizationService.Current.Get(TextKeys.CopyURL);
-        RefreshAiProviderLanguages();
         RefreshScanLocalization();
         RefreshDetailsColumnsLocalization();
+        RefreshPluginPageDescriptors();
         RefreshCategoriesPreservingSelection();
         NotifySelectedPluginDetailsChanged();
         NotifyMcpToolsLocalizationChanged();
@@ -867,8 +853,6 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(ShowCustomPropertiesSection));
         OnPropertyChanged(nameof(IsCollectionsCategorySelected));
         OnPropertyChanged(nameof(ShowCollectionsSection));
-        OnPropertyChanged(nameof(SelectedContributedPage));
-        OnPropertyChanged(nameof(ShowContributedOptionsPageSection));
         OnPropertyChanged(nameof(IsDetailsColumnsCategorySelected));
         OnPropertyChanged(nameof(ShowDetailsColumnsSection));
         OnPropertyChanged(nameof(IsToolbarCategorySelected));
@@ -884,7 +868,6 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(ShowMarketplaceEmptyState));
         OnPropertyChanged(nameof(ShowLanguageSection));
         OnPropertyChanged(nameof(HasVisibleCategoryContent));
-        OnPropertyChanged(nameof(ShowAcpSection));
         OnPropertyChanged(nameof(IsScanCategorySelected));
         OnPropertyChanged(nameof(ShowScanSection));
         OnPropertyChanged(nameof(IsScanRulesCategorySelected));
@@ -893,8 +876,6 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(ShowScanCompletionSection));
         OnPropertyChanged(nameof(IsAiDescriptionCategorySelected));
         OnPropertyChanged(nameof(ShowAiDescriptionSection));
-        OnPropertyChanged(nameof(IsAiProviderCategorySelected));
-        OnPropertyChanged(nameof(ShowAiProviderSection));
         OnPropertyChanged(nameof(IsMcpToolsCategorySelected));
         OnPropertyChanged(nameof(ShowMcpToolsSection));
         OnPropertyChanged(nameof(IsPluginsSettingsCategorySelected));

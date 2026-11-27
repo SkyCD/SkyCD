@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using SkyCD.Documents.Enum;
+using SkyCD.Plugin.Host.Media;
 using SkyCD.SDK.Capabilities.Media;
-using SkyCD.SDK.Capabilities.Volume;
 using SkyCD.Presentation.Scanning;
 using SkyCD.TestSupport;
 using Xunit;
@@ -36,18 +37,22 @@ public sealed class VolumeSerialCaptureTests : IDisposable
             d => d.Name == drivePathOrName || d.RootDirectory == drivePathOrName);
     }
 
-    private sealed class FakeVolumeProvider : IVolumeMetadataProvider
+    private static readonly MediaMetadataSchema FakeSchema = new("fake", 1, []);
+
+    private sealed class FakeVolumeProvider : IMediaTargetMetadataProvider
     {
         public IReadOnlyList<MediaMetadataValue> Values { get; set; } = [];
         public Exception? Failure { get; set; }
         public Action? OnCapture { get; set; }
-        public VolumeMediaContext? LastContext { get; private set; }
+        public MediaTarget? LastTarget { get; private set; }
         public int CaptureCount { get; private set; }
 
-        public IReadOnlyList<MediaMetadataValue> CaptureVolumeMetadata(VolumeMediaContext volume,
+        public bool HasProviders => true;
+
+        public Task<IReadOnlyList<MediaTargetProviderCapture>> CaptureAsync(MediaTarget target,
             CancellationToken cancellationToken)
         {
-            LastContext = volume;
+            LastTarget = target;
             CaptureCount++;
             cancellationToken.ThrowIfCancellationRequested();
             OnCapture?.Invoke();
@@ -56,7 +61,10 @@ public sealed class VolumeSerialCaptureTests : IDisposable
                 throw Failure;
             }
 
-            return Values;
+            return Task.FromResult<IReadOnlyList<MediaTargetProviderCapture>>(Values.Count == 0
+                ? []
+                : [new MediaTargetProviderCapture("fake", "1", "fake",
+                    new MediaTargetCapture(FakeSchema, Values))]);
         }
     }
 
@@ -68,7 +76,7 @@ public sealed class VolumeSerialCaptureTests : IDisposable
     {
         File.WriteAllText(Path.Combine(testDirectory, "track01.cda"), "audio");
         var drive = new MediaDriveInfo("D:\\", "MusicDisc", testDirectory, DriveType.CDRom, true, 0, 0, 700_000_000, "CDFS");
-        var scanner = new MediaCatalogScanner(new FakeDriveProvider([drive]), volumeMetadata: volume);
+        var scanner = new MediaCatalogScanner(new FakeDriveProvider([drive]), mediaTargets: volume);
         var options = new MediaScanOptions(
             DrivePathOrName: "D:\\",
             MediaName: "MusicDisc",
@@ -87,10 +95,11 @@ public sealed class VolumeSerialCaptureTests : IDisposable
         var root = Assert.Single(result.Documents, doc => doc.ParentId is null);
         Assert.Null(root.ParentId);
         Assert.Equal("1234-ABCD", root.Properties["VolumeSerialNumber"]?.ToString());
-        Assert.Equal(testDirectory, volume.LastContext?.RootPath);
-        Assert.Equal("D:\\", volume.LastContext?.Name);
-        Assert.Equal("MusicDisc", volume.LastContext?.VolumeLabel);
-        Assert.Equal("CDFS", volume.LastContext?.DriveFormat);
+        Assert.Equal(testDirectory, volume.LastTarget?.Location);
+        Assert.Equal(MediaTargetKind.OpticalDisc, volume.LastTarget?.Kind);
+        Assert.Equal("MusicDisc", volume.LastTarget?.Name);
+        Assert.Equal("MusicDisc", volume.LastTarget?.Facts?["VolumeLabel"]);
+        Assert.Equal("CDFS", volume.LastTarget?.Facts?["DriveFormat"]);
     }
 
     [Fact]
@@ -161,7 +170,7 @@ public sealed class VolumeSerialCaptureTests : IDisposable
         volume.Failure = new OperationCanceledException(cancellation.Token);
 
         var drive = new MediaDriveInfo("D:\\", "MusicDisc", testDirectory, DriveType.CDRom, true, 0, 0, 700_000_000);
-        var scanner = new MediaCatalogScanner(new FakeDriveProvider([drive]), volumeMetadata: volume);
+        var scanner = new MediaCatalogScanner(new FakeDriveProvider([drive]), mediaTargets: volume);
 
         Assert.ThrowsAny<OperationCanceledException>(() => scanner.ScanDetailed(
             new MediaScanOptions(DrivePathOrName: "D:\\", IncludeMediaInfo: true),

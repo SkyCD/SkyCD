@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 using SkyCD.SDK.Capabilities.Media;
+using SkyCD.Plugin.Ai.Provider.Models;
 using SkyCD.Plugin.Ai.Provider.Exceptions;
 using SkyCD.Plugin.Ai.Provider.Sources;
 
