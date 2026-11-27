@@ -78,3 +78,17 @@ threading, draft ownership, cancellation and headless use. Other capability sign
 - Runtime discovers plugin classes implementing `IPlugin`.
 - Runtime discovers capabilities by implemented interfaces inheriting `IPluginCapability`.
 - Incompatible plugins are skipped, not crashed.
+
+## SDK 3.0 description generator unification (#1341)
+
+Generated descriptions and the Options implementation identity now share one capability. Replace
+`IGeneratedDescriptionCapability` with `IDescriptionGeneratorCapability` and remove the separate
+`IAiDescriptionImplementationCapability`; the host persists `ImplementationId` for every generator.
+
+| Previous contract | SDK 3.0 replacement |
+|---|---|
+| `IGeneratedDescriptionCapability` | `IDescriptionGeneratorCapability` (adds `ImplementationId`, `ImplementationName`) |
+| `IAiDescriptionImplementationCapability` | Removed; identity lives on `IDescriptionGeneratorCapability` |
+| `AiDescriptionImplementationIds` (SDK) | Host-owned constant set in `SkyCD.Plugin.Host.Media`; each plugin owns its own stable id |
+
+`DescriptionGenerationPlan` and `IDescriptionGenerationPlanner` keep their provider-neutral shape.

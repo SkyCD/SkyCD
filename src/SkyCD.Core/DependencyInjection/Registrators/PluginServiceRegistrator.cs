@@ -159,7 +159,7 @@ public sealed class PluginServiceRegistrator
             ifAlreadyRegistered: IfAlreadyRegistered.Replace);
 
         registrator.RegisterInstance(new DescriptionExtensionManager(plugins.SelectMany(plugin =>
-            plugin.Capabilities.OfType<IGeneratedDescriptionCapability>())),
+            plugin.Capabilities.OfType<IDescriptionGeneratorCapability>())),
             ifAlreadyRegistered: IfAlreadyRegistered.Replace);
 
         // Online metadata sources are aggregated host-side so a description generator consumes facts without

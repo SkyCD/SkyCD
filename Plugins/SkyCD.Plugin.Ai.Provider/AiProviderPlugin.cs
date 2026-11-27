@@ -18,8 +18,8 @@ namespace SkyCD.Plugin.Ai.Provider;
 /// provider-neutral description contract with the ACP plugin, so host-side scan exclusions and file-size
 /// limits apply to either implementation.
 /// </summary>
-public sealed class AiProviderPlugin : IGeneratedDescriptionCapability, IDescriptionGenerationPlanner,
-    IAiProviderSettingsCapability, IAiDescriptionImplementationCapability
+public sealed class AiProviderPlugin : IDescriptionGeneratorCapability, IDescriptionGenerationPlanner,
+    IAiProviderSettingsCapability
 {
     public const string PluginVersion = "1.0.0";
 
@@ -40,7 +40,7 @@ public sealed class AiProviderPlugin : IGeneratedDescriptionCapability, IDescrip
         client = new AiProviderClient(httpClient);
     }
 
-    public string ImplementationId => AiDescriptionImplementationIds.Provider;
+    public string ImplementationId => "provider";
 
     public string ImplementationName => "AI provider";
 
