@@ -1577,6 +1577,26 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public void FileMenu_PinsSeparatorGroups()
+    {
+        var vm = CreateViewModel();
+
+        // New | Open, Save, Save As | Export, Split | Properties | Exit
+        var separators = vm.FileMenuItems
+            .Select((item, index) => (item, index))
+            .Where(entry => entry.item.Header == "-")
+            .Select(entry => entry.index)
+            .ToArray();
+        Assert.Equal([1, 5, 8, 10], separators);
+
+        var items = vm.FileMenuItems.ToList();
+        Assert.Equal("file_export", items[6].Key);
+        Assert.Equal("file_split", items[7].Key);
+        Assert.Equal(LocalizationService.Current.Get(TextKeys.Properties), items[9].Header);
+        Assert.Equal(LocalizationService.Current.Get(TextKeys.Exit), items[11].Header);
+    }
+
+    [Fact]
     public void FileFormatAvailability_DefaultsToEnabledBeforeHostReports()
     {
         var vm = CreateViewModel();
@@ -1691,9 +1711,9 @@ public class MainWindowViewModelTests
         var fileItems = vm.FileMenuItems.ToList();
         Assert.Equal("file_export", exportItem.Key);
         Assert.Equal(LocalizationService.Current.Get(TextKeys.ExportFileMenu), exportItem.Header);
-        Assert.Equal(
-            fileItems.IndexOf(FileMenuItem(vm, vm.SaveCatalogAsCommand)) + 1,
-            fileItems.IndexOf(exportItem));
+        var saveAsIndex = fileItems.IndexOf(FileMenuItem(vm, vm.SaveCatalogAsCommand));
+        Assert.Equal("-", fileItems[saveAsIndex + 1].Header);
+        Assert.Equal(saveAsIndex + 2, fileItems.IndexOf(exportItem));
         Assert.True(vm.ExportCatalogCommand.CanExecute(null));
         Assert.True(exportItem.IsEnabled);
     }

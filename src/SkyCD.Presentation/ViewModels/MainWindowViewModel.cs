@@ -4728,6 +4728,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                         Command = SaveCatalogAsCommand,
                         IsEnabled = IsSaveAsEnabled
                     },
+                    Separator(),
                     new MainMenuItemViewModel
                     {
                         Key = "file_export",
