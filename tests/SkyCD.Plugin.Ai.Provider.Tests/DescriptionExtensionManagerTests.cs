@@ -97,8 +97,7 @@ public sealed class DescriptionExtensionManagerTests
         Assert.Null(manager.ActiveImplementationId);
     }
 
-    private sealed class Stub(string id, string name) : IGeneratedDescriptionCapability,
-        IAiDescriptionImplementationCapability
+    private sealed class Stub(string id, string name) : IDescriptionGeneratorCapability
     {
         public string ImplementationId => id;
 
