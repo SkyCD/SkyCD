@@ -91,7 +91,7 @@ public sealed class MediaCatalogScanner(
         if (options.IncludeMediaInfo)
         {
             PopulateMediaDriveProperties(rootProperties, driveInfo);
-            PopulateVolumeMetadata(rootProperties, driveInfo, cancellationToken);
+            PopulateMediaTargetMetadata(rootProperties, driveInfo, rootName, cancellationToken);
         }
         else if (!hasFileSystem)
         {
@@ -154,54 +154,14 @@ public sealed class MediaCatalogScanner(
     }
 
     /// <summary>
-    /// Adds optional volume facts from enabled volume-aware plugins. Capture is best-effort: missing or
+    /// Adds optional medium facts from enabled media-target plugins. Capture is best-effort: missing or
     /// failed values are simply not written, so a later refresh can never erase a previously captured
     /// serial with a fabricated placeholder, and an unexpected failure never breaks the scan.
     /// </summary>
-    private void PopulateVolumeMetadata(PropertiesCollection properties, MediaDriveInfo drive,
-        CancellationToken cancellationToken)
+    private void PopulateMediaTargetMetadata(PropertiesCollection properties, MediaDriveInfo drive,
+        string rootName, CancellationToken cancellationToken)
     {
-        if (mediaTargetProvider is null)
-        {
-            return;
-        }
-
-        try
-        {
-            var target = new MediaTarget(MediaTargetKind.Volume, drive.RootDirectory, drive.Name, drive.VolumeLabel,
-                drive.DriveFormat);
-            // Traversal is synchronous, so the scan already runs on a worker thread; volume capture only reads
-            // local OS state, and waiting here keeps its values on the scan result.
-            var captures = mediaTargetProvider.CaptureAsync(target, cancellationToken)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
-            var seenKeys = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var capture in captures)
-            {
-                foreach (var value in capture.Capture.Values)
-                {
-                    var text = value.Type switch
-                    {
-                        MediaMetadataType.Text => value.Text,
-                        MediaMetadataType.Integer => value.Integer?.ToString(CultureInfo.InvariantCulture),
-                        MediaMetadataType.Number => value.Number?.ToString(CultureInfo.InvariantCulture),
-                        MediaMetadataType.Boolean => value.Boolean?.ToString(),
-                        MediaMetadataType.Timestamp => value.Timestamp?.ToString("O", CultureInfo.InvariantCulture),
-                        _ => null
-                    };
-                    if (text is not null && seenKeys.Add(value.Key))
-                    {
-                        properties[value.Key] = text;
-                    }
-                }
-            }
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch
-        {
-            // Volume capture is optional enrichment; plugin failures are reported at the provider boundary.
-        }
+        var target = MediaTargetFactory.FromDrive(drive, rootName, MediaTargetFactory.FactsOf(properties));
+        MediaTargetFactory.Capture(properties, mediaTargetProvider, target, cancellationToken);
     }
 }

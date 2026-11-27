@@ -42,6 +42,16 @@ Only type and namespace names changed. `PluginId`, `FormatId`, attribute values,
 `[assembly: PluginId(...)]` strings and persisted plugin state keep their exact values. External authors
 update the `using` directives, rebuild against `SkyCD.SDK` 3.0 and reinstall the plugin.
 
+### Media target contract (#1338)
+
+`MediaTarget` describes any catalog medium instead of only a drive: `Kind` is one of `Volume`,
+`OpticalDisc`, `Folder`, `File`, `NetworkFolder`, `NetworkResource` or `SourceFolder` (a plugin-filled
+source folder with no address of its own). `Location` carries the path, UNC path or URL and is `null`
+for `SourceFolder`; `Name` is the catalog entry name; `Facts` exposes the entry properties the host
+already captured (`VolumeLabel`, `DriveType`, `URL`, ...) under their catalog keys. A capability that
+serves several kinds returns `true` from `Supports` for each of them and reads `Kind` and `Location`
+in `CaptureAsync`; captures are merged into the media, folder, remote and disc roots alike.
+
 ## SDK 2.0 / SkyCD v3 configuration migration (#828)
 
 The SDK major version is now `2.0.0` (previously the implicit `1.0.0`). Configuration is a breaking

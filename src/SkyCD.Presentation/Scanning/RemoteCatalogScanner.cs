@@ -9,6 +9,7 @@ using SkyCD.Documents;
 using SkyCD.Documents.Collections;
 using SkyCD.Documents.Enum;
 using SkyCD.Presentation.Operations;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.UI.Localization;
 
 namespace SkyCD.Presentation.Scanning;
@@ -16,14 +17,22 @@ namespace SkyCD.Presentation.Scanning;
 public sealed class RemoteCatalogScanner
 {
     private readonly RemoteCatalogProviderRegistry providers;
+    private readonly IMediaTargetMetadataProvider? mediaTargets;
 
-    public RemoteCatalogScanner() : this(RemoteCatalogProviderRegistry.Default)
+    public RemoteCatalogScanner(IMediaTargetMetadataProvider? mediaTargets = null)
+        : this(RemoteCatalogProviderRegistry.Default, mediaTargets)
     {
     }
 
-    public RemoteCatalogScanner(RemoteCatalogProviderRegistry providers) => this.providers = providers;
+    public RemoteCatalogScanner(RemoteCatalogProviderRegistry providers,
+        IMediaTargetMetadataProvider? mediaTargets = null)
+    {
+        this.providers = providers;
+        this.mediaTargets = mediaTargets;
+    }
 
-    public RemoteCatalogScanner(IRemoteCatalogConnector connector) : this(new RemoteCatalogProviderRegistry([connector]))
+    public RemoteCatalogScanner(IRemoteCatalogConnector connector, IMediaTargetMetadataProvider? mediaTargets = null)
+        : this(new RemoteCatalogProviderRegistry([connector]), mediaTargets)
     {
     }
 
@@ -105,7 +114,7 @@ public sealed class RemoteCatalogScanner
                 rootProperties["RealPath"] = location.Path;
             }
 
-            documents.Insert(0, new CatalogDocument
+            var rootDoc = new CatalogDocument
             {
                 Id = rootId,
                 Name = rootName,
@@ -114,7 +123,11 @@ public sealed class RemoteCatalogScanner
                 Size = totalSize,
                 ChildrenCount = rootEmittedChildren,
                 Properties = rootProperties
-            });
+            };
+            documents.Insert(0, rootDoc);
+
+            var target = MediaTargetFactory.FromCatalogRoot(rootDoc) with { Location = location.PublicUrl };
+            MediaTargetFactory.Capture(rootProperties, mediaTargets, target, cancellationToken);
 
             context.Statistics.IncrementDiscovered();
 

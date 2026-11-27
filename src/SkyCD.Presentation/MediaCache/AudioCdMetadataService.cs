@@ -9,6 +9,7 @@ using SkyCD.Documents;
 using SkyCD.Documents.Collections;
 using SkyCD.Documents.Enum;
 using SkyCD.SDK.Capabilities.Media;
+using SkyCD.Presentation.Scanning;
 
 namespace SkyCD.Presentation.MediaCache;
 
@@ -59,8 +60,9 @@ public sealed class AudioCdMetadataService
             MediaTargetProviderCapture? captured;
             try
             {
-                var captures = await provider.CaptureAsync(
-                        new MediaTarget(MediaTargetKind.OpticalDisc, root.RootPath), cancellationToken)
+                var target = new MediaTarget(MediaTargetKind.OpticalDisc, root.RootPath, root.RootDocument?.Name,
+                    root.RootDocument is null ? null : MediaTargetFactory.FactsOf(root.RootDocument.Properties));
+                var captures = await provider.CaptureAsync(target, cancellationToken)
                     .ConfigureAwait(false);
                 captured = captures.FirstOrDefault();
             }

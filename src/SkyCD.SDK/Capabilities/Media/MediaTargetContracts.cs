@@ -6,28 +6,53 @@ using System.Threading.Tasks;
 namespace SkyCD.SDK.Capabilities.Media;
 
 /// <summary>
-/// The medium a path-addressed capture reads. A volume is ordinary mounted media with a filesystem; an
-/// optical disc may expose a filesystem or, like an audio CD, none at all. Both are addressed by a root
-/// path because the operating system identifies the medium, not a file, by that path.
+/// The kind of catalog medium a capture reads. Media in SkyCD are catalog roots, so a target is not
+/// necessarily a mounted drive: it can be a folder, a single file, a network location, an optical disc or a
+/// folder filled by a plugin source. A capability reports the kinds it reads through
+/// <see cref="IMediaTargetMetadataCapability.Supports"/>.
 /// </summary>
 public enum MediaTargetKind
 {
-    /// <summary>A mounted volume with a filesystem.</summary>
+    /// <summary>A mounted volume with a filesystem, such as a fixed disk, a USB stick or a network-mapped drive.</summary>
     Volume,
 
-    /// <summary>An optical drive, including discs without a filesystem.</summary>
-    OpticalDisc
+    /// <summary>An optical drive, including discs that expose no filesystem, such as an audio CD.</summary>
+    OpticalDisc,
+
+    /// <summary>A local folder added as a media root.</summary>
+    Folder,
+
+    /// <summary>A single file added as a media root.</summary>
+    File,
+
+    /// <summary>A remote folder reached through a network connector, such as SMB, SFTP, FTP or WebDAV.</summary>
+    NetworkFolder,
+
+    /// <summary>A URL-addressed network resource added as a media root.</summary>
+    NetworkResource,
+
+    /// <summary>
+    /// A catalog folder whose entries a plugin source produces or imports (an account catalog or a capture
+    /// source factory), so the folder has no location of its own.
+    /// </summary>
+    SourceFolder
 }
 
 /// <summary>
-/// One media medium handed to a capture. Unlike <see cref="MediaItem"/> and <see cref="IMediaSource"/>, which
-/// deliberately expose no filesystem paths, this contract carries the medium root because OS identity APIs
-/// and disc readers are addressed by it. Paths in this target must never be persisted or shown by a plugin.
+/// One media root handed to a capture. Unlike <see cref="MediaItem"/> and <see cref="IMediaSource"/>, which
+/// deliberately expose no filesystem paths, this contract carries the root because OS identity APIs, disc
+/// readers and remote clients are addressed through it. Locations in this target must never be persisted or
+/// shown by a plugin.
+/// <paramref name="Location"/> is the address the root is opened through: a filesystem or device path, a UNC
+/// path or a URL; it is null for a <see cref="MediaTargetKind.SourceFolder"/>, which has no address.
+/// <paramref name="Name"/> is the catalog name of the root.
+/// <paramref name="Facts"/> holds the facts the host already knows about the root, using the same keys as the
+/// catalog entry properties (for example <c>VolumeLabel</c>, <c>DriveType</c> or <c>URL</c>), and may be empty.
 /// <paramref name="Settings"/> holds the persisted settings of the plugin being asked, resolved by the host
 /// per provider, because a capture may run outside any plugin configuration session.
 /// </summary>
-public sealed record MediaTarget(MediaTargetKind Kind, string RootPath, string? Name = null,
-    string? VolumeLabel = null, string? DriveFormat = null,
+public sealed record MediaTarget(MediaTargetKind Kind, string? Location = null, string? Name = null,
+    IReadOnlyDictionary<string, string?>? Facts = null,
     IReadOnlyDictionary<string, string?>? Settings = null);
 
 /// <summary>
@@ -52,7 +77,7 @@ public sealed record MediaTargetCapture(MediaMetadataSchema Schema, IReadOnlyLis
     MediaPreviewArtifact? Cover = null);
 
 /// <summary>
-/// Assembly-discovered metadata collection addressed by a medium root. Implementations report which media
+/// Assembly-discovered metadata collection addressed by a media root. Implementations report which media
 /// kinds they handle through <see cref="Supports"/> and honour their own persisted settings. They must return
 /// <see langword="null"/> for unsupported platforms, unreadable media and unmatched media, and must never throw
 /// for a network failure.

@@ -16,7 +16,7 @@ namespace SkyCD.Plugin.Runtime.Tests;
 
 public sealed class VolumeCapabilityTests
 {
-    private static readonly MediaTarget Volume = new(MediaTargetKind.Volume, "E:\\", "E:\\", "DISC", "CDFS");
+    private static readonly MediaTarget Volume = new(MediaTargetKind.Volume, "E:\\", "E:\\");
 
     private static IReadOnlyList<MediaTargetProviderCapture> Capture(MediaTargetExtensionManager manager) =>
         manager.CaptureAsync(Volume, default).GetAwaiter().GetResult();

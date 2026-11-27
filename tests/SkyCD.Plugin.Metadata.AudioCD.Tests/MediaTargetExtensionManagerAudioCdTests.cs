@@ -42,7 +42,7 @@ public sealed class MediaTargetExtensionManagerAudioCdTests
         Assert.Equal("high.plugin", first.PluginId);
         Assert.Equal("high", first.Capture.Values.Single().Text);
         Assert.Equal(MediaTargetKind.OpticalDisc, high.LastTarget!.Kind);
-        Assert.Equal("E:\\", high.LastTarget.RootPath);
+        Assert.Equal("E:\\", high.LastTarget.Location);
     }
 
     [Fact]

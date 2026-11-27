@@ -46,11 +46,15 @@ public sealed class AudioCdMetadataPlugin : IMediaTargetMetadataCapability
         IProgress<MediaProgress>? progress, CancellationToken cancellationToken)
     {
         var settings = AudioCdSettings.Parse(request.Settings);
+        if (string.IsNullOrWhiteSpace(request.Location))
+        {
+            return null;
+        }
 
         DiscToc? toc;
         try
         {
-            toc = tocReader.Read(request.RootPath, cancellationToken);
+            toc = tocReader.Read(request.Location, cancellationToken);
         }
         catch (Exception exception) when (exception is not OperationCanceledException ||
                                            !cancellationToken.IsCancellationRequested)

@@ -10,7 +10,7 @@ namespace SkyCD.Plugin.Metadata.Volume.Tests;
 
 public sealed class VolumeSerialPluginTests
 {
-    private static readonly MediaTarget Volume = new(MediaTargetKind.Volume, "E:\\", "E:\\", "MY_DISC", "CDFS");
+    private static readonly MediaTarget Volume = new(MediaTargetKind.Volume, "E:\\", "E:\\");
 
     private sealed class FakeVolumeSerialApi(bool isSupported, bool succeeds, uint serial) : IVolumeSerialApi
     {
@@ -84,12 +84,24 @@ public sealed class VolumeSerialPluginTests
     }
 
     [Fact]
-    public void Supports_OnlyVolumes()
+    public void Supports_VolumesAndOpticalDiscs()
     {
         var plugin = new VolumeSerialPlugin(new FakeVolumeSerialApi(true, true, 1u));
 
         Assert.True(plugin.Supports(Volume));
-        Assert.False(plugin.Supports(Volume with { Kind = MediaTargetKind.OpticalDisc }));
+        Assert.True(plugin.Supports(Volume with { Kind = MediaTargetKind.OpticalDisc }));
+        Assert.False(plugin.Supports(Volume with { Kind = MediaTargetKind.Folder }));
+    }
+
+    [Fact]
+    public async Task Capture_WithoutLocation_ReturnsNoValue()
+    {
+        var api = new FakeVolumeSerialApi(true, true, 0x1234ABCDu);
+        var plugin = new VolumeSerialPlugin(api);
+
+        Assert.Null(await plugin.CaptureAsync(Volume with { Location = null }, progress: null,
+            CancellationToken.None));
+        Assert.Null(api.RequestedRootPath);
     }
 
     [Fact]

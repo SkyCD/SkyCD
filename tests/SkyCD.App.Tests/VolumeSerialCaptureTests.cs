@@ -94,11 +94,11 @@ public sealed class VolumeSerialCaptureTests : IDisposable
         var root = Assert.Single(result.Documents, doc => doc.ParentId is null);
         Assert.Null(root.ParentId);
         Assert.Equal("1234-ABCD", root.Properties["VolumeSerialNumber"]?.ToString());
-        Assert.Equal(testDirectory, volume.LastTarget?.RootPath);
-        Assert.Equal(MediaTargetKind.Volume, volume.LastTarget?.Kind);
-        Assert.Equal("D:\\", volume.LastTarget?.Name);
-        Assert.Equal("MusicDisc", volume.LastTarget?.VolumeLabel);
-        Assert.Equal("CDFS", volume.LastTarget?.DriveFormat);
+        Assert.Equal(testDirectory, volume.LastTarget?.Location);
+        Assert.Equal(MediaTargetKind.OpticalDisc, volume.LastTarget?.Kind);
+        Assert.Equal("MusicDisc", volume.LastTarget?.Name);
+        Assert.Equal("MusicDisc", volume.LastTarget?.Facts?["VolumeLabel"]);
+        Assert.Equal("CDFS", volume.LastTarget?.Facts?["DriveFormat"]);
     }
 
     [Fact]
