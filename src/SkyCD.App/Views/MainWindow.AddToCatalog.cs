@@ -16,6 +16,7 @@ using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Presentation.Accounts;
 using SkyCD.Presentation.Operations;
 using SkyCD.Presentation.Scanning;
+using SkyCD.Plugin.Host.Media;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.SDK.Capabilities.Accounts;
 using SkyCD.SDK.Capabilities.Sources;

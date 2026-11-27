@@ -8,6 +8,7 @@ using System.Text.Json;
 using SkyCD.Documents;
 using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
+using SkyCD.Plugin.Host.Media;
 using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Presentation.Staging;
 

@@ -13,7 +13,8 @@ The package contains only the plugin-authoring surface:
 
 - lifecycle and identity: `IPlugin`, `IPluginCapability`, `PluginIdAttribute`, `MinHostVersionAttribute`, `MaxHostVersionAttribute`;
 - the capability contracts under `Capabilities/**` and the host services plugins call back into
-  (`ICatalogApi`, `IHostCommandApi`, `IHostDialogApi`, `IPluginStorageApi` / `IPluginStorageConsumer`, `IOAuthService`, `ILocalizationService`);
+  (`ICatalogApi`, `IHostCommandApi`, `IHostDialogApi`, `IPluginStorageApi` / `IPluginStorageConsumer`, `IOAuthService`);
+  plugin translations use `ILocalizationPluginCapability`, while the host localizer lives in `SkyCD.UI.Localization`;
 - the request/result/descriptor models exchanged across those contracts.
 
 The package deliberately contains **no third-party helper types**. SkiaSharp, XmpCore, Avalonia and

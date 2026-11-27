@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Documents.Enum;
+using SkyCD.Plugin.Host.Media;
 using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Presentation.Scanning;
 using SkyCD.TestSupport;

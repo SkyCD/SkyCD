@@ -1,8 +1,8 @@
-using System.ComponentModel;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Globalization;
 
-namespace SkyCD.SDK.Localization;
+namespace SkyCD.UI.Localization;
 
 /// <summary>Shared culture, formatting, and dynamically registered translation sources.</summary>
 public interface ILocalizationService : INotifyPropertyChanged
@@ -20,7 +20,7 @@ public interface ILocalizationService : INotifyPropertyChanged
     /// <summary>Changes the culture and invalidates existing UI bindings.</summary>
     void SetCulture(CultureInfo culture);
     /// <summary>Atomically adds or replaces a namespace's YAML catalogs.</summary>
-    void Register(string namespaceName, ITranslationProvider provider);
+    void Register(string namespaceName, SkyCD.SDK.Localization.ITranslationProvider provider);
     /// <summary>Removes a namespace and invalidates its bindings.</summary>
     bool Unregister(string namespaceName);
 }
