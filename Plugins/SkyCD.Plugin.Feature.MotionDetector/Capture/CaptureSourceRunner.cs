@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using OpenCvSharp;
 using SkyCD.Plugin.Feature.MotionDetector.Detectors;
 using SkyCD.Plugin.Feature.MotionDetector.Models;
-using SkyCD.SDK.Capabilities.Capture;
+using SkyCD.SDK.Capabilities.Sources;
 using SkyCD.UI.Localization;
 
 namespace SkyCD.Plugin.Feature.MotionDetector.Capture;
@@ -20,9 +20,9 @@ internal sealed class CaptureSourceRunner : IDisposable
     private static readonly TimeSpan ReconnectDelay = TimeSpan.FromSeconds(3);
     private static readonly TimeSpan LoopDelay = TimeSpan.FromSeconds(1);
 
-    private readonly CaptureSourceConfiguration source;
-    private readonly Func<CaptureDetectorSettings> settings;
-    private readonly ICaptureSourceHostApi host;
+    private readonly SourceConfiguration source;
+    private readonly Func<SourceDetectorSettings> settings;
+    private readonly ISourceFactoryHostApi host;
     private readonly Action<string> report;
     private readonly CancellationTokenSource cancellation = new();
     private DestinationWatcher? watcher;
@@ -31,8 +31,8 @@ internal sealed class CaptureSourceRunner : IDisposable
     private int started;
     private string? lastReported;
 
-    public CaptureSourceRunner(CaptureSourceConfiguration source, Func<CaptureDetectorSettings> settings,
-        ICaptureSourceHostApi host, Action<string> report)
+    public CaptureSourceRunner(SourceConfiguration source, Func<SourceDetectorSettings> settings,
+        ISourceFactoryHostApi host, Action<string> report)
     {
         this.source = source;
         this.settings = settings;

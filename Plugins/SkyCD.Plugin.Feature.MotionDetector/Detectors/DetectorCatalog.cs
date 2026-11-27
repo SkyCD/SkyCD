@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using SkyCD.Plugin.Feature.MotionDetector.Models;
-using SkyCD.SDK.Capabilities.Capture;
+using SkyCD.SDK.Capabilities.Sources;
 using SkyCD.UI.Localization;
 
 namespace SkyCD.Plugin.Feature.MotionDetector.Detectors;
@@ -61,14 +61,14 @@ internal static class DetectorCatalog
         new(PerceptualDifference, [new("differencePercent", 2, 0.1, 100)])
     ];
 
-    public static IReadOnlyList<CaptureDetectorDescriptor> Describe()
+    public static IReadOnlyList<SourceDetectorDescriptor> Describe()
     {
         var localizer = LocalizationService.Current;
-        return Specs.Select(spec => new CaptureDetectorDescriptor(
+        return Specs.Select(spec => new SourceDetectorDescriptor(
             spec.Id,
             localizer.Get(MotionDetectorKeys.DetectorName(spec.Id)),
             localizer.Get(MotionDetectorKeys.DetectorDescription(spec.Id)),
-            spec.Parameters.Select(parameter => new CaptureDetectorParameter(
+            spec.Parameters.Select(parameter => new SourceDetectorParameter(
                 parameter.Key,
                 localizer.Get(MotionDetectorKeys.ParameterName(parameter.Key)),
                 parameter.DefaultValue,

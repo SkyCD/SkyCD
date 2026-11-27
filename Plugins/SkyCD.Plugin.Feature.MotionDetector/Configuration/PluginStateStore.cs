@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using SkyCD.Plugin.Feature.MotionDetector.Detectors;
-using SkyCD.SDK.Capabilities.Capture;
+using SkyCD.SDK.Capabilities.Sources;
 using SkyCD.SDK.Capabilities.Storage;
 
 namespace SkyCD.Plugin.Feature.MotionDetector.Configuration;
@@ -19,10 +19,10 @@ internal sealed class PluginStateStore(IPluginStorageApi storage)
     private const string SettingsId = "detector-settings";
     private const string ParameterPrefix = "param.";
 
-    public IReadOnlyList<CaptureSourceConfiguration> LoadSources()
+    public IReadOnlyList<SourceConfiguration> LoadSources()
     {
         var collection = storage.OpenCollection(SourcesCollection);
-        var sources = new List<CaptureSourceConfiguration>();
+        var sources = new List<SourceConfiguration>();
         foreach (var record in collection.GetAll())
         {
             var source = ReadSource(record);
@@ -35,7 +35,7 @@ internal sealed class PluginStateStore(IPluginStorageApi storage)
         return sources;
     }
 
-    public void SaveSource(CaptureSourceConfiguration source)
+    public void SaveSource(SourceConfiguration source)
     {
         ArgumentNullException.ThrowIfNull(source);
         storage.OpenCollection(SourcesCollection).Upsert(source.SourceId, new Dictionary<string, object?>
@@ -55,7 +55,7 @@ internal sealed class PluginStateStore(IPluginStorageApi storage)
         storage.OpenCollection(SourcesCollection).Delete(sourceId);
     }
 
-    public CaptureDetectorSettings LoadSettings()
+    public SourceDetectorSettings LoadSettings()
     {
         var record = storage.OpenCollection(SettingsCollection).Get(SettingsId);
         if (record is null)
@@ -73,12 +73,12 @@ internal sealed class PluginStateStore(IPluginStorageApi storage)
             }
         }
 
-        return new CaptureDetectorSettings(
+        return new SourceDetectorSettings(
             DetectorCatalog.Specs.Any(spec => spec.Id == detectorId) ? detectorId : null,
             DetectorCatalog.Normalize(detectorId, parameters));
     }
 
-    public void SaveSettings(CaptureDetectorSettings settings)
+    public void SaveSettings(SourceDetectorSettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
         var fields = new Dictionary<string, object?>(StringComparer.Ordinal)
@@ -93,11 +93,11 @@ internal sealed class PluginStateStore(IPluginStorageApi storage)
         storage.OpenCollection(SettingsCollection).Upsert(SettingsId, fields);
     }
 
-    public static CaptureDetectorSettings DefaultSettings() =>
+    public static SourceDetectorSettings DefaultSettings() =>
         new(DetectorCatalog.FrameDifference,
             DetectorCatalog.Normalize(DetectorCatalog.FrameDifference, stored: null));
 
-    private static CaptureSourceConfiguration? ReadSource(PluginDocumentRecord record)
+    private static SourceConfiguration? ReadSource(PluginDocumentRecord record)
     {
         var sourceId = ReadString(record.Fields, "SourceId") ?? record.Id;
         var kindId = ReadString(record.Fields, "KindId");
@@ -109,7 +109,7 @@ internal sealed class PluginStateStore(IPluginStorageApi storage)
             return null;
         }
 
-        return new CaptureSourceConfiguration(
+        return new SourceConfiguration(
             sourceId,
             kindId,
             location,
