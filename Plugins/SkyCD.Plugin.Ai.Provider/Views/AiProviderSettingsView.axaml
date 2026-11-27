@@ -1,0 +1,215 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:i18n="clr-namespace:SkyCD.UI.Localization;assembly=SkyCD.UI"
+             xmlns:models="clr-namespace:SkyCD.Plugin.Ai.Provider.Models"
+             xmlns:converters="clr-namespace:SkyCD.Plugin.Ai.Provider.Views"
+             xmlns:settings="clr-namespace:SkyCD.Plugin.Ai.Provider.Configuration"
+             xmlns:bindingConverters="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
+             x:Class="SkyCD.Plugin.Ai.Provider.Views.AiProviderSettingsView"
+             x:DataType="settings:AiProviderSettingsPageViewModel">
+    <UserControl.Resources>
+        <converters:AiProviderIconConverter x:Key="AiProviderIconConverter" />
+        <!-- Dropdown rows share the closed field's inset, as the source picker does. -->
+        <ControlTheme x:Key="AiProviderComboBoxItemTheme"
+                      TargetType="ComboBoxItem"
+                      BasedOn="{StaticResource {x:Type ComboBoxItem}}">
+            <Setter Property="Padding" Value="{DynamicResource SkyComboBoxContentPadding}" />
+        </ControlTheme>
+        <DataTemplate x:Key="AiProviderChoiceTemplate" x:DataType="models:AiProviderChoice">
+            <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceXs}">
+                <Panel Width="{DynamicResource SkyIconSize}"
+                       Height="{DynamicResource SkyIconSize}">
+                    <Border Background="{DynamicResource ThemeAccentBrush}"
+                            IsVisible="{Binding #ProviderIcon.Source, Converter={x:Static bindingConverters:ObjectConverters.IsNull}}"
+                            CornerRadius="{DynamicResource SkyCornerRadius}">
+                        <Viewbox Margin="{DynamicResource SkyInsetXxs}">
+                            <TextBlock Text="{Binding Monogram}"
+                                       Foreground="{DynamicResource ThemeForegroundBrush}" />
+                        </Viewbox>
+                    </Border>
+                    <Image x:Name="ProviderIcon"
+                           Source="{Binding Converter={x:Static converters:AiProviderIconConverter.Instance}}"
+                           Stretch="Uniform" />
+                </Panel>
+                <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+            </StackPanel>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <UserControl.Styles>
+        <!-- External links stay Buttons so Tab/Enter activate them, but render as links with the ↗ affordance. -->
+        <Style Selector="Button.pluginLink">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button.pluginLink TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource ThemeAccentBrush}" />
+        </Style>
+        <Style Selector="Button.pluginLink:pointerover TextBlock">
+            <Setter Property="TextDecorations" Value="Underline" />
+        </Style>
+        <Style Selector="Button.pluginLink.alignRight">
+            <Setter Property="HorizontalAlignment" Value="Right" />
+        </Style>
+    </UserControl.Styles>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Spacing="{DynamicResource SkySpaceSm}">
+            <Border BorderBrush="{DynamicResource ThemeBorderLowBrush}"
+                    BorderThickness="1"
+                    CornerRadius="{DynamicResource SkyCornerRadius}"
+                    Background="{DynamicResource ThemeControlLowBrush}"
+                    Padding="{DynamicResource SkyInsetMd}">
+                <StackPanel Spacing="{DynamicResource SkySpaceSm}">
+                    <Grid ColumnSpacing="{DynamicResource SkySpaceSm}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="{StaticResource SkyFormLabelWidth}" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiProvider}}"
+                                   VerticalAlignment="Center" />
+                        <ComboBox x:Name="AiProviderComboBox"
+                                  Grid.Column="1"
+                                  Padding="{DynamicResource SkyComboBoxContentPadding}"
+                                  ItemContainerTheme="{StaticResource AiProviderComboBoxItemTheme}"
+                                  ItemsSource="{Binding AiProviders}"
+                                  SelectedItem="{Binding SelectedAiProvider}"
+                                  ItemTemplate="{StaticResource AiProviderChoiceTemplate}"
+                                  SelectionBoxItemTemplate="{StaticResource AiProviderChoiceTemplate}" />
+                    </Grid>
+                    <Grid ColumnSpacing="{DynamicResource SkySpaceSm}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="{StaticResource SkyFormLabelWidth}" />
+                            <ColumnDefinition Width="120" />
+                            <ColumnDefinition Width="120" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.InternetProtocol}}"
+                                   VerticalAlignment="Center" />
+                        <ComboBox Grid.Column="1"
+                                  ItemsSource="{Binding AiProviderProtocols}"
+                                  SelectedItem="{Binding AiProviderProtocol}" />
+                        <TextBlock Grid.Column="2"
+                                   Text="{i18n:Translate {x:Static i18n:UiKeys.Port}}"
+                                   VerticalAlignment="Center" />
+                        <TextBox Grid.Column="3"
+                                 Text="{Binding AiProviderPort, UpdateSourceTrigger=PropertyChanged}" />
+                    </Grid>
+                    <Grid ColumnSpacing="{DynamicResource SkySpaceSm}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="{StaticResource SkyFormLabelWidth}" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiProviderAddress}}"
+                                   VerticalAlignment="Center" />
+                        <TextBox Grid.Column="1"
+                                 Text="{Binding AiProviderAddress, UpdateSourceTrigger=PropertyChanged}" />
+                    </Grid>
+                    <Grid ColumnSpacing="{DynamicResource SkySpaceSm}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="{StaticResource SkyFormLabelWidth}" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiProviderEndpoint}}"
+                                   VerticalAlignment="Center" />
+                        <TextBox Grid.Column="1"
+                                 IsReadOnly="True"
+                                 Text="{Binding AiProviderEndpointUrl}" />
+                    </Grid>
+                    <Grid ColumnSpacing="{DynamicResource SkySpaceSm}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="{StaticResource SkyFormLabelWidth}" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiProviderApiKey}}"
+                                   VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="1" Spacing="{DynamicResource SkySpaceXxs}">
+                            <TextBox PasswordChar="*"
+                                     Text="{Binding AiProviderApiKey, UpdateSourceTrigger=PropertyChanged}" />
+                            <Button Classes="pluginLink alignRight"
+                                    IsVisible="{Binding ShowApiKeyHelp}"
+                                    Command="{Binding OpenAiProviderApiKeyHelpCommand}"
+                                    ToolTip.Tip="{Binding ApiKeyHelpUrl}"
+                                    AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.AiProviderApiKeyHelp}}">
+                                <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceXxs}">
+                                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiProviderApiKeyHelp}}" />
+                                    <TextBlock Text="↗" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+                    <Grid ColumnSpacing="{DynamicResource SkySpaceSm}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="{StaticResource SkyFormLabelWidth}" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiProviderModel}}"
+                                   VerticalAlignment="Center" />
+                        <ComboBox Grid.Column="1"
+                                  IsEditable="True"
+                                  ItemsSource="{Binding AiProviderModels}"
+                                  Text="{Binding AiProviderModel, Mode=TwoWay}" />
+                        <Button Grid.Column="2"
+                                Content="↻"
+                                FontSize="{DynamicResource SkyFontSubtitle}"
+                                Width="34"
+                                Height="28"
+                                ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.AiProviderRefreshModels}}"
+                                Command="{Binding RefreshAiProviderModelsCommand}" />
+                    </Grid>
+                    <Grid ColumnSpacing="{DynamicResource SkySpaceSm}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="{StaticResource SkyFormLabelWidth}" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiProviderOutputLanguage}}"
+                                   VerticalAlignment="Center" />
+                        <ComboBox Grid.Column="1"
+                                  ItemsSource="{Binding AiProviderLanguages}"
+                                  SelectedItem="{Binding AiProviderLanguage}" />
+                    </Grid>
+                    <Grid ColumnSpacing="{DynamicResource SkySpaceSm}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="{StaticResource SkyFormLabelWidth}" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <CheckBox Grid.Column="1"
+                                  Content="{i18n:Translate {x:Static i18n:UiKeys.AiProviderResizeImages}}"
+                                  IsChecked="{Binding AiProviderResizeLargeImages}" />
+                    </Grid>
+                    <Grid ColumnSpacing="{DynamicResource SkySpaceSm}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="{StaticResource SkyFormLabelWidth}" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}">
+                            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.AiProviderCheckConnection}}"
+                                    Command="{Binding CheckAiProviderConnectionCommand}" />
+                            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.AiProviderStartServer}}"
+                                    IsVisible="{Binding CanStartServer}"
+                                    Command="{Binding StartAiProviderServerCommand}" />
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock Text="{Binding ConnectionStatus}"
+                               Foreground="{DynamicResource SkyStatusInfoForeground}"
+                               TextWrapping="Wrap" />
+                    <Border IsVisible="{Binding ShowAlert}"
+                            Background="{DynamicResource SkyAlertErrorBackground}"
+                            BorderBrush="{DynamicResource SkyAlertErrorBorder}"
+                            BorderThickness="1"
+                            CornerRadius="{DynamicResource SkyCornerRadius}"
+                            Padding="{DynamicResource SkyControlPadding}">
+                        <TextBlock Text="{Binding AlertMessage}"
+                                   Foreground="{DynamicResource SkyAlertErrorForeground}"
+                                   TextWrapping="Wrap" />
+                    </Border>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

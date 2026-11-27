@@ -1,7 +1,6 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Ai.Provider.Models;
 
 namespace SkyCD.Plugin.Ai.Provider.Sources;

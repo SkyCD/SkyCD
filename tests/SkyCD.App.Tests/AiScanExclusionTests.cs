@@ -205,7 +205,7 @@ public sealed class AiScanExclusionTests : IDisposable
 
         vm.SetAiDescriptionAvailable(true);
         Assert.Contains(vm.SettingCategories, category => category.Id == "ai-description" && category.Title == "Description");
-        Assert.Contains(vm.SettingCategories, category => category.Id == "ai-provider" && category.Title == "Provider");
+        Assert.DoesNotContain(vm.SettingCategories, category => category.Id == "ai-provider");
 
         vm.AiScanMaxFileSizeMegabytes = 2048;
         vm.SetAiScanExclusions(
@@ -245,11 +245,15 @@ public sealed class AiScanExclusionTests : IDisposable
         Assert.True(resetRaised);
     }
 
-    private sealed class CountingCapability : IGeneratedDescriptionCapability, IDescriptionGenerationPlanner
+    private sealed class CountingCapability : IDescriptionGeneratorCapability, IDescriptionGenerationPlanner
     {
         private int calls;
 
         public int Calls => Volatile.Read(ref calls);
+
+        public string ImplementationId => "counting";
+
+        public string ImplementationName => "Counting";
 
         public MediaMetadataSchema Schema => new("test.ai-scan.schema", 1, []);
 

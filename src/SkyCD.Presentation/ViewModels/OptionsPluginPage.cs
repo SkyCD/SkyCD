@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
-using SkyCD.SDK;
+using SkyCD.SDK.Plugins;
 using SkyCD.SDK.Capabilities.Configuration;
 using SkyCD.Plugin.Runtime.Configuration;
 using SkyCD.UI.Localization;
@@ -39,14 +39,30 @@ public sealed partial class OptionsPluginPage(PluginConfigurationRegistration re
     private bool disposed;
     private bool visited;
 
-    public PluginConfigurationRegistration Registration { get; } = registration;
-    public string Id => $"plugin:{Registration.PluginId}/{Registration.Descriptor.ConfigurationId}";
+    public PluginConfigurationRegistration Registration { get; private set; } = registration;
+    public string Id => GetCategoryId(Registration.PluginId, Registration.Descriptor.ConfigurationId);
+    public static string GetCategoryId(string pluginId, string configurationId) =>
+        $"plugin:{pluginId}/{configurationId}";
+    public string Title => Registration.Descriptor.Title;
+    public string? Group => Registration.Descriptor.Group;
+    public int Order => Registration.Descriptor.Order;
     public bool IsVisited => visited;
     [ObservableProperty] private object? content;
     [ObservableProperty] private bool isLoading;
     [ObservableProperty] private string error = string.Empty;
     public bool HasError => !string.IsNullOrEmpty(Error);
     partial void OnErrorChanged(string value) => OnPropertyChanged(nameof(HasError));
+
+    /// <summary>Replaces the descriptor captured for this page after a plugin rescan, keeping the live draft.</summary>
+    public void UpdateRegistration(PluginConfigurationRegistration updated)
+    {
+        if (Registration == updated) return;
+        Registration = updated;
+        OnPropertyChanged(nameof(Registration));
+        OnPropertyChanged(nameof(Title));
+        OnPropertyChanged(nameof(Group));
+        OnPropertyChanged(nameof(Order));
+    }
 
     /// <summary>Loads the draft once; a failed attempt is replaced on the next explicit call.</summary>
     public Task LoadAsync()
@@ -65,7 +81,8 @@ public sealed partial class OptionsPluginPage(PluginConfigurationRegistration re
         Error = string.Empty;
         try
         {
-            var outcome = await manager.CreatePageAsync(Registration.PluginId, timeout, lifetime.Token);
+            var outcome = await manager.CreatePageAsync(Registration.PluginId,
+                Registration.Descriptor.ConfigurationId, timeout, lifetime.Token);
             if (!outcome.IsSuccess)
             {
                 outcome.Page?.Dispose();

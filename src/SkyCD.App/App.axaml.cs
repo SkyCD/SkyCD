@@ -24,7 +24,7 @@ using SkyCD.Core.DependencyInjection;
 using SkyCD.Plugin.Runtime.Installation;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.Runtime.Marketplace.Services;
-using SkyCD.SDK;
+using SkyCD.SDK.Plugins;
 using SkyCD.SDK.Capabilities.Sources;
 using SkyCD.SDK.Capabilities.Catalog;
 using SkyCD.SDK.Capabilities.GenDesc;
@@ -253,10 +253,6 @@ public partial class App : Avalonia.Application
         var storageFactory = appServiceProvider.Resolve<PluginStorageApiFactory>();
         var dialogApi = new AvaloniaHostDialogApi(() =>
             (Avalonia.Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow);
-        var fileDialogApi = new AvaloniaHostFileDialogApi(() =>
-            (Avalonia.Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow);
-        var clipboard = new AvaloniaClipboardApi(() =>
-            (Avalonia.Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow);
         var genDescHost = appServiceProvider.Resolve<GenDescHostApi>();
         var onlineMetadata = ServiceProvider.Resolve<OnlineMetadataExtensionManager>();
         var captureHost = new SourceFactoryHostApi(() => appServiceProvider.Resolve<MainWindowViewModel>());
@@ -310,18 +306,6 @@ public partial class App : Avalonia.Application
                 catch (Exception exception) { PluginFailure.Publish(consumer.GetType(), "options", exception); }
             }
 
-            foreach (var consumer in plugin.Capabilities.OfType<IHostFileDialogConsumer>())
-            {
-                try { consumer.InitializeFileDialogApi(fileDialogApi); }
-                catch (Exception exception) { PluginFailure.Publish(consumer.GetType(), "modal", exception); }
-            }
-
-            foreach (var consumer in plugin.Capabilities.OfType<IClipboardConsumer>())
-            {
-                try { consumer.InitializeClipboard(clipboard); }
-                catch (Exception exception) { PluginFailure.Publish(consumer.GetType(), "modal", exception); }
-            }
-
             foreach (var consumer in plugin.Capabilities.OfType<ISourceFactoryHostConsumer>())
             {
                 try { consumer.InitializeSourceFactoryHost(captureHost); }
@@ -353,7 +337,7 @@ public partial class App : Avalonia.Application
             }
 
             var owner = desktop.Windows.FirstOrDefault(window => window.IsActive) ?? mainWindow;
-            return mainWindow.ShowContributedOptionsAsync(OptionsContributedPage.GetCategoryId(pluginId, pageId), owner);
+            return mainWindow.ShowContributedOptionsAsync(OptionsPluginPage.GetCategoryId(pluginId, pageId), owner);
         }).ConfigureAwait(false);
     }
 

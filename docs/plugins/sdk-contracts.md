@@ -40,10 +40,9 @@ host service contracts implemented by the host, not by copied helper source.
 - `IModalPluginCapability`
   - Declares modal descriptors with size hints, permission requirements, and typed input/output contracts
   - Uses `ModalPayload` (`TypeId` + value) for input/output envelopes
-- `IOptionsPageCapability` (`Capabilities.Options`)
-  - Contributes a first-class management page to Tools > Options (`OptionsPageDescriptor`), rendered next
-    to Collections instead of a plugin-owned floating window
-  - `CreateOptionsPage()` returns an embeddable control; the host owns navigation and disposal
+- `IPluginConfigurationCapability` (`Capabilities.Configuration`)
+  - The single mechanism for contributing pages to Tools > Options (`PluginConfigurationDescriptor`)
+  - Contributes one or more pages; each page is rendered in the Options sidebar and owns its content
 - `ICliPluginCapability`
   - Declares CLI command contributions (`CliCommandContribution`)
   - Supports new command registration and extension-point contributions for built-in host commands
@@ -72,6 +71,14 @@ host service contracts implemented by the host, not by copied helper source.
     `IOnlineMetadataConsumer.InitializeOnlineMetadata` and `IOnlineMetadataService`, so a
     generator owns templates and rendering, never site parsing or fetching.
   - See [online metadata sources](online-metadata.md) for the shipped source plugins.
+- `IDescriptionGeneratorCapability` (`Capabilities.Media`)
+  - Carries a stable `ImplementationId`, a user-facing `ImplementationName`, the generated-metadata
+    `Schema` and `GenerateAsync(DescriptionContext, CancellationToken)`.
+  - One contract covers template-backed and AI-backed generators; whether a generator calls a model is an
+    implementation detail. The host persists `ImplementationId` to pick among installed generators, so keep
+    it stable, and shows `ImplementationName` in the Options implementation picker.
+  - `IDescriptionGenerationPlanner.GetPlan()` stays optional and provider-neutral: it discloses the
+    configured provider and context limits without contacting it.
 - `IActionProvider` (`Capabilities.Actions`)
   - Returns item-specific `SkyAction` instances through `GetActions(Item)`.
   - `Item` is an SDK context containing a stable identifier and provider metadata;
@@ -87,18 +94,24 @@ host service contracts implemented by the host, not by copied helper source.
 modal `ConfigureAsync` contract. Recompile configuration plugins against SDK 2.0; remove their
 configuration Windows and the descriptor's Width/Height arguments. Other capabilities are unchanged.
 
-- `PluginConfigurationDescriptor(ConfigurationId, Title, Group)` identifies one page per plugin. Keep the ID
+SDK 3.0 (#1340) makes this the only Options mechanism: plugins contribute one or more pages through
+`Configurations`, operational surfaces such as the catalog contacts manager or the AI provider settings
+are configuration pages too, and `IOptionsPageCapability` no longer exists.
+
+- `PluginConfigurationDescriptor(ConfigurationId, Title, Group, Order)` identifies one page. Keep the ID
   stable; the host uses plugin ID plus configuration ID, not the possibly duplicated/translated title.
   `Group` is optional: pages sharing a group are nested under one parent in the Options sidebar, while
-  pages without a group stay top-level.
+  pages without a group stay top-level. `Order` sorts plugin pages; lower values come first.
 - Return a fresh `PluginConfigurationPage` for each Options session. Its `createContent` callback must
   return an embeddable Avalonia `Control`, never a `Window`. The framework-neutral `object` boundary
   keeps Avalonia out of the abstractions/runtime assemblies. Content is created lazily on the UI thread.
 - Load `request.CurrentSettings` into a private editor. The page and control are retained when navigating,
   searching, or disabling/re-enabling the plugin within the same dialog.
 - The page's `AcceptAsync` callback validates and returns a snapshot in `PluginConfigurationResult`.
-  It may run repeatedly after a failed Save. It must not save, change consumers, or perform external side
-  effects. A validation failure stays inline on that page and prevents Options from closing.
+  It may run repeatedly after a failed Save. Plugin-side work belongs here, not in `CreatePageAsync`:
+  a page that manages host state accepts by performing that work and returning `request.CurrentSettings`
+  unchanged, while a settings page must not persist settings or change consumers itself.
+  A validation failure stays inline on that page and prevents Options from closing.
 - A draft that cannot be created or embedded is reported inline on its page but contributes no settings,
   so it does not block saving built-in or other plugin settings. Its category remains available for review.
 - The host validates all visited, enabled pages before committing through `PluginConfigurationStore`,
@@ -116,27 +129,20 @@ See `Plugins/SkyCD.Plugin.Sample.Config/SampleConfigurationPlugin.cs` and
 `SampleConfigurationPage.axaml` for the editor, lazy control and acceptance callbacks. The four production
 examples are AudioCd, EBook, EComic and Fonts. Discovery remains assembly/capability based.
 
-## Plugin-contributed Options pages (SDK 3.0, #1105)
+## Navigation into contributed pages (SDK 3.0, #1105, #1340)
 
-`IOptionsPageCapability` lets a feature plugin add a first-class management page to Tools > Options
-instead of opening its own window. It is for operational surfaces such as managing catalog locations;
-settings drafts stay on `IPluginConfigurationCapability`.
+`IOptionsNavigationConsumer` lets a plugin ask the host to open one of its configuration pages, for
+example from a menu command. The host passes a callback that takes a
+`PluginConfigurationDescriptor.ConfigurationId`, opens Options with that page selected, and completes when
+Options closes.
 
-- `OptionsPageDescriptor(PageId, Title, Order, Group)` identifies the page. Keep `PageId` stable: the host
-  persists the selection as plugin ID plus page ID, not the translated title. `Title` and `Group` are read
-  whenever the navigation is rebuilt, so a language change inside Options retranslates them. `Order` sorts
-  contributed pages, which are placed next to Collections. An optional `Group` renders the page under a
-  non-selectable sidebar header shared with the other pages of that plugin; keep grouped pages' orders
-  contiguous so the group stays together.
-- `CreateOptionsPage()` returns an embeddable Avalonia `Control`, never a `Window`, and is called once
-  per Options session on the UI thread. The host keeps the page across navigation/search and disposes
-  the content when Options closes.
-- A page that cannot be created or embedded is reported inline. The page is hidden while its plugin is
-  disabled.
-- Pages read host state through SDK contracts (for example `ILocationApi.IsCatalogOpen`) and render their
-  own empty/unavailable states; the host stays feature-agnostic.
+- The page must be listed in the plugin's `IPluginConfigurationCapability.Configurations`; an unknown
+  configuration ID is reported inline on the plugin page instead of opening a window.
+- Other feature code reads host state through SDK contracts (for example `ILocationApi.IsCatalogOpen`) and
+  renders its own empty/unavailable states; the host stays feature-agnostic.
 
-See `Plugins/SkyCD.Plugin.Feature.Locations/LocationsPlugin.cs` for the reference implementation.
+See `Plugins/SkyCD.Plugin.Feature.Locations/LocationsPlugin.cs` and
+`Plugins/SkyCD.Plugin.Feature.Loans/LoansPlugin.cs` for reference implementations.
 
 ## Catalog data-loss preflight (SDK 3.0)
 

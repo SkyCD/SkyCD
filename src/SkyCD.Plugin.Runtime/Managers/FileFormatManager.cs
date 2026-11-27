@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using Avalonia.Platform.Storage;
 using SkyCD.SDK.Capabilities.FileFormats;
 using SkyCD.Plugin.Runtime.Exceptions;
-using SkyCD.SDK;
+using SkyCD.SDK.Plugins;
 
 namespace SkyCD.Plugin.Runtime.Managers;
 

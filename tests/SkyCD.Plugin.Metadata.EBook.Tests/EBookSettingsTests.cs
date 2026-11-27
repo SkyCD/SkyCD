@@ -161,7 +161,7 @@ public sealed class EBookSettingsTests
     [Fact]
     public void ConfigurationPlugin_DescribesItsSurface()
     {
-        var descriptor = new EBookConfigurationPlugin().Configuration;
+        var descriptor = Assert.Single(new EBookConfigurationPlugin().Configurations);
 
         Assert.Equal("ebook.settings", descriptor.ConfigurationId);
         Assert.Equal("eBook", descriptor.Title);

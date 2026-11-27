@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.SDK;
+using SkyCD.SDK.Plugins;
 using SkyCD.SDK.Capabilities.Configuration;
 using SkyCD.Plugin.Runtime.Managers;
 
@@ -33,12 +33,15 @@ public sealed class PluginConfigurationManager(PluginManager pluginManager, Plug
 
             try
             {
-                registrations.Add(new PluginConfigurationRegistration(plugin.Id, plugin.Name,
-                    capability.Configuration));
+                var index = 0;
+                foreach (var descriptor in capability.Configurations)
+                {
+                    registrations.Add(new PluginConfigurationRegistration(plugin.Id, plugin.Name, descriptor, index++));
+                }
             }
             catch (Exception exception)
             {
-                // A stale plugin can throw binding errors while reading its own descriptor; isolate it so
+                // A stale plugin can throw binding errors while reading its own descriptors; isolate it so
                 // the remaining plugins still register and the Options dialog stays usable.
                 PluginFailure.Publish(capability.GetType(), "configure", exception);
             }
@@ -46,26 +49,28 @@ public sealed class PluginConfigurationManager(PluginManager pluginManager, Plug
 
         return registrations
             .OrderBy(p => p.PluginName, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(p => p.PluginId, StringComparer.OrdinalIgnoreCase).ToArray();
+            .ThenBy(p => p.PluginId, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(p => p.Descriptor.Order)
+            .ThenBy(p => p.DescriptorIndex).ToArray();
     }
 
     /// <summary>Loads stored settings into a new draft without creating UI or persisting anything.</summary>
-    public Task<PluginConfigurationOutcome> CreatePageAsync(string pluginId, TimeSpan timeout,
+    public Task<PluginConfigurationOutcome> CreatePageAsync(string pluginId, string configurationId, TimeSpan timeout,
         CancellationToken cancellationToken = default)
     {
         var capability = ResolveCapability(pluginId);
-        if (capability is null)
+        if (capability is null || !OffersConfiguration(capability, configurationId))
             return Task.FromResult(new PluginConfigurationOutcome
             {
                 Status = PluginConfigurationStatus.NotSupported,
-                Error = $"Plugin '{pluginId}' does not provide a configuration surface."
+                Error = $"Plugin '{pluginId}' does not provide a configuration page '{configurationId}'."
             });
 
         return RunAsync(pluginId, capability.GetType(), async token =>
         {
             var task = capability.CreatePageAsync(new PluginConfigurationRequest
             {
-                ConfigurationId = capability.Configuration.ConfigurationId,
+                ConfigurationId = configurationId,
                 CurrentSettings = store.GetSettings(pluginId)
             }, token);
             try
@@ -168,4 +173,18 @@ public sealed class PluginConfigurationManager(PluginManager pluginManager, Plug
     private IPluginConfigurationCapability? ResolveCapability(string? pluginId) => pluginManager.AvailablePlugins
         .Where(p => p.Id.Equals(pluginId, StringComparison.OrdinalIgnoreCase))
         .SelectMany(p => p.Capabilities.OfType<IPluginConfigurationCapability>()).FirstOrDefault();
+
+    private static bool OffersConfiguration(IPluginConfigurationCapability capability, string configurationId)
+    {
+        try
+        {
+            return capability.Configurations.Any(descriptor =>
+                descriptor.ConfigurationId.Equals(configurationId, StringComparison.OrdinalIgnoreCase));
+        }
+        catch (Exception exception)
+        {
+            PluginFailure.Publish(capability.GetType(), "configure", exception);
+            return false;
+        }
+    }
 }

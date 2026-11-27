@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Controls;
+using Avalonia.Media;
 using SkyCD.Plugin.Feature.MotionDetector.Capture;
 using SkyCD.Plugin.Feature.MotionDetector.Configuration;
 using SkyCD.Plugin.Feature.MotionDetector.Detectors;
@@ -13,7 +15,7 @@ using SkyCD.Plugin.Feature.MotionDetector.Views;
 using SkyCD.SDK.Capabilities;
 using SkyCD.SDK.Capabilities.Sources;
 using SkyCD.SDK.Capabilities.Catalog;
-using SkyCD.SDK.Capabilities.Options;
+using SkyCD.SDK.Capabilities.Configuration;
 using SkyCD.SDK.Capabilities.Storage;
 using SkyCD.SDK.Localization;
 using SkyCD.UI.Localization;
@@ -26,7 +28,7 @@ namespace SkyCD.Plugin.Feature.MotionDetector;
 /// </summary>
 public sealed class MotionDetectorPlugin : IPluginCapability, IActivatablePluginCapability,
     ISourceFactoryPluginCapability, ISourceFactoryHostConsumer, IPluginStorageConsumer,
-    IOptionsPageCapability, ILocalizationPluginCapability, ICatalogLifecyclePluginCapability
+    IPluginConfigurationCapability, ILocalizationPluginCapability, ICatalogLifecyclePluginCapability
 {
     private const string ProviderIdentifier = "motion-detector";
 
@@ -323,12 +325,43 @@ public sealed class MotionDetectorPlugin : IPluginCapability, IActivatablePlugin
     }
 
     /// <inheritdoc />
-    public OptionsPageDescriptor OptionsPage =>
-        new("motion-detector", Get(MotionDetectorKeys.OptionsPage), 20);
+    public IReadOnlyList<PluginConfigurationDescriptor> Configurations =>
+        [new(ProviderIdentifier, Get(MotionDetectorKeys.OptionsPage), Order: -40)];
 
     /// <inheritdoc />
-    public object CreateOptionsPage() =>
-        new MotionDetectorOptionsView { DataContext = new MotionDetectorOptionsViewModel(this) };
+    public Task<PluginConfigurationPage> CreatePageAsync(PluginConfigurationRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!request.ConfigurationId.Equals(ProviderIdentifier, StringComparison.OrdinalIgnoreCase))
+        {
+            return Task.FromResult(new PluginConfigurationPage(
+                () => new TextBlock
+                {
+                    Text = $"Unsupported configuration '{request.ConfigurationId}'.",
+                    TextWrapping = TextWrapping.Wrap
+                },
+                _ => Task.FromResult(new PluginConfigurationResult
+                {
+                    Success = false,
+                    Error = $"Unsupported configuration '{request.ConfigurationId}'."
+                })));
+        }
+
+        var view = new MotionDetectorOptionsView { DataContext = new MotionDetectorOptionsViewModel(this) };
+        return Task.FromResult(new PluginConfigurationPage(
+            () => view,
+            token =>
+            {
+                token.ThrowIfCancellationRequested();
+                return Task.FromResult(new PluginConfigurationResult
+                {
+                    Success = true,
+                    Settings = request.CurrentSettings
+                });
+            }));
+    }
 
     /// <inheritdoc />
     public IReadOnlyDictionary<string, string> GetTranslations() => MotionDetectorTranslations.All;
