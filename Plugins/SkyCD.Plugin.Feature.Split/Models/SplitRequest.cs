@@ -1,6 +1,6 @@
-namespace SkyCD.Presentation.Catalog.Split;
+namespace SkyCD.Plugin.Feature.Split.Models;
 
-/// <summary>One requested split run: which catalog entries, where the parts go, and where each part stops.</summary>
+/// <summary>One requested split run: where the parts go and where each part stops.</summary>
 public sealed record SplitRequest
 {
     /// <summary>Gets the display name of the source catalog the parts are cut from.</summary>

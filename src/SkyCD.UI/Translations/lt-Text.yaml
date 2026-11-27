@@ -1,4 +1,4 @@
-text.Done: "Atlikta."
+﻿text.Done: "Atlikta."
 text.Type: "Tipas"
 text.Size: "Dydis"
 text.CreatedANewCatalog: "Sukurtas naujas katalogas."
@@ -315,5 +315,3 @@ text.PluginUninstallNotCatalogOwned: "šis įskiepis nebuvo įdiegtas per SkyCD,
 text.PluginUninstallFilesInUse: "įskiepio failai naudojami arba tik skaitomi, todėl nieko nebuvo ištrinta."
 text.PluginFilterNoMatches: "Joks įskiepis neatitinka filtro."
 text.PluginMarketplaceFilterNoMatches: "Joks rinkos įskiepis neatitinka filtro."
-text.SplitFileMenu: "S_kaidyti..."
-text.SplitNoWritableFormat: "Nėra katalogo formato, kurį būtų galima įrašyti ir vėl atidaryti. Patikrinkite papildinių nuostatas."

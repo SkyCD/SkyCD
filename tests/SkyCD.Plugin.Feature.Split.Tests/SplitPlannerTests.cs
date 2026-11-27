@@ -8,100 +8,95 @@ using System.Threading.Tasks;
 using SkyCD.Documents;
 using SkyCD.Documents.Collections;
 using SkyCD.Documents.Enum;
-using SkyCD.Plugin.FileFormat.Json;
-using SkyCD.Plugin.FileFormat.LegacySkyCD;
 using SkyCD.Plugin.FileFormat.LegacySkyCD.Models;
-using SkyCD.Plugin.Runtime.Managers;
-using SkyCD.Presentation.Catalog.Split;
+using SkyCD.Plugin.Feature.Split.Exceptions;
+using SkyCD.Plugin.Feature.Split.Models;
+using SkyCD.Plugin.Feature.Split.Parsing;
+using SkyCD.SDK.Capabilities.Catalog;
 using SkyCD.SDK.Capabilities.FileFormats;
 using SkyCD.TestSupport;
 using Xunit;
 
-namespace SkyCD.App.Tests;
+namespace SkyCD.Plugin.Feature.Split.Tests;
 
-public sealed class CatalogSplitServiceTests
+public sealed class SplitPlannerTests
 {
-    private const string JsonFormatId = "skycd-json";
-    private const string LegacyFormatId = "legacy-scd";
-
     [Fact]
     public async Task Split_NamesPartsAndPreservesEveryEntryInOrder()
     {
         using var workspace = new TestWorkspace();
-        var entries = SampleEntries();
+        var catalog = SampleCatalog();
         var output = workspace.CreateDirectory("parts");
-        var service = CreateService();
 
-        var result = await service.SplitAsync(entries, [],
-            Request(output, "part #N.json", JsonFormatId, maxEntries: 5),
-            _ => Task.FromResult(true), progress: null, CancellationToken.None);
+        var result = await Planner(catalog).SplitAsync(catalog.Entries(),
+            Request(output, "part #N.json", TestCatalog.JsonFormatId, maxEntries: 5),
+            _ => Task.FromResult(true), progress: null, cancellationToken: CancellationToken.None);
 
-        Assert.Equal(13, entries.Count);
+        Assert.Equal(13, catalog.Documents.Count);
         Assert.Equal(["part #1.json", "part #2.json", "part #3.json"],
             result.Parts.Select(part => Path.GetFileName(part.Path)));
         Assert.Equal([5, 5, 3], result.Parts.Select(part => part.EntryCount));
         Assert.Equal(13, result.TotalEntries);
         Assert.Equal(
-            entries.Select(Describe),
-            (await ReadJsonBackAsync(CreateManager(), result.Parts)).Select(Describe));
+            catalog.Documents.Select(Describe),
+            (await ReadJsonBackAsync(catalog, result.Parts)).Select(Describe));
     }
 
     [Fact]
     public async Task Split_LegacyScdKeepsEntryBoundariesAndReopens()
     {
         using var workspace = new TestWorkspace();
-        var entries = SampleEntries();
+        var catalog = SampleCatalog();
         var output = workspace.CreateDirectory("parts");
-        var service = CreateService();
 
-        var result = await service.SplitAsync(entries, [],
-            Request(output, "part #N.scd", LegacyFormatId, maxEntries: 5),
-            _ => Task.FromResult(true), progress: null, CancellationToken.None);
+        var result = await Planner(catalog).SplitAsync(catalog.Entries(),
+            Request(output, "part #N.scd", TestCatalog.LegacyFormatId, maxEntries: 5),
+            _ => Task.FromResult(true), progress: null, cancellationToken: CancellationToken.None);
 
         Assert.Equal(["part #1.scd", "part #2.scd", "part #3.scd"],
             result.Parts.Select(part => Path.GetFileName(part.Path)));
         Assert.Equal([5, 5, 3], result.Parts.Select(part => part.EntryCount));
         Assert.Equal(
-            entries.Select(entry => entry.Name),
-            (await ReadLegacyBackAsync(CreateManager(), result.Parts)).SelectMany(catalog => catalog.Entries).Select(entry => entry.Path));
+            catalog.Documents.Select(static entry => entry.Name),
+            (await ReadLegacyBackAsync(catalog, result.Parts))
+                .SelectMany(static legacy => legacy.Entries)
+                .Select(static entry => entry.Path));
     }
 
     [Fact]
     public async Task Split_HonoursTheSizeLimitAgainstTheWrittenFiles()
     {
         using var workspace = new TestWorkspace();
-        var entries = SampleEntries();
+        var catalog = SampleCatalog();
         var output = workspace.CreateDirectory("parts");
-        var service = CreateService();
 
-        var result = await service.SplitAsync(entries, [],
-            Request(output, "part #N.json", JsonFormatId, maxEntries: 100, maxBytes: 900),
-            _ => Task.FromResult(true), progress: null, CancellationToken.None);
+        var result = await Planner(catalog).SplitAsync(catalog.Entries(),
+            Request(output, "part #N.json", TestCatalog.JsonFormatId, maxEntries: 100, maxBytes: 900),
+            _ => Task.FromResult(true), progress: null, cancellationToken: CancellationToken.None);
 
         Assert.True(result.Parts.Count > 1, "The size limit should force more than one part.");
         Assert.All(result.Parts, part =>
             Assert.True(new FileInfo(part.Path).Length <= 900, $"{part.Path} is over the size limit."));
-        Assert.Equal(entries.Select(Describe),
-            (await ReadJsonBackAsync(CreateManager(), result.Parts)).Select(Describe));
+        Assert.Equal(catalog.Documents.Select(Describe),
+            (await ReadJsonBackAsync(catalog, result.Parts)).Select(Describe));
     }
 
     [Fact]
     public async Task Split_LeavesTheSourceCatalogUntouched()
     {
         using var workspace = new TestWorkspace();
-        var entries = SampleEntries();
-        var service = CreateService();
+        var catalog = SampleCatalog();
         var source = workspace.GetPath("source.json");
-        await service.SplitAsync(entries, [],
-            Request(workspace.GetPath("seed"), "seed #N.json", JsonFormatId, maxEntries: 100),
-            _ => Task.FromResult(true), progress: null, CancellationToken.None);
+        await Planner(catalog).SplitAsync(catalog.Entries(),
+            Request(workspace.GetPath("seed"), "seed #N.json", TestCatalog.JsonFormatId, maxEntries: 100),
+            _ => Task.FromResult(true), progress: null, cancellationToken: CancellationToken.None);
         File.Move(Path.Combine(workspace.GetPath("seed"), "seed #1.json"), source);
         var before = File.ReadAllBytes(source);
         var written = File.GetLastWriteTimeUtc(source);
 
-        await service.SplitAsync(entries, [],
-            Request(workspace.CreateDirectory("parts"), "part #N.json", JsonFormatId, maxEntries: 4),
-            _ => Task.FromResult(true), progress: null, CancellationToken.None);
+        await Planner(catalog).SplitAsync(catalog.Entries(),
+            Request(workspace.CreateDirectory("parts"), "part #N.json", TestCatalog.JsonFormatId, maxEntries: 4),
+            _ => Task.FromResult(true), progress: null, cancellationToken: CancellationToken.None);
 
         Assert.Equal(before, File.ReadAllBytes(source));
         Assert.Equal(written, File.GetLastWriteTimeUtc(source));
@@ -111,13 +106,12 @@ public sealed class CatalogSplitServiceTests
     public async Task Split_WritesOnlyInsideTheChosenOutputFolder()
     {
         using var workspace = new TestWorkspace();
-        var entries = SampleEntries();
+        var catalog = SampleCatalog();
         var output = workspace.CreateDirectory("parts");
-        var service = CreateService();
 
-        await Assert.ThrowsAsync<SplitPatternException>(() => service.SplitAsync(entries, [],
-            Request(output, @"..\escape #N.json", JsonFormatId, maxEntries: 4),
-            _ => Task.FromResult(true), progress: null, CancellationToken.None));
+        await Assert.ThrowsAsync<SplitPatternException>(() => Planner(catalog).SplitAsync(catalog.Entries(),
+            Request(output, @"..\escape #N.json", TestCatalog.JsonFormatId, maxEntries: 4),
+            _ => Task.FromResult(true), progress: null, cancellationToken: CancellationToken.None));
 
         Assert.Empty(Directory.GetFiles(output));
         Assert.False(File.Exists(workspace.GetPath("escape #1.json")));
@@ -127,14 +121,13 @@ public sealed class CatalogSplitServiceTests
     public async Task Split_RefusesToReplaceAnExistingPartAndWritesNothing()
     {
         using var workspace = new TestWorkspace();
-        var entries = SampleEntries();
+        var catalog = SampleCatalog();
         var output = workspace.CreateDirectory("parts");
         var occupied = workspace.CreateFile(Path.Combine("parts", "part #1.json"), "already here");
-        var service = CreateService();
 
-        await Assert.ThrowsAsync<SplitOutputConflictException>(() => service.SplitAsync(entries, [],
-            Request(output, "part #N.json", JsonFormatId, maxEntries: 11),
-            _ => Task.FromResult(true), progress: null, CancellationToken.None));
+        await Assert.ThrowsAsync<SplitOutputConflictException>(() => Planner(catalog).SplitAsync(catalog.Entries(),
+            Request(output, "part #N.json", TestCatalog.JsonFormatId, maxEntries: 11),
+            _ => Task.FromResult(true), progress: null, cancellationToken: CancellationToken.None));
 
         Assert.Equal("already here", File.ReadAllText(occupied));
         Assert.Equal(["part #1.json"], Directory.GetFiles(output).Select(Path.GetFileName));
@@ -144,13 +137,12 @@ public sealed class CatalogSplitServiceTests
     public async Task Split_CancellingLeavesNoPartBehind()
     {
         using var workspace = new TestWorkspace();
-        var entries = SampleEntries();
+        var catalog = SampleCatalog();
         var output = workspace.CreateDirectory("parts");
-        var service = CreateService();
         using var cancellation = new CancellationTokenSource();
 
-        await Assert.ThrowsAsync<OperationCanceledException>(() => service.SplitAsync(entries, [],
-            Request(output, "part #N.json", JsonFormatId, maxEntries: 4),
+        await Assert.ThrowsAsync<OperationCanceledException>(() => Planner(catalog).SplitAsync(catalog.Entries(),
+            Request(output, "part #N.json", TestCatalog.JsonFormatId, maxEntries: 4),
             _ => Task.FromResult(true), new CancelAfterFirstPart(cancellation), cancellation.Token));
 
         Assert.Empty(Directory.GetFileSystemEntries(output));
@@ -160,14 +152,13 @@ public sealed class CatalogSplitServiceTests
     public async Task Split_FailureRollsBackThePartsAlreadyWritten()
     {
         using var workspace = new TestWorkspace();
-        var entries = SampleEntries();
+        var catalog = SampleCatalog();
         var output = workspace.CreateDirectory("parts");
         var collision = workspace.CreateFile(Path.Combine("parts", "part #2.json"), "taken");
-        var service = CreateService();
 
-        await Assert.ThrowsAsync<SplitOutputConflictException>(() => service.SplitAsync(entries, [],
-            Request(output, "part #N.json", JsonFormatId, maxEntries: 4),
-            _ => Task.FromResult(true), progress: null, CancellationToken.None));
+        await Assert.ThrowsAsync<SplitOutputConflictException>(() => Planner(catalog).SplitAsync(catalog.Entries(),
+            Request(output, "part #N.json", TestCatalog.JsonFormatId, maxEntries: 4),
+            _ => Task.FromResult(true), progress: null, cancellationToken: CancellationToken.None));
 
         Assert.Equal("taken", File.ReadAllText(collision));
         Assert.Equal(["part #2.json"], Directory.GetFiles(output).Select(Path.GetFileName));
@@ -177,13 +168,12 @@ public sealed class CatalogSplitServiceTests
     public async Task Split_CreatesAMissingOutputFolderAndReportsProgress()
     {
         using var workspace = new TestWorkspace();
-        var entries = SampleEntries();
+        var catalog = SampleCatalog();
         var output = workspace.GetPath(Path.Combine("deep", "parts", "dir"));
-        var service = CreateService();
         var progress = new List<SplitProgress>();
 
-        var result = await service.SplitAsync(entries, [],
-            Request(output, "{source}-{n}-of-{total}.json", JsonFormatId, maxEntries: 8),
+        var result = await Planner(catalog).SplitAsync(catalog.Entries(),
+            Request(output, "{source}-{n}-of-{total}.json", TestCatalog.JsonFormatId, maxEntries: 8),
             _ => Task.FromResult(true), new CollectProgress(progress), CancellationToken.None);
 
         Assert.True(Directory.Exists(output));
@@ -199,19 +189,19 @@ public sealed class CatalogSplitServiceTests
     public async Task Split_ConfirmsLossyFormatOnceForTheWholeRun()
     {
         using var workspace = new TestWorkspace();
-        var entries = SampleEntries();
+        var catalog = SampleCatalog();
+        catalog.ScopeItems = LossyScopeItems();
         var output = workspace.CreateDirectory("parts");
-        var service = CreateService();
         var confirmations = 0;
 
-        var result = await service.SplitAsync(entries, LossyScopeItems(),
-            Request(output, "part #N.scd", LegacyFormatId, maxEntries: 5),
+        var result = await Planner(catalog).SplitAsync(catalog.Entries(),
+            Request(output, "part #N.scd", TestCatalog.LegacyFormatId, maxEntries: 5),
             preview =>
             {
                 confirmations++;
                 Assert.NotEmpty(preview.Items);
                 return Task.FromResult(true);
-            }, progress: null, CancellationToken.None);
+            }, progress: null, cancellationToken: CancellationToken.None);
 
         Assert.Equal(1, confirmations);
         Assert.Equal(3, result.Parts.Count);
@@ -221,18 +211,18 @@ public sealed class CatalogSplitServiceTests
     public async Task Split_ScopePreservingFormatNeedsNoConfirmation()
     {
         using var workspace = new TestWorkspace();
-        var entries = SampleEntries();
+        var catalog = SampleCatalog();
+        catalog.ScopeItems = LossyScopeItems();
         var output = workspace.CreateDirectory("parts");
-        var service = CreateService();
         var confirmations = 0;
 
-        var result = await service.SplitAsync(entries, LossyScopeItems(),
-            Request(output, "part #N.json", JsonFormatId, maxEntries: 5),
+        var result = await Planner(catalog).SplitAsync(catalog.Entries(),
+            Request(output, "part #N.json", TestCatalog.JsonFormatId, maxEntries: 5),
             _ =>
             {
                 confirmations++;
                 return Task.FromResult(true);
-            }, progress: null, CancellationToken.None);
+            }, progress: null, cancellationToken: CancellationToken.None);
 
         Assert.Equal(0, confirmations);
         Assert.Equal(3, result.Parts.Count);
@@ -242,13 +232,13 @@ public sealed class CatalogSplitServiceTests
     public async Task Split_DecliningTheLossConfirmationWritesNothing()
     {
         using var workspace = new TestWorkspace();
-        var entries = SampleEntries();
+        var catalog = SampleCatalog();
+        catalog.ScopeItems = LossyScopeItems();
         var output = workspace.CreateDirectory("parts");
-        var service = CreateService();
 
-        await Assert.ThrowsAsync<OperationCanceledException>(() => service.SplitAsync(entries, LossyScopeItems(),
-            Request(output, "part #N.scd", LegacyFormatId, maxEntries: 5),
-            _ => Task.FromResult(false), progress: null, CancellationToken.None));
+        await Assert.ThrowsAsync<OperationCanceledException>(() => Planner(catalog).SplitAsync(catalog.Entries(),
+            Request(output, "part #N.scd", TestCatalog.LegacyFormatId, maxEntries: 5),
+            _ => Task.FromResult(false), progress: null, cancellationToken: CancellationToken.None));
 
         Assert.Empty(Directory.GetFileSystemEntries(output));
     }
@@ -256,13 +246,13 @@ public sealed class CatalogSplitServiceTests
     [Fact]
     public async Task Plan_RespectsBothLimitsAtEntryBoundaries()
     {
-        var entries = UniformEntries(100);
-        var service = CreateService();
-        Task<long> Measure(string name, IReadOnlyList<CatalogDocument> slice, CancellationToken token) =>
-            Task.FromResult(slice.Sum(entry => entry.Size));
+        var catalog = new TestCatalog(UniformEntries(100));
+        var planner = new SplitPlanner(catalog.SaveHost);
+        Task<long> Measure(string name, IReadOnlyList<CatalogEntry> slice, CancellationToken token) =>
+            Task.FromResult(slice.Sum(static entry => entry.Size));
 
-        var plans = await service.PlanAsync(entries,
-            Request("output", "part #N.json", JsonFormatId, maxEntries: 5, maxBytes: 450),
+        var plans = await planner.PlanAsync(catalog.Entries(),
+            BoundRequest("output", "part #N.json", maxEntries: 5, maxBytes: 450),
             Measure, CancellationToken.None);
 
         Assert.Equal([(0, 2), (2, 3), (5, 2), (7, 3), (10, 3)],
@@ -276,13 +266,13 @@ public sealed class CatalogSplitServiceTests
     [Fact]
     public async Task Plan_KeepsASingleOversizedEntryAlone()
     {
-        var entries = SkewedEntries();
-        var service = CreateService();
-        Task<long> Measure(string name, IReadOnlyList<CatalogDocument> slice, CancellationToken token) =>
-            Task.FromResult(slice.Sum(entry => entry.Size));
+        var catalog = new TestCatalog(SkewedEntries());
+        var planner = new SplitPlanner(catalog.SaveHost);
+        Task<long> Measure(string name, IReadOnlyList<CatalogEntry> slice, CancellationToken token) =>
+            Task.FromResult(slice.Sum(static entry => entry.Size));
 
-        var plans = await service.PlanAsync(entries,
-            Request("output", "part #N.json", JsonFormatId, maxEntries: 13, maxBytes: 450),
+        var plans = await planner.PlanAsync(catalog.Entries(),
+            BoundRequest("output", "part #N.json", maxEntries: 13, maxBytes: 450),
             Measure, CancellationToken.None);
 
         Assert.Equal(13, plans.Sum(plan => plan.EntryCount));
@@ -295,25 +285,33 @@ public sealed class CatalogSplitServiceTests
     [Fact]
     public async Task Plan_RejectsAMissingEntryLimit()
     {
-        var service = CreateService();
+        var catalog = SampleCatalog();
+        var planner = new SplitPlanner(catalog.SaveHost);
 
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => service.PlanAsync(SampleEntries(),
-            Request("output", "part #N.json", JsonFormatId, maxEntries: 0),
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => planner.PlanAsync(catalog.Entries(),
+            BoundRequest("output", "part #N.json", maxEntries: 0, maxBytes: 0),
             null, CancellationToken.None));
     }
 
-    private static CatalogSplitService CreateService() =>
-        new(CreateManager());
+    private static SplitPlanner Planner(TestCatalog catalog) => new(catalog.SaveHost);
 
-    private static FileFormatManager CreateManager() =>
-        new([new LegacyScdPlugin(), new JsonCatalogPlugin()]);
+    private static SplitRequest Request(string output, string pattern, string formatId, int maxEntries,
+        long maxBytes = 0) => new()
+        {
+            SourceName = "gamez",
+            OutputFolder = output,
+            FileNamePattern = pattern,
+            FormatId = formatId,
+            MaxEntriesPerPart = maxEntries,
+            MaxPartSizeBytes = maxBytes
+        };
 
-    private static SplitRequest Request(string output, string pattern, string formatId, int maxEntries, long maxBytes = 0) => new()
+    private static SplitRequest BoundRequest(string output, string pattern, int maxEntries, long maxBytes) => new()
     {
         SourceName = "gamez",
         OutputFolder = output,
         FileNamePattern = pattern,
-        FormatId = formatId,
+        FormatId = TestCatalog.JsonFormatId,
         MaxEntriesPerPart = maxEntries,
         MaxPartSizeBytes = maxBytes
     };
@@ -321,52 +319,57 @@ public sealed class CatalogSplitServiceTests
     private static IReadOnlyList<FileFormatDataLossItem> LossyScopeItems() =>
         [new FileFormatDataLossItem("collections", "favorites", 2, "Fav")];
 
-    private static IReadOnlyList<CatalogDocument> UniformEntries(long size) => Enumerable.Range(1, 13).Select(index => new CatalogDocument
-    {
-        Id = $"file-{index}",
-        Name = $"File{index:00}.dat",
-        ParentId = null,
-        Type = CatalogDocumentType.File,
-        Size = size,
-        ChildrenCount = 0
-    }).ToArray();
+    private static TestCatalog SampleCatalog() => new(SampleEntries());
 
-    private static IReadOnlyList<CatalogDocument> SkewedEntries() => Enumerable.Range(1, 13).Select(index => new CatalogDocument
-    {
-        Id = $"file-{index}",
-        Name = $"File{index:00}.dat",
-        ParentId = null,
-        Type = CatalogDocumentType.File,
-        Size = index == 6 ? 2000 : 100,
-        ChildrenCount = 0
-    }).ToArray();
-
-    private static IReadOnlyList<CatalogDocument> SampleEntries() => Enumerable.Range(1, 13).Select(index => new CatalogDocument
-    {
-        Id = $"file-{index}",
-        Name = $"File{index:00}.dat",
-        ParentId = null,
-        Type = CatalogDocumentType.File,
-        Size = index * 100,
-        ChildrenCount = 0,
-        Status = index % 4 == 0 ? "damaged" : "ok",
-        Properties = new PropertiesCollection(new Dictionary<string, object?>
+    private static IReadOnlyList<CatalogDocument> UniformEntries(long size) => Enumerable.Range(1, 13)
+        .Select(index => new CatalogDocument
         {
-            ["Tags"] = index % 3 == 0 ? new List<string> { "keep", $"tag-{index}" } : new List<string>(),
-            ["Note"] = $"note-{index}"
-        })
-    }).ToArray();
+            Id = $"file-{index}",
+            Name = $"File{index:00}.dat",
+            ParentId = null,
+            Type = CatalogDocumentType.File,
+            Size = size,
+            ChildrenCount = 0
+        }).ToArray();
+
+    private static IReadOnlyList<CatalogDocument> SkewedEntries() => Enumerable.Range(1, 13)
+        .Select(index => new CatalogDocument
+        {
+            Id = $"file-{index}",
+            Name = $"File{index:00}.dat",
+            ParentId = null,
+            Type = CatalogDocumentType.File,
+            Size = index == 6 ? 2000 : 100,
+            ChildrenCount = 0
+        }).ToArray();
+
+    private static IReadOnlyList<CatalogDocument> SampleEntries() => Enumerable.Range(1, 13)
+        .Select(index => new CatalogDocument
+        {
+            Id = $"file-{index}",
+            Name = $"File{index:00}.dat",
+            ParentId = null,
+            Type = CatalogDocumentType.File,
+            Size = index * 100,
+            ChildrenCount = 0,
+            Status = index % 4 == 0 ? "damaged" : "ok",
+            Properties = new PropertiesCollection(new Dictionary<string, object?>
+            {
+                ["Tags"] = index % 3 == 0 ? new List<string> { "keep", $"tag-{index}" } : new List<string>(),
+                ["Note"] = $"note-{index}"
+            })
+        }).ToArray();
 
     private static async Task<IReadOnlyList<JsonElement>> ReadJsonBackAsync(
-        FileFormatManager manager, IReadOnlyList<SplitPart> parts)
+        TestCatalog catalog, IReadOnlyList<SplitPart> parts)
     {
         var elements = new List<JsonElement>();
         foreach (var part in parts)
         {
             await using var stream = File.OpenRead(part.Path);
-            var result = await manager.ReadAsync(new FileFormatReadRequest
+            var result = await catalog.Manager.ReadAsync(new FileFormatReadRequest
             {
-                FormatId = JsonFormatId,
+                FormatId = TestCatalog.JsonFormatId,
                 FileName = Path.GetFileName(part.Path),
                 Source = stream
             });
@@ -378,15 +381,15 @@ public sealed class CatalogSplitServiceTests
     }
 
     private static async Task<IReadOnlyList<LegacyScdCatalog>> ReadLegacyBackAsync(
-        FileFormatManager manager, IReadOnlyList<SplitPart> parts)
+        TestCatalog catalog, IReadOnlyList<SplitPart> parts)
     {
         var catalogs = new List<LegacyScdCatalog>();
         foreach (var part in parts)
         {
             await using var stream = File.OpenRead(part.Path);
-            var result = await manager.ReadAsync(new FileFormatReadRequest
+            var result = await catalog.Manager.ReadAsync(new FileFormatReadRequest
             {
-                FormatId = LegacyFormatId,
+                FormatId = TestCatalog.LegacyFormatId,
                 FileName = Path.GetFileName(part.Path),
                 Source = stream
             });
@@ -404,7 +407,7 @@ public sealed class CatalogSplitServiceTests
     {
         var tags = element.GetProperty("properties").TryGetProperty("Tags", out var tagElement) &&
             tagElement.ValueKind == JsonValueKind.Array
-            ? string.Join(",", tagElement.EnumerateArray().Select(tag => tag.GetString()))
+            ? string.Join(",", tagElement.EnumerateArray().Select(static tag => tag.GetString()))
             : string.Empty;
         var status = element.TryGetProperty("status", out var statusElement) &&
             statusElement.ValueKind == JsonValueKind.String
@@ -435,4 +438,3 @@ public sealed class CatalogSplitServiceTests
         public void Report(SplitProgress value) => sink.Add(value);
     }
 }
-

@@ -313,6 +313,4 @@ public static class TextKeys
     public const string PluginUninstallFilesInUse = "core.text.PluginUninstallFilesInUse";
     public const string PluginFilterNoMatches = "core.text.PluginFilterNoMatches";
     public const string PluginMarketplaceFilterNoMatches = "core.text.PluginMarketplaceFilterNoMatches";
-    public const string SplitFileMenu = "core.text.SplitFileMenu";
-    public const string SplitNoWritableFormat = "core.text.SplitNoWritableFormat";
 }

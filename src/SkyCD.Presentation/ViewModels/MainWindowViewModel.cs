@@ -150,7 +150,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public event EventHandler? OpenCatalogRequested;
     public event EventHandler? SaveCatalogAsRequested;
     public event EventHandler? SaveCatalogRequested;
-    public event EventHandler? SplitCatalogRequested;
     public event EventHandler? ExportCatalogRequested;
     public event EventHandler? AboutRequested;
     public event EventHandler? FindCatalogRequested;
@@ -1234,7 +1233,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     /// </summary>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveCatalogAsCommand))]
-    [NotifyCanExecuteChangedFor(nameof(SplitCatalogCommand))]
     private bool isSaveAsEnabled = true;
 
     /// <summary>Applies the file-format capabilities the host currently has loaded.</summary>
@@ -1884,9 +1882,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         StatusText = LocalizationService.Current.Format(TextKeys.SavedCatalogAs, GetDisplayFileName(filePath));
         IsDirtyDocument = false;
     }
-
-    [RelayCommand(CanExecute = nameof(IsSaveAsEnabled))]
-    private void SplitCatalog() => SplitCatalogRequested?.Invoke(this, EventArgs.Empty);
 
     [RelayCommand(CanExecute = nameof(IsExportEnabled))]
     private void ExportCatalog() => ExportCatalogRequested?.Invoke(this, EventArgs.Empty);
@@ -4730,14 +4725,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                         Command = ExportCatalogCommand,
                         IsEnabled = IsExportEnabled
                     },
-                    new MainMenuItemViewModel
-                    {
-                        Key = "file_split",
-                        Header = LocalizationService.Current.Get(TextKeys.SplitFileMenu),
-                        Command = SplitCatalogCommand,
-                        IsEnabled = IsSaveAsEnabled
-                    },
-                    Separator(),
                     ..GetFilePluginMenuItems(),
                     new MainMenuItemViewModel
                         { Header = LocalizationService.Current.Get(TextKeys.Properties), HotKey = "Alt+Enter", InputGesture = "Alt+Enter", Command = OpenPropertiesCommand },
@@ -4829,6 +4816,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         return menuItems;
     }
 
+    /// <summary>
+    /// File-menu contributions sit in their own group between Export and Properties. When no plugin
+    /// contributes, the group is absent entirely, so the File menu keeps no separator for an empty section.
+    /// </summary>
     private IReadOnlyList<MainMenuItemViewModel> GetFilePluginMenuItems()
     {
         var contributions = menuExtensionManager.GetMenuContributions("File");
@@ -4837,7 +4828,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             return [];
         }
 
-        var items = new List<MainMenuItemViewModel>();
+        var items = new List<MainMenuItemViewModel> { Separator() };
         foreach (var contribution in contributions)
         {
             var commandId = contribution.CommandId;
@@ -4845,7 +4836,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             {
                 Key = FilePluginMenuKey(commandId),
                 Header = contribution.Title,
-                Command = new RelayCommand(() => _ = ExecutePluginMenuCommandAsync(commandId))
+                Command = new RelayCommand(() => _ = ExecutePluginMenuCommandAsync(commandId)),
+                IsEnabled = !contribution.RequiresWritableFormat || IsSaveAsEnabled
             });
         }
 
@@ -4901,7 +4893,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         "motion-detector.capture",
         "skycd.gendesc.nfo",
-        "skycd.gendesc.description"
+        "skycd.gendesc.description",
+        "skycd.split"
     };
 
     internal async Task ExecutePluginMenuCommandAsync(string commandId)
@@ -5067,7 +5060,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         SetMenuEnabled(byKey, "file_open", IsOpenEnabled);
         SetMenuEnabled(byKey, "file_save_as", IsSaveAsEnabled);
         SetMenuEnabled(byKey, "file_export", IsExportEnabled);
-        SetMenuEnabled(byKey, "file_split", IsSaveAsEnabled);
+        foreach (var contribution in menuExtensionManager.GetMenuContributions("File")
+                     .Where(static contribution => contribution.RequiresWritableFormat))
+        {
+            SetMenuEnabled(byKey, FilePluginMenuKey(contribution.CommandId), IsSaveAsEnabled);
+        }
+
         var localFileCommands = menuExtensionManager.GetMenuContributions("File")
             .Where(contribution => contribution.RequiresLocalFile)
             .ToArray();

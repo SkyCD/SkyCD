@@ -6,10 +6,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using SkyCD.Presentation.Catalog.Split;
+using SkyCD.Plugin.Feature.Split.Exceptions;
+using SkyCD.Plugin.Feature.Split.Localization;
+using SkyCD.Plugin.Feature.Split.Models;
+using SkyCD.Plugin.Feature.Split.Parsing;
 using SkyCD.UI.Localization;
 
-namespace SkyCD.Presentation.ViewModels;
+namespace SkyCD.Plugin.Feature.Split.ViewModels;
 
 /// <summary>
 /// Collects the split limits, runs the split off the UI thread and publishes per-part progress, so the dialog
@@ -45,7 +48,7 @@ public sealed partial class SplitDialogViewModel : ObservableObject
     public int EntryCount { get; }
 
     /// <summary>Gets the source catalog entry count as dialog text.</summary>
-    public string EntrySummary => LocalizationService.Current.Format(UiKeys.SplitEntrySummary, EntryCount);
+    public string EntrySummary => LocalizationService.Current.Format(SplitKeys.EntrySummary, EntryCount);
 
     /// <summary>Gets the saving formats the parts can be written in.</summary>
     public IReadOnlyList<SplitFormatOption> Formats { get; }
@@ -81,7 +84,7 @@ public sealed partial class SplitDialogViewModel : ObservableObject
         OutcomeMessage = null;
         if (SelectedSplitFormat is not { } format)
         {
-            ErrorText = LocalizationService.Current.Get(TextKeys.SplitNoWritableFormat);
+            ErrorText = LocalizationService.Current.Get(SplitKeys.NoWritableFormat);
             return;
         }
 
@@ -101,19 +104,19 @@ public sealed partial class SplitDialogViewModel : ObservableObject
             var result = await Task.Run(() =>
                 runSplitAsync(request, progress, cancellation.Token), cancellation.Token).ConfigureAwait(true);
             ProgressPercent = 100;
-            OutcomeMessage = LocalizationService.Current.Format(UiKeys.SplitOutcome,
+            OutcomeMessage = LocalizationService.Current.Format(SplitKeys.Outcome,
                 SourceName, EntryCount, result.Parts.Count, request.OutputFolder);
             StatusText = OutcomeMessage;
             CloseRequested?.Invoke();
         }
         catch (OperationCanceledException)
         {
-            StatusText = LocalizationService.Current.Get(UiKeys.SplitCancelled);
+            StatusText = LocalizationService.Current.Get(SplitKeys.Cancelled);
         }
         catch (Exception exception)
         {
             ErrorText = exception.Message;
-            StatusText = LocalizationService.Current.Get(UiKeys.SplitFailed);
+            StatusText = LocalizationService.Current.Get(SplitKeys.Failed);
         }
         finally
         {
@@ -138,7 +141,7 @@ public sealed partial class SplitDialogViewModel : ObservableObject
     private void Report(SplitProgress progress)
     {
         ProgressPercent = progress.Percent;
-        StatusText = LocalizationService.Current.Format(UiKeys.SplitProgressStatus,
+        StatusText = LocalizationService.Current.Format(SplitKeys.ProgressStatus,
             progress.PartsWritten, progress.TotalParts, progress.EntriesWritten, progress.TotalEntries);
     }
 
@@ -153,7 +156,7 @@ public sealed partial class SplitDialogViewModel : ObservableObject
         var folder = OutputFolder.Trim();
         if (folder.Length == 0)
         {
-            failure = LocalizationService.Current.Get(UiKeys.SplitOutputFolderRequired);
+            failure = LocalizationService.Current.Get(SplitKeys.OutputFolderRequired);
             return false;
         }
 
@@ -170,7 +173,7 @@ public sealed partial class SplitDialogViewModel : ObservableObject
 
         if (!ExtensionMatchesFormat(pattern, format))
         {
-            failure = LocalizationService.Current.Format(UiKeys.SplitPatternExtensionMismatch,
+            failure = LocalizationService.Current.Format(SplitKeys.PatternExtensionMismatch,
                 Path.GetExtension(pattern), format.DisplayName, string.Join(", ", format.Extensions));
             return false;
         }
@@ -198,8 +201,8 @@ public sealed partial class SplitDialogViewModel : ObservableObject
             || entries <= 0)
         {
             failure = entryText.Length == 0
-                ? LocalizationService.Current.Get(UiKeys.SplitEntriesRequired)
-                : LocalizationService.Current.Format(UiKeys.SplitEntriesInvalid, entryText);
+                ? LocalizationService.Current.Get(SplitKeys.EntriesRequired)
+                : LocalizationService.Current.Format(SplitKeys.EntriesInvalid, entryText);
             return false;
         }
 
@@ -212,7 +215,7 @@ public sealed partial class SplitDialogViewModel : ObservableObject
 
         if (!double.TryParse(sizeText, NumberStyles.Float, CultureInfo.InvariantCulture, out var size) || size <= 0)
         {
-            failure = LocalizationService.Current.Format(UiKeys.SplitSizeInvalid, sizeText);
+            failure = LocalizationService.Current.Format(SplitKeys.SizeInvalid, sizeText);
             return false;
         }
 
@@ -226,7 +229,7 @@ public sealed partial class SplitDialogViewModel : ObservableObject
         };
         if (multiplier == 0)
         {
-            failure = LocalizationService.Current.Get(UiKeys.SplitSizeUnitRequired);
+            failure = LocalizationService.Current.Get(SplitKeys.SizeUnitRequired);
             return false;
         }
 
@@ -236,7 +239,7 @@ public sealed partial class SplitDialogViewModel : ObservableObject
         }
         catch (OverflowException)
         {
-            failure = LocalizationService.Current.Get(UiKeys.SplitSizeTooLarge);
+            failure = LocalizationService.Current.Get(SplitKeys.SizeTooLarge);
             return false;
         }
 

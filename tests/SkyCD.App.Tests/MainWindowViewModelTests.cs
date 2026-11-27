@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Avalonia.Input;
@@ -11,6 +12,7 @@ using SkyCD.Documents.Enum;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.UI.Controls.Lists;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.SDK.Capabilities.Menu;
 using SkyCD.UI.Localization;
 using Xunit;
 
@@ -1544,7 +1546,6 @@ public class MainWindowViewModelTests
             vm.SaveCatalogCommand,
             vm.SaveCatalogAsCommand,
             vm.ExportCatalogCommand,
-            vm.SplitCatalogCommand,
             vm.OpenPropertiesCommand,
             vm.ExitApplicationCommand
         ];
@@ -1561,7 +1562,6 @@ public class MainWindowViewModelTests
             localization.Get(TextKeys.Save),
             localization.Get(TextKeys.SaveAs),
             localization.Get(TextKeys.ExportFileMenu),
-            localization.Get(TextKeys.SplitFileMenu),
             localization.Get(TextKeys.Properties),
             localization.Get(TextKeys.Exit)
         ];
@@ -1650,31 +1650,56 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
-    public void SplitCatalog_FollowsSaveAsAvailabilityInCommandAndFileMenu()
+    public void FileMenu_WithoutFilePluginContribution_HasNoSplitEntryOrDanglingSeparator()
     {
         var vm = CreateViewModel();
 
-        Assert.True(vm.SplitCatalogCommand.CanExecute(null));
-        Assert.True(FileMenuItem(vm, vm.SplitCatalogCommand).IsEnabled);
-        Assert.Null(FileMenuItem(vm, vm.SplitCatalogCommand).HotKey);
-
-        vm.SetFileFormatAvailability(hasReadable: true, hasWritable: false);
-
-        Assert.False(vm.SplitCatalogCommand.CanExecute(null));
-        Assert.False(FileMenuItem(vm, vm.SplitCatalogCommand).IsEnabled);
+        Assert.DoesNotContain(vm.FileMenuItems, item => item.Key == "file_split");
+        Assert.DoesNotContain(vm.FileMenuItems,
+            item => item.Key is not null && item.Key.StartsWith("file_plugin_", StringComparison.Ordinal));
+        for (var index = 1; index < vm.FileMenuItems.Count; index++)
+        {
+            Assert.False(vm.FileMenuItems[index - 1].Header == "-" && vm.FileMenuItems[index].Header == "-",
+                $"File menu has adjacent separators at {index - 1} and {index}.");
+        }
     }
 
     [Fact]
-    public void SplitCatalogCommand_WithSubscriber_OnlyRaisesRequest()
+    public void FileMenu_ShowsFilePluginContributionOnlyWhileThePluginContributes()
     {
         var vm = CreateViewModel();
-        var raised = false;
-        vm.SplitCatalogRequested += (_, _) => raised = true;
+        var contribution = new MenuContribution("skycd.split", "Split", "File", 140, RequiresWritableFormat: true);
 
-        vm.SplitCatalogCommand.Execute(null);
+        vm.RefreshPluginMenuServices(new MenuExtensionManager([new StubMenuPlugin(contribution)]));
 
-        Assert.True(raised);
-        Assert.Null(vm.CurrentCatalogPath);
+        var items = vm.FileMenuItems.ToList();
+        var split = Assert.Single(items, item => item.Key == "file_plugin_skycd.split");
+        Assert.Equal("Split", split.Header);
+        Assert.True(split.IsEnabled);
+        var splitIndex = items.IndexOf(split);
+        Assert.Equal("-", items[splitIndex - 1].Header);
+        Assert.Equal("-", items[splitIndex + 1].Header);
+        Assert.Same(FileMenuItem(vm, vm.OpenPropertiesCommand), items[splitIndex + 2]);
+
+        vm.RefreshPluginMenuServices(new MenuExtensionManager([]));
+
+        Assert.DoesNotContain(vm.FileMenuItems, item => item.Key == "file_plugin_skycd.split");
+    }
+
+    [Fact]
+    public void FileMenu_FilePluginContribution_FollowsWritableFormatAvailability()
+    {
+        var vm = CreateViewModel();
+        var contribution = new MenuContribution("skycd.split", "Split", "File", 140, RequiresWritableFormat: true);
+        vm.RefreshPluginMenuServices(new MenuExtensionManager([new StubMenuPlugin(contribution)]));
+
+        vm.SetFileFormatAvailability(hasReadable: true, hasWritable: false);
+
+        Assert.False(Assert.Single(vm.FileMenuItems, item => item.Key == "file_plugin_skycd.split").IsEnabled);
+
+        vm.SetFileFormatAvailability(hasReadable: true, hasWritable: true);
+
+        Assert.True(Assert.Single(vm.FileMenuItems, item => item.Key == "file_plugin_skycd.split").IsEnabled);
     }
 
     [Fact]
@@ -1817,5 +1842,13 @@ public class MainWindowViewModelTests
     private static MainWindowViewModel CreateViewModel()
     {
         return MainWindowViewModel.CreateForInMemoryCatalog(TestCatalogEntries.Default());
+    }
+
+    private sealed class StubMenuPlugin(params MenuContribution[] contributions) : IMenuPluginCapability
+    {
+        public IReadOnlyCollection<MenuContribution> GetMenuContributions() => contributions;
+
+        public Task ExecuteMenuCommandAsync(string commandId, MenuCommandContext context,
+            CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 }
