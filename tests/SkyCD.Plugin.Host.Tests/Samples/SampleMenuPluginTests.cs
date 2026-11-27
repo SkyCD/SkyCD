@@ -10,7 +10,7 @@ using SkyCD.Plugin.Runtime.Discovery;
 using SkyCD.Plugin.Sample.Menu;
 using Xunit;
 
-namespace SkyCD.Plugin.Sample.Menu.Tests;
+namespace SkyCD.Plugin.Host.Tests.Samples;
 
 public sealed class SampleMenuPluginTests
 {

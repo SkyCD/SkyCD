@@ -27,14 +27,14 @@
 - `src/SkyCD.Plugin.Host`: host-side plugin routing/execution services.
 - `Plugins/`: functional plugin implementations discovered from assembly metadata and capabilities.
 - `Plugins/Shared/`: source linked into multiple plugin projects instead of a standalone assembly.
-- `Plugins/SkyCD.Plugin.Sample.*`: sample configuration, menu and modal plugins.
+- The configuration, menu and modal samples are published in standalone repositories under the SkyCD organization.
 - `tests/`: xUnit test projects organized per module (`SkyCD.App.Tests`, `SkyCD.Infrastructure.Tests`, etc.).
 - `tools/`: CI/publishing scripts and migration CLI.
 - `docs/`: architecture, migration, plugin SDK, legal/license, and implementation guides.
 - `legacy/`: archived VB.NET WinForms code; reference-only for migration context.
 
 ## Plugin Project Layout
-Every project under `Plugins/`, `Plugins/Shared` and `Plugins/SkyCD.Plugin.Sample.*` follows a
+Every project under `Plugins/` follows a
 role-based layout; full rules and examples are in
 [docs/plugins/plugin-project-layout.md](docs/plugins/plugin-project-layout.md).
 - Root files are capability entry types and `AssemblyInfo.cs` only.

@@ -6,7 +6,7 @@ using SkyCD.Plugin.Host.Modal;
 using SkyCD.Plugin.Sample.Modal;
 using Xunit;
 
-namespace SkyCD.Plugin.Host.Tests;
+namespace SkyCD.Plugin.Host.Tests.Samples;
 
 public class SampleModalPluginTests
 {
