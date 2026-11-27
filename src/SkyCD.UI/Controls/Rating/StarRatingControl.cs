@@ -399,7 +399,7 @@ public class StarRatingControl : Control, IRangeValueProvider
 
     internal static readonly Color FilledColor = Color.Parse("#E5B045");
 
-    internal static readonly Color HoverColor = Color.Parse("#F3CB70");
+    internal static readonly Color HoverColor = Color.Parse("#43B6DD");
 
     internal static readonly Color EmptyColor = Color.Parse("#8A8F98");
 
