@@ -10,6 +10,7 @@
     </PropertyGroup>
     <ItemGroup>
         <ProjectReference Include="../../src/SkyCD.SDK/SkyCD.SDK.csproj" />
+        <ProjectReference Include="../../src/SkyCD.UI/SkyCD.UI.csproj" />
     </ItemGroup>
     <ItemGroup>
         <!-- Shared with the other preview plugins: one bounded cover pipeline and one encode helper. -->
@@ -17,6 +18,9 @@
         <Compile Include="..\Shared\Preview\Export\CoverImageRenderer.cs" Link="Shared\Preview\Export\CoverImageRenderer.cs"/>
     </ItemGroup>
     <ItemGroup>
+        <PackageReference Include="Avalonia" Version="12.1.6" />
+        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+        <PackageReference Include="SkyCD.Resource.Icons.LlmBackends" Version="0.2.0" />
         <PackageReference Include="SkiaSharp" Version="3.119.4" />
         <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.4" />
         <PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="3.119.4" />

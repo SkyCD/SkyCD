@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using SkyCD.SDK.Capabilities.Configuration;
 using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Ai.Description.Exceptions;
 using SkyCD.Plugin.Ai.Description.Models;
@@ -12,7 +13,7 @@ using SkyCD.Plugin.Ai.Description.Sources;
 
 namespace SkyCD.Plugin.Ai.Description;
 
-public sealed partial class AiDescriptionPlugin : IGeneratedDescriptionCapability, IDescriptionGenerationPlanner, IAcpAgentSettingsCapability, IAiDescriptionImplementationCapability
+public sealed partial class AiDescriptionPlugin : IGeneratedDescriptionCapability, IDescriptionGenerationPlanner, IAiDescriptionImplementationCapability, IPluginConfigurationCapability
 {
     public const string PluginVersion = "1.0.0";
     private readonly string configurationPath;

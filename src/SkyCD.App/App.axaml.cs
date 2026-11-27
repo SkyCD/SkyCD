@@ -353,7 +353,7 @@ public partial class App : Avalonia.Application
             }
 
             var owner = desktop.Windows.FirstOrDefault(window => window.IsActive) ?? mainWindow;
-            return mainWindow.ShowContributedOptionsAsync(OptionsContributedPage.GetCategoryId(pluginId, pageId), owner);
+            return mainWindow.ShowContributedOptionsAsync(OptionsPluginPage.GetCategoryId(pluginId, pageId), owner);
         }).ConfigureAwait(false);
     }
 

@@ -83,12 +83,11 @@ public sealed class PluginOptionsTests : IDisposable
         var category = TestCategory(vm);
         Assert.Equal("Plugins", category.Title);
         Assert.Equal(1, vm.SettingCategories.Count(c => c.Title == "Plugins"));
-        Assert.All(vm.SettingCategories.Take(12), c => Assert.Null(c.PluginPage));
+        Assert.All(vm.SettingCategories.Take(11), c => Assert.Null(c.PluginPage));
         Assert.Equal("scan-completion", vm.SettingCategories[6].Id);
         Assert.Equal("toolbar", vm.SettingCategories[8].Id);
         Assert.Equal("mcp", vm.SettingCategories[9].Id);
-        Assert.Equal("acp", vm.SettingCategories[10].Id);
-        Assert.Equal("mcp-tools", vm.SettingCategories[11].Id);
+        Assert.Equal("mcp-tools", vm.SettingCategories[10].Id);
         vm.SelectedSettingCategory = category;
         Assert.False(vm.ShowPluginListSection);
         Assert.True(vm.ShowPluginSettingsSection);
@@ -117,24 +116,22 @@ public sealed class PluginOptionsTests : IDisposable
     {
         using var vm = CreateViewModel();
         var withoutAi = vm.SettingCategories.ToList();
-        Assert.Equal([0, 1, 3, 4, 6, 14, 15, 7, 9, 2, 5, 12],
-            withoutAi.Take(12).Select(category => category.BuiltInIndex));
+        Assert.Equal([0, 1, 3, 4, 6, 14, 15, 7, 9, 2, 12],
+            withoutAi.Take(11).Select(category => category.BuiltInIndex));
         Assert.Equal(["plugins", "language", "statuses", "custom-properties", "scan",
-            "scan-rules", "scan-completion", "details-columns", "toolbar", "mcp", "acp", "mcp-tools"],
-            withoutAi.Take(12).Select(category => category.Id));
-        Assert.All(withoutAi.Skip(12), category => Assert.Equal(-1, category.BuiltInIndex));
+            "scan-rules", "scan-completion", "details-columns", "toolbar", "mcp", "mcp-tools"],
+            withoutAi.Take(11).Select(category => category.Id));
+        Assert.All(withoutAi.Skip(11), category => Assert.Equal(-1, category.BuiltInIndex));
 
         vm.SetAiDescriptionAvailable(true);
         var categories = vm.SettingCategories.ToList();
-        Assert.Equal([0, 1, 3, 4, 6, 14, 15, 7, 9, 10, 11, 2, 5, 12],
-            categories.Take(14).Select(category => category.BuiltInIndex));
+        Assert.Equal([0, 1, 3, 4, 6, 14, 15, 7, 9, 10, 2, 12],
+            categories.Take(12).Select(category => category.BuiltInIndex));
         Assert.Equal("toolbar", categories[8].Id);
         Assert.Equal("ai-description", categories[9].Id);
-        Assert.Equal("ai-provider", categories[10].Id);
-        Assert.Equal((2, "mcp"), (categories[11].BuiltInIndex, categories[11].Id));
-        Assert.Equal((5, "acp"), (categories[12].BuiltInIndex, categories[12].Id));
-        Assert.Equal((12, "mcp-tools"), (categories[13].BuiltInIndex, categories[13].Id));
-        Assert.All(categories.Skip(14).Where(category => category.Id != "plugins-settings"), category =>
+        Assert.Equal((2, "mcp"), (categories[10].BuiltInIndex, categories[10].Id));
+        Assert.Equal((12, "mcp-tools"), (categories[11].BuiltInIndex, categories[11].Id));
+        Assert.All(categories.Skip(12).Where(category => category.Id != "plugins-settings"), category =>
         {
             Assert.Equal(-1, category.BuiltInIndex);
             Assert.NotNull(category.PluginPage);
@@ -250,12 +247,12 @@ public sealed class PluginOptionsTests : IDisposable
         using var vm = CreateViewModel();
         vm.SetAiDescriptionAvailable(true);
         var description = vm.SidebarEntries.Single(entry => entry.Category?.Id == "ai-description");
-        var provider = vm.SidebarEntries.Single(entry => entry.Category?.Id == "ai-provider");
+        var mcp = vm.SidebarEntries.Single(entry => entry.Category?.Id == "mcp");
         var descriptionIndex = vm.SidebarEntries.IndexOf(description);
         var header = vm.SidebarEntries[descriptionIndex - 1];
         Assert.True(header.IsGroupHeader);
         Assert.Equal(LocalizationService.Current.Get(UiKeys.AiGroup), header.Title);
-        Assert.Equal(descriptionIndex + 1, vm.SidebarEntries.IndexOf(provider));
+        Assert.Equal(descriptionIndex + 1, vm.SidebarEntries.IndexOf(mcp));
 
         var window = new OptionsWindow { DataContext = vm };
         window.Show();
@@ -271,7 +268,7 @@ public sealed class PluginOptionsTests : IDisposable
 
             window.KeyPressQwerty(PhysicalKey.ArrowDown, RawInputModifiers.None);
             Dispatcher.UIThread.RunJobs();
-            Assert.Equal("ai-provider", vm.SelectedSettingCategory?.Id);
+            Assert.Equal("mcp", vm.SelectedSettingCategory?.Id);
             Assert.False(vm.SelectedSidebarEntry!.IsGroupHeader);
 
             window.KeyPressQwerty(PhysicalKey.ArrowUp, RawInputModifiers.None);
@@ -612,7 +609,7 @@ public sealed class PluginOptionsTests : IDisposable
         ];
         foreach (var (capability, controlName, value, key) in cases)
         {
-            using var page = await capability.CreatePageAsync(new PluginConfigurationRequest { ConfigurationId = capability.Configuration.ConfigurationId });
+            using var page = await capability.CreatePageAsync(new PluginConfigurationRequest { ConfigurationId = capability.Configurations[0].ConfigurationId });
             var control = Assert.IsAssignableFrom<UserControl>(page.Content);
             control.FindControl<TextBox>(controlName)!.Text = value;
             var result = await page.AcceptAsync();
@@ -620,7 +617,7 @@ public sealed class PluginOptionsTests : IDisposable
             Assert.Equal(value, result.Settings[key]);
         }
         var audio = new AudioCdConfigurationPlugin();
-        using var audioPage = await audio.CreatePageAsync(new PluginConfigurationRequest { ConfigurationId = audio.Configuration.ConfigurationId });
+        using var audioPage = await audio.CreatePageAsync(new PluginConfigurationRequest { ConfigurationId = audio.Configurations[0].ConfigurationId });
         Assert.IsAssignableFrom<UserControl>(audioPage.Content).FindControl<CheckBox>("OfflineCheckBox")!.IsChecked = true;
         Assert.True(AudioCdSettings.Parse((await audioPage.AcceptAsync()).Settings).Offline);
     }
@@ -646,6 +643,8 @@ public sealed class OptionsTestCapability : IPluginConfigurationCapability, IPlu
     public static string Title { get; set; } = "Plugins";
     public static string? Group { get; set; }
     public PluginConfigurationDescriptor Configuration => new("options.test", Title, Group);
+
+    public IReadOnlyList<PluginConfigurationDescriptor> Configurations => [Configuration];
 
     public static void Reset()
     {

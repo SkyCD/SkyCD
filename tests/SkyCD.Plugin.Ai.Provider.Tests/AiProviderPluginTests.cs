@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Xunit;
 using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Ai.Provider.Exceptions;
+using SkyCD.Plugin.Ai.Provider.Models;
 using SkyCD.TestSupport;
 
 namespace SkyCD.Plugin.Ai.Provider.Tests;

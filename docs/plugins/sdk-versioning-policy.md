@@ -42,6 +42,24 @@ Only type and namespace names changed. `PluginId`, `FormatId`, attribute values,
 `[assembly: PluginId(...)]` strings and persisted plugin state keep their exact values. External authors
 update the `using` directives, rebuild against `SkyCD.SDK` 3.0 and reinstall the plugin.
 
+## SDK 3.0 Options unification (#1340)
+
+Tools > Options now lists every plugin page through `IPluginConfigurationCapability` only. Plugins may
+contribute several configuration pages, the descriptor gained `Order`, and the page's accept callback is
+the place for plugin-side work (managing host state) as well as settings validation. AI provider and ACP
+agent management moved out of the host into the plugins that own them.
+
+| Previous contract | SDK 3.0 replacement |
+|---|---|
+| `IOptionsPageCapability` / `OptionsPageDescriptor` | `IPluginConfigurationCapability.Configurations` with `PluginConfigurationDescriptor.Order` |
+| `IPluginConfigurationCapability.Configuration` (one page) | `IReadOnlyList<PluginConfigurationDescriptor> Configurations` |
+| Host-owned AI provider settings page (`IAiProviderSettingsCapability`) | Configuration page contributed by `SkyCD.Plugin.Ai.Provider`; settings stay plugin-owned |
+| Host-owned ACP agent settings page (`IAcpAgentSettingsCapability`) | Configuration page contributed by `SkyCD.Plugin.Ai.Description`; settings stay plugin-owned |
+| `AcpAgentChoice` / `AcpAgentSettings` in `SkyCD.SDK.Capabilities.Media` | Plugin-internal records in `SkyCD.Plugin.Ai.Description` |
+
+`IOptionsNavigationConsumer` remains: it still asks the host to open one of the plugin's configuration
+pages by `ConfigurationId`. Persisted plugin settings, configuration IDs and plugin IDs keep their values.
+
 ## SDK 2.0 / SkyCD v3 configuration migration (#828)
 
 The SDK major version is now `2.0.0` (previously the implicit `1.0.0`). Configuration is a breaking

@@ -1,5 +1,6 @@
 using Xunit;
 using SkyCD.SDK.Capabilities.Media;
+using SkyCD.Plugin.Ai.Provider.Models;
 using SkyCD.Plugin.Ai.Provider.Configuration;
 using SkyCD.Plugin.Ai.Provider.Exceptions;
 

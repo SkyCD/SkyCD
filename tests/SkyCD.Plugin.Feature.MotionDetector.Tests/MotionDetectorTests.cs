@@ -10,8 +10,8 @@ using SkyCD.Plugin.Feature.MotionDetector.Detectors;
 using SkyCD.Plugin.Feature.MotionDetector.Models;
 using SkyCD.SDK.Capabilities;
 using SkyCD.SDK.Capabilities.Capture;
+using SkyCD.SDK.Capabilities.Configuration;
 using SkyCD.SDK.Capabilities.Menu;
-using SkyCD.SDK.Capabilities.Options;
 using SkyCD.SDK.Capabilities.Storage;
 using SkyCD.TestSupport;
 using Xunit;
@@ -27,7 +27,8 @@ public sealed class MotionDetectorTests
 
         Assert.IsAssignableFrom<IActivatablePluginCapability>(plugin);
         Assert.IsAssignableFrom<ICaptureSourcePluginCapability>(plugin);
-        Assert.IsAssignableFrom<IOptionsPageCapability>(plugin);
+        var configuration = Assert.IsAssignableFrom<IPluginConfigurationCapability>(plugin);
+        Assert.Equal("motion-detector", Assert.Single(configuration.Configurations).ConfigurationId);
         Assert.IsNotAssignableFrom<IMenuPluginCapability>(plugin);
         Assert.Equal("motion-detector", plugin.ProviderId);
     }

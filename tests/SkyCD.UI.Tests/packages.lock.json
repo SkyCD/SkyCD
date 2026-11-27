@@ -1315,11 +1315,15 @@
       "skycd.plugin.ai.provider": {
         "type": "Project",
         "dependencies": {
+          "Avalonia": "[12.1.6, )",
+          "CommunityToolkit.Mvvm": "[8.4.2, )",
           "SkiaSharp": "[3.119.4, )",
           "SkiaSharp.NativeAssets.Linux": "[3.119.4, )",
           "SkiaSharp.NativeAssets.Win32": "[3.119.4, )",
           "SkiaSharp.NativeAssets.macOS": "[3.119.4, )",
-          "SkyCD.SDK": "[3.0.0, )"
+          "SkyCD.Resource.Icons.LlmBackends": "[0.2.0, )",
+          "SkyCD.SDK": "[3.0.0, )",
+          "SkyCD.UI": "[1.0.0, )"
         }
       },
       "skycd.plugin.feature.loans": {
