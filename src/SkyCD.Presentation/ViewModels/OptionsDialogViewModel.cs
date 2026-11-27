@@ -215,8 +215,9 @@ public partial class OptionsDialogViewModel : ObservableObject, IDisposable
                     Group: scanGroup),
                 new(ScanRulesCategoryId, LocalizationService.Current.Get(UiKeys.ExclusionByScanName),
                     ScanRulesCategoryIndex, Group: scanGroup),
+                // Post-scan behavior is not an exclusion, so the page stays top-level next to the group.
                 new(ScanCompletionCategoryId, LocalizationService.Current.Get(UiKeys.ScanCompletionPage),
-                    ScanCompletionCategoryIndex, Group: scanGroup),
+                    ScanCompletionCategoryIndex),
                 new("details-columns", LocalizationService.Current.Get(UiKeys.DetailsColumns), 7,
                     Group: uiGroup),
                 new(ToolbarCategoryId, LocalizationService.Current.Get(UiKeys.Toolbar), ToolbarCategoryIndex,
