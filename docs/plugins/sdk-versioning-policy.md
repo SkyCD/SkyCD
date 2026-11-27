@@ -38,6 +38,7 @@ unreleased `3.0.0` major, so no additional major bump is required and no transit
 | `clr-namespace:SkyCD.Plugin.Abstractions.Capabilities.Media;assembly=SkyCD.SDK` | `clr-namespace:SkyCD.SDK.Capabilities.Media;assembly=SkyCD.SDK` |
 | `SkyCD.SDK.Capabilities.Capture.*` (`ICaptureSourcePluginCapability`, `ICaptureSourceHostApi`, `CaptureSourceKind`, `CaptureDevice`, `CapturePreviewResult`, `CapturedCatalogFile`, …) | `SkyCD.SDK.Capabilities.Sources.*` (`ISourceFactoryPluginCapability`, `ISourceFactoryHostApi`, `SourceKind`, `SourceDevice`, `SourcePreviewResult`, `SourceFile`, …) |
 | `SkyCD.SDK.PluginFailure` | `SkyCD.SDK.Plugins.PluginFailure` |
+| `SkyCD.SDK.Capabilities.Catalog.ToolbarContribution` / `ToolbarButtonContribution` | `SkyCD.SDK.Capabilities.Toolbars.*` |
 | `SkyCD.SDK.Capabilities.Catalog.ILocationApi` (and the location exceptions, `CatalogLocationInfo`) | `SkyCD.SDK.Capabilities.Catalog.Locations.*` |
 | `SkyCD.SDK.Capabilities.Import.ICatalogImportPluginCapability` (and `ImportOutcome`) | `SkyCD.SDK.Capabilities.Catalog.*` |
 

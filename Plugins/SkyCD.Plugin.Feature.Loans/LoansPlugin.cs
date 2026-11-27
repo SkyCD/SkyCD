@@ -18,6 +18,7 @@ using SkyCD.SDK.Capabilities;
 using SkyCD.SDK.Capabilities.Catalog;
 using SkyCD.SDK.Capabilities.Configuration;
 using SkyCD.SDK.Capabilities.FileFormats;
+using SkyCD.SDK.Capabilities.Toolbars;
 using SkyCD.SDK.Capabilities.Menu;
 using SkyCD.SDK.Capabilities.Options;
 using SkyCD.SDK.Localization;

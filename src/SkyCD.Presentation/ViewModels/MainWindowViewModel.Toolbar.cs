@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using SkyCD.Documents;
 using SkyCD.Plugin.Host.Catalog;
 using SkyCD.SDK.Capabilities.Catalog;
+using SkyCD.SDK.Capabilities.Toolbars;
 using SkyCD.UI.Localization;
 
 namespace SkyCD.Presentation.ViewModels;
