@@ -12,9 +12,10 @@ namespace SkyCD.TestSupport.Tests;
 public sealed class SharedHelperDuplicationGateTests
 {
     [Theory]
-    [InlineData("ByteArrayMediaSource.cs", "tests/SkyCD.TestSupport/ByteArrayMediaSource.cs")]
-    [InlineData("TestHelpers.cs", null)]
-    public void HelperFile_ExistsOnlyAtTheCanonicalLocation(string fileName, string? canonicalRelativePath)
+    [InlineData("ByteArrayMediaSource.cs")]
+    [InlineData("TestWorkspace.cs")]
+    [InlineData("TestHelpers.cs")]
+    public void HelperFile_IsNotDuplicatedInSkyCD(string fileName)
     {
         var repositoryRoot = FindRepositoryRoot();
 
@@ -25,14 +26,13 @@ public sealed class SharedHelperDuplicationGateTests
             .Order(StringComparer.Ordinal)
             .ToArray();
 
-        string[] expected = canonicalRelativePath is null ? [] : [canonicalRelativePath];
-        Assert.Equal(expected, copies);
+        Assert.Empty(copies);
     }
 
     private const string DeclarationMarker = "class " + nameof(ByteArrayMediaSource);
 
     [Fact]
-    public void ByteArrayMediaSource_IsDeclaredOnlyInTestSupport()
+    public void ByteArrayMediaSource_IsDeclaredOnlyInTheTestingPackage()
     {
         var repositoryRoot = FindRepositoryRoot();
 
@@ -44,7 +44,8 @@ public sealed class SharedHelperDuplicationGateTests
             .Order(StringComparer.Ordinal)
             .ToArray();
 
-        Assert.Equal(["tests/SkyCD.TestSupport/ByteArrayMediaSource.cs"], declaringFiles);
+        Assert.Empty(declaringFiles);
+        Assert.Equal("SkyCD.Testing", typeof(ByteArrayMediaSource).Assembly.GetName().Name);
     }
 
     private static bool IsBuildOutput(string path) =>

@@ -130,6 +130,13 @@ are configuration pages too, and `IOptionsPageCapability` no longer exists.
 See the [Sample Configuration source](https://github.com/SkyCD/SkyCD.Plugin.Sample.Config/tree/main/src/SkyCD.Plugin.Sample.Config/Configuration) for the editor, lazy control and acceptance callbacks. The four production
 examples are AudioCd, EBook, EComic and Fonts. Discovery remains assembly/capability based.
 
+## Testing a standalone plugin
+
+Add `SkyCD.Testing` from the SkyCD GitHub Packages NuGet feed to the plugin's test project.
+Run the tests with `dotnet test` from the plugin repository. The package provides SDK-based
+assembly metadata checks, a recording host command API, temporary workspaces, and an in-memory
+media source. The Web Browser repository uses it to test URL handling and command notifications.
+
 ## Navigation into contributed pages (SDK 3.0, #1105, #1340)
 
 `IOptionsNavigationConsumer` lets a plugin ask the host to open one of its configuration pages, for

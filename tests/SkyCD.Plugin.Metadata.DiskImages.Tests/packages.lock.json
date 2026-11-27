@@ -788,6 +788,14 @@
         "resolved": "2.1.0",
         "contentHash": "rmQcrFXgcrqT9M6+xdxAK/JWx1vFuCRT8fTdce4ALdze2/8N5yMRW9Vmkresw+JpL+JC8zuC1HfDkrfVgBUIqA=="
       },
+      "SkyCD.Testing": {
+        "type": "Transitive",
+        "resolved": "3.0.0-alpha.1",
+        "contentHash": "QVCg5cvApCr+3MAea7NbutA12MZ5fCrGE6Es3KvpLyV4G957YbkoxVWpJ3i8FO0LRmNnb/4XPtowQPNIAsH7hQ==",
+        "dependencies": {
+          "SkyCD.SDK": "[3.0.0-alpha.2]"
+        }
+      },
       "SmartFormat": {
         "type": "Transitive",
         "resolved": "3.6.2",
@@ -957,7 +965,8 @@
       "skycd.testsupport": {
         "type": "Project",
         "dependencies": {
-          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
+          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
+          "SkyCD.Testing": "[3.0.0-alpha.1, 3.0.0-alpha.1]"
         }
       },
       "skycd.ui": {
