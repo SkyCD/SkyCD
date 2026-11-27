@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Presenters;
 using Avalonia.Data;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
@@ -672,10 +673,22 @@ public class ControlsContractTests
 
             Assert.Equal(14, firstIcon.Width);
             Assert.Equal(14, firstIcon.Height);
-            Assert.Equal(new Thickness(8, 0, 0, 0), firstIcon.Margin);
+            Assert.Equal(Application.Current!.FindResource("SkySearchIconMargin"), firstIcon.Margin);
             Assert.Equal(
                 Application.Current!.FindResource("ThemeForegroundLowBrush"),
                 firstIcon.GetValue(PackIconControl.ForegroundProperty));
+
+            // Issue #1312: the glyph keeps the input inset on its left and one ramp step of air on
+            // its right, so neither typed text nor the placeholder touches the magnifier.
+            var gap = Assert.IsType<double>(Application.Current!.FindResource("SkySpaceXs"));
+            var iconRight = firstIcon.TranslatePoint(new Point(firstIcon.Bounds.Width, 0), window)!.Value.X;
+            var textPresenter = first.GetVisualDescendants().OfType<TextPresenter>().Single();
+            var textLeft = textPresenter.TranslatePoint(new Point(0, 0), window)!.Value.X;
+            var placeholder = second.GetVisualDescendants().OfType<TextBlock>().Single(block => block.Name == "placeholder");
+            var iconRightInEmpty = secondIcon.TranslatePoint(new Point(secondIcon.Bounds.Width, 0), window)!.Value.X;
+            var placeholderLeft = placeholder.TranslatePoint(new Point(0, 0), window)!.Value.X;
+            Assert.True(textLeft - iconRight >= gap, $"text starts {textLeft - iconRight}px after the glyph");
+            Assert.True(placeholderLeft - iconRightInEmpty >= gap, $"placeholder starts {placeholderLeft - iconRightInEmpty}px after the glyph");
 
             // The icon shares the plain input inset, so both fields measure the same height.
             var plain = window.GetVisualDescendants().OfType<TextBox>().Single(box => box is not SearchTextBox);
