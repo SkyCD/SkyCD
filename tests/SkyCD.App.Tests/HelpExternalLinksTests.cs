@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using SkyCD.Presentation.Plugins;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.UI.Localization;
 using Xunit;
@@ -9,6 +10,8 @@ namespace SkyCD.App.Tests;
 
 /// <summary>
 /// Issue #1219: both Help menu links go through the shared validated launcher and surface failures.
+/// Issue #1282: the success-path doubles capture the shell StartInfo instead of invoking the
+/// production launcher, so the suite no longer opens real browser windows.
 /// </summary>
 public sealed class HelpExternalLinksTests
 {
@@ -17,13 +20,9 @@ public sealed class HelpExternalLinksTests
     {
         using var viewModel = MainWindowViewModel.CreateForInMemoryCatalog([]);
         ProcessStartInfo? started = null;
-        viewModel.ExternalLinkOpener = (url, launcher) =>
-        {
-            var startInfo = new ProcessStartInfo { FileName = url, UseShellExecute = true };
-            launcher(startInfo);
-            started = startInfo;
-            return true;
-        };
+        viewModel.ExternalLinkOpener = (url, _) => ExternalLinkLauncher.TryOpen(
+            url,
+            startInfo => started = startInfo);
 
         viewModel.OpenProjectWebsiteCommand.Execute(null);
 
@@ -39,13 +38,9 @@ public sealed class HelpExternalLinksTests
     {
         using var viewModel = MainWindowViewModel.CreateForInMemoryCatalog([]);
         ProcessStartInfo? started = null;
-        viewModel.ExternalLinkOpener = (url, launcher) =>
-        {
-            var startInfo = new ProcessStartInfo { FileName = url, UseShellExecute = true };
-            launcher(startInfo);
-            started = startInfo;
-            return true;
-        };
+        viewModel.ExternalLinkOpener = (url, _) => ExternalLinkLauncher.TryOpen(
+            url,
+            startInfo => started = startInfo);
 
         viewModel.OpenGithubAreaCommand.Execute(null);
 
