@@ -71,6 +71,7 @@ public sealed class CatalogFindTests
 
         catalog.QuickFindQuery = "tRiP";
         await WaitForAsync(() => catalog.VisibleBrowserItems.Count == 1);
+        await WaitForAsync(() => catalog.QuickFindStatus == "1 matching entries.");
         Assert.Equal("nested-a", Assert.Single(catalog.VisibleBrowserItems).Id);
 
         catalog.QuickFindQuery = string.Empty;
@@ -78,6 +79,7 @@ public sealed class CatalogFindTests
         Assert.Equal(string.Empty, catalog.QuickFindStatus);
 
         catalog.QuickFindQuery = "missing";
+        await WaitForAsync(() => catalog.QuickFindStatus == "No matching catalog entries.");
         catalog.CloseQuickFilterCommand.Execute(null);
         Assert.False(catalog.IsQuickFilterOpen);
         Assert.Same(catalog.BrowserItems, catalog.VisibleBrowserItems);
