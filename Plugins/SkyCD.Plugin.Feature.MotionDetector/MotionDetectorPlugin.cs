@@ -11,7 +11,7 @@ using SkyCD.Plugin.Feature.MotionDetector.Exceptions;
 using SkyCD.Plugin.Feature.MotionDetector.Models;
 using SkyCD.Plugin.Feature.MotionDetector.Views;
 using SkyCD.SDK.Capabilities;
-using SkyCD.SDK.Capabilities.Capture;
+using SkyCD.SDK.Capabilities.Sources;
 using SkyCD.SDK.Capabilities.Catalog;
 using SkyCD.SDK.Capabilities.Options;
 using SkyCD.SDK.Capabilities.Storage;
@@ -25,18 +25,18 @@ namespace SkyCD.Plugin.Feature.MotionDetector;
 /// source, and stores sources plus detector settings in the open catalog through plugin storage.
 /// </summary>
 public sealed class MotionDetectorPlugin : IPluginCapability, IActivatablePluginCapability,
-    ICaptureSourcePluginCapability, ICaptureSourceHostConsumer, IPluginStorageConsumer,
+    ISourceFactoryPluginCapability, ISourceFactoryHostConsumer, IPluginStorageConsumer,
     IOptionsPageCapability, ILocalizationPluginCapability, ICatalogLifecyclePluginCapability
 {
     private const string ProviderIdentifier = "motion-detector";
 
     private readonly object gate = new();
     private readonly SemaphoreSlim syncGate = new(1, 1);
-    private readonly List<CaptureSourceConfiguration> sources = [];
+    private readonly List<SourceConfiguration> sources = [];
     private readonly Dictionary<string, CaptureSourceRunner> runners = new(StringComparer.Ordinal);
-    private CaptureDetectorSettings settings = PluginStateStore.DefaultSettings();
+    private SourceDetectorSettings settings = PluginStateStore.DefaultSettings();
     private IPluginStorageApi? storage;
-    private ICaptureSourceHostApi? captureHost;
+    private ISourceFactoryHostApi? captureHost;
     private bool activated;
     private bool suspended;
     private bool loaded;
@@ -68,7 +68,7 @@ public sealed class MotionDetectorPlugin : IPluginCapability, IActivatablePlugin
     }
 
     /// <inheritdoc />
-    public void InitializeCaptureHost(ICaptureSourceHostApi host)
+    public void InitializeSourceFactoryHost(ISourceFactoryHostApi host)
     {
         ArgumentNullException.ThrowIfNull(host);
         captureHost = host;
@@ -124,7 +124,7 @@ public sealed class MotionDetectorPlugin : IPluginCapability, IActivatablePlugin
     }
 
     /// <inheritdoc />
-    public IReadOnlyList<CaptureSourceKind> GetSourceKinds() =>
+    public IReadOnlyList<SourceKind> GetSourceKinds() =>
     [
         new(CaptureSourceKinds.File, Get(MotionDetectorKeys.SourceKindFile),
             Get(MotionDetectorKeys.LocationFile), UseFilePicker: true),
@@ -136,28 +136,28 @@ public sealed class MotionDetectorPlugin : IPluginCapability, IActivatablePlugin
     ];
 
     /// <inheritdoc />
-    public IReadOnlyList<CaptureDevice> GetDevices(string kindId) =>
+    public IReadOnlyList<SourceDevice> GetDevices(string kindId) =>
         kindId == CaptureSourceKinds.Device ? DeviceEnumerator.Enumerate() : [];
 
     /// <inheritdoc />
-    public Task<CaptureSourceProbeResult> ProbeAsync(CaptureSourceConfiguration configuration,
+    public Task<SourceProbeResult> ProbeAsync(SourceConfiguration configuration,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(configuration);
         return Task.FromResult(Probe(configuration));
     }
 
-    private CaptureSourceProbeResult Probe(CaptureSourceConfiguration configuration)
+    private SourceProbeResult Probe(SourceConfiguration configuration)
     {
         if (!IsCatalogAvailable)
         {
-            return CaptureSourceProbeResult.Unavailable(Get(MotionDetectorKeys.CatalogUnavailable));
+            return SourceProbeResult.Unavailable(Get(MotionDetectorKeys.CatalogUnavailable));
         }
 
         if (string.IsNullOrWhiteSpace(configuration.DestinationFolder) ||
             !Path.IsPathFullyQualified(configuration.DestinationFolder))
         {
-            return CaptureSourceProbeResult.Unavailable(Get(MotionDetectorKeys.DestinationRequired));
+            return SourceProbeResult.Unavailable(Get(MotionDetectorKeys.DestinationRequired));
         }
 
         try
@@ -167,7 +167,7 @@ public sealed class MotionDetectorPlugin : IPluginCapability, IActivatablePlugin
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException
                                               or ArgumentException or NotSupportedException)
         {
-            return CaptureSourceProbeResult.Unavailable(
+            return SourceProbeResult.Unavailable(
                 LocalizationService.Current.Format(MotionDetectorKeys.DestinationMissing,
                     configuration.DestinationFolder));
         }
@@ -175,29 +175,29 @@ public sealed class MotionDetectorPlugin : IPluginCapability, IActivatablePlugin
         if (configuration.KindId == CaptureSourceKinds.File)
         {
             return File.Exists(configuration.Location)
-                ? CaptureSourceProbeResult.Available()
-                : CaptureSourceProbeResult.Unavailable(Get(MotionDetectorKeys.SourceFileMissing));
+                ? SourceProbeResult.Available()
+                : SourceProbeResult.Unavailable(Get(MotionDetectorKeys.SourceFileMissing));
         }
 
         if (CaptureSourceKinds.IsUrl(configuration.KindId))
         {
             return Uri.TryCreate(configuration.Location, UriKind.Absolute, out _)
-                ? CaptureSourceProbeResult.Available()
-                : CaptureSourceProbeResult.Unavailable(Get(MotionDetectorKeys.SourceUrlInvalid));
+                ? SourceProbeResult.Available()
+                : SourceProbeResult.Unavailable(Get(MotionDetectorKeys.SourceUrlInvalid));
         }
 
         if (configuration.KindId == CaptureSourceKinds.Device)
         {
             return GetDevices(configuration.KindId).Any(device => device.Id == configuration.Location)
-                ? CaptureSourceProbeResult.Available()
-                : CaptureSourceProbeResult.Unavailable(Get(MotionDetectorKeys.SourceOpenFailed));
+                ? SourceProbeResult.Available()
+                : SourceProbeResult.Unavailable(Get(MotionDetectorKeys.SourceOpenFailed));
         }
 
-        return CaptureSourceProbeResult.Unavailable(Get(MotionDetectorKeys.SourceOpenFailed));
+        return SourceProbeResult.Unavailable(Get(MotionDetectorKeys.SourceOpenFailed));
     }
 
     /// <inheritdoc />
-    public Task<CapturePreviewResult> CapturePreviewAsync(CaptureSourceConfiguration configuration,
+    public Task<SourcePreviewResult> CapturePreviewAsync(SourceConfiguration configuration,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(configuration);
@@ -205,7 +205,7 @@ public sealed class MotionDetectorPlugin : IPluginCapability, IActivatablePlugin
     }
 
     /// <inheritdoc />
-    public IReadOnlyList<CaptureSourceConfiguration> GetSources()
+    public IReadOnlyList<SourceConfiguration> GetSources()
     {
         lock (gate)
         {
@@ -214,13 +214,13 @@ public sealed class MotionDetectorPlugin : IPluginCapability, IActivatablePlugin
     }
 
     /// <inheritdoc />
-    public async Task<CaptureSourceConfiguration> AddSourceAsync(CaptureSourceDraft draft,
+    public async Task<SourceConfiguration> AddSourceAsync(SourceDraft draft,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(draft);
         var store = RequireStore();
         var label = string.IsNullOrWhiteSpace(draft.Label) ? draft.KindId : draft.Label.Trim();
-        var configuration = new CaptureSourceConfiguration(
+        var configuration = new SourceConfiguration(
             Guid.NewGuid().ToString("N"),
             draft.KindId,
             draft.Location.Trim(),
@@ -256,7 +256,7 @@ public sealed class MotionDetectorPlugin : IPluginCapability, IActivatablePlugin
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceId);
         var store = RequireStore();
         CaptureSourceRunner? runner = null;
-        CaptureSourceConfiguration? removed = null;
+        SourceConfiguration? removed = null;
         lock (gate)
         {
             if (runners.Remove(sourceId, out var existing))
@@ -283,10 +283,10 @@ public sealed class MotionDetectorPlugin : IPluginCapability, IActivatablePlugin
     }
 
     /// <inheritdoc />
-    public IReadOnlyList<CaptureDetectorDescriptor> GetDetectors() => DetectorCatalog.Describe();
+    public IReadOnlyList<SourceDetectorDescriptor> GetDetectors() => DetectorCatalog.Describe();
 
     /// <inheritdoc />
-    public CaptureDetectorSettings GetDetectorSettings()
+    public SourceDetectorSettings GetDetectorSettings()
     {
         lock (gate)
         {
@@ -295,12 +295,12 @@ public sealed class MotionDetectorPlugin : IPluginCapability, IActivatablePlugin
     }
 
     /// <inheritdoc />
-    public async Task SaveDetectorSettingsAsync(CaptureDetectorSettings updated,
+    public async Task SaveDetectorSettingsAsync(SourceDetectorSettings updated,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(updated);
         var store = RequireStore();
-        var normalized = new CaptureDetectorSettings(
+        var normalized = new SourceDetectorSettings(
             updated.DetectorId,
             DetectorCatalog.Normalize(updated.DetectorId, updated.Parameters));
         try
@@ -492,7 +492,7 @@ public sealed class MotionDetectorPlugin : IPluginCapability, IActivatablePlugin
         }
     }
 
-    private ICaptureSourceHostApi RequireHost() =>
+    private ISourceFactoryHostApi RequireHost() =>
         captureHost ?? throw new MotionDetectorSettingsException();
 
     private void Report(string message)

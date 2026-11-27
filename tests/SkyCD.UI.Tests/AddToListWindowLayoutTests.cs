@@ -16,7 +16,7 @@ using Avalonia.VisualTree;
 using IconPacks.Avalonia;
 using SkyCD.App.Views;
 using SkyCD.Presentation.Scanning;
-using SkyCD.SDK.Capabilities.Capture;
+using SkyCD.SDK.Capabilities.Sources;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.UI.Localization;
 using Xunit;
@@ -31,14 +31,14 @@ namespace SkyCD.UI.Tests;
 /// </summary>
 public sealed class AddToListWindowLayoutTests
 {
-    private static readonly CaptureSourceKind[] CaptureKinds =
+    private static readonly SourceKind[] CaptureKinds =
     [
         new("file", "File", "Video file", UseFilePicker: true),
         new("camera", "Local device", "Camera", UseDevicePicker: true),
         new("url", "JPEG URL", "URL"),
     ];
 
-    private static readonly CaptureDevice[] CaptureDevices =
+    private static readonly SourceDevice[] CaptureDevices =
     [
         new("0", "Integrated camera"),
     ];
@@ -84,7 +84,7 @@ public sealed class AddToListWindowLayoutTests
     }
 
 
-    private sealed class FakeCaptureProvider : ICaptureSourcePluginCapability
+    private sealed class FakeCaptureProvider : ISourceFactoryPluginCapability
     {
         public string ProviderId => "test-capture";
 
@@ -96,33 +96,33 @@ public sealed class AddToListWindowLayoutTests
             remove { }
         }
 
-        public IReadOnlyList<CaptureSourceKind> GetSourceKinds() => CaptureKinds;
+        public IReadOnlyList<SourceKind> GetSourceKinds() => CaptureKinds;
 
-        public IReadOnlyList<CaptureDevice> GetDevices(string kindId) => CaptureDevices;
+        public IReadOnlyList<SourceDevice> GetDevices(string kindId) => CaptureDevices;
 
-        public Task<CaptureSourceProbeResult> ProbeAsync(CaptureSourceConfiguration configuration,
+        public Task<SourceProbeResult> ProbeAsync(SourceConfiguration configuration,
             CancellationToken cancellationToken = default) =>
-            Task.FromResult(CaptureSourceProbeResult.Available());
+            Task.FromResult(SourceProbeResult.Available());
 
-        public Task<CapturePreviewResult> CapturePreviewAsync(CaptureSourceConfiguration configuration,
+        public Task<SourcePreviewResult> CapturePreviewAsync(SourceConfiguration configuration,
             CancellationToken cancellationToken = default) =>
-            Task.FromResult(CapturePreviewResult.Failed("No frame"));
+            Task.FromResult(SourcePreviewResult.Failed("No frame"));
 
-        public IReadOnlyList<CaptureSourceConfiguration> GetSources() => [];
+        public IReadOnlyList<SourceConfiguration> GetSources() => [];
 
-        public Task<CaptureSourceConfiguration> AddSourceAsync(CaptureSourceDraft draft,
+        public Task<SourceConfiguration> AddSourceAsync(SourceDraft draft,
             CancellationToken cancellationToken = default) =>
-            Task.FromResult(new CaptureSourceConfiguration("source", draft.KindId, draft.Location,
+            Task.FromResult(new SourceConfiguration("source", draft.KindId, draft.Location,
                 draft.DestinationFolder, draft.CatalogFolder, draft.Label));
 
         public Task RemoveSourceAsync(string sourceId, CancellationToken cancellationToken = default) =>
             Task.CompletedTask;
 
-        public IReadOnlyList<CaptureDetectorDescriptor> GetDetectors() => [];
+        public IReadOnlyList<SourceDetectorDescriptor> GetDetectors() => [];
 
-        public CaptureDetectorSettings GetDetectorSettings() => new(null, new Dictionary<string, double>());
+        public SourceDetectorSettings GetDetectorSettings() => new(null, new Dictionary<string, double>());
 
-        public Task SaveDetectorSettingsAsync(CaptureDetectorSettings settings,
+        public Task SaveDetectorSettingsAsync(SourceDetectorSettings settings,
             CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 

@@ -8,7 +8,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SkyCD.Plugin.Feature.MotionDetector.Exceptions;
 using SkyCD.Plugin.Feature.MotionDetector.Models;
-using SkyCD.SDK.Capabilities.Capture;
+using SkyCD.SDK.Capabilities.Sources;
 using SkyCD.UI.Localization;
 
 namespace SkyCD.Plugin.Feature.MotionDetector.Views;
@@ -19,7 +19,7 @@ public sealed record DetectorChoice(string? Id, string DisplayName, string Descr
 /// <summary>A numeric detector parameter bound to a slider row on the options page.</summary>
 public sealed partial class DetectorParameterRow : ObservableObject
 {
-    public DetectorParameterRow(CaptureDetectorParameter parameter, double value)
+    public DetectorParameterRow(SourceDetectorParameter parameter, double value)
     {
         Key = parameter.Key;
         DisplayName = parameter.DisplayName;
@@ -145,7 +145,7 @@ public sealed partial class MotionDetectorOptionsViewModel : ObservableObject
         var parameters = Parameters.ToDictionary(row => row.Key, row => row.Value, StringComparer.Ordinal);
         try
         {
-            await plugin.SaveDetectorSettingsAsync(new CaptureDetectorSettings(SelectedDetector?.Id, parameters));
+            await plugin.SaveDetectorSettingsAsync(new SourceDetectorSettings(SelectedDetector?.Id, parameters));
             StatusText = LocalizationService.Current.Get(MotionDetectorKeys.Saved);
         }
         catch (MotionDetectorSettingsException)

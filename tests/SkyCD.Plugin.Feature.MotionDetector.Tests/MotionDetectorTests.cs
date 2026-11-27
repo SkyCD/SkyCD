@@ -9,7 +9,7 @@ using SkyCD.Plugin.Feature.MotionDetector.Configuration;
 using SkyCD.Plugin.Feature.MotionDetector.Detectors;
 using SkyCD.Plugin.Feature.MotionDetector.Models;
 using SkyCD.SDK.Capabilities;
-using SkyCD.SDK.Capabilities.Capture;
+using SkyCD.SDK.Capabilities.Sources;
 using SkyCD.SDK.Capabilities.Menu;
 using SkyCD.SDK.Capabilities.Options;
 using SkyCD.SDK.Capabilities.Storage;
@@ -26,7 +26,7 @@ public sealed class MotionDetectorTests
         var plugin = new MotionDetectorPlugin();
 
         Assert.IsAssignableFrom<IActivatablePluginCapability>(plugin);
-        Assert.IsAssignableFrom<ICaptureSourcePluginCapability>(plugin);
+        Assert.IsAssignableFrom<ISourceFactoryPluginCapability>(plugin);
         Assert.IsAssignableFrom<IOptionsPageCapability>(plugin);
         Assert.IsNotAssignableFrom<IMenuPluginCapability>(plugin);
         Assert.Equal("motion-detector", plugin.ProviderId);
@@ -110,7 +110,7 @@ public sealed class MotionDetectorTests
     public void StateStore_RoundTripsSourcesAndSettings()
     {
         var storage = new FakeStorage();
-        var source = new CaptureSourceConfiguration(
+        var source = new SourceConfiguration(
             "source-1",
             CaptureSourceKinds.JpegUrl,
             "http://camera.local/frame.jpg",
@@ -119,7 +119,7 @@ public sealed class MotionDetectorTests
             "Front door");
 
         new PluginStateStore(storage).SaveSource(source);
-        new PluginStateStore(storage).SaveSettings(new CaptureDetectorSettings(
+        new PluginStateStore(storage).SaveSettings(new SourceDetectorSettings(
             DetectorCatalog.Mog2, new Dictionary<string, double> { ["learningRate"] = 0.5 }));
 
         var reloaded = new PluginStateStore(storage);
@@ -135,7 +135,7 @@ public sealed class MotionDetectorTests
     public void StateStore_DropsUnknownDetectorAndKeepsDefaults()
     {
         var storage = new FakeStorage();
-        new PluginStateStore(storage).SaveSettings(new CaptureDetectorSettings("unknown-detector", new Dictionary<string, double>()));
+        new PluginStateStore(storage).SaveSettings(new SourceDetectorSettings("unknown-detector", new Dictionary<string, double>()));
 
         var loaded = new PluginStateStore(storage).LoadSettings();
 
@@ -165,11 +165,11 @@ public sealed class MotionDetectorTests
         var host = new FakeHost { IsCatalogOpen = true };
         var plugin = new MotionDetectorPlugin();
         plugin.InitializeStorage(storage);
-        plugin.InitializeCaptureHost(host);
+        plugin.InitializeSourceFactoryHost(host);
 
         var destination = workspace.Root;
 
-        var added = await plugin.AddSourceAsync(new CaptureSourceDraft(
+        var added = await plugin.AddSourceAsync(new SourceDraft(
             CaptureSourceKinds.JpegUrl, "http://camera.local/frame.jpg", destination, string.Empty, string.Empty));
 
         Assert.Equal(CaptureSourceKinds.JpegUrl, added.KindId);
@@ -186,7 +186,7 @@ public sealed class MotionDetectorTests
         using var workspace = new TestWorkspace();
         var plugin = new MotionDetectorPlugin();
         plugin.InitializeStorage(new FakeStorage());
-        plugin.InitializeCaptureHost(new FakeHost { IsCatalogOpen = false });
+        plugin.InitializeSourceFactoryHost(new FakeHost { IsCatalogOpen = false });
 
         var configuration = Source("source-1");
 
@@ -194,7 +194,7 @@ public sealed class MotionDetectorTests
         Assert.False(unavailable.IsAvailable);
         Assert.False(string.IsNullOrWhiteSpace(unavailable.Message));
 
-        plugin.InitializeCaptureHost(new FakeHost { IsCatalogOpen = true });
+        plugin.InitializeSourceFactoryHost(new FakeHost { IsCatalogOpen = true });
         var withoutDestination = await plugin.ProbeAsync(configuration with { DestinationFolder = "relative" });
         Assert.False(withoutDestination.IsAvailable);
 
@@ -214,16 +214,16 @@ public sealed class MotionDetectorTests
         Assert.Equal(2, frame.Rows);
     }
 
-    private static CaptureSourceConfiguration Source(string id) =>
+    private static SourceConfiguration Source(string id) =>
         new(id, CaptureSourceKinds.JpegUrl, "http://camera.local/frame.jpg", @"D:\captures", "Motion", id);
 
-    private sealed class FakeHost : ICaptureSourceHostApi
+    private sealed class FakeHost : ISourceFactoryHostApi
     {
         public bool IsCatalogOpen { get; set; }
 
         public List<string> Messages { get; } = [];
 
-        public Task ImportCapturedFilesAsync(IReadOnlyList<CapturedCatalogFile> files,
+        public Task ImportSourceFilesAsync(IReadOnlyList<SourceFile> files,
             CancellationToken cancellationToken = default) => Task.CompletedTask;
 
         public Task NotifyAsync(string message, CancellationToken cancellationToken = default)

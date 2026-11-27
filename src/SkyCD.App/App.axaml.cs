@@ -25,7 +25,7 @@ using SkyCD.Plugin.Runtime.Installation;
 using SkyCD.Plugin.Runtime.Managers;
 using SkyCD.Plugin.Runtime.Marketplace.Services;
 using SkyCD.SDK;
-using SkyCD.SDK.Capabilities.Capture;
+using SkyCD.SDK.Capabilities.Sources;
 using SkyCD.SDK.Capabilities.Catalog;
 using SkyCD.SDK.Capabilities.GenDesc;
 using SkyCD.SDK.Capabilities.Options;
@@ -33,7 +33,7 @@ using SkyCD.SDK.Capabilities.Storage;
 using SkyCD.SDK.Capabilities.Ui;
 using SkyCD.Core.DependencyInjection.Registrators;
 using SkyCD.Core.Versioning;
-using SkyCD.Presentation.Capture;
+using SkyCD.Presentation.Sources;
 using SkyCD.Presentation.Catalog;
 using SkyCD.Presentation.GenDesc;
 using SkyCD.Presentation.Scanning;
@@ -259,7 +259,7 @@ public partial class App : Avalonia.Application
             (Avalonia.Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow);
         var genDescHost = appServiceProvider.Resolve<GenDescHostApi>();
         var onlineMetadata = ServiceProvider.Resolve<OnlineMetadataExtensionManager>();
-        var captureHost = new CaptureSourceHostApi(() => appServiceProvider.Resolve<MainWindowViewModel>());
+        var captureHost = new SourceFactoryHostApi(() => appServiceProvider.Resolve<MainWindowViewModel>());
         var catalogSaveHost = new CatalogSaveHostApi(
             appServiceProvider.Resolve<RepositoryManager>(),
             appServiceProvider.Resolve<OpenCatalogState>(),
@@ -322,9 +322,9 @@ public partial class App : Avalonia.Application
                 catch (Exception exception) { PluginFailure.Publish(consumer.GetType(), "modal", exception); }
             }
 
-            foreach (var consumer in plugin.Capabilities.OfType<ICaptureSourceHostConsumer>())
+            foreach (var consumer in plugin.Capabilities.OfType<ISourceFactoryHostConsumer>())
             {
-                try { consumer.InitializeCaptureHost(captureHost); }
+                try { consumer.InitializeSourceFactoryHost(captureHost); }
                 catch (Exception exception) { PluginFailure.Publish(consumer.GetType(), "capture", exception); }
             }
 

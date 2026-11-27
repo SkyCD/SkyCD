@@ -6,7 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.ViewModels;
-using SkyCD.SDK.Capabilities.Capture;
+using SkyCD.SDK.Capabilities.Sources;
 using SkyCD.UI.Localization;
 using Xunit;
 
@@ -26,50 +26,50 @@ public class AddToListCaptureSourceTests
         public MediaDriveInfo? GetDrive(string drivePathOrName) => null;
     }
 
-    private sealed class FakeCaptureProvider(IReadOnlyList<CaptureDevice>? devices = null)
-        : ICaptureSourcePluginCapability
+    private sealed class FakeCaptureProvider(IReadOnlyList<SourceDevice>? devices = null)
+        : ISourceFactoryPluginCapability
     {
-        public CaptureSourceDraft? LastDraft { get; private set; }
+        public SourceDraft? LastDraft { get; private set; }
 
         public string ProviderId => "fake-capture";
 
         public string DisplayName => "Fake capture";
 
-        public IReadOnlyList<CaptureSourceKind> GetSourceKinds() =>
+        public IReadOnlyList<SourceKind> GetSourceKinds() =>
         [
             new("file", "File", "Capture file", UseFilePicker: true),
             new("camera", "Local device", "Capture device", UseDevicePicker: true),
             new("mjpeg", "MJPEG URL", "MJPEG stream URL")
         ];
 
-        public IReadOnlyList<CaptureDevice> GetDevices(string kindId) => devices ?? [];
+        public IReadOnlyList<SourceDevice> GetDevices(string kindId) => devices ?? [];
 
-        public Task<CaptureSourceProbeResult> ProbeAsync(CaptureSourceConfiguration configuration,
-            CancellationToken cancellationToken = default) => Task.FromResult(CaptureSourceProbeResult.Available());
+        public Task<SourceProbeResult> ProbeAsync(SourceConfiguration configuration,
+            CancellationToken cancellationToken = default) => Task.FromResult(SourceProbeResult.Available());
 
-        public Task<CapturePreviewResult> CapturePreviewAsync(CaptureSourceConfiguration configuration,
+        public Task<SourcePreviewResult> CapturePreviewAsync(SourceConfiguration configuration,
             CancellationToken cancellationToken = default) =>
-            Task.FromResult(CapturePreviewResult.Failed("Camera is busy."));
+            Task.FromResult(SourcePreviewResult.Failed("Camera is busy."));
 
-        public IReadOnlyList<CaptureSourceConfiguration> GetSources() => [];
+        public IReadOnlyList<SourceConfiguration> GetSources() => [];
 
-        public Task<CaptureSourceConfiguration> AddSourceAsync(CaptureSourceDraft draft,
+        public Task<SourceConfiguration> AddSourceAsync(SourceDraft draft,
             CancellationToken cancellationToken = default)
         {
             LastDraft = draft;
-            return Task.FromResult(new CaptureSourceConfiguration("source-1", draft.KindId, draft.Location,
+            return Task.FromResult(new SourceConfiguration("source-1", draft.KindId, draft.Location,
                 draft.DestinationFolder, draft.CatalogFolder, draft.Label));
         }
 
         public Task RemoveSourceAsync(string sourceId, CancellationToken cancellationToken = default) =>
             Task.CompletedTask;
 
-        public IReadOnlyList<CaptureDetectorDescriptor> GetDetectors() => [];
+        public IReadOnlyList<SourceDetectorDescriptor> GetDetectors() => [];
 
-        public CaptureDetectorSettings GetDetectorSettings() =>
+        public SourceDetectorSettings GetDetectorSettings() =>
             new(null, new Dictionary<string, double>());
 
-        public Task SaveDetectorSettingsAsync(CaptureDetectorSettings settings,
+        public Task SaveDetectorSettingsAsync(SourceDetectorSettings settings,
             CancellationToken cancellationToken = default) => Task.CompletedTask;
 
         public event EventHandler? SourcesChanged
@@ -148,7 +148,7 @@ public class AddToListCaptureSourceTests
     [Fact]
     public void DeviceKind_FillsThePickerAndDefaultsTheSelection()
     {
-        var provider = new FakeCaptureProvider([new CaptureDevice("cam-0", "Integrated camera")]);
+        var provider = new FakeCaptureProvider([new SourceDevice("cam-0", "Integrated camera")]);
         using var vm = CreateViewModel(provider);
         vm.SourceMode = AddToListSourceMode.CaptureSource;
 

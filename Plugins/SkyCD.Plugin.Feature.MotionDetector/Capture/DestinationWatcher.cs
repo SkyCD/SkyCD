@@ -7,7 +7,7 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using SkyCD.Plugin.Feature.MotionDetector.Models;
-using SkyCD.SDK.Capabilities.Capture;
+using SkyCD.SDK.Capabilities.Sources;
 using SkyCD.SDK.Capabilities.Menu;
 using SkyCD.UI.Localization;
 
@@ -23,8 +23,8 @@ internal sealed class DestinationWatcher : IDisposable
     private const int MaxBatch = 20;
     private const int StableChecks = 20;
 
-    private readonly CaptureSourceConfiguration source;
-    private readonly ICaptureSourceHostApi host;
+    private readonly SourceConfiguration source;
+    private readonly ISourceFactoryHostApi host;
     private readonly Action<string> report;
     private readonly FileSystemWatcher watcher;
     private readonly Channel<string> pending = Channel.CreateUnbounded<string>();
@@ -33,7 +33,7 @@ internal sealed class DestinationWatcher : IDisposable
     private readonly Task pump;
     private bool disposed;
 
-    public DestinationWatcher(CaptureSourceConfiguration source, ICaptureSourceHostApi host, Action<string> report)
+    public DestinationWatcher(SourceConfiguration source, ISourceFactoryHostApi host, Action<string> report)
     {
         this.source = source;
         this.host = host;
@@ -103,7 +103,7 @@ internal sealed class DestinationWatcher : IDisposable
         {
             while (await pending.Reader.WaitToReadAsync(cancellation.Token).ConfigureAwait(false))
             {
-                var batch = new List<CapturedCatalogFile>(MaxBatch);
+                var batch = new List<SourceFile>(MaxBatch);
                 while (batch.Count < MaxBatch && pending.Reader.TryRead(out var path))
                 {
                     var file = await BuildAsync(path, cancellation.Token).ConfigureAwait(false);
@@ -120,7 +120,7 @@ internal sealed class DestinationWatcher : IDisposable
 
                 try
                 {
-                    await host.ImportCapturedFilesAsync(batch, cancellation.Token).ConfigureAwait(false);
+                    await host.ImportSourceFilesAsync(batch, cancellation.Token).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
                 {
@@ -139,7 +139,7 @@ internal sealed class DestinationWatcher : IDisposable
         }
     }
 
-    private static async Task<CapturedCatalogFile?> BuildAsync(string path, CancellationToken cancellationToken)
+    private static async Task<SourceFile?> BuildAsync(string path, CancellationToken cancellationToken)
     {
         var info = await WaitForStableAsync(path, cancellationToken).ConfigureAwait(false);
         if (info is null)
@@ -158,7 +158,7 @@ internal sealed class DestinationWatcher : IDisposable
             ["Attributes"] = info.Attributes.ToString(),
             ["FullName"] = info.FullName
         };
-        return new CapturedCatalogFile(
+        return new SourceFile(
             "Motion",
             info.LastWriteTime.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
             info.Name,
