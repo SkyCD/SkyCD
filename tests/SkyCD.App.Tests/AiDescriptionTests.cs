@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -10,9 +11,12 @@ using SkyCD.Couchbase.DependencyInjection;
 using SkyCD.Documents;
 using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
-using SkyCD.SDK.Capabilities.Media;
+using SkyCD.Plugin.Host.Media;
+using SkyCD.Presentation.Catalog;
+using SkyCD.Presentation.Descriptions;
 using SkyCD.Presentation.MediaCache;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.TestSupport;
 using Xunit;
 
@@ -109,6 +113,82 @@ public sealed class AiDescriptionTests : IDisposable
         public static GeneratedDescription Describe(string text) => new(
             text, "fake-agent", "fake-model", "1.0.0", "prompt-v1", "English",
             "content-based AI description", "cloud", DateTimeOffset.UtcNow);
+    }
+
+    private static OnlineMetadataResult Ok(string sourceId, string? sourceUrl,
+        params (string Key, string Value)[] facts) =>
+        OnlineMetadataResult.Success(sourceId, sourceUrl,
+            facts.ToDictionary(fact => fact.Key, fact => fact.Value, StringComparer.OrdinalIgnoreCase));
+
+    private static OnlineMetadataRun RunOf(params OnlineMetadataResult[] results) => new(
+        results.Where(result => result.Succeeded)
+            .SelectMany(result => result.Facts)
+            .GroupBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First().Value, StringComparer.OrdinalIgnoreCase),
+        results);
+
+    private sealed class FakeOnlineMetadataService : IOnlineMetadataService
+    {
+        private readonly Func<IReadOnlyList<string>, CancellationToken, Task<OnlineMetadataRun>> fetch;
+
+        public FakeOnlineMetadataService(OnlineMetadataRun run, params string[] sourceIds)
+            : this((_, _) => Task.FromResult(run), sourceIds)
+        {
+        }
+
+        public FakeOnlineMetadataService(
+            Func<IReadOnlyList<string>, CancellationToken, Task<OnlineMetadataRun>> fetch, params string[] sourceIds)
+        {
+            this.fetch = fetch;
+            SourceIds = sourceIds;
+        }
+
+        public IReadOnlyList<string> SourceIds { get; }
+
+        public IReadOnlyList<string> KnownHosts => [];
+
+        public int Calls { get; private set; }
+
+        public OnlineMetadataRequest? LastRequest { get; private set; }
+
+        public IReadOnlyList<string>? LastSourceIds { get; private set; }
+
+        public TimeSpan LastTimeout { get; private set; }
+
+        public Task<OnlineMetadataRun> FetchAsync(IReadOnlyList<string> sourceIds, OnlineMetadataRequest request,
+            TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            Calls++;
+            LastRequest = request;
+            LastSourceIds = sourceIds;
+            LastTimeout = timeout;
+            return fetch(sourceIds, cancellationToken);
+        }
+    }
+
+    private sealed class SlowSource(TimeSpan delay) : IOnlineMetadataSourceCapability
+    {
+        public string SourceId => "slow";
+
+        public string DisplayName => "Slow source";
+
+        public IReadOnlyList<string> KnownHosts => [];
+
+        public async Task<OnlineMetadataResult> FetchAsync(OnlineMetadataRequest request,
+            CancellationToken cancellationToken)
+        {
+            await Task.Delay(delay, cancellationToken);
+            return Ok("slow", "https://slow.test/1", ("Title", "Arrived too late"));
+        }
+    }
+
+    private static IMediaCacheStore StoreOf(Stack stack) =>
+        new CouchbaseMediaCacheStore(stack.Catalog.Collection.Database);
+
+    private static Dictionary<string, string?> Fields(IMediaCacheStore store, string entryId)
+    {
+        var record = Assert.Single(store.GetRecordsForEntry(entryId), CatalogDescriptionService.IsOnlineMetadataRecord);
+        return record.Metadata.ToDictionary(field => field.Key, field => field.Text, StringComparer.Ordinal);
     }
 
     [Fact]
@@ -380,6 +460,132 @@ public sealed class AiDescriptionTests : IDisposable
         Assert.DoesNotContain(result.Items, item => item.Outcome == AiDescriptionBatchItemOutcome.Failed);
         Assert.Equal("Earlier accepted", service.Read("a").Text);
         Assert.Equal("User comment", stack.Catalog.Get("a")!.Properties["Comment"]);
+    }
+
+    [Fact]
+    public async Task Generation_CapturesOnlineFacts_IntoContextAndCache()
+    {
+        using var stack = new Stack();
+        using var store = StoreOf(stack);
+        stack.Catalog.Save("entry", Entry("entry", name: "entry.mkv"));
+        DescriptionContext? observed = null;
+        var capability = new FakeCapability((context, _) =>
+        {
+            observed = context;
+            return Task.FromResult(FakeCapability.Describe("generated"));
+        });
+        var online = new FakeOnlineMetadataService(RunOf(
+            Ok("imdb", "https://www.imdb.test/title/1", ("Title", "The Film"), ("Genre", "Drama")),
+            Ok("wikipedia", "https://en.wikipedia.test/wiki/Film", ("Plot", "A plot."))), "imdb", "wikipedia");
+        var service = new AiDescriptionService(stack.Catalog, store, capability, onlineMetadata: online);
+
+        var outcome = await service.GenerateAsync("entry", regenerate: false, CancellationToken.None);
+
+        Assert.False(outcome.Skipped);
+        Assert.NotNull(observed);
+        Assert.Contains(observed!.Parts, part => part.Kind == CatalogDescriptionService.OnlineMetadataPartKind
+            && part.Text == "Title: The Film");
+        Assert.Equal("entry", online.LastRequest!.Query);
+        Assert.False(string.IsNullOrWhiteSpace(online.LastRequest.Language));
+        Assert.Equal(["imdb", "wikipedia"], online.LastSourceIds);
+        Assert.Equal(AiDescriptionService.DefaultOnlineMetadataTimeout, online.LastTimeout);
+
+        var fields = Fields(store, "entry");
+        Assert.Equal("The Film", fields["Title"]);
+        Assert.Equal("Drama", fields["Genre"]);
+        Assert.Equal("A plot.", fields["Plot"]);
+        Assert.Equal("imdb, wikipedia", fields[CatalogDescriptionService.OnlineMetadataSourcesKey]);
+        var record = Assert.Single(store.GetRecordsForEntry("entry"), CatalogDescriptionService.IsOnlineMetadataRecord);
+        Assert.Contains("imdb.test", fields[CatalogDescriptionService.OnlineMetadataSourceUrlsKey]);
+        Assert.DoesNotContain(record.Metadata
+                .Where(field => field.Key != CatalogDescriptionService.OnlineMetadataSourceUrlsKey),
+            field => field.Text?.Contains("imdb.test", StringComparison.Ordinal) == true);
+    }
+
+    [Fact]
+    public async Task FailedOnlineSource_DoesNotBlockGenerationOrStoreFailedFacts()
+    {
+        using var stack = new Stack();
+        using var store = StoreOf(stack);
+        stack.Catalog.Save("entry", Entry("entry"));
+        var capability = new FakeCapability();
+        var online = new FakeOnlineMetadataService(RunOf(
+            OnlineMetadataResult.Failure("imdb", "https://www.imdb.test/title/1", "site down"),
+            Ok("wikipedia", "https://en.wikipedia.test/wiki/Film", ("Title", "From Wiki"))), "imdb", "wikipedia");
+        var service = new AiDescriptionService(stack.Catalog, store, capability, onlineMetadata: online);
+
+        var outcome = await service.GenerateAsync("entry", regenerate: false, CancellationToken.None);
+
+        Assert.False(outcome.Skipped);
+        Assert.Equal(1, capability.Calls);
+        var fields = Fields(store, "entry");
+        Assert.Equal("From Wiki", fields["Title"]);
+        Assert.Equal("wikipedia", fields[CatalogDescriptionService.OnlineMetadataSourcesKey]);
+        Assert.DoesNotContain("imdb.test", fields[CatalogDescriptionService.OnlineMetadataSourceUrlsKey]);
+    }
+
+    [Fact]
+    public async Task SlowOnlineSource_TimesOut_WithoutBlockingGeneration()
+    {
+        using var stack = new Stack();
+        using var store = StoreOf(stack);
+        stack.Catalog.Save("entry", Entry("entry"));
+        var manager = new OnlineMetadataExtensionManager(
+        [
+            new OnlineMetadataProvider("slow-plugin", "1.0.0", new SlowSource(TimeSpan.FromSeconds(10)))
+        ]);
+        var capability = new FakeCapability();
+        var service = new AiDescriptionService(stack.Catalog, store, capability, onlineMetadata: manager,
+            onlineMetadataTimeout: TimeSpan.FromMilliseconds(50));
+
+        var stopwatch = Stopwatch.StartNew();
+        var outcome = await service.GenerateAsync("entry", regenerate: false, CancellationToken.None);
+        stopwatch.Stop();
+
+        Assert.False(outcome.Skipped);
+        Assert.Equal(1, capability.Calls);
+        Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(5), $"generation took {stopwatch.Elapsed}");
+        var record = Assert.Single(store.GetRecordsForEntry("entry"), CatalogDescriptionService.IsOnlineMetadataRecord);
+        Assert.DoesNotContain(record.Metadata, field => field.Key == "Title");
+    }
+
+    [Fact]
+    public async Task UnchangedEntry_DoesNotQueryOnlineSourcesAgain()
+    {
+        using var stack = new Stack();
+        using var store = StoreOf(stack);
+        stack.Catalog.Save("entry", Entry("entry"));
+        var online = new FakeOnlineMetadataService(RunOf(Ok("imdb", null, ("Title", "The Film"))), "imdb");
+        var service = new AiDescriptionService(stack.Catalog, store, new FakeCapability(), onlineMetadata: online);
+
+        var first = await service.GenerateAsync("entry", regenerate: false, CancellationToken.None);
+        var second = await service.GenerateAsync("entry", regenerate: false, CancellationToken.None);
+
+        Assert.False(first.Skipped);
+        Assert.True(second.Skipped);
+        Assert.Equal(1, online.Calls);
+    }
+
+    [Fact]
+    public async Task CapturedOnlineFacts_AreVisibleToDescriptionEntryFacts()
+    {
+        using var stack = new Stack();
+        using var store = StoreOf(stack);
+        var entry = Entry("entry", name: "entry.mkv");
+        entry.Properties["FullName"] = @"C:\media\entry.mkv";
+        stack.Catalog.Save("entry", entry);
+        var online = new FakeOnlineMetadataService(
+            RunOf(Ok("imdb", null, ("Title", "The Film"), ("Genre", "Drama"))), "imdb");
+        await new AiDescriptionService(stack.Catalog, store, new FakeCapability(), onlineMetadata: online)
+            .GenerateAsync("entry", regenerate: false, CancellationToken.None);
+
+        var state = new OpenCatalogState();
+        state.Attach(stack.Catalog);
+        var facts = await new DescriptionEntryFactsApi(state).GetEntryFactsAsync("entry");
+
+        Assert.NotNull(facts);
+        Assert.Equal("Drama", facts!.Facts["Genre"]);
+        Assert.Equal("The Film", facts.Facts["Metadata.Title"]);
     }
 
     private static void InterlockedMax(ref int target, int value)

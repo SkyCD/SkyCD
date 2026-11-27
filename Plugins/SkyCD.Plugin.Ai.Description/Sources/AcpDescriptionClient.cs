@@ -190,6 +190,7 @@ public sealed class AcpDescriptionClient
             {
                 "filename" => options.Sources.Filename,
                 "metadata" => options.Sources.Metadata,
+                "online-metadata" => options.Sources.Metadata,
                 "content-text" => options.Sources.Text,
                 "image" => options.Sources.Images && Supports("image"),
                 "audio" => options.Sources.Audio && Supports("audio"),

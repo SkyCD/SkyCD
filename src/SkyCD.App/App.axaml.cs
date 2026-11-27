@@ -94,7 +94,8 @@ public partial class App : Avalonia.Application
                 mainWindowViewModel.RefreshMediaServices(ServiceProvider.Resolve<MediaExtensionManager>(),
                     ServiceProvider.Resolve<IMediaTargetMetadataProvider>(),
                     ServiceProvider.Resolve<IndexWorkItemSequence>());
-                mainWindowViewModel.RefreshDescriptionServices(descriptionManager);
+                mainWindowViewModel.RefreshDescriptionServices(descriptionManager,
+                    ServiceProvider.Resolve<OnlineMetadataExtensionManager>());
                 mainWindowViewModel.RefreshCatalogFeatureServices(ServiceProvider.Resolve<CatalogFeatureExtensionManager>());
                 var mainWindow = appServiceProvider.Resolve<MainWindow>();
                 mainWindow.DataContext = mainWindowViewModel;

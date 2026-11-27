@@ -35,7 +35,7 @@ public sealed class AiProviderClient
         ArgumentNullException.ThrowIfNull(context);
         var provider = AiProviderCatalog.Find(settings.ProviderId)!;
         var textParts = context.Parts
-            .Where(part => part.Text is not null && part.Kind is "filename" or "content-text")
+            .Where(part => part.Text is not null && part.Kind is "filename" or "content-text" or "online-metadata")
             .Select(part => new { source = part.Kind, data = part.Text })
             .ToArray();
         var images = context.Parts
