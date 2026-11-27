@@ -1008,6 +1008,11 @@
         "resolved": "0.2.0",
         "contentHash": "CLqyDfKVZiRrXk7jVYrkbllqj1CWE/+G6MiX1VgN7yeEegQX7ZkBNhq/2RFq8r01khjhIB6UyK6d9I5OXmJidQ=="
       },
+      "SkyCD.SDK": {
+        "type": "Transitive",
+        "resolved": "3.0.0-alpha.2",
+        "contentHash": "fxJSzGteGzMd6jW76KOriqaofaYPJWy8DXYvYyxfTkAnhNl7Jd9QYtjOX97Ewe2/mcbX094dQbfdp4G4c/2Ylg=="
+      },
       "SmartFormat": {
         "type": "Transitive",
         "resolved": "3.6.2",
@@ -1172,7 +1177,7 @@
           "SkyCD.Core": "[1.0.0, )",
           "SkyCD.Plugin.Host": "[1.0.0, )",
           "SkyCD.Plugin.Runtime": "[1.0.0, )",
-          "SkyCD.SDK": "[3.0.0, )"
+          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
         }
       },
       "skycd.core": {
@@ -1231,7 +1236,7 @@
           "SkyCD.Couchbase": "[1.0.0, )",
           "SkyCD.Documents": "[1.0.0, )",
           "SkyCD.Presentation": "[1.0.0, )",
-          "SkyCD.SDK": "[3.0.0, )",
+          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
           "SkyCD.UI": "[1.0.0, )",
           "vCardLib.dll": "[6.3.2, )"
         }
@@ -1241,7 +1246,7 @@
         "dependencies": {
           "Avalonia": "[12.1.6, )",
           "CommunityToolkit.Mvvm": "[8.4.2, )",
-          "SkyCD.SDK": "[3.0.0, )",
+          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
           "SkyCD.UI": "[1.0.0, )"
         }
       },
@@ -1249,20 +1254,20 @@
         "type": "Project",
         "dependencies": {
           "JustyBase.UCanAccess.File": "[1.1.0, )",
-          "SkyCD.SDK": "[3.0.0, )"
+          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
         }
       },
       "skycd.plugin.fileformat.mycatalogue": {
         "type": "Project",
         "dependencies": {
           "JustyBase.UCanAccess.File": "[1.1.0, )",
-          "SkyCD.SDK": "[3.0.0, )"
+          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
         }
       },
       "skycd.plugin.host": {
         "type": "Project",
         "dependencies": {
-          "SkyCD.SDK": "[3.0.0, )"
+          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
         }
       },
       "skycd.plugin.runtime": {
@@ -1280,7 +1285,7 @@
           "SkyCD.Documents": "[1.0.0, )",
           "SkyCD.Logging": "[1.0.0, )",
           "SkyCD.Plugin.Host": "[1.0.0, )",
-          "SkyCD.SDK": "[3.0.0, )",
+          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
           "System.Reflection.MetadataLoadContext": "[10.0.15, )"
         }
       },
@@ -1299,18 +1304,15 @@
           "SkyCD.Formatting": "[1.0.0, )",
           "SkyCD.Plugin.Host": "[1.0.0, )",
           "SkyCD.Plugin.Runtime": "[1.0.0, )",
-          "SkyCD.SDK": "[3.0.0, )",
+          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
           "SkyCD.UI": "[1.0.0, )",
           "WebDav.Client": "[2.9.0, )"
         }
       },
-      "skycd.sdk": {
-        "type": "Project"
-      },
       "skycd.testsupport": {
         "type": "Project",
         "dependencies": {
-          "SkyCD.SDK": "[3.0.0, )"
+          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
         }
       },
       "skycd.ui": {
@@ -1320,7 +1322,7 @@
           "IconPacks.Avalonia": "[2.0.0, )",
           "IconPacks.Avalonia.Lucide": "[2.0.0, )",
           "SkyCD.Formatting": "[1.0.0, )",
-          "SkyCD.SDK": "[3.0.0, )",
+          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
           "SmartFormat": "[3.6.2, )",
           "YamlDotNet": "[18.1.0, )"
         }

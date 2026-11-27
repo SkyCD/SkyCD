@@ -3,7 +3,7 @@
         <Compile Include="..\Shared\EncodingProfiles\LegacyEncoding.cs" Link="Shared\EncodingProfiles\LegacyEncoding.cs" />
     </ItemGroup>
     <ItemGroup>
-        <ProjectReference Include="..\..\src\SkyCD.SDK\SkyCD.SDK.csproj" />
+        <PackageReference Include="SkyCD.SDK" Version="[$(SkyCdSdkVersion)]" />
     </ItemGroup>
     <ItemGroup>
         <!-- MIT: tag-soup HTML parsing for report import. No script execution; parsing only. -->

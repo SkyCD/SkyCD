@@ -12,7 +12,7 @@
         <InternalsVisibleTo Include="SkyCD.App.Tests" />
     </ItemGroup>
     <ItemGroup>
-        <ProjectReference Include="../../src/SkyCD.SDK/SkyCD.SDK.csproj" />
+        <PackageReference Include="SkyCD.SDK" Version="[$(SkyCdSdkVersion)]" />
         <ProjectReference Include="../../src/SkyCD.UI/SkyCD.UI.csproj" />
     </ItemGroup>
     <ItemGroup>

@@ -27,7 +27,6 @@ Use a **parallel rewrite** with a controlled compatibility bridge for legacy fil
 |   |-- SkyCD.Application/                 # Use-cases/orchestration, service contracts
 |   |-- SkyCD.Domain/                      # Core entities/value objects/rules
 |   |-- SkyCD.Infrastructure/              # SQLite, filesystem, logging, settings
-|   |-- SkyCD.SDK/         # Public plugin SDK contracts
 |   |-- SkyCD.Plugin.Runtime/              # Discovery/loading/compat checks/isolation
 |   |-- SkyCD.Plugin.Host/                 # Host-facing extension services for plugins
 |   |-- SkyCD.Format.Builtin.LegacySCD/    # Built-in plugin: *.scd

@@ -693,6 +693,11 @@
         "resolved": "2.1.0",
         "contentHash": "rmQcrFXgcrqT9M6+xdxAK/JWx1vFuCRT8fTdce4ALdze2/8N5yMRW9Vmkresw+JpL+JC8zuC1HfDkrfVgBUIqA=="
       },
+      "SkyCD.SDK": {
+        "type": "Transitive",
+        "resolved": "3.0.0-alpha.2",
+        "contentHash": "fxJSzGteGzMd6jW76KOriqaofaYPJWy8DXYvYyxfTkAnhNl7Jd9QYtjOX97Ewe2/mcbX094dQbfdp4G4c/2Ylg=="
+      },
       "SmartFormat": {
         "type": "Transitive",
         "resolved": "3.6.2",
@@ -822,27 +827,27 @@
         "type": "Project",
         "dependencies": {
           "CommandDotNet": "[8.1.1, )",
-          "SkyCD.SDK": "[3.0.0, )"
+          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
         }
       },
       "skycd.plugin.accounts.jetbrains": {
         "type": "Project",
         "dependencies": {
           "CommandDotNet": "[8.1.1, )",
-          "SkyCD.SDK": "[3.0.0, )"
+          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
         }
       },
       "skycd.plugin.accounts.microsoft365": {
         "type": "Project",
         "dependencies": {
           "CommandDotNet": "[8.1.1, )",
-          "SkyCD.SDK": "[3.0.0, )"
+          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
         }
       },
       "skycd.plugin.host": {
         "type": "Project",
         "dependencies": {
-          "SkyCD.SDK": "[3.0.0, )"
+          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
         }
       },
       "skycd.plugin.runtime": {
@@ -860,17 +865,14 @@
           "SkyCD.Documents": "[1.0.0, )",
           "SkyCD.Logging": "[1.0.0, )",
           "SkyCD.Plugin.Host": "[1.0.0, )",
-          "SkyCD.SDK": "[3.0.0, )",
+          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
           "System.Reflection.MetadataLoadContext": "[10.0.15, )"
         }
-      },
-      "skycd.sdk": {
-        "type": "Project"
       },
       "skycd.testsupport": {
         "type": "Project",
         "dependencies": {
-          "SkyCD.SDK": "[3.0.0, )"
+          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
         }
       },
       "skycd.ui": {
@@ -880,7 +882,7 @@
           "IconPacks.Avalonia": "[2.0.0, )",
           "IconPacks.Avalonia.Lucide": "[2.0.0, )",
           "SkyCD.Formatting": "[1.0.0, )",
-          "SkyCD.SDK": "[3.0.0, )",
+          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
           "SmartFormat": "[3.6.2, )",
           "YamlDotNet": "[18.1.0, )"
         }

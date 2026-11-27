@@ -13,7 +13,7 @@
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Metadata.TvCom\SkyCD.Plugin.Metadata.TvCom.csproj"/>
-        <ProjectReference Include="..\..\src\SkyCD.SDK\SkyCD.SDK.csproj"/>
+        <PackageReference Include="SkyCD.SDK" Version="[$(SkyCdSdkVersion)]"/>
         <ProjectReference Include="..\..\src\SkyCD.Plugin.Runtime\SkyCD.Plugin.Runtime.csproj"/>
     </ItemGroup>
     <ItemGroup>

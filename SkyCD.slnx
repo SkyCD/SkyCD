@@ -95,7 +95,6 @@
         <Project Path="src/SkyCD.Documents/SkyCD.Documents.csproj"/>
         <Project Path="src/SkyCD.Formatting/SkyCD.Formatting.csproj"/>
         <Project Path="src/SkyCD.Logging/SkyCD.Logging.csproj"/>
-        <Project Path="src/SkyCD.SDK/SkyCD.SDK.csproj"/>
         <Project Path="src/SkyCD.Plugin.Host/SkyCD.Plugin.Host.csproj"/>
         <Project Path="src/SkyCD.Plugin.Runtime/SkyCD.Plugin.Runtime.csproj"/>
         <Project Path="src/SkyCD.Presentation/SkyCD.Presentation.csproj"/>

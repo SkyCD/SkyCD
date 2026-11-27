@@ -9,7 +9,7 @@
         <Description>Reads typed project and asset facts from Godot, Unity, Unreal, Roblox, GameMaker, RPG Maker, Construct 3, Cocos, Defold, CRYENGINE, O3DE, Flax, Stride, Wicked, Ren'Py, s&amp;box, MonoGame/FNA, LÖVE, libGDX atlases, Tiled, LDtk and Aseprite files, with bounded pixel and structure thumbnails. Referenced tilesets, GUID targets and media files are never opened.</Description>
     </PropertyGroup>
     <ItemGroup>
-        <ProjectReference Include="..\..\src\SkyCD.SDK\SkyCD.SDK.csproj"/>
+        <PackageReference Include="SkyCD.SDK" Version="[$(SkyCdSdkVersion)]"/>
     </ItemGroup>
     <ItemGroup>
         <!-- Shared with the other preview plugins: one page layout and one encode helper. -->

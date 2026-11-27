@@ -55,6 +55,12 @@
         "resolved": "7.6.0",
         "contentHash": "Ka3LakuFhLhhZ3JcGr4srWpDnYu6FIQnyR7jsKR6YeZnHqnq6jicrXcMa2jDFbK9X/kwkvsrx1wgMC7nJPhpUQ=="
       },
+      "SkyCD.SDK": {
+        "type": "Direct",
+        "requested": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
+        "resolved": "3.0.0-alpha.2",
+        "contentHash": "fxJSzGteGzMd6jW76KOriqaofaYPJWy8DXYvYyxfTkAnhNl7Jd9QYtjOX97Ewe2/mcbX094dQbfdp4G4c/2Ylg=="
+      },
       "Avalonia.BuildServices": {
         "type": "Transitive",
         "resolved": "11.3.2",
@@ -562,9 +568,6 @@
           "Humanizer.Core": "[3.0.10, )"
         }
       },
-      "skycd.sdk": {
-        "type": "Project"
-      },
       "skycd.ui": {
         "type": "Project",
         "dependencies": {
@@ -572,7 +575,7 @@
           "IconPacks.Avalonia": "[2.0.0, )",
           "IconPacks.Avalonia.Lucide": "[2.0.0, )",
           "SkyCD.Formatting": "[1.0.0, )",
-          "SkyCD.SDK": "[3.0.0, )",
+          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
           "SmartFormat": "[3.6.2, )",
           "YamlDotNet": "[18.1.0, )"
         }

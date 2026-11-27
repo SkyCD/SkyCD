@@ -23,13 +23,16 @@
         "resolved": "4.13.0.20261107",
         "contentHash": "suj3kBH9QX9x/zLvgHgmdudU7/wPbJQInyt2UmnIChgsJQ3x8xyjbFsVKi2hCYyV4J3ENvydgV5jGAcC+oZPVg=="
       },
+      "SkyCD.SDK": {
+        "type": "Direct",
+        "requested": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
+        "resolved": "3.0.0-alpha.2",
+        "contentHash": "fxJSzGteGzMd6jW76KOriqaofaYPJWy8DXYvYyxfTkAnhNl7Jd9QYtjOX97Ewe2/mcbX094dQbfdp4G4c/2Ylg=="
+      },
       "XmpCore": {
         "type": "Transitive",
         "resolved": "6.1.10.1",
         "contentHash": "/Tp2/e39e7z8hLtS4TXt0FNNZHbf5yNFfHS0/59soXlgOzZlyRZivvzWpvujyaWkTWWgecp/1nHxkuc5vntn7A=="
-      },
-      "skycd.sdk": {
-        "type": "Project"
       }
     }
   }

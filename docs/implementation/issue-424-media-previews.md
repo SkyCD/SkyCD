@@ -8,7 +8,7 @@ migration, compatibility and limitation notes the parent requires.
 
 - #435 plugin capabilities: `IMediaMetadataCapability` / `IMediaPreviewCapability`
   and the `MediaMetadata*` contracts in
-  `src/SkyCD.SDK/Capabilities/Media/MediaContracts.cs`; host routing
+  [MediaContracts.cs](https://github.com/SkyCD/SkyCD.SDK/blob/main/Capabilities/Media/MediaContracts.cs); host routing
   via `MediaExtensionManager`. Documented in `docs/plugins/media-capabilities.md`.
 - #436 offline persistence: `MediaCacheStore`/`CouchbaseMediaCacheStore`,
   `MediaExtractionScheduler`, retention/eviction, bundles, stale/missing handling.

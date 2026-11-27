@@ -131,7 +131,7 @@ The plugin never writes the catalog. Records are staged into the media cache bat
 already manages, and published atomically with the file records:
 
 - `IMediaTargetMetadataCapability` / `MediaTarget` / `MediaTargetCapture` — the shared medium seam in
-  `src/SkyCD.SDK/Capabilities/Media/MediaTargetContracts.cs`; the plugin supports
+  [MediaTargetContracts.cs](https://github.com/SkyCD/SkyCD.SDK/blob/main/Capabilities/Media/MediaTargetContracts.cs); the plugin supports
   `MediaTargetKind.OpticalDisc` and returns the disc as the capture and the tracks as its parts;
 - `MediaTargetExtensionManager` (`src/SkyCD.Plugin.Host/Media/`) — generic host manager: `Supports` filtering
   by medium kind, priority order, per-plugin settings resolution, failure isolation through

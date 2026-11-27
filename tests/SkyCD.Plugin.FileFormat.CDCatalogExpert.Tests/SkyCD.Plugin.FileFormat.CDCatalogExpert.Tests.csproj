@@ -12,7 +12,7 @@
         <PackageReference Include="xunit.runner.visualstudio" Version="4.0.1"/>
     </ItemGroup>
     <ItemGroup>
-        <ProjectReference Include="..\..\src\SkyCD.SDK\SkyCD.SDK.csproj"/>
+        <PackageReference Include="SkyCD.SDK" Version="[$(SkyCdSdkVersion)]"/>
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.CDCatalogExpert\SkyCD.Plugin.FileFormat.CDCatalogExpert.csproj"/>
     </ItemGroup>
     <ItemGroup>

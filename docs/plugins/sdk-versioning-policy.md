@@ -1,11 +1,12 @@
 # Plugin SDK Versioning and Compatibility Policy
 
 ## Scope
-Applies to the `SkyCD.SDK` package (assembly `SkyCD.SDK`, source project `src/SkyCD.SDK`, namespaces
+Applies to the `SkyCD.SDK` package (assembly `SkyCD.SDK`, source repository [SkyCD/SkyCD.SDK](https://github.com/SkyCD/SkyCD.SDK), namespaces
 `SkyCD.SDK.*`) and runtime discovery behavior.
 
 ## Semantic Versioning Rules
-- SDK uses SemVer: `MAJOR.MINOR.PATCH`.
+- SDK uses SemVer: `MAJOR.MINOR.PATCH`. Initial packages use `3.0.0-alpha.1`,
+  `3.0.0-alpha.2`, and successive alpha numbers before the stable `3.0.0` release.
 - `PATCH`: documentation or non-breaking implementation detail changes.
 - `MINOR`: backward-compatible additions (new optional members, new capability interfaces).
 - `MAJOR`: breaking contract changes (removed/renamed members, changed signatures, behaviorally incompatible changes).

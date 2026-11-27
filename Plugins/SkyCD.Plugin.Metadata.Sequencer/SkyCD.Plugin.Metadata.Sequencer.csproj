@@ -9,7 +9,7 @@
         <Description>Catalogs DAW projects, MIDI files and tracker modules with structure previews.</Description>
     </PropertyGroup>
     <ItemGroup>
-        <ProjectReference Include="..\..\src\SkyCD.SDK\SkyCD.SDK.csproj"/>
+        <PackageReference Include="SkyCD.SDK" Version="[$(SkyCdSdkVersion)]"/>
         <PackageReference Include="Melanchall.DryWetMidi.Nativeless" Version="8.0.3"/>
         <PackageReference Include="SkiaSharp" Version="3.119.4"/>
         <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.4"/>

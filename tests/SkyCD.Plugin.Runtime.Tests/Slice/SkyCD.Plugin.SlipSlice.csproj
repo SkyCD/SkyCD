@@ -13,7 +13,7 @@
         <Compile Remove="Foreign/**/*.cs"/>
     </ItemGroup>
     <ItemGroup>
-        <ProjectReference Include="..\..\..\src\SkyCD.SDK\SkyCD.SDK.csproj"/>
+        <PackageReference Include="SkyCD.SDK" Version="[$(SkyCdSdkVersion)]"/>
     </ItemGroup>
     <ItemGroup>
         <AssemblyAttribute Include="SkyCD.SDK.Lifecycle.PluginIdAttribute">

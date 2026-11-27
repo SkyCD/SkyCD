@@ -75,6 +75,12 @@
           "IconPacks.Avalonia.Core": "2.0.0"
         }
       },
+      "SkyCD.SDK": {
+        "type": "Direct",
+        "requested": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
+        "resolved": "3.0.0-alpha.2",
+        "contentHash": "fxJSzGteGzMd6jW76KOriqaofaYPJWy8DXYvYyxfTkAnhNl7Jd9QYtjOX97Ewe2/mcbX094dQbfdp4G4c/2Ylg=="
+      },
       "SmartFormat": {
         "type": "Direct",
         "requested": "[3.6.2, )",
@@ -497,9 +503,6 @@
         "dependencies": {
           "Humanizer.Core": "[3.0.10, )"
         }
-      },
-      "skycd.sdk": {
-        "type": "Project"
       }
     }
   }

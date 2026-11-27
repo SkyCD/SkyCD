@@ -9,7 +9,7 @@
         <Description>Exports the current list or result set to a Microsoft Access database (*.mdb).</Description>
     </PropertyGroup>
     <ItemGroup>
-        <ProjectReference Include="../../src/SkyCD.SDK/SkyCD.SDK.csproj" />
+        <PackageReference Include="SkyCD.SDK" Version="[$(SkyCdSdkVersion)]" />
     </ItemGroup>
     <ItemGroup>
       <PackageReference Include="JustyBase.UCanAccess.File" Version="1.1.0" />

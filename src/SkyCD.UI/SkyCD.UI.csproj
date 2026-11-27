@@ -15,7 +15,7 @@
         <PackageReference Include="IconPacks.Avalonia.Lucide" Version="2.0.0"/>
     </ItemGroup>
     <ItemGroup>
-        <ProjectReference Include="..\SkyCD.SDK\SkyCD.SDK.csproj"/>
+        <PackageReference Include="SkyCD.SDK" Version="[$(SkyCdSdkVersion)]"/>
         <ProjectReference Include="..\SkyCD.Formatting\SkyCD.Formatting.csproj"/>
         <AvaloniaResource Include="../SkyCD.App/Assets/skycd.ico" Link="Assets/skycd.ico"/>
         <EmbeddedResource Include="Translations\*.yaml"/>

@@ -94,6 +94,12 @@
           "DiscUtils.Core": "0.16.13"
         }
       },
+      "SkyCD.SDK": {
+        "type": "Direct",
+        "requested": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
+        "resolved": "3.0.0-alpha.2",
+        "contentHash": "fxJSzGteGzMd6jW76KOriqaofaYPJWy8DXYvYyxfTkAnhNl7Jd9QYtjOX97Ewe2/mcbX094dQbfdp4G4c/2Ylg=="
+      },
       "DiscUtils.Core": {
         "type": "Transitive",
         "resolved": "0.16.13",
@@ -111,9 +117,6 @@
         "type": "Transitive",
         "resolved": "1.0.15",
         "contentHash": "O5AhPNxnNhI9Ena8b+VJ1hhgNac8rRmd1rnYopSEWHetU/1Z5xOFPuWT4nxpy2u5Qk7evS5kFj1dRDhcArBtpg=="
-      },
-      "skycd.sdk": {
-        "type": "Project"
       }
     }
   }
