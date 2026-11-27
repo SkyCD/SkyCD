@@ -1,22 +1,21 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using SkyCD.SDK.Capabilities.Media;
-using SkyCD.SDK.Capabilities.Volume;
 using SkyCD.Plugin.Metadata.Volume.Models;
 using SkyCD.Plugin.Metadata.Volume.Sources;
 
 namespace SkyCD.Plugin.Metadata.Volume;
 
 /// <summary>
-/// Captures the filesystem volume serial of a disk while the host captures media info. Absence is
-/// reported by returning no value, so a genuinely reported zero serial is never stored as a failure
-/// and a failure never fabricates a placeholder. The plugin degrades to a no-op on unsupported platforms.
+/// Captures the filesystem volume serial of a mounted volume or a data disc while the host captures media
+/// info. An audio CD exposes no filesystem, so its capture returns nothing. Absence is reported by returning
+/// no capture, so a genuinely reported zero serial is never stored as a failure and a failure never fabricates
+/// a placeholder. The plugin degrades to a no-op on unsupported platforms.
 /// </summary>
-public sealed class VolumeSerialPlugin : IVolumeMetadataCapability
+public sealed class VolumeSerialPlugin : IMediaTargetMetadataCapability
 {
-    private static readonly VolumeExtractionResult NoValue = new(Array.Empty<MediaMetadataValue>());
-
     private readonly IVolumeSerialApi api;
 
     public VolumeSerialPlugin()
@@ -29,22 +28,27 @@ public sealed class VolumeSerialPlugin : IVolumeMetadataCapability
         this.api = api;
     }
 
-    public VolumeDescriptor Descriptor => new(VolumeSerialSchema.Metadata);
+    public MediaTargetDescriptor Descriptor => new();
 
-    public VolumeExtractionResult Extract(VolumeMediaContext volume, CancellationToken cancellationToken)
+    public bool Supports(MediaTarget target) => target.Kind is MediaTargetKind.Volume or MediaTargetKind.OpticalDisc;
+
+    public Task<MediaTargetCapture?> CaptureAsync(MediaTarget target, IProgress<MediaProgress>? progress,
+        CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(volume);
+        ArgumentNullException.ThrowIfNull(target);
         cancellationToken.ThrowIfCancellationRequested();
-        if (!api.IsSupported || !api.TryGetVolumeSerial(volume.RootPath, out var volumeSerial))
+        if (!api.IsSupported || string.IsNullOrWhiteSpace(target.Location)
+            || !api.TryGetVolumeSerial(target.Location, out var volumeSerial))
         {
-            return NoValue;
+            return Task.FromResult<MediaTargetCapture?>(null);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        return new VolumeExtractionResult(new List<MediaMetadataValue>(1)
-        {
-            new(VolumeSerialSchema.VolumeSerialNumber, MediaMetadataType.Text, Text: VolumeSerialSchema.Format(volumeSerial))
-        });
+        return Task.FromResult<MediaTargetCapture?>(new MediaTargetCapture(VolumeSerialSchema.Metadata,
+            [
+                new MediaMetadataValue(VolumeSerialSchema.VolumeSerialNumber, MediaMetadataType.Text,
+                    Text: VolumeSerialSchema.Format(volumeSerial))
+            ]));
     }
 
     private static IVolumeSerialApi CreateDefaultApi()

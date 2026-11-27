@@ -15,7 +15,6 @@ using SkyCD.Plugin.Host.Catalog;
 using SkyCD.Plugin.Host.Indexing;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Host.Menu;
-using SkyCD.Plugin.Host.Volume;
 using SkyCD.Plugin.Runtime.Exceptions;
 using SkyCD.Presentation.Catalog;
 using SkyCD.Presentation.Catalog.Export;
@@ -104,9 +103,8 @@ public partial class MainWindow
                 newCatalog = MainWindowViewModel.CreateNewCatalog(window.repositoryManager);
                 newCatalog.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
                 newCatalog.RefreshMediaServices(ServiceProvider.Resolve<MediaExtensionManager>(),
-                    ServiceProvider.Resolve<VolumeExtensionManager>(),
-                    ServiceProvider.Resolve<IndexWorkItemSequence>(),
-                    ServiceProvider.Resolve<IAudioCdMetadataProvider>());
+                    ServiceProvider.Resolve<IMediaTargetMetadataProvider>(),
+                    ServiceProvider.Resolve<IndexWorkItemSequence>());
                 newCatalog.RefreshDescriptionServices(ServiceProvider.Resolve<DescriptionExtensionManager>());
                 newCatalog.ApplySessionState(vm.CurrentViewMode, vm.CurrentSortMode, vm.IsStatusBarVisible, vm.IsSortDescending);
                 newCatalog.ApplyDetailsColumnSettings(vm.GetDetailsColumnSettings());
@@ -419,9 +417,8 @@ public partial class MainWindow
                 reloadedViewModel.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
                 reloadedViewModel.RefreshCatalogFeatureServices(ServiceProvider.Resolve<CatalogFeatureExtensionManager>());
                 reloadedViewModel.RefreshMediaServices(ServiceProvider.Resolve<MediaExtensionManager>(),
-                    ServiceProvider.Resolve<VolumeExtensionManager>(),
-                    ServiceProvider.Resolve<IndexWorkItemSequence>(),
-                    ServiceProvider.Resolve<IAudioCdMetadataProvider>());
+                    ServiceProvider.Resolve<IMediaTargetMetadataProvider>(),
+                    ServiceProvider.Resolve<IndexWorkItemSequence>());
                 var options = window.LoadAppOptions();
                 reloadedViewModel.ApplySessionState(options.Browser.ViewMode, options.Browser.SortMode, options.IsStatusBarVisible,
                     options.Browser.SortDescending);

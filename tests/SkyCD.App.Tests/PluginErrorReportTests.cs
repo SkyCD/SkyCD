@@ -57,7 +57,8 @@ public sealed class PluginErrorReportTests
     [InlineData("configure")]
     [InlineData("media")]
     [InlineData("media-settings")]
-    [InlineData("volume")]
+    [InlineData("media-target")]
+    [InlineData("media-target-settings")]
     [InlineData("catalog")]
     [InlineData("import")]
     [InlineData("index")]
@@ -65,8 +66,6 @@ public sealed class PluginErrorReportTests
     [InlineData("options")]
     [InlineData("install")]
     [InlineData("uninstall")]
-    [InlineData("audio-cd")]
-    [InlineData("audio-cd-settings")]
     [InlineData("online-metadata")]
     public void HostControlledOperations_ArePreservedInReports(string operation)
     {

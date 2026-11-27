@@ -89,11 +89,11 @@ public sealed class DiscoveredPluginFactory
             }
         }
 
-        foreach (var capability in capabilities.OfType<IAudioCdMetadataCapability>())
+        foreach (var capability in capabilities.OfType<IMediaTargetMetadataCapability>())
         {
             var extension = TryResolveFirstExtension(() =>
             {
-                var primary = capability.PrimaryExtension;
+                var primary = capability.Descriptor.PrimaryExtension;
                 return primary is null ? [] : [primary];
             });
             if (extension is not null)

@@ -9,6 +9,7 @@ using SkyCD.Documents;
 using SkyCD.Documents.Collections;
 using SkyCD.Documents.Enum;
 using SkyCD.SDK.Capabilities.Media;
+using SkyCD.Presentation.Scanning;
 
 namespace SkyCD.Presentation.MediaCache;
 
@@ -26,11 +27,11 @@ public sealed class AudioCdMetadataService
     private const string DriveTypePropertyKey = "DriveType";
     private const string TrackExtension = ".cda";
 
-    private readonly IAudioCdMetadataProvider provider;
+    private readonly IMediaTargetMetadataProvider provider;
     private readonly IMediaCacheStore store;
     private readonly TimeProvider timeProvider;
 
-    public AudioCdMetadataService(IAudioCdMetadataProvider provider, IMediaCacheStore store,
+    public AudioCdMetadataService(IMediaTargetMetadataProvider provider, IMediaCacheStore store,
         TimeProvider? timeProvider = null)
     {
         this.provider = provider ?? throw new ArgumentNullException(nameof(provider));
@@ -56,10 +57,14 @@ public sealed class AudioCdMetadataService
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            AudioCdProviderCapture? captured;
+            MediaTargetProviderCapture? captured;
             try
             {
-                captured = await provider.CaptureAsync(root.RootPath, cancellationToken).ConfigureAwait(false);
+                var target = new MediaTarget(MediaTargetKind.OpticalDisc, root.RootPath, root.RootDocument?.Name,
+                    root.RootDocument is null ? null : MediaTargetFactory.FactsOf(root.RootDocument.Properties));
+                var captures = await provider.CaptureAsync(target, cancellationToken)
+                    .ConfigureAwait(false);
+                captured = captures.FirstOrDefault();
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -135,7 +140,7 @@ public sealed class AudioCdMetadataService
         return roots.Values.ToList();
     }
 
-    private int StageDisc(AudioCdDiscRoot root, AudioCdProviderCapture captured,
+    private int StageDisc(AudioCdDiscRoot root, MediaTargetProviderCapture captured,
         IReadOnlyList<CatalogDocument> catalog, string batchId)
     {
         if (root.RootDocument is null)
@@ -144,15 +149,15 @@ public sealed class AudioCdMetadataService
         }
 
         var fingerprint = MediaSourceFingerprint.ForCatalogEntry(root.RootDocument, catalog);
-        store.Stage(batchId, BuildPayload(root.RootDocument.Id, fingerprint, captured, captured.Capture.DiscSchema,
-            captured.Capture.DiscValues, captured.Capture.DiscCover));
+        store.Stage(batchId, BuildPayload(root.RootDocument.Id, fingerprint, captured, captured.Capture.Schema,
+            captured.Capture.Values, captured.Capture.Cover));
         return 1;
     }
 
-    private int StageTracks(AudioCdDiscRoot root, AudioCdProviderCapture captured,
+    private int StageTracks(AudioCdDiscRoot root, MediaTargetProviderCapture captured,
         IReadOnlyList<CatalogDocument> documents, IReadOnlyList<CatalogDocument> catalog, string batchId)
     {
-        if (captured.Capture.Tracks.Count == 0)
+        if (captured.Capture.Parts is not { Count: > 0 } parts || captured.Capture.PartSchema is not { } partSchema)
         {
             return 0;
         }
@@ -179,23 +184,23 @@ public sealed class AudioCdMetadataService
         }
 
         var staged = 0;
-        foreach (var track in captured.Capture.Tracks)
+        foreach (var part in parts)
         {
-            if (!byNumber.TryGetValue(track.Number, out var document))
+            if (!byNumber.TryGetValue(part.Number, out var document))
             {
                 continue;
             }
 
             var fingerprint = MediaSourceFingerprint.ForCatalogEntry(document, catalog);
-            store.Stage(batchId, BuildPayload(document.Id, fingerprint, captured, captured.Capture.TrackSchema,
-                track.Values, track.Cover));
+            store.Stage(batchId, BuildPayload(document.Id, fingerprint, captured, partSchema,
+                part.Values, part.Cover));
             staged++;
         }
 
         return staged;
     }
 
-    private MediaCachePayload BuildPayload(string entryId, string fingerprint, AudioCdProviderCapture captured,
+    private MediaCachePayload BuildPayload(string entryId, string fingerprint, MediaTargetProviderCapture captured,
         MediaMetadataSchema schema, IReadOnlyList<MediaMetadataValue> values, MediaPreviewArtifact? cover)
     {
         var now = timeProvider.GetUtcNow();

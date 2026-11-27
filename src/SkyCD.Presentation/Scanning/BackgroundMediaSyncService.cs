@@ -8,7 +8,7 @@ using System.Text.Json;
 using SkyCD.Documents;
 using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
-using SkyCD.SDK.Capabilities.Volume;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Presentation.Staging;
 
 namespace SkyCD.Presentation.Scanning;
@@ -35,7 +35,7 @@ public sealed class BackgroundMediaSyncService : IDisposable
         Func<bool>? canSync = null,
         IMediaDriveProvider? drives = null,
         Func<MediaScanOptions, CancellationToken, CatalogScanResult>? scan = null,
-        IVolumeMetadataProvider? volumeMetadata = null,
+        IMediaTargetMetadataProvider? mediaTargets = null,
         Func<ScanTraversalOptions>? traversalFactory = null)
     {
         this.repository = repository;
@@ -43,7 +43,7 @@ public sealed class BackgroundMediaSyncService : IDisposable
         this.canSync = canSync ?? (() => true);
         this.drives = drives ?? new SystemMediaDriveProvider();
         this.traversalFactory = traversalFactory;
-        var scanner = new MediaCatalogScanner(this.drives, volumeMetadata: volumeMetadata);
+        var scanner = new MediaCatalogScanner(this.drives, mediaTargets: mediaTargets);
         this.scan = scan ?? ((options, token) => scanner.ScanDetailed(options, cancellationToken: token));
     }
 

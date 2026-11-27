@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.SDK.Capabilities.Media;
 using Xunit;
 
 namespace SkyCD.App.Tests;
@@ -141,6 +143,40 @@ public sealed class RemoteCatalogProviderTests
         Assert.DoesNotContain("secret", exception.Message, StringComparison.Ordinal);
         Assert.Empty(provider.Listed);
         Assert.Throws<RemoteSchemeNotSupportedException>(() => LoginDialogViewModel.FromAddress("smb://example.com", registry));
+    }
+
+    [Fact]
+    public void Scan_OffersNetworkFolderTargetAndStoresCapturedValues()
+    {
+        var provider = new TestProvider();
+        var registry = new RemoteCatalogProviderRegistry([provider]);
+        var mediaTargets = new CapturingMediaTargetProvider();
+        var result = new RemoteCatalogScanner(registry, mediaTargets).ScanDetailed(new RemoteScanOptions(
+            "test://example.com/root/", "alice", "secret", false, "Remote root", null, false));
+
+        var root = Assert.Single(result.Documents, document => document.ParentId is null);
+        Assert.Equal("captured", root.Properties["RemoteFact"]?.ToString());
+        Assert.Equal(MediaTargetKind.NetworkFolder, mediaTargets.LastTarget?.Kind);
+        Assert.Equal("Remote root", mediaTargets.LastTarget?.Name);
+        Assert.StartsWith("test://example.com", mediaTargets.LastTarget?.Location, StringComparison.Ordinal);
+    }
+
+    private sealed class CapturingMediaTargetProvider : IMediaTargetMetadataProvider
+    {
+        public MediaTarget? LastTarget { get; private set; }
+
+        public bool HasProviders => true;
+
+        public Task<IReadOnlyList<MediaTargetProviderCapture>> CaptureAsync(MediaTarget target,
+            CancellationToken cancellationToken)
+        {
+            LastTarget = target;
+            return Task.FromResult<IReadOnlyList<MediaTargetProviderCapture>>(
+            [
+                new("fake", "1", "fake", new MediaTargetCapture(new MediaMetadataSchema("fake", 1, []),
+                    [new MediaMetadataValue("RemoteFact", MediaMetadataType.Text, Text: "captured")]))
+            ]);
+        }
     }
 
     private sealed class TestProvider : IRemoteCatalogConnector, IRemoteCatalogSession

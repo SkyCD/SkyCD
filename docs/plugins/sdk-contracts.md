@@ -71,6 +71,12 @@ host service contracts implemented by the host, not by copied helper source.
     `IOnlineMetadataConsumer.InitializeOnlineMetadata` and `IOnlineMetadataService`, so a
     generator owns templates and rendering, never site parsing or fetching.
   - See [online metadata sources](online-metadata.md) for the shipped source plugins.
+- `IMediaTargetMetadataCapability` (`Capabilities.Media`)
+  - Collects metadata addressed by a catalog media root instead of by file bytes. `MediaTarget` carries
+    the medium `Kind` (volume, optical disc, folder, file, network folder, network resource or
+    plugin-filled source folder), a nullable `Location` (path, UNC path or URL), the root name and the
+    facts the host already knows. `Supports(MediaTarget)` lets one capability serve several kinds, and
+    captures are merged into the root catalog entry by the scanning, folder, remote and disc flows.
 - `IDescriptionGeneratorCapability` (`Capabilities.Media`)
   - Carries a stable `ImplementationId`, a user-facing `ImplementationName`, the generated-metadata
     `Schema` and `GenerateAsync(DescriptionContext, CancellationToken)`.

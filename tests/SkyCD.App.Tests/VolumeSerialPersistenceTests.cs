@@ -12,7 +12,6 @@ using SkyCD.Documents;
 using SkyCD.Documents.Enum;
 using SkyCD.Documents.Repository;
 using SkyCD.SDK.Capabilities.Media;
-using SkyCD.SDK.Capabilities.Volume;
 using SkyCD.Presentation.Scanning;
 using SkyCD.Presentation.Staging;
 using SkyCD.Presentation.ViewModels;
@@ -54,17 +53,28 @@ public sealed class VolumeSerialPersistenceTests : IDisposable
             d => d.Name == drivePathOrName || d.RootDirectory == drivePathOrName);
     }
 
-    private sealed class FixedVolumeProvider(string serial) : IVolumeMetadataProvider
+    private static readonly MediaMetadataSchema FakeSchema = new("fake", 1, []);
+
+    private sealed class FixedVolumeProvider(string serial) : IMediaTargetMetadataProvider
     {
-        public IReadOnlyList<MediaMetadataValue> CaptureVolumeMetadata(VolumeMediaContext volume,
+        public bool HasProviders => true;
+
+        public Task<IReadOnlyList<MediaTargetProviderCapture>> CaptureAsync(MediaTarget target,
             CancellationToken cancellationToken) =>
-            [new("VolumeSerialNumber", MediaMetadataType.Text, Text: serial)];
+            Task.FromResult<IReadOnlyList<MediaTargetProviderCapture>>(
+            [
+                new("fake", "1", "fake", new MediaTargetCapture(FakeSchema,
+                    [new("VolumeSerialNumber", MediaMetadataType.Text, Text: serial)]))
+            ]);
     }
 
-    private sealed class MissingVolumeProvider : IVolumeMetadataProvider
+    private sealed class MissingVolumeProvider : IMediaTargetMetadataProvider
     {
-        public IReadOnlyList<MediaMetadataValue> CaptureVolumeMetadata(VolumeMediaContext volume,
-            CancellationToken cancellationToken) => [];
+        public bool HasProviders => true;
+
+        public Task<IReadOnlyList<MediaTargetProviderCapture>> CaptureAsync(MediaTarget target,
+            CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<MediaTargetProviderCapture>>([]);
     }
 
     private sealed class TestStack : IDisposable
@@ -88,7 +98,7 @@ public sealed class VolumeSerialPersistenceTests : IDisposable
         public void Dispose() => Provider.Dispose();
     }
 
-    private IReadOnlyList<CatalogDocument> ScanMedia(IVolumeMetadataProvider? volumeMetadata)
+    private IReadOnlyList<CatalogDocument> ScanMedia(IMediaTargetMetadataProvider? mediaTargets)
     {
         var cdRoot = Path.Combine(scanTestDirectory, "DiscRoot");
         Directory.CreateDirectory(cdRoot);
@@ -105,7 +115,7 @@ public sealed class VolumeSerialPersistenceTests : IDisposable
             TotalSize: 700_000_000,
             DriveFormat: "CDFS");
 
-        var scanner = new MediaCatalogScanner(new FakeDriveProvider([drive]), volumeMetadata: volumeMetadata);
+        var scanner = new MediaCatalogScanner(new FakeDriveProvider([drive]), mediaTargets: mediaTargets);
         return scanner.Scan(new MediaScanOptions(
             DrivePathOrName: "D:\\",
             MediaName: "GameDisc",

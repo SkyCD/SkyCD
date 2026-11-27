@@ -4,10 +4,12 @@ using System.Threading;
 using SkyCD.Documents;
 using SkyCD.Documents.Enum;
 using SkyCD.Presentation.Operations;
+using SkyCD.SDK.Capabilities.Media;
 
 namespace SkyCD.Presentation.Scanning;
 
-public sealed class FolderCatalogScanner(IScanFileSystem? fileSystem = null)
+public sealed class FolderCatalogScanner(IScanFileSystem? fileSystem = null,
+    IMediaTargetMetadataProvider? mediaTargets = null)
 {
     private readonly IScanFileSystem fileSystem = fileSystem ?? new RealScanFileSystem();
 
@@ -60,6 +62,9 @@ public sealed class FolderCatalogScanner(IScanFileSystem? fileSystem = null)
             options.IncludeExtendedInfo,
             documents);
 
+        // The root address identifies the media target even when extended info is off.
+        rootProperties["FullName"] = rootEntry.FullPath;
+
         var rootDoc = new CatalogDocument
         {
             Id = rootId,
@@ -70,6 +75,9 @@ public sealed class FolderCatalogScanner(IScanFileSystem? fileSystem = null)
             ChildrenCount = directChildrenCount,
             Properties = rootProperties
         };
+
+        MediaTargetFactory.Capture(rootProperties, mediaTargets, MediaTargetFactory.FromCatalogRoot(rootDoc),
+            cancellationToken);
 
         documents.Insert(0, rootDoc);
         context.Statistics.IncrementDiscovered();

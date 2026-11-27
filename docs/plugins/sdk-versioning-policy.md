@@ -37,6 +37,7 @@ unreleased `3.0.0` major, so no additional major bump is required and no transit
 | `[assembly: SkyCD.Plugin.Abstractions.Lifecycle.PluginId("...")]` | `[assembly: SkyCD.SDK.Lifecycle.PluginId("...")]` |
 | `clr-namespace:SkyCD.Plugin.Abstractions.Capabilities.Media;assembly=SkyCD.SDK` | `clr-namespace:SkyCD.SDK.Capabilities.Media;assembly=SkyCD.SDK` |
 | `SkyCD.SDK.Capabilities.Capture.*` (`ICaptureSourcePluginCapability`, `ICaptureSourceHostApi`, `CaptureSourceKind`, `CaptureDevice`, `CapturePreviewResult`, `CapturedCatalogFile`, …) | `SkyCD.SDK.Capabilities.Sources.*` (`ISourceFactoryPluginCapability`, `ISourceFactoryHostApi`, `SourceKind`, `SourceDevice`, `SourcePreviewResult`, `SourceFile`, …) |
+| `SkyCD.SDK.Capabilities.Media.IAudioCdMetadataCapability` / `AudioCdDiscRequest` / `AudioCdCapture` / `AudioCdProviderCapture` / `IAudioCdMetadataProvider` and `SkyCD.SDK.Capabilities.Volume.*` (`IVolumeMetadataCapability`, `VolumeMediaContext`, `VolumeDescriptor`, `VolumeExtractionResult`, `IVolumeMetadataProvider`) | `SkyCD.SDK.Capabilities.Media.IMediaTargetMetadataCapability` / `MediaTarget` / `MediaTargetCapture` / `MediaTargetProviderCapture` / `IMediaTargetMetadataProvider`; `Capabilities.Volume` is deleted |
 | `SkyCD.SDK.PluginFailure` | `SkyCD.SDK.Plugins.PluginFailure` |
 | `SkyCD.SDK.Capabilities.Catalog.ToolbarContribution` / `ToolbarButtonContribution` | `SkyCD.SDK.Capabilities.Toolbars.*` |
 | `SkyCD.SDK.Capabilities.Catalog.ILocationApi` (and the location exceptions, `CatalogLocationInfo`) | `SkyCD.SDK.Capabilities.Catalog.Locations.*` |
@@ -45,6 +46,16 @@ unreleased `3.0.0` major, so no additional major bump is required and no transit
 Only type and namespace names changed. `PluginId`, `FormatId`, attribute values, existing
 `[assembly: PluginId(...)]` strings and persisted plugin state keep their exact values. External authors
 update the `using` directives, rebuild against `SkyCD.SDK` 3.0 and reinstall the plugin.
+
+### Media target contract (#1338)
+
+`MediaTarget` describes any catalog medium instead of only a drive: `Kind` is one of `Volume`,
+`OpticalDisc`, `Folder`, `File`, `NetworkFolder`, `NetworkResource` or `SourceFolder` (a plugin-filled
+source folder with no address of its own). `Location` carries the path, UNC path or URL and is `null`
+for `SourceFolder`; `Name` is the catalog entry name; `Facts` exposes the entry properties the host
+already captured (`VolumeLabel`, `DriveType`, `URL`, ...) under their catalog keys. A capability that
+serves several kinds returns `true` from `Supports` for each of them and reads `Kind` and `Location`
+in `CaptureAsync`; captures are merged into the media, folder, remote and disc roots alike.
 
 ## SDK 3.0 Options unification (#1340)
 

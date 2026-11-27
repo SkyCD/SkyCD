@@ -5,10 +5,10 @@ Implements #732 on the volume-level media contracts from #435 (`docs/plugins/med
 Assembly: `Plugins/SkyCD.Plugin.Metadata.AudioCD/` → plugin id `SkyCD.Plugin.Metadata.AudioCD`.
 Tests: `tests/SkyCD.Plugin.Metadata.AudioCD.Tests/`.
 
-An audio CD has no filesystem to read tags from, so identification and enrichment exist only at the volume
-level. The plugin contributes one `IAudioCdMetadataCapability` (disc and track records plus cover art) and one
-`IPluginConfigurationCapability` (the embedded Options → Metadata → Audio CD page). Discovery uses assembly metadata
-and implemented capability types only — there is no `plugin.json`.
+An audio CD has no filesystem to read tags from, so identification and enrichment exist only at the medium
+level. The plugin contributes one `IMediaTargetMetadataCapability` for optical discs (disc and track records
+plus cover art) and one `IPluginConfigurationCapability` (the embedded Options → Metadata → Audio CD page).
+Discovery uses assembly metadata and implemented capability types only — there is no `plugin.json`.
 
 ## Identification
 
@@ -130,17 +130,19 @@ capture time by the host, so a change takes effect on the next scan without relo
 The plugin never writes the catalog. Records are staged into the media cache batch the scanning view model
 already manages, and published atomically with the file records:
 
-- `IAudioCdMetadataCapability` / `AudioCdDiscRequest` / `AudioCdCapture` — the plugin seam in
-  `src/SkyCD.SDK/Capabilities/Media/AudioCdContracts.cs`;
-- `AudioCdExtensionManager` (`src/SkyCD.Plugin.Host/AudioCd/`) — generic host manager: priority order,
-  per-plugin settings resolution, failure isolation through `PluginFailure.Publish`, cancellation passthrough,
-  registered as `IAudioCdMetadataProvider`;
+- `IMediaTargetMetadataCapability` / `MediaTarget` / `MediaTargetCapture` — the shared medium seam in
+  `src/SkyCD.SDK/Capabilities/Media/MediaTargetContracts.cs`; the plugin supports
+  `MediaTargetKind.OpticalDisc` and returns the disc as the capture and the tracks as its parts;
+- `MediaTargetExtensionManager` (`src/SkyCD.Plugin.Host/Media/`) — generic host manager: `Supports` filtering
+  by medium kind, priority order, per-plugin settings resolution, failure isolation through
+  `PluginFailure.Publish`, cancellation passthrough, registered as `IMediaTargetMetadataProvider`;
 - `AudioCdMetadataService` (`src/SkyCD.Presentation/MediaCache/`) — platform-neutral disc-root discovery,
-  artifact staging (`preview:0`), and per-entry fingerprints, mirroring the file metadata service;
+  artifact staging (`preview:0`), and per-entry fingerprints, mirroring the file metadata service; it takes
+  the first successful optical-disc capture;
 - `SystemMediaDriveProvider` / `MediaCatalogScanner` — on Unix an audio CD exists only as a device node;
   sysfs and IOKit probes offer it for scanning, and the scanner catalogues it as a media root without
   traversing a filesystem;
-- `DiscoveredPluginFactory` gains an `IAudioCdMetadataCapability.PrimaryExtension` fallback so the plugin has
+- `DiscoveredPluginFactory` gains a `MediaTargetDescriptor.PrimaryExtension` fallback so the plugin has
   an icon identity (`cda`) without a file-format capability;
 - `MainWindowViewModel.StageMetadataAsync` runs the disc step before the file loop and reports failures as a
   scan warning.
