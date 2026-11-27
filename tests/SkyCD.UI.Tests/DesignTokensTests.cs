@@ -65,7 +65,6 @@ public sealed class DesignTokensTests
         Assert.Equal(new Thickness(0, 0, 0, 4), Token("SkyGapBottomXs"));
         Assert.Equal(new Thickness(0, 0, 0, 8), Token("SkyGapBottomSm"));
         Assert.Equal(new Thickness(0, 0, 0, 12), Token("SkyGapBottomMd"));
-        Assert.Equal(new Thickness(8, 0, 0, 0), Token("SkyGapLeftSm"));
         Assert.Equal(new Thickness(0, 2, 0, 2), Token("SkyGapYXxs"));
         Assert.Equal(new Thickness(0, 4, 0, 4), Token("SkyGapYXs"));
         Assert.Equal(new Thickness(0, 8, 0, 8), Token("SkyGapYSm"));
@@ -83,6 +82,10 @@ public sealed class DesignTokensTests
         Assert.Equal(Token("SkyComboBoxContentPadding"), Token("SkyInputPadding"));
         Assert.Equal(new Thickness(8, 4), Token("SkyInputPadding"));
         Assert.Equal(14, Size("SkySearchIconSize"));
+
+        // Issue #1312: the glyph keeps the input inset on its left and one ramp step of air
+        // before the query text on its right.
+        Assert.Equal(new Thickness(8, 0, 4, 0), Token("SkySearchIconMargin"));
     }
 
     [AvaloniaFact]

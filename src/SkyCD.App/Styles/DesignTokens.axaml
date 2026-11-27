@@ -38,11 +38,16 @@
 
     <!--
         Text inputs share one inner inset (issue #1184). The icon of a search field sits on the
-        same inset as plain input text, so the glyph and the text start at one shared edge.
+        same inset as plain input text, so the glyph starts on the shared text edge.
     -->
     <Thickness x:Key="SkyInputPadding">8,4</Thickness>
     <!-- The Lucide search glyph every search field draws (issue #1184). -->
     <x:Double x:Key="SkySearchIconSize">14</x:Double>
+    <!--
+        The glyph keeps the input inset on its left and adds one ramp step of air on its right,
+        so the query text or placeholder never touches the magnifier (issue #1312).
+    -->
+    <Thickness x:Key="SkySearchIconMargin">8,0,4,0</Thickness>
 
     <!--
         The inset vocabulary (issue #999). Margin and Padding take one of these keys, or a plain 0
@@ -61,7 +66,6 @@
     <Thickness x:Key="SkyGapBottomXs">0,0,0,4</Thickness>
     <Thickness x:Key="SkyGapBottomSm">0,0,0,8</Thickness>
     <Thickness x:Key="SkyGapBottomMd">0,0,0,12</Thickness>
-    <Thickness x:Key="SkyGapLeftSm">8,0,0,0</Thickness>
 
     <!-- One axis: separates rows or columns inside a stack. -->
     <Thickness x:Key="SkyGapYXxs">0,2,0,2</Thickness>

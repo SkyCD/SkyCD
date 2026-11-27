@@ -25,7 +25,7 @@ public sealed class SearchTextBox : TextBox
         var icon = new PackIconControl { Kind = PackIconLucideKind.Search };
         icon.Bind(Layoutable.WidthProperty, new DynamicResourceExtension("SkySearchIconSize"));
         icon.Bind(Layoutable.HeightProperty, new DynamicResourceExtension("SkySearchIconSize"));
-        icon.Bind(Layoutable.MarginProperty, new DynamicResourceExtension("SkyGapLeftSm"));
+        icon.Bind(Layoutable.MarginProperty, new DynamicResourceExtension("SkySearchIconMargin"));
         icon.Bind(PackIconControl.ForegroundProperty, new DynamicResourceExtension("ThemeForegroundLowBrush"));
         InnerLeftContent = icon;
     }
