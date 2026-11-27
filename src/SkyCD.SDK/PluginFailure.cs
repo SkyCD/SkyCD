@@ -65,9 +65,8 @@ public sealed record PluginFailure(string PluginIdentity, string PluginVersion, 
         // Operation is host-controlled; arbitrary plugin strings are never exported.
         var safeOperation = operation
             is "menu" or "modal" or "read" or "write" or "configure" or "media" or "media-settings"
-            or "volume" or "catalog" or "import" or "index" or "assess"
-            or "options" or "install" or "uninstall"
-            or "audio-cd" or "audio-cd-settings" or "online-metadata"
+            or "media-target" or "media-target-settings" or "catalog" or "import" or "index" or "assess"
+            or "options" or "install" or "uninstall" or "online-metadata"
             ? operation
             : "plugin";
         return new PluginFailure(identity, assembly.GetName().Version?.ToString() ?? "0.0",

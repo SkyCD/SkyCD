@@ -23,20 +23,20 @@ public sealed class AudioCdMetadataPluginTests
         var capture = await CaptureAsync(AudioCdSettings.Default, mb: AudioCdFixtures.MusicBrainzMetadata());
 
         Assert.NotNull(capture);
-        Assert.Equal("skycd.audio-cd.disc", capture.DiscSchema.Id);
-        Assert.Equal("Test Album", Text(capture.DiscValues, AudioCdSchema.Album));
-        Assert.Equal("Test Artist", Text(capture.DiscValues, AudioCdSchema.Artist));
-        Assert.Equal("Test Artist", Text(capture.DiscValues, AudioCdSchema.AlbumArtist));
-        Assert.Equal(1999L, Integer(capture.DiscValues, AudioCdSchema.Year));
-        Assert.Equal(6L, Integer(capture.DiscValues, AudioCdSchema.TrackCount));
-        Assert.Equal("49HHV7Eb8UKF3aQiNmu1GR8vKTY-", Text(capture.DiscValues, AudioCdSchema.MusicBrainzDiscId));
-        Assert.Equal("musicbrainz", Text(capture.DiscValues, AudioCdSchema.Source));
+        Assert.Equal("skycd.audio-cd.disc", capture.Schema.Id);
+        Assert.Equal("Test Album", Text(capture.Values, AudioCdSchema.Album));
+        Assert.Equal("Test Artist", Text(capture.Values, AudioCdSchema.Artist));
+        Assert.Equal("Test Artist", Text(capture.Values, AudioCdSchema.AlbumArtist));
+        Assert.Equal(1999L, Integer(capture.Values, AudioCdSchema.Year));
+        Assert.Equal(6L, Integer(capture.Values, AudioCdSchema.TrackCount));
+        Assert.Equal("49HHV7Eb8UKF3aQiNmu1GR8vKTY-", Text(capture.Values, AudioCdSchema.MusicBrainzDiscId));
+        Assert.Equal("musicbrainz", Text(capture.Values, AudioCdSchema.Source));
 
-        Assert.Equal(6, capture.Tracks.Count);
-        Assert.Equal("Opening", Text(capture.Tracks[0].Values, AudioCdSchema.Title));
-        Assert.Equal(1L, Integer(capture.Tracks[0].Values, AudioCdSchema.TrackNumber));
-        Assert.Equal(Math.Round((15363 - 150) / 75d, 3), Number(capture.Tracks[0].Values, AudioCdSchema.Length));
-        Assert.Equal("Test Album", Text(capture.Tracks[0].Values, AudioCdSchema.Album));
+        Assert.Equal(6, capture.Parts!.Count);
+        Assert.Equal("Opening", Text(capture.Parts![0].Values, AudioCdSchema.Title));
+        Assert.Equal(1L, Integer(capture.Parts![0].Values, AudioCdSchema.TrackNumber));
+        Assert.Equal(Math.Round((15363 - 150) / 75d, 3), Number(capture.Parts![0].Values, AudioCdSchema.Length));
+        Assert.Equal("Test Album", Text(capture.Parts![0].Values, AudioCdSchema.Album));
     }
 
     [Fact]
@@ -49,12 +49,12 @@ public sealed class AudioCdMetadataPluginTests
             AudioCdSettings.Parse(AudioCdFixtures.Settings((AudioCdSettings.TrackArtistTagsKey, "false"))),
             mb: AudioCdFixtures.MusicBrainzMetadata());
 
-        Assert.Null(Find(withoutDiscArtist!.DiscValues, AudioCdSchema.Artist));
-        Assert.Null(Find(withoutDiscArtist.DiscValues, AudioCdSchema.AlbumArtist));
-        Assert.Equal("Test Artist", Text(withoutDiscArtist.Tracks[0].Values, AudioCdSchema.Artist));
+        Assert.Null(Find(withoutDiscArtist!.Values, AudioCdSchema.Artist));
+        Assert.Null(Find(withoutDiscArtist.Values, AudioCdSchema.AlbumArtist));
+        Assert.Equal("Test Artist", Text(withoutDiscArtist.Parts![0].Values, AudioCdSchema.Artist));
 
-        Assert.NotNull(Find(withoutTrackArtist!.DiscValues, AudioCdSchema.Artist));
-        Assert.Null(Find(withoutTrackArtist.Tracks[0].Values, AudioCdSchema.Artist));
+        Assert.NotNull(Find(withoutTrackArtist!.Values, AudioCdSchema.Artist));
+        Assert.Null(Find(withoutTrackArtist.Parts![0].Values, AudioCdSchema.Artist));
     }
 
     [Fact]
@@ -65,10 +65,10 @@ public sealed class AudioCdMetadataPluginTests
             (AudioCdSettings.DiscCoverSizeKey, "100"),
             (AudioCdSettings.TrackCoverSizeKey, "50"))), mb: mb);
 
-        Assert.NotNull(capture!.DiscCover);
-        Assert.All(capture.Tracks, track => Assert.NotNull(track.Cover));
-        Assert.Equal(100, LongestEdge(capture.DiscCover!.Data.ToArray()));
-        Assert.Equal(50, LongestEdge(capture.Tracks[0].Cover!.Data.ToArray()));
+        Assert.NotNull(capture!.Cover);
+        Assert.All(capture.Parts!, track => Assert.NotNull(track.Cover));
+        Assert.Equal(100, LongestEdge(capture.Cover!.Data.ToArray()));
+        Assert.Equal(50, LongestEdge(capture.Parts![0].Cover!.Data.ToArray()));
     }
 
     [Fact]
@@ -80,8 +80,8 @@ public sealed class AudioCdMetadataPluginTests
             (AudioCdSettings.TrackCoversKey, "false"))), mb: AudioCdFixtures.MusicBrainzMetadata(), cover: cover);
 
         Assert.NotNull(capture);
-        Assert.Null(capture.DiscCover);
-        Assert.All(capture.Tracks, track => Assert.Null(track.Cover));
+        Assert.Null(capture.Cover);
+        Assert.All(capture.Parts!, track => Assert.Null(track.Cover));
         Assert.Equal(0, cover.Calls);
     }
 
@@ -92,7 +92,7 @@ public sealed class AudioCdMetadataPluginTests
             cover: new FakeCoverArtLookup());
 
         Assert.NotNull(capture);
-        Assert.Null(capture.DiscCover);
+        Assert.Null(capture.Cover);
     }
 
     [Fact]
@@ -123,7 +123,7 @@ public sealed class AudioCdMetadataPluginTests
             musicBrainz: mb, gnuDb: gnu);
 
         Assert.NotNull(capture);
-        Assert.Equal("gnudb", Text(capture.DiscValues, AudioCdSchema.Source));
+        Assert.Equal("gnudb", Text(capture.Values, AudioCdSchema.Source));
         Assert.Equal(1, mb.Calls);
         Assert.Equal(1, gnu.Calls);
     }
@@ -136,7 +136,7 @@ public sealed class AudioCdMetadataPluginTests
                 new FakeCoverArtLookup(), new AudioCdCoverRenderer()));
 
         var capture = await plugin.CaptureAsync(
-            new AudioCdDiscRequest("E:\\", new Dictionary<string, string?>()), null, CancellationToken.None);
+            new MediaTarget(MediaTargetKind.OpticalDisc, "E:\\"), null, CancellationToken.None);
 
         Assert.Null(capture);
     }
@@ -156,7 +156,7 @@ public sealed class AudioCdMetadataPluginTests
                 new AudioCdCoverRenderer()));
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => plugin.CaptureAsync(
-            new AudioCdDiscRequest("E:\\", new Dictionary<string, string?>()), null, cancelled.Token));
+            new MediaTarget(MediaTargetKind.OpticalDisc, "E:\\"), null, cancelled.Token));
     }
 
     [Fact]
@@ -166,7 +166,7 @@ public sealed class AudioCdMetadataPluginTests
 
         Assert.Equal("SkyCD.Plugin.AudioCd", plugin.Id);
         Assert.Equal("Audio CD Metadata Collection", plugin.Name);
-        Assert.Contains(plugin.Capabilities, capability => capability is IAudioCdMetadataCapability);
+        Assert.Contains(plugin.Capabilities, capability => capability is IMediaTargetMetadataCapability);
         Assert.Contains(plugin.Capabilities,
             capability => capability is SkyCD.SDK.Capabilities.Configuration.IPluginConfigurationCapability);
         Assert.Equal("cda", plugin.PrimaryExtension);
@@ -181,7 +181,7 @@ public sealed class AudioCdMetadataPluginTests
         Assert.Empty(Directory.EnumerateFiles(projectDirectory, "plugin.json", SearchOption.AllDirectories));
     }
 
-    private static async Task<AudioCdCapture?> CaptureAsync(AudioCdSettings settings, DiscMetadata? mb = null,
+    private static async Task<MediaTargetCapture?> CaptureAsync(AudioCdSettings settings, DiscMetadata? mb = null,
         DiscMetadata? gnu = null, DiscMetadata? metadata = null, FakeMusicBrainzLookup? musicBrainz = null,
         FakeGnuDbLookup? gnuDb = null, FakeCoverArtLookup? cover = null)
     {
@@ -192,7 +192,7 @@ public sealed class AudioCdMetadataPluginTests
                 cover ?? new FakeCoverArtLookup(AudioCdFixtures.CoverPng(300)), new AudioCdCoverRenderer()));
 
         return await plugin.CaptureAsync(
-            new AudioCdDiscRequest("E:\\", settings.ToSettings()), null, CancellationToken.None);
+            new MediaTarget(MediaTargetKind.OpticalDisc, "E:\\", Settings: settings.ToSettings()), null, CancellationToken.None);
     }
 
     private static AudioCdMetadataPlugin CreatePlugin(FakeDiscTocReader reader,

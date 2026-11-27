@@ -28,7 +28,6 @@ using SkyCD.Plugin.Host.Indexing;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.SDK.Capabilities.Menu;
-using SkyCD.SDK.Capabilities.Volume;
 using SkyCD.Presentation.Catalog;
 using SkyCD.Presentation.MediaCache;
 using SkyCD.Presentation.Operations;
@@ -74,7 +73,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                         return true;
                     }, null, token, canPublish: canPublish);
                     if (published) RefreshPreview();
-                }, () => !isDisposed && !IsProgressVisible, volumeMetadata: volumeMetadataProvider,
+                }, () => !isDisposed && !IsProgressVisible, mediaTargets: mediaTargetProvider,
                 traversalFactory: scanTraversalFactory);
             backgroundMediaSync.Failed += message => StatusText = $"Background media sync failed: {message}";
             backgroundMediaSync.Start();
@@ -168,7 +167,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private AiDescriptionService? aiDescriptionService;
     private CancellationTokenSource? pluginCommandCancellation;
     private MediaMetadataService? mediaMetadataService;
-    private IVolumeMetadataProvider? volumeMetadataProvider;
+    private IMediaTargetMetadataProvider? mediaTargetProvider;
     private AudioCdMetadataService? audioCdMetadataService;
     private readonly SemaphoreSlim metadataPublicationGate = new(1, 1);
     private readonly CancellationTokenSource metadataLifetime = new();
@@ -189,17 +188,16 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private readonly object viewRefreshLock = new();
 
     public void RefreshMediaServices(MediaExtensionManager updatedManager,
-        IVolumeMetadataProvider? volumeMetadataProvider = null, IndexWorkItemSequence? indexWorkItems = null,
-        IAudioCdMetadataProvider? audioCdMetadataProvider = null)
+        IMediaTargetMetadataProvider? mediaTargets = null, IndexWorkItemSequence? indexWorkItems = null)
     {
         ArgumentNullException.ThrowIfNull(updatedManager);
         mediaMetadataService = new MediaMetadataService(updatedManager, mediaCacheStore, workItems: indexWorkItems);
         RequestCaptureMetadataExtraction();
-        this.volumeMetadataProvider = volumeMetadataProvider;
+        mediaTargetProvider = mediaTargets;
         InvalidateMediaCatalogEffects();
-        audioCdMetadataService = audioCdMetadataProvider is null
+        audioCdMetadataService = mediaTargets is null
             ? null
-            : new AudioCdMetadataService(audioCdMetadataProvider, mediaCacheStore);
+            : new AudioCdMetadataService(mediaTargets, mediaCacheStore);
         if (backgroundMediaSync is not null)
         {
             OnIsBackgroundMediaSyncEnabledChanged(IsBackgroundMediaSyncEnabled);

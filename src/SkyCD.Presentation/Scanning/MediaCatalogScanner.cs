@@ -7,7 +7,6 @@ using SkyCD.Documents;
 using SkyCD.Documents.Collections;
 using SkyCD.Documents.Enum;
 using SkyCD.SDK.Capabilities.Media;
-using SkyCD.SDK.Capabilities.Volume;
 using SkyCD.Presentation.Operations;
 using SkyCD.Presentation.Locations;
 
@@ -16,11 +15,11 @@ namespace SkyCD.Presentation.Scanning;
 public sealed class MediaCatalogScanner(
     IMediaDriveProvider? driveProvider = null,
     IScanFileSystem? fileSystem = null,
-    IVolumeMetadataProvider? volumeMetadata = null)
+    IMediaTargetMetadataProvider? mediaTargets = null)
 {
     private readonly IMediaDriveProvider driveProvider = driveProvider ?? new SystemMediaDriveProvider();
     private readonly IScanFileSystem fileSystem = fileSystem ?? new RealScanFileSystem();
-    private readonly IVolumeMetadataProvider? volumeMetadataProvider = volumeMetadata;
+    private readonly IMediaTargetMetadataProvider? mediaTargetProvider = mediaTargets;
 
     public IReadOnlyList<CatalogDocument> Scan(
         MediaScanOptions options,
@@ -162,30 +161,37 @@ public sealed class MediaCatalogScanner(
     private void PopulateVolumeMetadata(PropertiesCollection properties, MediaDriveInfo drive,
         CancellationToken cancellationToken)
     {
-        if (volumeMetadataProvider is null)
+        if (mediaTargetProvider is null)
         {
             return;
         }
 
         try
         {
-            var values = volumeMetadataProvider.CaptureVolumeMetadata(
-                new VolumeMediaContext(drive.RootDirectory, drive.Name, drive.VolumeLabel, drive.DriveFormat),
-                cancellationToken);
-            foreach (var value in values)
+            var target = new MediaTarget(MediaTargetKind.Volume, drive.RootDirectory, drive.Name, drive.VolumeLabel,
+                drive.DriveFormat);
+            // Traversal is synchronous, so the scan already runs on a worker thread; volume capture only reads
+            // local OS state, and waiting here keeps its values on the scan result.
+            var captures = mediaTargetProvider.CaptureAsync(target, cancellationToken)
+                .ConfigureAwait(false).GetAwaiter().GetResult();
+            var seenKeys = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var capture in captures)
             {
-                var text = value.Type switch
+                foreach (var value in capture.Capture.Values)
                 {
-                    MediaMetadataType.Text => value.Text,
-                    MediaMetadataType.Integer => value.Integer?.ToString(CultureInfo.InvariantCulture),
-                    MediaMetadataType.Number => value.Number?.ToString(CultureInfo.InvariantCulture),
-                    MediaMetadataType.Boolean => value.Boolean?.ToString(),
-                    MediaMetadataType.Timestamp => value.Timestamp?.ToString("O", CultureInfo.InvariantCulture),
-                    _ => null
-                };
-                if (text is not null)
-                {
-                    properties[value.Key] = text;
+                    var text = value.Type switch
+                    {
+                        MediaMetadataType.Text => value.Text,
+                        MediaMetadataType.Integer => value.Integer?.ToString(CultureInfo.InvariantCulture),
+                        MediaMetadataType.Number => value.Number?.ToString(CultureInfo.InvariantCulture),
+                        MediaMetadataType.Boolean => value.Boolean?.ToString(),
+                        MediaMetadataType.Timestamp => value.Timestamp?.ToString("O", CultureInfo.InvariantCulture),
+                        _ => null
+                    };
+                    if (text is not null && seenKeys.Add(value.Key))
+                    {
+                        properties[value.Key] = text;
+                    }
                 }
             }
         }

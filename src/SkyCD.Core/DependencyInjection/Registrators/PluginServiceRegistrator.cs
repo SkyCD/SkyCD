@@ -18,13 +18,10 @@ using SkyCD.SDK.Capabilities.Catalog;
 using SkyCD.SDK.Capabilities.Import;
 using SkyCD.SDK.Capabilities.Indexing;
 using SkyCD.SDK.Capabilities.Media;
-using SkyCD.SDK.Capabilities.Volume;
-using SkyCD.Plugin.Host.AudioCd;
 using SkyCD.Plugin.Host.Catalog;
 using SkyCD.Plugin.Host.Indexing;
 using SkyCD.Plugin.Host.Menu;
 using SkyCD.Plugin.Host.Media;
-using SkyCD.Plugin.Host.Volume;
 using SkyCD.Plugin.Runtime.Activation;
 using SkyCD.Plugin.Runtime.Collections;
 using SkyCD.Plugin.Runtime.Configuration;
@@ -153,11 +150,6 @@ public sealed class PluginServiceRegistrator
                 plugin.Capabilities.OfType<IIndexWorkItemProvider>())),
             ifAlreadyRegistered: IfAlreadyRegistered.Replace);
 
-        registrator.RegisterInstance(new VolumeExtensionManager(plugins.SelectMany(plugin =>
-            plugin.Capabilities.OfType<IVolumeMetadataCapability>()
-                .Select(capability => new VolumeProvider(plugin.Id, plugin.Version.ToString(), capability)))),
-            ifAlreadyRegistered: IfAlreadyRegistered.Replace);
-
         registrator.RegisterInstance(new DescriptionExtensionManager(plugins.SelectMany(plugin =>
             plugin.Capabilities.OfType<IGeneratedDescriptionCapability>())),
             ifAlreadyRegistered: IfAlreadyRegistered.Replace);
@@ -180,14 +172,14 @@ public sealed class PluginServiceRegistrator
             ifAlreadyRegistered: IfAlreadyRegistered.Replace);
 
         // Capture-time settings are read from the configuration store so a persisted change applies to the
-        // next scan without restarting the host.
-        registrator.RegisterDelegate<AudioCdExtensionManager>(resolver => new AudioCdExtensionManager(
-                plugins.SelectMany(plugin => plugin.Capabilities.OfType<IAudioCdMetadataCapability>()
-                    .Select(capability => new AudioCdProvider(plugin.Id, plugin.Version.ToString(), capability))),
+        // next scan without restarting the host. Every medium (volume, optical disc) runs through one seam.
+        registrator.RegisterDelegate<MediaTargetExtensionManager>(resolver => new MediaTargetExtensionManager(
+                plugins.SelectMany(plugin => plugin.Capabilities.OfType<IMediaTargetMetadataCapability>()
+                    .Select(capability => new MediaTargetProvider(plugin.Id, plugin.Version.ToString(), capability))),
                 resolver.Resolve<PluginConfigurationStore>().GetSettings),
             Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
-        registrator.RegisterDelegate<IAudioCdMetadataProvider>(
-            resolver => resolver.Resolve<AudioCdExtensionManager>(),
+        registrator.RegisterDelegate<IMediaTargetMetadataProvider>(
+            resolver => resolver.Resolve<MediaTargetExtensionManager>(),
             Reuse.Singleton, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
 
         registrator.Register<FileFormatManager>(Reuse.Singleton,

@@ -1,7 +1,7 @@
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using SkyCD.SDK.Capabilities.Media;
-using SkyCD.SDK.Capabilities.Volume;
 using Xunit;
 using SkyCD.Plugin.Metadata.Volume.Models;
 using SkyCD.Plugin.Metadata.Volume.Sources;
@@ -10,7 +10,7 @@ namespace SkyCD.Plugin.Metadata.Volume.Tests;
 
 public sealed class VolumeSerialPluginTests
 {
-    private static readonly VolumeMediaContext Volume = new("E:\\", "E:\\", "MY_DISC", "CDFS");
+    private static readonly MediaTarget Volume = new(MediaTargetKind.Volume, "E:\\", "E:\\", "MY_DISC", "CDFS");
 
     private sealed class FakeVolumeSerialApi(bool isSupported, bool succeeds, uint serial) : IVolumeSerialApi
     {
@@ -25,13 +25,18 @@ public sealed class VolumeSerialPluginTests
         }
     }
 
+    private static async Task<MediaTargetCapture?> CaptureAsync(VolumeSerialPlugin plugin,
+        CancellationToken cancellationToken = default) =>
+        await plugin.CaptureAsync(Volume, progress: null, cancellationToken);
+
     [Fact]
-    public void Extract_KnownSerial_StoresLosslessDisplayForm()
+    public async Task Capture_KnownSerial_StoresLosslessDisplayForm()
     {
         var api = new FakeVolumeSerialApi(true, true, 0x1234ABCDu);
         var plugin = new VolumeSerialPlugin(api);
 
-        var value = Assert.Single(plugin.Extract(Volume, CancellationToken.None).Values);
+        var capture = await CaptureAsync(plugin);
+        var value = Assert.Single(Assert.IsType<MediaTargetCapture>(capture).Values);
 
         Assert.Equal(VolumeSerialSchema.VolumeSerialNumber, value.Key);
         Assert.Equal(MediaMetadataType.Text, value.Type);
@@ -40,21 +45,22 @@ public sealed class VolumeSerialPluginTests
     }
 
     [Fact]
-    public void Extract_ZeroSerial_ReportsGenuineZeroInsteadOfFailure()
+    public async Task Capture_ZeroSerial_ReportsGenuineZeroInsteadOfFailure()
     {
         var plugin = new VolumeSerialPlugin(new FakeVolumeSerialApi(true, true, 0u));
 
-        var value = Assert.Single(plugin.Extract(Volume, CancellationToken.None).Values);
+        var capture = Assert.IsType<MediaTargetCapture>(await CaptureAsync(plugin));
 
-        Assert.Equal("0000-0000", value.Text);
+        Assert.Equal("0000-0000", Assert.Single(capture.Values).Text);
     }
 
     [Fact]
-    public void Extract_MaxSerial_IsLossless()
+    public async Task Capture_MaxSerial_IsLossless()
     {
         var plugin = new VolumeSerialPlugin(new FakeVolumeSerialApi(true, true, uint.MaxValue));
 
-        var value = Assert.Single(plugin.Extract(Volume, CancellationToken.None).Values);
+        var capture = Assert.IsType<MediaTargetCapture>(await CaptureAsync(plugin));
+        var value = Assert.Single(capture.Values);
 
         Assert.Equal("FFFF-FFFF", value.Text);
         Assert.True(VolumeSerialSchema.TryParse(value.Text, out var parsed));
@@ -62,53 +68,63 @@ public sealed class VolumeSerialPluginTests
     }
 
     [Fact]
-    public void Extract_ApiFailure_ReturnsNoValueInsteadOfPlaceholder()
+    public async Task Capture_ApiFailure_ReturnsNoValueInsteadOfPlaceholder()
     {
         var plugin = new VolumeSerialPlugin(new FakeVolumeSerialApi(true, false, 0u));
 
-        var result = plugin.Extract(Volume, CancellationToken.None);
-
-        Assert.Empty(result.Values);
+        Assert.Null(await CaptureAsync(plugin));
     }
 
     [Fact]
-    public void Extract_UnsupportedPlatform_ReturnsNoValue()
+    public async Task Capture_UnsupportedPlatform_ReturnsNoValue()
     {
         var plugin = new VolumeSerialPlugin(new FakeVolumeSerialApi(false, true, 0x1234ABCDu));
 
-        var result = plugin.Extract(Volume, CancellationToken.None);
-
-        Assert.Empty(result.Values);
+        Assert.Null(await CaptureAsync(plugin));
     }
 
     [Fact]
-    public void Extract_Cancelled_Throws()
+    public void Supports_OnlyVolumes()
+    {
+        var plugin = new VolumeSerialPlugin(new FakeVolumeSerialApi(true, true, 1u));
+
+        Assert.True(plugin.Supports(Volume));
+        Assert.False(plugin.Supports(Volume with { Kind = MediaTargetKind.OpticalDisc }));
+    }
+
+    [Fact]
+    public async Task Capture_Cancelled_Throws()
     {
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
         var plugin = new VolumeSerialPlugin(new FakeVolumeSerialApi(true, true, 1u));
 
-        Assert.ThrowsAny<OperationCanceledException>(() => plugin.Extract(Volume, cancellation.Token));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            plugin.CaptureAsync(Volume, progress: null, cancellation.Token));
     }
 
     [Fact]
-    public void Extract_NullVolume_Throws()
+    public async Task Capture_NullTarget_Throws()
     {
         var plugin = new VolumeSerialPlugin(new FakeVolumeSerialApi(true, true, 1u));
 
-        Assert.Throws<ArgumentNullException>(() => plugin.Extract(null!, CancellationToken.None));
+        await Assert.ThrowsAsync<ArgumentNullException>(() =>
+            plugin.CaptureAsync(null!, progress: null, CancellationToken.None));
     }
 
     [Fact]
-    public void Descriptor_PublishesStableSchema()
+    public async Task Capture_PublishesStableSchema()
     {
-        var descriptor = new VolumeSerialPlugin(new FakeVolumeSerialApi(false, false, 0u)).Descriptor;
+        var plugin = new VolumeSerialPlugin(new FakeVolumeSerialApi(true, true, 0x1234ABCDu));
 
-        Assert.Equal(VolumeSerialSchema.MetadataSchemaId, descriptor.Schema.Id);
-        Assert.Equal(1, descriptor.Schema.Version);
-        var field = Assert.Single(descriptor.Schema.Fields);
+        var capture = Assert.IsType<MediaTargetCapture>(await CaptureAsync(plugin));
+
+        Assert.Equal(VolumeSerialSchema.MetadataSchemaId, capture.Schema.Id);
+        Assert.Equal(1, capture.Schema.Version);
+        var field = Assert.Single(capture.Schema.Fields);
         Assert.Equal(VolumeSerialSchema.VolumeSerialNumber, field.Key);
         Assert.Equal(MediaMetadataType.Text, field.Type);
+        Assert.Null(plugin.Descriptor.PrimaryExtension);
     }
 
     [Theory]

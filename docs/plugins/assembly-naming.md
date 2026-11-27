@@ -20,7 +20,7 @@ Format roles — what the plugin does with files:
 | Kind | Meaning |
 | --- | --- |
 | `FileFormat` | A format the user opens through File > Open or writes through File > Save As, implemented as `IFileFormatPluginCapability` (read or write support is enough), including content-aware, folder-aware and index work-item companions that belong to the same reader. |
-| `Metadata` | Data collected by inspecting files while a path is scanned: `IMediaMetadataCapability`, `ILocalMediaMetadataCapability`, `IAudioCdMetadataCapability`, and entry listings contributed through `IIndexWorkItemProvider` (archives, disk images, containers) that become subentries of generated catalog entries. |
+| `Metadata` | Data collected by inspecting files or media while a path is scanned: `IMediaMetadataCapability`, `ILocalMediaMetadataCapability`, `IMediaTargetMetadataCapability` (volume and optical-disc facts), and entry listings contributed through `IIndexWorkItemProvider` (archives, disk images, containers) that become subentries of generated catalog entries. |
 | `Preview` | Implements `IMediaPreviewCapability` or `ILocalMediaPreviewCapability` as the assembly's own purpose. |
 | `Config` | Implements `IPluginConfigurationCapability` as the assembly's own purpose. |
 
@@ -31,7 +31,7 @@ Feature / domain roles — what the plugin adds to the application when it is no
 | `Feature` | User-facing catalog tools and workflows that hang off a host surface (menu, modal, embedded window) but are features in their own right, such as motion-capture import or the web browser. |
 | `Accounts` | Account sync, ownership and connectors. |
 | `Ai` | Description generation implementations and providers. |
-| `Volume` | Volume metadata. |
+| `Volume` | Media metadata that only applies to mounted volumes, implemented through `IMediaTargetMetadataCapability` with a volume-only `Supports`. |
 | `Sample` | Sample plugins. `<Subject>` names the capability it demonstrates (`Sample.Menu`, `Sample.Modal`, `Sample.Config`). |
 
 `<Subject>` is the format, product, brand or feature the plugin handles (`Zip`, `EBook`, `AudioCD`,

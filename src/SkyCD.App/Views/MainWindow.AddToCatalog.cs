@@ -12,7 +12,7 @@ using Avalonia.VisualTree;
 using SkyCD.Core.DependencyInjection;
 using SkyCD.Documents;
 using SkyCD.Documents.Enum;
-using SkyCD.Plugin.Host.Volume;
+using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Presentation.Accounts;
 using SkyCD.Presentation.Operations;
 using SkyCD.Presentation.Scanning;
@@ -396,7 +396,7 @@ public partial class MainWindow
                 LocationId: dialogVm.SelectedLocationId);
 
             var scanner = new MediaCatalogScanner(mediaDriveProvider,
-                volumeMetadata: ServiceProvider.Resolve<VolumeExtensionManager>());
+                mediaTargets: ServiceProvider.Resolve<IMediaTargetMetadataProvider>());
             var progressVm = new AddingProgressDialogViewModel
             {
                 CanCancel = true,

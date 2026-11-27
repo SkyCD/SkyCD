@@ -178,7 +178,7 @@ public sealed class AudioCdMetadataServiceTests
             Properties = new PropertiesCollection { ["FullName"] = fullName }
         };
 
-    private static AudioCdProviderCapture Capture()
+    private static MediaTargetProviderCapture Capture()
     {
         var discSchema = new MediaMetadataSchema("skycd.audio-cd.disc", 1,
             [new MediaMetadataField("Album", MediaMetadataType.Text)]);
@@ -186,25 +186,25 @@ public sealed class AudioCdMetadataServiceTests
             [new MediaMetadataField("Title", MediaMetadataType.Text)]);
         var cover = new MediaPreviewArtifact("image/png", AudioCdFixtures.CoverPng(20));
 
-        return new AudioCdProviderCapture("SkyCD.Plugin.AudioCd", "1.0.0", "audio-cd",
-            new AudioCdCapture(
+        return new MediaTargetProviderCapture("SkyCD.Plugin.AudioCd", "1.0.0", "audio-cd",
+            new MediaTargetCapture(
                 discSchema,
                 [new MediaMetadataValue("Album", MediaMetadataType.Text, Text: "Test Album")],
                 trackSchema,
                 [
-                    new AudioCdTrackCapture(1,
+                    new MediaTargetPart(1,
                         [new MediaMetadataValue("Title", MediaMetadataType.Text, Text: "Opening")], cover),
-                    new AudioCdTrackCapture(2,
+                    new MediaTargetPart(2,
                         [new MediaMetadataValue("Title", MediaMetadataType.Text, Text: "Second")], cover)
                 ],
                 cover));
     }
 
-    private sealed class StubProvider : IAudioCdMetadataProvider
+    private sealed class StubProvider : IMediaTargetMetadataProvider
     {
-        private readonly AudioCdProviderCapture? capture;
+        private readonly MediaTargetProviderCapture? capture;
 
-        public StubProvider(AudioCdProviderCapture? capture, bool hasProviders = true)
+        public StubProvider(MediaTargetProviderCapture? capture, bool hasProviders = true)
         {
             this.capture = capture;
             HasProviders = hasProviders;
@@ -214,18 +214,21 @@ public sealed class AudioCdMetadataServiceTests
 
         public int Calls { get; private set; }
 
-        public Task<AudioCdProviderCapture?> CaptureAsync(string rootPath, CancellationToken cancellationToken)
+        public Task<IReadOnlyList<MediaTargetProviderCapture>> CaptureAsync(MediaTarget target,
+            CancellationToken cancellationToken)
         {
             Calls++;
-            return Task.FromResult(capture);
+            return Task.FromResult<IReadOnlyList<MediaTargetProviderCapture>>(
+                capture is null ? [] : [capture]);
         }
     }
 
-    private sealed class ThrowingProvider : IAudioCdMetadataProvider
+    private sealed class ThrowingProvider : IMediaTargetMetadataProvider
     {
         public bool HasProviders => true;
 
-        public Task<AudioCdProviderCapture?> CaptureAsync(string rootPath, CancellationToken cancellationToken) =>
+        public Task<IReadOnlyList<MediaTargetProviderCapture>> CaptureAsync(MediaTarget target,
+            CancellationToken cancellationToken) =>
             throw new InvalidOperationException("provider failed");
     }
 }

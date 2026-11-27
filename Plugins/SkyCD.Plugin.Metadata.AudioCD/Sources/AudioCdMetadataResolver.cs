@@ -31,7 +31,7 @@ public sealed class AudioCdMetadataResolver
         this.coverRenderer = coverRenderer;
     }
 
-    public async Task<AudioCdCapture?> ResolveAsync(DiscToc toc, AudioCdSettings settings,
+    public async Task<MediaTargetCapture?> ResolveAsync(DiscToc toc, AudioCdSettings settings,
         CancellationToken cancellationToken)
     {
         if (settings.Offline || settings.Sources.Count == 0)
@@ -54,7 +54,7 @@ public sealed class AudioCdMetadataResolver
             .ConfigureAwait(false);
         var tracks = BuildTracks(disc, toc, settings, trackCover);
 
-        return new AudioCdCapture(AudioCdSchema.Disc, discValues, AudioCdSchema.Track, tracks, discCover);
+        return new MediaTargetCapture(AudioCdSchema.Disc, discValues, AudioCdSchema.Track, tracks, discCover);
     }
 
     private async Task<DiscMetadata?> LookupAsync(string musicBrainzDiscId, DiscToc toc, string cddbDiscId,
@@ -152,10 +152,10 @@ public sealed class AudioCdMetadataResolver
         return values;
     }
 
-    private static IReadOnlyList<AudioCdTrackCapture> BuildTracks(DiscMetadata disc, DiscToc toc,
+    private static IReadOnlyList<MediaTargetPart> BuildTracks(DiscMetadata disc, DiscToc toc,
         AudioCdSettings settings, MediaPreviewArtifact? cover)
     {
-        var tracks = new List<AudioCdTrackCapture>(toc.TrackCount);
+        var tracks = new List<MediaTargetPart>(toc.TrackCount);
 
         for (var index = 0; index < toc.TrackCount; index++)
         {
@@ -180,7 +180,7 @@ public sealed class AudioCdMetadataResolver
             values.Add(new MediaMetadataValue(AudioCdSchema.Length, MediaMetadataType.Number,
                 Number: lengthSeconds));
 
-            tracks.Add(new AudioCdTrackCapture(number, values, settings.TrackCovers ? cover : null));
+            tracks.Add(new MediaTargetPart(number, values, settings.TrackCovers ? cover : null));
         }
 
         return tracks;

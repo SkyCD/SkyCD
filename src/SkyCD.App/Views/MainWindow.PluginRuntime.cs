@@ -6,7 +6,6 @@ using SkyCD.Plugin.Host.Catalog;
 using SkyCD.Plugin.Host.Indexing;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Host.Menu;
-using SkyCD.Plugin.Host.Volume;
 using SkyCD.Presentation.ViewModels;
 using SkyCD.SDK.Capabilities.FileFormats;
 using SkyCD.SDK.Capabilities.Media;
@@ -31,9 +30,8 @@ public partial class MainWindow
             viewModel.RefreshPluginMenuServices(ServiceProvider.Resolve<MenuExtensionManager>());
             viewModel.RefreshCatalogFeatureServices(ServiceProvider.Resolve<CatalogFeatureExtensionManager>());
             viewModel.RefreshMediaServices(ServiceProvider.Resolve<MediaExtensionManager>(),
-                ServiceProvider.Resolve<VolumeExtensionManager>(),
-                ServiceProvider.Resolve<IndexWorkItemSequence>(),
-                ServiceProvider.Resolve<IAudioCdMetadataProvider>());
+                ServiceProvider.Resolve<IMediaTargetMetadataProvider>(),
+                ServiceProvider.Resolve<IndexWorkItemSequence>());
             viewModel.RefreshDescriptionServices(descriptionManager);
         }
 

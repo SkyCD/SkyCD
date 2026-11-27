@@ -16,7 +16,7 @@ namespace SkyCD.Plugin.Metadata.AudioCD;
 /// capability is discovered from assembly metadata, keeps the host responsive by bounding every request, and
 /// answers null for offline mode, unreadable drives and unmatched discs.
 /// </summary>
-public sealed class AudioCdMetadataPlugin : IAudioCdMetadataCapability
+public sealed class AudioCdMetadataPlugin : IMediaTargetMetadataCapability
 {
     private static readonly HttpClient SharedHttpClient = new() { Timeout = Timeout.InfiniteTimeSpan };
     private static readonly IRequestThrottle MusicBrainzThrottle = new MinimumIntervalThrottle(TimeSpan.FromSeconds(1));
@@ -37,11 +37,12 @@ public sealed class AudioCdMetadataPlugin : IAudioCdMetadataCapability
         this.resolverFactory = resolverFactory;
     }
 
-    public int Priority => 0;
+    public MediaTargetDescriptor Descriptor =>
+        new(PrimaryExtension: AudioCdSchema.TrackExtensions[0].TrimStart('.'));
 
-    public string? PrimaryExtension => AudioCdSchema.TrackExtensions[0].TrimStart('.');
+    public bool Supports(MediaTarget target) => target.Kind == MediaTargetKind.OpticalDisc;
 
-    public async Task<AudioCdCapture?> CaptureAsync(AudioCdDiscRequest request,
+    public async Task<MediaTargetCapture?> CaptureAsync(MediaTarget request,
         IProgress<MediaProgress>? progress, CancellationToken cancellationToken)
     {
         var settings = AudioCdSettings.Parse(request.Settings);
@@ -62,7 +63,7 @@ public sealed class AudioCdMetadataPlugin : IAudioCdMetadataCapability
             return null;
         }
 
-        AudioCdCapture? capture;
+        MediaTargetCapture? capture;
         try
         {
             capture = await resolverFactory(settings).ResolveAsync(toc, settings, cancellationToken)
