@@ -488,6 +488,66 @@ public sealed class AddToListWindowLayoutTests
         Assert.True(message.Bounds.Height >= 14, $"{mode}: validation line collapsed to {message.Bounds.Height}.");
     }
 
+    [AvaloniaFact]
+    public void DestinationDescription_SitsInsideTheSelectedFolderOption()
+    {
+        // Issue #1314: the destination is now the selected-folder option's second line instead of a
+        // detached caption under both radios, and it follows the captured destination name.
+        using var fixture = ShowWindow(AddToListSourceMode.Media);
+        var viewModel = fixture.ViewModel;
+        viewModel.SetTargetParent("folder-1", "Concerts");
+        Dispatcher.UIThread.RunJobs();
+
+        var caption = fixture.Window.FindControl<TextBlock>("TargetParentDescriptionText")!;
+        var owner = fixture.Root.GetVisualDescendants().OfType<RadioButton>()
+            .Single(radio => string.Equals(radio.CommandParameter as string, "SelectedFolder", StringComparison.Ordinal));
+
+        Assert.True(caption.IsEffectivelyVisible);
+        Assert.Contains("Concerts", caption.Text, StringComparison.Ordinal);
+        Assert.Contains(caption, owner.GetVisualDescendants());
+
+        var captionBounds = BoundsRelativeTo(caption, fixture.Root);
+        var ownerBounds = BoundsRelativeTo(owner, fixture.Root);
+        Assert.True(captionBounds.Top >= ownerBounds.Top - 0.5 && captionBounds.Bottom <= ownerBounds.Bottom + 0.5,
+            $"destination caption {captionBounds} escapes its option {ownerBounds}.");
+        Assert.True(ownerBounds.Bottom <= BoundsRelativeTo(FindButton(fixture.Root, UiKeys.Ok), fixture.Root).Top + 0.5,
+            "the selected-folder option must end above the action row.");
+
+        viewModel.SetTargetParent("folder-2", "Jazz");
+        Dispatcher.UIThread.RunJobs();
+        Assert.Contains("Jazz", caption.Text, StringComparison.Ordinal);
+    }
+
+    [AvaloniaFact]
+    public void NewMediaChoice_HidesTheDestinationWithoutLeavingALineUnderTheRadios()
+    {
+        // Issue #1314: choosing "As new Media" must remove the destination entirely, with no stray
+        // text left between the option group and the OK/Cancel row.
+        using var fixture = ShowWindow(AddToListSourceMode.Media);
+        var viewModel = fixture.ViewModel;
+        viewModel.SetTargetParent("folder-1", "Concerts");
+        Dispatcher.UIThread.RunJobs();
+
+        var caption = fixture.Window.FindControl<TextBlock>("TargetParentDescriptionText")!;
+        Assert.True(caption.IsEffectivelyVisible);
+
+        viewModel.SelectTargetCommand.Execute("NewMedia");
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.False(caption.IsEffectivelyVisible);
+        Assert.Equal(0, caption.Bounds.Height, 1);
+
+        var groupBounds = BoundsRelativeTo(fixture.Window.FindControl<StackPanel>("TargetPlacementGroup")!, fixture.Root);
+        var actionBounds = BoundsRelativeTo(fixture.Window.FindControl<StackPanel>("DialogActions")!, fixture.Root);
+
+        foreach (var text in fixture.Root.GetVisualDescendants().OfType<TextBlock>().Where(text => text.IsEffectivelyVisible))
+        {
+            var bounds = BoundsRelativeTo(text, fixture.Root);
+            Assert.False(bounds.Top >= groupBounds.Bottom - 0.5 && bounds.Bottom <= actionBounds.Top + 0.5,
+                $"'{text.Text}' still floats between the radios and the actions at {bounds}.");
+        }
+    }
+
     private static double MeasureNaturalHeight(AddToListSourceMode mode)
     {
         var viewModel = new AddToListDialogViewModel(new FakeDriveProvider(), mode,
