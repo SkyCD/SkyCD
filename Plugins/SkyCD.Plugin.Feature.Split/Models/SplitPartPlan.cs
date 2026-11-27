@@ -1,4 +1,4 @@
-namespace SkyCD.Presentation.Catalog.Split;
+namespace SkyCD.Plugin.Feature.Split.Models;
 
 /// <summary>A planned part: the entry range it owns and the file it will be written to.</summary>
 /// <param name="PartNumber">The 1-based part number the naming pattern is expanded with.</param>

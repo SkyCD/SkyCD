@@ -8,6 +8,7 @@
         <Project Path="Plugins/SkyCD.Plugin.Ai.Provider/SkyCD.Plugin.Ai.Provider.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Feature.Loans/SkyCD.Plugin.Feature.Loans.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Feature.Locations/SkyCD.Plugin.Feature.Locations.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.Feature.Split/SkyCD.Plugin.Feature.Split.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Feature.MotionDetector/SkyCD.Plugin.Feature.MotionDetector.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Feature.WebBrowser/SkyCD.Plugin.Feature.WebBrowser.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.AbeMeda/SkyCD.Plugin.FileFormat.AbeMeda.csproj"/>
@@ -112,6 +113,7 @@
         <Project Path="tests/SkyCD.Plugin.Ai.Provider.Tests/SkyCD.Plugin.Ai.Provider.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Feature.Loans.Tests/SkyCD.Plugin.Feature.Loans.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Feature.Locations.Tests/SkyCD.Plugin.Feature.Locations.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Feature.Split.Tests/SkyCD.Plugin.Feature.Split.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Feature.MotionDetector.Tests/SkyCD.Plugin.Feature.MotionDetector.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Feature.WebBrowser.Tests/SkyCD.Plugin.Feature.WebBrowser.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.AbeMeda.Tests/SkyCD.Plugin.FileFormat.AbeMeda.Tests.csproj"/>

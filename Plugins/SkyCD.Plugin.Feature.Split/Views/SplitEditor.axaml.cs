@@ -2,20 +2,21 @@ using System;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
-using SkyCD.Presentation.ViewModels;
+using SkyCD.Plugin.Feature.Split.Localization;
+using SkyCD.Plugin.Feature.Split.ViewModels;
 using SkyCD.UI.Localization;
 
-namespace SkyCD.App.Views;
+namespace SkyCD.Plugin.Feature.Split.Views;
 
 /// <summary>
-/// The split form. The view owns the window lifetime and the folder picker; the view model owns the
-/// split options, validation and progress.
+/// The split form, embedded in a host-owned window. The view runs the folder picker and closes that host
+/// window; the view model owns the split options, validation and progress.
 /// </summary>
-public partial class SplitWindow : Window
+public partial class SplitEditor : UserControl
 {
     private SplitDialogViewModel? boundViewModel;
 
-    public SplitWindow() => InitializeComponent();
+    public SplitEditor() => InitializeComponent();
 
     protected override void OnDataContextChanged(EventArgs e)
     {
@@ -27,13 +28,13 @@ public partial class SplitWindow : Window
 
         if (boundViewModel is not null)
         {
-            boundViewModel.CloseRequested -= CloseWindow;
+            boundViewModel.CloseRequested -= CloseHostWindow;
         }
 
         boundViewModel = DataContext as SplitDialogViewModel;
         if (boundViewModel is not null)
         {
-            boundViewModel.CloseRequested += CloseWindow;
+            boundViewModel.CloseRequested += CloseHostWindow;
         }
     }
 
@@ -52,7 +53,7 @@ public partial class SplitWindow : Window
 
         var folders = await picker.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
-            Title = LocalizationService.Current.Get(UiKeys.SplitOutputFolder),
+            Title = LocalizationService.Current.Get(SplitKeys.OutputFolder),
             AllowMultiple = false
         });
         if (folders.Count > 0 && folders[0].TryGetLocalPath() is { Length: > 0 } path)
@@ -61,9 +62,9 @@ public partial class SplitWindow : Window
         }
     }
 
-    private void OnCloseClicked(object? sender, RoutedEventArgs e) => CloseWindow();
+    private void OnCloseClicked(object? sender, RoutedEventArgs e) => CloseHostWindow();
 
-    private void CloseWindow()
+    private void CloseHostWindow()
     {
         if (TopLevel.GetTopLevel(this) is Window window)
         {

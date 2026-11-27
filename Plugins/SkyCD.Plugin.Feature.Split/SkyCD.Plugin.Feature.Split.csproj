@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>disable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <Company>SkyCD</Company>
+        <Authors>SkyCD</Authors>
+        <AssemblyTitle>Split</AssemblyTitle>
+        <Description>Splits the open catalog into numbered part catalogs written in a loaded file format.</Description>
+    </PropertyGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\SkyCD.SDK\SkyCD.SDK.csproj"/>
+        <ProjectReference Include="..\..\src\SkyCD.UI\SkyCD.UI.csproj"/>
+    </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Avalonia" Version="12.1.6"/>
+        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2"/>
+    </ItemGroup>
+    <ItemGroup>
+        <AssemblyMetadata Include="AuthorUrl" Value="https://sourceforge.net/projects/skycd/"/>
+    </ItemGroup>
+    <ItemGroup>
+        <InternalsVisibleTo Include="SkyCD.Plugin.Feature.Split.Tests"/>
+    </ItemGroup>
+</Project>

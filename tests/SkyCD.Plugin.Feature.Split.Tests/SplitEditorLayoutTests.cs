@@ -4,31 +4,31 @@ using System.Linq;
 using System.Xml.Linq;
 using Xunit;
 
-namespace SkyCD.App.Tests;
+namespace SkyCD.Plugin.Feature.Split.Tests;
 
 /// <summary>
-/// Issue #1183: File &gt; Split... keeps one fixed size with the part options, the saving format picker
-/// and the progress row, so the form never moves or clips while a split runs.
+/// Issue #1310: the split form is plugin content embedded in a host-owned window. The host sizes and closes
+/// the window; the form only lays out its options, the format picker and the progress row, so it never grows
+/// or clips while a split runs.
 /// </summary>
-public sealed class SplitWindowLayoutTests
+public sealed class SplitEditorLayoutTests
 {
     private static readonly XNamespace Avalonia = "https://github.com/avaloniaui";
 
     [Fact]
-    public void Window_KeepsOneFixedSize()
+    public void TheFormIsEmbeddableContentNotAWindow()
     {
-        var window = ReadSplitWindow();
+        var root = ReadSplitEditor();
 
-        Assert.Equal("620", window.Attribute("Width")?.Value);
-        Assert.Equal("560", window.Attribute("Height")?.Value);
-        Assert.Equal("False", window.Attribute("CanResize")?.Value);
-        Assert.Null(window.Attribute("SizeToContent"));
+        Assert.Equal(Avalonia + "UserControl", root.Name);
+        Assert.Null(root.Attribute("Width"));
+        Assert.Null(root.Attribute("Height"));
     }
 
     [Fact]
-    public void Window_DoesNotDeclareLiteralInsets()
+    public void TheForm_DoesNotDeclareLiteralInsets()
     {
-        var xaml = ReadSplitWindow().ToString();
+        var xaml = ReadSplitEditor().ToString();
 
         Assert.DoesNotContain("Margin=\"0,", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Margin=\"8", xaml, StringComparison.Ordinal);
@@ -38,10 +38,10 @@ public sealed class SplitWindowLayoutTests
     [Fact]
     public void FormatPicker_ShowsFormatDisplayNames()
     {
-        var picker = ReadSplitWindow()
+        var picker = ReadSplitEditor()
             .Descendants(Avalonia + "ComboBox")
-            .Single(box => (string?)box.Attribute("AutomationProperties.Name") is string name &&
-                name.Contains("SplitSavingFormat"));
+            .Single(box => ((string?)box.Attribute("SelectedItem"))?.Contains("SelectedSplitFormat",
+                StringComparison.Ordinal) == true);
 
         Assert.NotNull(picker.Element(Avalonia + "ComboBox.ItemTemplate"));
         Assert.Contains("DisplayName", picker.ToString(), StringComparison.Ordinal);
@@ -50,7 +50,7 @@ public sealed class SplitWindowLayoutTests
     [Fact]
     public void Actions_OfferSplitCancelAndClose()
     {
-        var buttons = ReadSplitWindow().Descendants(Avalonia + "Button").ToArray();
+        var buttons = ReadSplitEditor().Descendants(Avalonia + "Button").ToArray();
 
         var split = Assert.Single(buttons, button =>
             (string?)button.Attribute("Command") == "{Binding SplitCommand}");
@@ -62,9 +62,10 @@ public sealed class SplitWindowLayoutTests
             (string?)button.Attribute("IsCancel") == "True");
     }
 
-    private static XElement ReadSplitWindow()
+    private static XElement ReadSplitEditor()
     {
-        var path = Path.Combine(FindRepoRoot(), "src", "SkyCD.App", "Views", "SplitWindow.axaml");
+        var path = Path.Combine(FindRepoRoot(), "Plugins", "SkyCD.Plugin.Feature.Split", "Views",
+            "SplitEditor.axaml");
         return XElement.Load(path);
     }
 

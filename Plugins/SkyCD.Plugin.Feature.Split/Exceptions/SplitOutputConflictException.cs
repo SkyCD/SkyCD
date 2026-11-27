@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace SkyCD.Presentation.Catalog.Split;
+namespace SkyCD.Plugin.Feature.Split.Exceptions;
 
 /// <summary>A planned part file already exists, so the split stops instead of overwriting it.</summary>
 public sealed class SplitOutputConflictException(string path)

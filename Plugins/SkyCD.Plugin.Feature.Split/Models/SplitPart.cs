@@ -1,4 +1,4 @@
-namespace SkyCD.Presentation.Catalog.Split;
+namespace SkyCD.Plugin.Feature.Split.Models;
 
 /// <summary>A written part catalog.</summary>
 /// <param name="Path">The full path of the part file.</param>

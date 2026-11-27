@@ -4,20 +4,19 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Documents;
+using SkyCD.Plugin.Feature.Split.Exceptions;
+using SkyCD.Plugin.Feature.Split.Models;
+using SkyCD.SDK.Capabilities.Catalog;
 using SkyCD.SDK.Capabilities.FileFormats;
-using SkyCD.Plugin.Runtime.Managers;
-using SkyCD.Presentation.Catalog.Split;
 
-namespace SkyCD.App;
+namespace SkyCD.Plugin.Feature.Split.Parsing;
 
 /// <summary>
-/// Cuts the entries of the open catalog into part catalogs at entry boundaries and writes each part
-/// through the same save path as Save As, so every part reopens as a valid catalog in the chosen format.
-/// A cancelled or failed run removes the parts it wrote, and an existing target stops the run before
-/// anything is written.
+/// Cuts the entries of the open catalog into part catalogs at entry boundaries and writes each part through
+/// the host save surface, so every part reopens as a valid catalog in the chosen format. A cancelled or failed
+/// run removes the parts it wrote, and an existing target stops the run before anything is written.
 /// </summary>
-public sealed class CatalogSplitService(FileFormatManager formats)
+public sealed class SplitPlanner(ICatalogSaveHostApi saveHost)
 {
     /// <summary>
     /// Assigns entries and part file names to parts, honouring both limits at entry boundaries. Parts wider
@@ -25,9 +24,9 @@ public sealed class CatalogSplitService(FileFormatManager formats)
     /// may still exceed the cap. The measurer serializes one candidate part and reports its size.
     /// </summary>
     public async Task<IReadOnlyList<SplitPartPlan>> PlanAsync(
-        IReadOnlyList<CatalogDocument> entries,
+        IReadOnlyList<CatalogEntry> entries,
         SplitRequest request,
-        Func<string, IReadOnlyList<CatalogDocument>, CancellationToken, Task<long>>? measureBytesAsync = null,
+        Func<string, IReadOnlyList<CatalogEntry>, CancellationToken, Task<long>>? measureBytesAsync = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entries);
@@ -39,9 +38,8 @@ public sealed class CatalogSplitService(FileFormatManager formats)
         }
 
         var pattern = SplitPattern.Normalize(request.FileNamePattern);
-        var measure = measureBytesAsync ?? ((_, slice, token) =>
-            MeasureSerializedBytesAsync(request.FormatId, "split-measure" + Path.GetExtension(pattern), slice, [],
-                token));
+        var measure = measureBytesAsync ?? ((name, slice, token) =>
+            MeasureAsync(request.FormatId, name, slice, [], token));
         var chunks = ChunkByCount(entries.Count, request.MaxEntriesPerPart)
             .Select(chunk => (chunk.FirstEntry, chunk.EntryCount, Bytes: 0L)).ToList();
         if (request.MaxPartSizeBytes > 0)
@@ -68,10 +66,9 @@ public sealed class CatalogSplitService(FileFormatManager formats)
     /// or a failure removes the parts written by this run.
     /// </summary>
     public async Task<SplitResult> SplitAsync(
-        IReadOnlyList<CatalogDocument> entries,
-        IReadOnlyList<FileFormatDataLossItem> catalogScopeItems,
+        IReadOnlyList<CatalogEntry> entries,
         SplitRequest request,
-        Func<CatalogSavePreview, Task<bool>> confirmLoss,
+        Func<SplitDataLossPreview, Task<bool>> confirmLoss,
         IProgress<SplitProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
@@ -85,20 +82,20 @@ public sealed class CatalogSplitService(FileFormatManager formats)
 
         var outputFolder = Path.GetFullPath(request.OutputFolder);
         Directory.CreateDirectory(outputFolder);
+        var catalogScopeItems = saveHost.CollectCatalogScopeItems();
         var plans = await PlanAsync(entries, request,
-                (name, slice, token) => MeasureSerializedBytesAsync(
-                    request.FormatId, name, slice, catalogScopeItems, token),
+                (name, slice, token) => MeasureAsync(request.FormatId, name, slice, catalogScopeItems, token),
                 cancellationToken)
             .ConfigureAwait(false);
 
-        var lossEntries = CatalogSaveSnapshot.BuildEntries(entries);
-        var loss = formats.AssessDataLoss(request.FormatId, plans[0].FileName, lossEntries, catalogScopeItems);
+        var loss = saveHost.AssessDataLoss(request.FormatId, plans[0].FileName, entries, catalogScopeItems);
         if (loss.Count > 0)
         {
-            var displayName = formats.GetSaveFormats()
-                .FirstOrDefault(format => format.FormatId.Equals(request.FormatId, StringComparison.OrdinalIgnoreCase))
+            var displayName = saveHost.GetRewritableFormats()
+                .FirstOrDefault(format =>
+                    format.FormatId.Equals(request.FormatId, StringComparison.OrdinalIgnoreCase))
                 ?.DisplayName ?? request.FormatId;
-            if (!await confirmLoss(new CatalogSavePreview(displayName, loss)).ConfigureAwait(false))
+            if (!await confirmLoss(new SplitDataLossPreview(displayName, loss)).ConfigureAwait(false))
             {
                 throw new OperationCanceledException("The split was declined at the data-loss confirmation.");
             }
@@ -122,7 +119,6 @@ public sealed class CatalogSplitService(FileFormatManager formats)
             targets.Add(target);
         }
 
-        var saveService = new CatalogSaveService(formats);
         var written = new List<string>();
         try
         {
@@ -133,8 +129,8 @@ public sealed class CatalogSplitService(FileFormatManager formats)
                 cancellationToken.ThrowIfCancellationRequested();
                 var plan = plans[index];
                 var slice = entries.Skip(plan.FirstEntry).Take(plan.EntryCount).ToArray();
-                await saveService.SaveAsync(targets[index], slice, catalogScopeItems,
-                    _ => Task.FromResult(true), cancellationToken).ConfigureAwait(false);
+                await saveHost.WriteFileAsync(request.FormatId, targets[index], slice, catalogScopeItems,
+                    cancellationToken).ConfigureAwait(false);
                 written.Add(targets[index]);
                 entriesWritten += plan.EntryCount;
                 parts.Add(new SplitPart(targets[index], plan.EntryCount,
@@ -163,11 +159,11 @@ public sealed class CatalogSplitService(FileFormatManager formats)
     }
 
     private async Task<List<(int FirstEntry, int EntryCount, long Bytes)>> EnforceSizeCapAsync(
-        IReadOnlyList<CatalogDocument> entries,
+        IReadOnlyList<CatalogEntry> entries,
         List<(int FirstEntry, int EntryCount, long Bytes)> chunks,
         string pattern,
         SplitRequest request,
-        Func<string, IReadOnlyList<CatalogDocument>, CancellationToken, Task<long>> measure,
+        Func<string, IReadOnlyList<CatalogEntry>, CancellationToken, Task<long>> measure,
         CancellationToken cancellationToken)
     {
         var current = chunks.Select(chunk => (chunk.FirstEntry, chunk.EntryCount, 0L)).ToList();
@@ -220,22 +216,16 @@ public sealed class CatalogSplitService(FileFormatManager formats)
         return names;
     }
 
-    private async Task<long> MeasureSerializedBytesAsync(
+    private async Task<long> MeasureAsync(
         string formatId,
         string fileName,
-        IReadOnlyList<CatalogDocument> slice,
+        IReadOnlyList<CatalogEntry> slice,
         IReadOnlyList<FileFormatDataLossItem> catalogScopeItems,
         CancellationToken cancellationToken)
     {
         using var buffer = new MemoryStream();
-        await formats.WriteAsync(new FileFormatWriteRequest
-        {
-            FormatId = formatId,
-            FileName = fileName,
-            Target = buffer,
-            Payload = CatalogSaveSnapshot.BuildRows(slice),
-            CatalogScopeItems = catalogScopeItems
-        }, cancellationToken).ConfigureAwait(false);
+        await saveHost.WriteAsync(formatId, fileName, buffer, slice, catalogScopeItems, cancellationToken)
+            .ConfigureAwait(false);
         return buffer.Length;
     }
 

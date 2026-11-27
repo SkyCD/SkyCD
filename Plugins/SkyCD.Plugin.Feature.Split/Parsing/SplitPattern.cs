@@ -1,8 +1,9 @@
 using System;
 using System.Globalization;
 using System.IO;
+using SkyCD.Plugin.Feature.Split.Exceptions;
 
-namespace SkyCD.Presentation.Catalog.Split;
+namespace SkyCD.Plugin.Feature.Split.Parsing;
 
 /// <summary>
 /// Expands the part file naming pattern. <c>#N</c> becomes the legacy hash plus the part number, so the default

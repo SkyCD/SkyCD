@@ -1,4 +1,4 @@
-namespace SkyCD.Presentation.Catalog.Split;
+namespace SkyCD.Plugin.Feature.Split.Models;
 
 /// <summary>Progress of a split run, reported per written part.</summary>
 /// <param name="PartsWritten">The parts completed so far.</param>

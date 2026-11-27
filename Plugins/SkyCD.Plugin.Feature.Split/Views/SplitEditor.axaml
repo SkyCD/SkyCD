@@ -1,18 +1,10 @@
-<Window xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:i18n="clr-namespace:SkyCD.UI.Localization;assembly=SkyCD.UI"
-        xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
-        xmlns:split="clr-namespace:SkyCD.Presentation.Catalog.Split;assembly=SkyCD.Presentation"
-        x:Class="SkyCD.App.Views.SplitWindow"
-        x:DataType="vm:SplitDialogViewModel"
-        Width="620"
-        Height="560"
-        CanResize="False"
-        WindowStartupLocation="CenterOwner"
-        CanMinimize="False"
-        ShowInTaskbar="False"
-        Icon="/Assets/skycd.ico"
-        Title="{i18n:Translate {x:Static i18n:UiKeys.SplitDialogTitle}}">
+        xmlns:loc="clr-namespace:SkyCD.Plugin.Feature.Split.Localization"
+        xmlns:vm="clr-namespace:SkyCD.Plugin.Feature.Split.ViewModels"
+        x:Class="SkyCD.Plugin.Feature.Split.Views.SplitEditor"
+        x:DataType="vm:SplitDialogViewModel">
 
     <DockPanel Margin="{DynamicResource SkyInsetMd}">
         <StackPanel DockPanel.Dock="Bottom" Spacing="{DynamicResource SkySpaceXs}"
@@ -23,7 +15,7 @@
             <TextBlock Text="{Binding ErrorText}" TextWrapping="Wrap" Foreground="{DynamicResource SkyErrorForeground}" />
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
                         Spacing="{DynamicResource SkySpaceSm}">
-                <Button Content="{i18n:Translate {x:Static i18n:UiKeys.SplitAction}}"
+                <Button Content="{i18n:Translate {x:Static loc:SplitKeys.Action}}"
                         Command="{Binding SplitCommand}" MinWidth="90" IsDefault="True" />
                 <Button Content="{i18n:Translate {x:Static i18n:UiKeys.Cancel}}"
                         Command="{Binding CancelCommand}" MinWidth="90"
@@ -35,56 +27,57 @@
 
         <StackPanel Spacing="{DynamicResource SkySpaceSm}" IsEnabled="{Binding !IsBusy}">
             <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
-                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SplitSourceCatalog}}" />
+                <TextBlock Text="{i18n:Translate {x:Static loc:SplitKeys.SourceCatalog}}" />
                 <TextBlock Text="{Binding SourceName}" TextWrapping="Wrap" />
                 <TextBlock Text="{Binding EntrySummary}" Classes="caption" />
             </StackPanel>
 
             <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
-                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SplitOutputFolder}}" />
+                <TextBlock Text="{i18n:Translate {x:Static loc:SplitKeys.OutputFolder}}" />
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceXs}">
                     <TextBox Text="{Binding OutputFolder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                             AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.SplitOutputFolder}}" />
+                             AutomationProperties.Name="{i18n:Translate {x:Static loc:SplitKeys.OutputFolder}}" />
                     <Button Grid.Column="1" Content="{i18n:Translate {x:Static i18n:UiKeys.Browse}}"
                             Click="OnBrowseClicked" />
                 </Grid>
             </StackPanel>
 
             <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
-                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SplitFileNamePattern}}" />
+                <TextBlock Text="{i18n:Translate {x:Static loc:SplitKeys.FileNamePattern}}" />
                 <TextBox Text="{Binding FileNamePattern, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                         AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.SplitFileNamePattern}}" />
-                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SplitPatternHint}}"
+                         AutomationProperties.Name="{i18n:Translate {x:Static loc:SplitKeys.FileNamePattern}}" />
+                <TextBlock Text="{i18n:Translate {x:Static loc:SplitKeys.PatternHint}}"
                            Classes="caption" TextWrapping="Wrap" />
             </StackPanel>
 
             <Grid ColumnDefinitions="*,*" ColumnSpacing="{DynamicResource SkySpaceMd}">
                 <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
-                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SplitEntriesPerPart}}" />
+                    <TextBlock Text="{i18n:Translate {x:Static loc:SplitKeys.EntriesPerPart}}" />
                     <TextBox Text="{Binding EntriesPerPart, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                             AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.SplitEntriesPerPart}}" />
+                             AutomationProperties.Name="{i18n:Translate {x:Static loc:SplitKeys.EntriesPerPart}}" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Spacing="{DynamicResource SkySpaceXxs}">
-                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SplitPartSize}}" />
+                    <TextBlock Text="{i18n:Translate {x:Static loc:SplitKeys.PartSize}}" />
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceXs}">
                         <TextBox Text="{Binding PartSize, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                 AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.SplitPartSize}}" />
+                                 AutomationProperties.Name="{i18n:Translate {x:Static loc:SplitKeys.PartSize}}" />
                         <ComboBox Grid.Column="1" MinWidth="88"
                                   ItemsSource="{Binding SizeUnits}"
                                   SelectedItem="{Binding PartSizeUnit, Mode=TwoWay}"
-                                  AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.SplitPartSize}}" />
+                                  AutomationProperties.Name="{i18n:Translate {x:Static loc:SplitKeys.PartSize}}" />
                     </Grid>
                 </StackPanel>
             </Grid>
 
             <StackPanel Spacing="{DynamicResource SkySpaceXxs}">
-                <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.SplitSavingFormat}}" />
-                <ComboBox ItemsSource="{Binding Formats}"
+                <TextBlock Text="{i18n:Translate {x:Static loc:SplitKeys.SavingFormat}}" />
+                <ComboBox x:Name="FormatPicker"
+                          ItemsSource="{Binding Formats}"
                           SelectedItem="{Binding SelectedSplitFormat, Mode=TwoWay}"
-                          AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.SplitSavingFormat}}"
+                          AutomationProperties.Name="{i18n:Translate {x:Static loc:SplitKeys.SavingFormat}}"
                           HorizontalAlignment="Stretch">
                     <ComboBox.ItemTemplate>
-                        <DataTemplate x:DataType="split:SplitFormatOption">
+                        <DataTemplate x:DataType="vm:SplitFormatOption">
                             <TextBlock Text="{Binding DisplayName}" />
                         </DataTemplate>
                     </ComboBox.ItemTemplate>
@@ -92,4 +85,4 @@
             </StackPanel>
         </StackPanel>
     </DockPanel>
-</Window>
+</UserControl>
