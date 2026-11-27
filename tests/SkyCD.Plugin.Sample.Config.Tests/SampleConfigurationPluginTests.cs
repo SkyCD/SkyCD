@@ -62,8 +62,8 @@ public sealed class SampleConfigurationPluginTests : IDisposable
     {
         var plugin = new SampleConfigurationPlugin();
 
-        Assert.Equal("sample.configuration.general", plugin.Configuration.ConfigurationId);
-        Assert.Equal("Sample Configuration", plugin.Configuration.Title);
+        Assert.Equal("sample.configuration.general", plugin.Configurations[0].ConfigurationId);
+        Assert.Equal("Sample Configuration", plugin.Configurations[0].Title);
     }
 
     [Fact]
@@ -142,7 +142,7 @@ public sealed class SampleConfigurationPluginTests : IDisposable
 
         pluginManager.Discover(pluginsDirectory, new Version(3, 0, 0));
 
-        var outcome = await configurationManager.CreatePageAsync("SkyCD.Plugin.Sample.Configuration", TimeSpan.FromSeconds(5));
+        var outcome = await configurationManager.CreatePageAsync("SkyCD.Plugin.Sample.Configuration", "sample.configuration.general", TimeSpan.FromSeconds(5));
         using var page = outcome.Page!;
         outcome = await configurationManager.AcceptPageAsync("SkyCD.Plugin.Sample.Configuration", page, TimeSpan.FromSeconds(5));
 
@@ -176,7 +176,7 @@ public sealed class SampleConfigurationPluginTests : IDisposable
 
         pluginManager.Discover(pluginsDirectory, new Version(3, 0, 0));
 
-        var outcome = await configurationManager.CreatePageAsync("SkyCD.Plugin.Sample.Configuration", TimeSpan.FromSeconds(5));
+        var outcome = await configurationManager.CreatePageAsync("SkyCD.Plugin.Sample.Configuration", "sample.configuration.general", TimeSpan.FromSeconds(5));
         using var page = outcome.Page!;
         outcome = await configurationManager.AcceptPageAsync("SkyCD.Plugin.Sample.Configuration", page, TimeSpan.FromSeconds(5));
 
@@ -203,7 +203,7 @@ public sealed class SampleConfigurationPluginTests : IDisposable
         // Use test plugin with canceling capability
         TestStubConfigurationCapability.Mode = TestStubMode.Cancel;
 
-        var outcome = await configurationManager.CreatePageAsync(pluginId, TimeSpan.FromSeconds(5));
+        var outcome = await configurationManager.CreatePageAsync(pluginId, "tests.sample.config", TimeSpan.FromSeconds(5));
         using var page = outcome.Page!;
         outcome = await configurationManager.AcceptPageAsync(pluginId, page, TimeSpan.FromSeconds(5));
 
@@ -221,10 +221,10 @@ public sealed class SampleConfigurationPluginTests : IDisposable
 
         pluginManager.Discover(pluginsDirectory, new Version(3, 0, 0));
 
-        var outcome = await configurationManager.CreatePageAsync("SkyCD.Plugin.Unsupported", TimeSpan.FromSeconds(5));
+        var outcome = await configurationManager.CreatePageAsync("SkyCD.Plugin.Unsupported", "unsupported.page", TimeSpan.FromSeconds(5));
 
         Assert.Equal(PluginConfigurationStatus.NotSupported, outcome.Status);
-        Assert.Contains("does not provide a configuration surface", outcome.Error);
+        Assert.Contains("does not provide a configuration page", outcome.Error);
     }
 
     [Fact]
@@ -243,7 +243,7 @@ public sealed class SampleConfigurationPluginTests : IDisposable
         {
             pluginManager.Discover(pluginsDirectory, new Version(3, 0, 0));
 
-            var outcome = await configurationManager.CreatePageAsync(pluginId, TimeSpan.FromSeconds(5));
+            var outcome = await configurationManager.CreatePageAsync(pluginId, "tests.sample.config", TimeSpan.FromSeconds(5));
 
             Assert.Equal(PluginConfigurationStatus.Failed, outcome.Status);
             Assert.NotNull(reportedFailure);
@@ -271,7 +271,7 @@ public sealed class SampleConfigurationPluginTests : IDisposable
         {
             pluginManager.Discover(pluginsDirectory, new Version(3, 0, 0));
 
-            var outcome = await configurationManager.CreatePageAsync(pluginId, TimeSpan.FromMilliseconds(50));
+            var outcome = await configurationManager.CreatePageAsync(pluginId, "tests.sample.config", TimeSpan.FromMilliseconds(50));
 
             Assert.Equal(PluginConfigurationStatus.TimedOut, outcome.Status);
             Assert.NotNull(reportedFailure);
@@ -291,7 +291,7 @@ public sealed class SampleConfigurationPluginTests : IDisposable
 
         Assert.NotNull(discovered);
         var configCapability = Assert.Single(discovered.Capabilities.OfType<IPluginConfigurationCapability>());
-        Assert.Equal("sample.configuration.general", configCapability.Configuration.ConfigurationId);
+        Assert.Equal("sample.configuration.general", configCapability.Configurations[0].ConfigurationId);
     }
 
     [Fact]
@@ -321,7 +321,7 @@ public sealed class SampleConfigurationPluginTests : IDisposable
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => configurationManager.CreatePageAsync(
-            Assembly.GetExecutingAssembly().GetName().Name!, TimeSpan.FromSeconds(5), cancellation.Token));
+            Assembly.GetExecutingAssembly().GetName().Name!, "tests.sample.config", TimeSpan.FromSeconds(5), cancellation.Token));
     }
 
     [Fact]
@@ -333,7 +333,7 @@ public sealed class SampleConfigurationPluginTests : IDisposable
         var deferred = new TaskCompletionSource<PluginConfigurationPage>(TaskCreationOptions.RunContinuationsAsynchronously);
         TestStubConfigurationCapability.DeferredPage = deferred.Task;
         var outcome = await configurationManager.CreatePageAsync(Assembly.GetExecutingAssembly().GetName().Name!,
-            TimeSpan.FromMilliseconds(50));
+            "tests.sample.config", TimeSpan.FromMilliseconds(50));
         var disposed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         deferred.SetResult(new PluginConfigurationPage(() => new object(),
             _ => Task.FromResult(new PluginConfigurationResult { Success = true }), () => disposed.SetResult()));
@@ -361,7 +361,7 @@ public sealed class SampleConfigurationPluginTests : IDisposable
         var plugin = new SampleConfigurationPlugin();
         using var page = await plugin.CreatePageAsync(new PluginConfigurationRequest
         {
-            ConfigurationId = plugin.Configuration.ConfigurationId,
+            ConfigurationId = plugin.Configurations[0].ConfigurationId,
             CurrentSettings = new Dictionary<string, string?> { ["greeting"] = "draft" }
         });
         page.Dispose();
@@ -399,10 +399,10 @@ public sealed class TestStubConfigurationCapability : IPluginConfigurationCapabi
     public static bool ThrowOnConfigurationRead { get; set; }
     public static Task<PluginConfigurationPage>? DeferredPage { get; set; }
 
-    public PluginConfigurationDescriptor Configuration => ThrowOnConfigurationRead
+    public IReadOnlyList<PluginConfigurationDescriptor> Configurations => ThrowOnConfigurationRead
         ? throw new MissingMethodException(
             "Method not found: 'Void SkyCD.SDK.Capabilities.Configuration.PluginConfigurationDescriptor..ctor(System.String, System.String)'.")
-        : new PluginConfigurationDescriptor("tests.sample.config", "Test Stub Configuration");
+        : [new PluginConfigurationDescriptor("tests.sample.config", "Test Stub Configuration")];
 
     public Task<PluginConfigurationPage> CreatePageAsync(PluginConfigurationRequest request,
         CancellationToken cancellationToken = default)

@@ -5,6 +5,7 @@ using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SkyCD.Documents;
+using SkyCD.Plugin.Host.Media;
 using SkyCD.UI.Localization;
 
 namespace SkyCD.Presentation.ViewModels;
@@ -15,6 +16,12 @@ public partial class OptionsDialogViewModel
     private const int AiDescriptionCategoryIndex = 10;
 
     public ObservableCollection<AiScanExclusionItemViewModel> AiScanExclusions { get; } = [];
+
+    public ObservableCollection<AiDescriptionImplementationChoice> AiDescriptionImplementations { get; } = [];
+
+    [ObservableProperty] private AiDescriptionImplementationChoice? selectedAiDescriptionImplementation;
+
+    public bool ShowAiDescriptionImplementationSection => AiDescriptionImplementations.Count > 1;
 
     [ObservableProperty] private AiScanExclusionItemViewModel? selectedAiScanExclusion;
 
@@ -35,6 +42,24 @@ public partial class OptionsDialogViewModel
 
     public event EventHandler? ResetAiScanExclusionsRequested;
 
+    /// <summary>Loads the installed implementations and restores the host-selected one when still available.</summary>
+    public void SetAiDescriptionImplementations(IEnumerable<AiDescriptionImplementationChoice> implementations,
+        string? selectedId)
+    {
+        AiDescriptionImplementations.Clear();
+        foreach (var implementation in implementations.DistinctBy(
+                     static implementation => implementation.Id, StringComparer.OrdinalIgnoreCase))
+        {
+            AiDescriptionImplementations.Add(implementation);
+        }
+
+        SelectedAiDescriptionImplementation = AiDescriptionImplementations.FirstOrDefault(implementation =>
+                                                string.Equals(implementation.Id, selectedId,
+                                                    StringComparison.OrdinalIgnoreCase))
+                                            ?? AiDescriptionImplementations.FirstOrDefault();
+        OnPropertyChanged(nameof(ShowAiDescriptionImplementationSection));
+    }
+
     /// <summary>Shows or hides the AI description category; the settings apply only while its plugin is installed.</summary>
     public void SetAiDescriptionAvailable(bool available)
     {
@@ -43,8 +68,8 @@ public partial class OptionsDialogViewModel
             return;
         }
 
-        // The MCP tool page always follows the AI group, so only the AI-dependent pages trigger the fallback.
-        var aiWasSelected = SelectedBuiltInIndex is AiDescriptionCategoryIndex or AiProviderCategoryIndex;
+        // The MCP tool page always follows the AI group, so only the AI-dependent page triggers the fallback.
+        var aiWasSelected = SelectedBuiltInIndex == AiDescriptionCategoryIndex;
         IsAiDescriptionAvailable = available;
         if (!available && aiWasSelected)
         {

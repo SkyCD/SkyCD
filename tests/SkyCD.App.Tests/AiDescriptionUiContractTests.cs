@@ -146,15 +146,19 @@ public sealed class AiDescriptionUiContractTests
     }
 
     [Fact]
-    public void OptionsWindow_ExposesSeparateAiProviderCategory()
+    public void AiProviderPage_LivesInThePluginNotTheHostOptionsWindow()
     {
         var xaml = ReadRepoFile("src", "SkyCD.App", "Views", "OptionsWindow.axaml");
 
-        Assert.Contains("IsVisible=\"{Binding ShowAiProviderSection}\"", xaml, StringComparison.Ordinal);
-        // Issue #1213: the in-page title duplicated the breadcrumb, so the section
-        // keeps the settings while the heading is gone.
+        // Issue #1340: the provider settings are a plugin configuration page, so the host
+        // window no longer carries this section.
+        Assert.DoesNotContain("ShowAiProviderSection", xaml, StringComparison.Ordinal);
+
+        // Issue #1213: the in-page title duplicated the breadcrumb, so the page keeps the
+        // settings while the heading is gone.
+        var view = ReadRepoFile("Plugins", "SkyCD.Plugin.Ai.Provider", "Views", "AiProviderSettingsView.axaml");
         Assert.DoesNotContain(
-            "Text=\"{i18n:Translate {x:Static i18n:UiKeys.AiProviderCategory}}\"", xaml, StringComparison.Ordinal);
+            "Text=\"{i18n:Translate {x:Static i18n:UiKeys.AiProviderCategory}}\"", view, StringComparison.Ordinal);
 
         foreach (var language in new[] { "en", "lt" })
         {

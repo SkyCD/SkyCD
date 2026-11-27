@@ -3,10 +3,8 @@
         xmlns:i18n="clr-namespace:SkyCD.UI.Localization;assembly=SkyCD.UI"
         xmlns:vm="clr-namespace:SkyCD.Presentation.ViewModels;assembly=SkyCD.Presentation"
         xmlns:marketplace="clr-namespace:SkyCD.Presentation.Marketplace;assembly=SkyCD.Presentation"
-        xmlns:media="clr-namespace:SkyCD.SDK.Capabilities.Media;assembly=SkyCD.SDK"
         xmlns:hostmedia="clr-namespace:SkyCD.Plugin.Host.Media;assembly=SkyCD.Plugin.Host"
         xmlns:converters="clr-namespace:SkyCD.App.Converters"
-        xmlns:bindingConverters="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
         xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
         xmlns:lucide="clr-namespace:IconPacks.Avalonia.Lucide;assembly=IconPacks.Avalonia.Lucide"
         xmlns:multiSelect="clr-namespace:SkyCD.UI.Controls.Selectors.MultiSelectDropdown;assembly=SkyCD.UI"
@@ -25,52 +23,11 @@
         Icon="/Assets/skycd.ico"
         Title="{i18n:Translate {x:Static i18n:UiKeys.Options}}">
 
-    <Window.Resources>
-        <!-- Issue #1207: dropdown rows share the closed field's inset, as the source picker does. -->
-        <ControlTheme x:Key="AiProviderComboBoxItemTheme"
-                      TargetType="ComboBoxItem"
-                      BasedOn="{StaticResource {x:Type ComboBoxItem}}">
-            <Setter Property="Padding" Value="{DynamicResource SkyComboBoxContentPadding}" />
-        </ControlTheme>
-        <DataTemplate x:Key="AiProviderChoiceTemplate" x:DataType="media:AiProviderChoice">
-            <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceXs}">
-                <Panel Width="{DynamicResource SkyIconSize}"
-                       Height="{DynamicResource SkyIconSize}">
-                    <Border Background="{DynamicResource ThemeAccentBrush}"
-                            IsVisible="{Binding #ProviderIcon.Source, Converter={x:Static bindingConverters:ObjectConverters.IsNull}}"
-                            CornerRadius="{DynamicResource SkyCornerRadius}">
-                        <Viewbox Margin="{DynamicResource SkyInsetXxs}">
-                            <TextBlock Text="{Binding Monogram}"
-                                       Foreground="{DynamicResource ThemeForegroundBrush}" />
-                        </Viewbox>
-                    </Border>
-                    <Image x:Name="ProviderIcon"
-                           Source="{Binding Converter={x:Static converters:AiProviderIconConverter.Instance}}"
-                           Stretch="Uniform" />
-                </Panel>
-                <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
-            </StackPanel>
-        </DataTemplate>
-    </Window.Resources>
-
     <Design.DataContext>
         <vm:OptionsDialogViewModel />
     </Design.DataContext>
 
     <Window.Styles>
-        <Style Selector="Border.acpAgentCard">
-            <Setter Property="BorderBrush" Value="{DynamicResource TabCardBorderBrush}" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Padding" Value="{DynamicResource SkyInsetMd}" />
-        </Style>
-        <Style Selector="Border.acpAgentCard.selected">
-            <Setter Property="BorderBrush" Value="{DynamicResource SkyAcpAgentSelectedBorder}" />
-            <Setter Property="BorderThickness" Value="2" />
-            <Setter Property="Padding" Value="{DynamicResource SkyInsetMd}" />
-        </Style>
-        <Style Selector="Button.acpUseAgent">
-            <Setter Property="Content" Value="{i18n:Translate {x:Static i18n:UiKeys.UseAcpAgent}}" />
-        </Style>
         <!-- External links stay Buttons so Tab/Enter activate them, but render as links with the ↗ affordance. -->
         <Style Selector="Button.pluginLink">
             <Setter Property="Background" Value="Transparent" />
@@ -88,23 +45,6 @@
         <Style Selector="Button.pluginLink.alignRight">
             <Setter Property="HorizontalAlignment" Value="Right" />
         </Style>
-        <Style Selector="Border.acpAgentCard.selected Button.acpUseAgent">
-            <Setter Property="IsEnabled" Value="False" />
-            <Setter Property="Theme">
-                <ControlTheme TargetType="Button">
-                    <Setter Property="Template">
-                        <ControlTemplate>
-                            <Border Background="{DynamicResource SkyAcpAgentSelectedBackground}" BorderBrush="{DynamicResource SkyAcpAgentSelectedBorder}" BorderThickness="1" CornerRadius="{DynamicResource SkyCornerRadiusMedium}">
-                                <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}"
-                                                  Padding="{DynamicResource SkyControlPadding}" HorizontalContentAlignment="Center"
-                                                  VerticalContentAlignment="Center" Foreground="{DynamicResource SkyAcpAgentSelectedForeground}" />
-                            </Border>
-                        </ControlTemplate>
-                    </Setter>
-                </ControlTheme>
-            </Setter>
-            <Setter Property="Content" Value="{i18n:Translate {x:Static i18n:UiKeys.AcpAgentSelected}}" />
-        </Style>
     </Window.Styles>
 
     <Window.Resources>
@@ -116,67 +56,7 @@
         <converters:LanguageFlagImageConverter x:Key="LanguageFlagImageConverter" />
         <converters:StatusBadgeIconConverter x:Key="StatusBadgeIconConverter" />
         <converters:StatusIconTileConverter x:Key="StatusIconTileConverter" />
-        <converters:AcpAgentIconConverter x:Key="AcpAgentIconConverter" />
-        <converters:AcpAgentSelectionConverter x:Key="AcpAgentSelectionConverter" />
         <converters:ToolbarIconConverter x:Key="ToolbarIconConverter" />
-        <ItemsPanelTemplate x:Key="AcpAgentCardsPanel">
-            <UniformGrid Columns="2" />
-        </ItemsPanelTemplate>
-        <DataTemplate x:Key="AcpAgentCardTemplate" x:DataType="media:AcpAgentChoice">
-            <Border Classes="acpAgentCard" MinHeight="96" Margin="{DynamicResource SkyInsetXs}"
-                    Background="{DynamicResource TabCardBackgroundBrush}"
-                    CornerRadius="{DynamicResource SkyAcpAgentCardRadius}">
-                <Classes.selected>
-                    <MultiBinding Converter="{StaticResource AcpAgentSelectionConverter}">
-                        <Binding />
-                        <ReflectionBinding Path="DataContext.AcpCardAgent"
-                                           RelativeSource="{RelativeSource FindAncestor, AncestorType={x:Type Window}}" />
-                    </MultiBinding>
-                </Classes.selected>
-                <Grid ColumnSpacing="{DynamicResource SkySpaceSm}" RowDefinitions="Auto,Auto" RowSpacing="{DynamicResource SkySpaceSm}">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="{StaticResource SkyAcpAgentIconColumnWidth}" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <Border Width="34" Height="34" CornerRadius="{DynamicResource SkyAcpAgentBadgeRadius}" Background="{DynamicResource SkyAcpAgentBadgeBackground}"
-                            VerticalAlignment="Top">
-                        <Grid>
-                            <TextBlock Text="{Binding IconLabel}" Foreground="White" FontWeight="SemiBold"
-                                       IsVisible="{Binding !IconPaths.Count}"
-                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
-                            <Image Source="{Binding IconPaths, Converter={StaticResource AcpAgentIconConverter}}"
-                                   Width="20" Height="20" />
-                        </Grid>
-                    </Border>
-                    <StackPanel Grid.Column="1" Spacing="{DynamicResource SkySpaceXs}">
-                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
-                                   ToolTip.Tip="{Binding Name}" />
-                        <TextBlock Text="{Binding Description}" Opacity="0.78"
-                                   TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Description}" />
-                    </StackPanel>
-                    <Grid Grid.Row="1" Grid.ColumnSpan="2" ColumnDefinitions="*,Auto" ColumnSpacing="{DynamicResource SkySpaceXs}">
-                        <TextBlock Text="{Binding DisplayVersion}" Opacity="0.7"
-                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{DynamicResource SkySpaceXs}">
-                            <Button Classes="acpUseAgent" IsVisible="{Binding IsInstalled}"
-                                    Click="OnSelectAcpAgentClicked" />
-                            <Button IsVisible="{Binding CanInstall}" Click="OnInstallAcpAgentClicked"
-                                    Content="{i18n:Translate {x:Static i18n:UiKeys.InstallAcpAgent}}" />
-                            <Button IsVisible="{Binding CanUpdate}" Click="OnInstallAcpAgentClicked"
-                                    ToolTip.Tip="{Binding RegistryVersion}"
-                                    Content="{i18n:Translate {x:Static i18n:UiKeys.UpdateAcpAgent}}" />
-                            <Button IsVisible="{Binding IsManaged}" Click="OnUninstallAcpAgentClicked"
-                                    Content="{i18n:Translate {x:Static i18n:UiKeys.UninstallAcpAgent}}" />
-                            <Button IsVisible="{Binding CanLocateExecutable}" Click="OnBrowseAcpAgentClicked"
-                                    ToolTip.Tip="{Binding ExpectedExecutable}"
-                                    Content="{i18n:Translate {x:Static i18n:UiKeys.LocateAcpAgent}}" />
-                            <TextBlock IsVisible="{Binding !HasAvailableAction}" Opacity="0.7"
-                                       Text="{i18n:Translate {x:Static i18n:UiKeys.AcpAgentUnavailable}}" />
-                        </StackPanel>
-                    </Grid>
-                </Grid>
-            </Border>
-        </DataTemplate>
     </Window.Resources>
 
     <Grid RowDefinitions="*,Auto">
@@ -1527,64 +1407,6 @@
                                    TextWrapping="Wrap" />
                     </Grid>
                     <Grid Grid.Row="2"
-                          IsVisible="{Binding ShowContributedOptionsPageSection}"
-                          RowDefinitions="Auto,*"
-                          RowSpacing="{DynamicResource SkySpaceSm}">
-                        <TextBlock Text="{Binding SelectedContributedPage.Error}"
-                                   IsVisible="{Binding SelectedContributedPage.HasError}"
-                                   TextWrapping="Wrap" />
-                        <ContentControl Grid.Row="1"
-                                        Content="{Binding SelectedContributedPage.Content}"
-                                        IsVisible="{Binding SelectedContributedPage.HasContent}"
-                                        HorizontalContentAlignment="Stretch"
-                                        VerticalContentAlignment="Stretch" />
-                    </Grid>
-                    <Grid Grid.Row="2" IsVisible="{Binding ShowAcpSection}"
-                          RowDefinitions="Auto,*,Auto">
-                        <search:SearchTextBox Margin="{DynamicResource SkyGapBottomMd}"
-                                                 PlaceholderText="{i18n:Translate {x:Static i18n:UiKeys.SearchAcpAgents}}"
-                                                 Text="{Binding AcpSearchText, UpdateSourceTrigger=PropertyChanged}"
-                                                 IsEnabled="{Binding !IsAcpLoading}" />
-
-                        <Border Grid.Row="1" BorderBrush="{DynamicResource TabCardBorderBrush}"
-                                BorderThickness="1" CornerRadius="{DynamicResource SkyAcpAgentCardRadius}">
-                            <Grid>
-                                <ScrollViewer IsVisible="{Binding !IsAcpLoading}"
-                                              HorizontalScrollBarVisibility="Disabled">
-                                    <StackPanel Margin="{DynamicResource SkyInsetMd}" Spacing="{DynamicResource SkySpaceSm}">
-                                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AcpAgentInstalled}}" IsVisible="{Binding HasInstalledAcpAgents}"
-                                                   FontWeight="SemiBold" />
-                                        <ItemsControl ItemsSource="{Binding InstalledAcpAgents}" IsVisible="{Binding HasInstalledAcpAgents}"
-                                                      ItemTemplate="{StaticResource AcpAgentCardTemplate}"
-                                                      ItemsPanel="{StaticResource AcpAgentCardsPanel}" />
-                                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AcpAgentsAvailable}}" IsVisible="{Binding HasAvailableAcpAgents}"
-                                                   FontWeight="SemiBold" Margin="{DynamicResource SkyGapTopSm}" />
-                                        <ItemsControl ItemsSource="{Binding AvailableAcpAgents}" IsVisible="{Binding HasAvailableAcpAgents}"
-                                                      ItemTemplate="{StaticResource AcpAgentCardTemplate}"
-                                                      ItemsPanel="{StaticResource AcpAgentCardsPanel}" />
-                                    </StackPanel>
-                                </ScrollViewer>
-                                <Grid IsVisible="{Binding !IsAcpLoading}">
-                                    <TextBlock IsVisible="{Binding HasNoMatchingAcpAgents}"
-                                               Text="{i18n:Translate {x:Static i18n:UiKeys.NoMatchingAcpAgents}}"
-                                               HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.75" />
-                                </Grid>
-                                <StackPanel IsVisible="{Binding IsAcpLoading}" HorizontalAlignment="Center"
-                                            VerticalAlignment="Center" Spacing="{DynamicResource SkySpaceSm}">
-                                    <ProgressBar Width="124" Height="5" IsIndeterminate="{Binding IsAcpLoading}" />
-                                    <TextBlock Text="{Binding AcpLoadingLabel}" HorizontalAlignment="Center" />
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-
-                        <StackPanel Grid.Row="2" Spacing="{DynamicResource SkySpaceSm}">
-                            <TextBlock IsVisible="{Binding HasAcpRegistryStatus}" Text="{Binding AcpRegistryStatus}"
-                                       Margin="{DynamicResource SkyGapTopSm}" TextWrapping="Wrap" />
-                            <TextBlock IsVisible="{Binding HasAcpAlert}" Text="{Binding AcpAlertMessage}"
-                                       Margin="{DynamicResource SkyGapTopSm}" TextWrapping="Wrap" Foreground="{DynamicResource SkyErrorForeground}" />
-                        </StackPanel>
-                    </Grid>
-                    <Grid Grid.Row="2"
                           IsVisible="{Binding ShowScanSection}"
                           RowDefinitions="*">
                         <ScrollViewer x:Name="ScanSettingsScrollViewer"
@@ -2060,165 +1882,6 @@
                                        TextWrapping="Wrap" />
                         </Border>
                     </Grid>
-                    <ScrollViewer Grid.Row="2"
-                                  IsVisible="{Binding ShowAiProviderSection}"
-                                  VerticalScrollBarVisibility="Auto"
-                                  HorizontalScrollBarVisibility="Disabled">
-                        <StackPanel Spacing="{DynamicResource SkySpaceSm}">
-                            <Border BorderBrush="{DynamicResource ThemeBorderLowBrush}"
-                                    BorderThickness="1"
-                                    CornerRadius="{DynamicResource SkyCornerRadius}"
-                                    Background="{DynamicResource ThemeControlLowBrush}"
-                                    Padding="{DynamicResource SkyInsetMd}">
-                                <StackPanel Spacing="{DynamicResource SkySpaceSm}">
-                                    <Grid ColumnSpacing="{DynamicResource SkySpaceSm}">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="{StaticResource SkyFormLabelWidth}" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiProvider}}"
-                                                   VerticalAlignment="Center" />
-                                        <ComboBox x:Name="AiProviderComboBox"
-                                                  Grid.Column="1"
-                                                  Padding="{DynamicResource SkyComboBoxContentPadding}"
-                                                  ItemContainerTheme="{StaticResource AiProviderComboBoxItemTheme}"
-                                                  ItemsSource="{Binding AiProviders}"
-                                                  SelectedItem="{Binding SelectedAiProvider}"
-                                                  ItemTemplate="{StaticResource AiProviderChoiceTemplate}"
-                                                  SelectionBoxItemTemplate="{StaticResource AiProviderChoiceTemplate}">
-                                        </ComboBox>
-                                    </Grid>
-                                    <Grid ColumnSpacing="{DynamicResource SkySpaceSm}">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="{StaticResource SkyFormLabelWidth}" />
-                                            <ColumnDefinition Width="120" />
-                                            <ColumnDefinition Width="120" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.InternetProtocol}}"
-                                                   VerticalAlignment="Center" />
-                                        <ComboBox Grid.Column="1"
-                                                  ItemsSource="{Binding AiProviderProtocols}"
-                                                  SelectedItem="{Binding AiProviderProtocol}" />
-                                        <TextBlock Grid.Column="2"
-                                                   Text="{i18n:Translate {x:Static i18n:UiKeys.Port}}"
-                                                   VerticalAlignment="Center" />
-                                        <TextBox Grid.Column="3"
-                                                 Text="{Binding AiProviderPort, UpdateSourceTrigger=PropertyChanged}" />
-                                    </Grid>
-                                    <Grid ColumnSpacing="{DynamicResource SkySpaceSm}">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="{StaticResource SkyFormLabelWidth}" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiProviderAddress}}"
-                                                   VerticalAlignment="Center" />
-                                        <TextBox Grid.Column="1"
-                                                 Text="{Binding AiProviderAddress, UpdateSourceTrigger=PropertyChanged}" />
-                                    </Grid>
-                                    <Grid ColumnSpacing="{DynamicResource SkySpaceSm}">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="{StaticResource SkyFormLabelWidth}" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiProviderEndpoint}}"
-                                                   VerticalAlignment="Center" />
-                                        <TextBox Grid.Column="1"
-                                                 IsReadOnly="True"
-                                                 Text="{Binding AiProviderEndpointUrl}" />
-                                    </Grid>
-                                    <Grid ColumnSpacing="{DynamicResource SkySpaceSm}">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="{StaticResource SkyFormLabelWidth}" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiProviderApiKey}}"
-                                                   VerticalAlignment="Center" />
-                                        <StackPanel Grid.Column="1" Spacing="{DynamicResource SkySpaceXxs}">
-                                            <TextBox PasswordChar="*"
-                                                     Text="{Binding AiProviderApiKey, UpdateSourceTrigger=PropertyChanged}" />
-                                            <Button Classes="pluginLink alignRight"
-                                                    IsVisible="{Binding ShowAiProviderApiKeyHelp}"
-                                                    Command="{Binding OpenAiProviderApiKeyHelpCommand}"
-                                                    ToolTip.Tip="{Binding AiProviderApiKeyHelpUrl}"
-                                                    AutomationProperties.Name="{i18n:Translate {x:Static i18n:UiKeys.AiProviderApiKeyHelp}}">
-                                                <StackPanel Orientation="Horizontal" Spacing="{DynamicResource SkySpaceXxs}">
-                                                    <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiProviderApiKeyHelp}}" />
-                                                    <TextBlock Text="↗" />
-                                                </StackPanel>
-                                            </Button>
-                                        </StackPanel>
-                                    </Grid>
-                                    <Grid ColumnSpacing="{DynamicResource SkySpaceSm}">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="{StaticResource SkyFormLabelWidth}" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiProviderModel}}"
-                                                   VerticalAlignment="Center" />
-                                        <ComboBox Grid.Column="1"
-                                                  IsEditable="True"
-                                                  ItemsSource="{Binding AiProviderModels}"
-                                                  Text="{Binding AiProviderModel, Mode=TwoWay}" />
-                                        <Button Grid.Column="2"
-                                                Content="↻"
-                                                FontSize="{DynamicResource SkyFontSubtitle}"
-                                                Width="34"
-                                                Height="28"
-                                                ToolTip.Tip="{i18n:Translate {x:Static i18n:UiKeys.AiProviderRefreshModels}}"
-                                                Command="{Binding RefreshAiProviderModelsCommand}" />
-                                    </Grid>
-                                    <Grid ColumnSpacing="{DynamicResource SkySpaceSm}">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="{StaticResource SkyFormLabelWidth}" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="{i18n:Translate {x:Static i18n:UiKeys.AiProviderOutputLanguage}}"
-                                                   VerticalAlignment="Center" />
-                                        <ComboBox Grid.Column="1"
-                                                  ItemsSource="{Binding AiProviderLanguages}"
-                                                  SelectedItem="{Binding AiProviderLanguage}" />
-                                    </Grid>
-                                    <Grid ColumnSpacing="{DynamicResource SkySpaceSm}">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="{StaticResource SkyFormLabelWidth}" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <CheckBox Grid.Column="1"
-                                                  Content="{i18n:Translate {x:Static i18n:UiKeys.AiProviderResizeImages}}"
-                                                  IsChecked="{Binding AiProviderResizeLargeImages}" />
-                                    </Grid>
-                                    <Grid ColumnSpacing="{DynamicResource SkySpaceSm}">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="{StaticResource SkyFormLabelWidth}" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{DynamicResource SkySpaceSm}">
-                                            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.AiProviderCheckConnection}}"
-                                                    Command="{Binding CheckAiProviderConnectionCommand}" />
-                                            <Button Content="{i18n:Translate {x:Static i18n:UiKeys.AiProviderStartServer}}"
-                                                    IsVisible="{Binding AiProviderCanStartServer}"
-                                                    Command="{Binding StartAiProviderServerCommand}" />
-                                        </StackPanel>
-                                    </Grid>
-                                    <TextBlock Text="{Binding AiProviderConnectionStatus}"
-                                               Foreground="{DynamicResource SkyStatusInfoForeground}"
-                                               TextWrapping="Wrap" />
-                                    <Border IsVisible="{Binding ShowAiProviderAlert}"
-                                            Background="{DynamicResource SkyAlertErrorBackground}"
-                                            BorderBrush="{DynamicResource SkyAlertErrorBorder}"
-                                            BorderThickness="1"
-                                            CornerRadius="{DynamicResource SkyCornerRadius}"
-                                            Padding="{DynamicResource SkyControlPadding}">
-                                        <TextBlock Text="{Binding AiProviderAlertMessage}"
-                                                   Foreground="{DynamicResource SkyAlertErrorForeground}"
-                                                   TextWrapping="Wrap" />
-                                    </Border>
-                                </StackPanel>
-                            </Border>
-                        </StackPanel>
-                    </ScrollViewer>
                     <Grid Grid.Row="2"
                           IsVisible="{Binding ShowMcpToolsSection}"
                           RowDefinitions="Auto,Auto,*"

@@ -4,12 +4,12 @@ using System.Globalization;
 using System.IO;
 using Avalonia.Data.Converters;
 using Avalonia.Media.Imaging;
+using SkyCD.Plugin.Ai.Provider.Models;
 using SkyCD.Resource.Icons.LlmBackends;
-using SkyCD.SDK.Capabilities.Media;
 
-namespace SkyCD.App.Converters;
+namespace SkyCD.Plugin.Ai.Provider.Views;
 
-/// <summary>Loads a provider preset's embedded icon. A missing resource returns null so the monogram shows.</summary>
+/// <summary>Loads a provider preset's packaged icon. A missing resource returns null so the monogram shows.</summary>
 public sealed class AiProviderIconConverter : IValueConverter
 {
     private const string PackagedIconPrefix = "llm-backend:";
