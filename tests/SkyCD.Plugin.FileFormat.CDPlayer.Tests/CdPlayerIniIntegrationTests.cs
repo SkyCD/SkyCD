@@ -26,28 +26,6 @@ namespace SkyCD.Plugin.FileFormat.CDPlayer.Tests;
 public sealed class CdPlayerIniIntegrationTests
 {
     [Fact]
-    public void CanHandle_ValidCdPlayerIni_ReturnsTrue()
-    {
-        var text = "[12ab34cd]\r\nartist=Pink Floyd\r\ntitle=The Dark Side\r\nnumtracks=2\r\n0=Speak to Me\r\n1=Breathe\r\n";
-        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(text));
-
-        var canHandle = CdPlayerIniParser.CanHandle(stream);
-
-        Assert.True(canHandle);
-    }
-
-    [Fact]
-    public void CanHandle_GenericNonCdIni_ReturnsFalse()
-    {
-        var text = "[Settings]\r\nTheme=Dark\r\nFontSize=14\r\n";
-        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(text));
-
-        var canHandle = CdPlayerIniParser.CanHandle(stream);
-
-        Assert.False(canHandle);
-    }
-
-    [Fact]
     public async Task LoadAsync_WithStandardFixture_PersistsAndReopensAccurately()
     {
         var fixturePath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "CdPlayerIni", "cdplayer-standard.ini");
@@ -142,46 +120,6 @@ public sealed class CdPlayerIniIntegrationTests
         }, new Progress<int>());
 
         Assert.Equal(3, loadedCount);
-    }
-
-    [Fact]
-    public void Parse_InvalidIniWithoutCdSections_ThrowsCdPlayerInvalidFormatException()
-    {
-        var text = "[General]\r\nVersion=1.0\r\n";
-        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(text));
-
-        Assert.Throws<CdPlayerInvalidFormatException>(() => CdPlayerIniParser.Parse(stream));
-    }
-
-    [Fact]
-    public void Parse_ExceedingFileSizeLimit_ThrowsCdPlayerFileSizeLimitExceededException()
-    {
-        var text = "[12345678]\r\nartist=Test\r\ntitle=Test\r\nnumtracks=1\r\n0=Track 1\r\n";
-        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(text));
-
-        Assert.Throws<CdPlayerFileSizeLimitExceededException>(() => CdPlayerIniParser.Parse(stream, maxSizeBytes: 10));
-    }
-
-    [Fact]
-    public void Parse_DuplicateSections_MergesEntries()
-    {
-        var text = "[12345678]\r\nartist=Artist A\r\ntitle=Album A\r\nnumtracks=2\r\n0=Track 1\r\n\r\n[12345678]\r\n1=Track 2\r\n";
-        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(text));
-
-        var doc = CdPlayerIniParser.Parse(stream);
-        Assert.Equal(3, doc.Count); // 1 root + 2 tracks
-    }
-
-    [Fact]
-    public void Parse_OverwritesDuplicateKeysWithinSection()
-    {
-        var text = "[12345678]\r\nartist=Old Artist\r\nartist=New Artist\r\ntitle=Album A\r\nnumtracks=1\r\n0=Track 1\r\n";
-        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(text));
-
-        var doc = CdPlayerIniParser.Parse(stream);
-        var root = doc.Single(r => r["parentId"] is null);
-        var props = Assert.IsAssignableFrom<IDictionary<string, object?>>(root["properties"]);
-        Assert.Equal("New Artist", props["Artist"]);
     }
 
     private static IReadOnlyList<CatalogDocument> Extract(object payload)

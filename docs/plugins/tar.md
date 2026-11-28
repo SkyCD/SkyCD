@@ -5,7 +5,7 @@ see [archives.md](archives.md). This page covers only the read-only format plugi
 
 | Project | Plugin id | Capability | Role |
 |---|---|---|---|
-| `Plugins/SkyCD.Plugin.FileFormat.Tar/` | `skycd-tar` | `IFileFormatPluginCapability` | Opens `.tar`, `.tar.gz` and `.tgz` as a read-only catalog/filesystem view |
+| [TAR Archive Index](https://github.com/SkyCD/SkyCD.Plugin.FileFormat.Tar) | `skycd-tar` | `IFileFormatPluginCapability` | Opens `.tar`, `.tar.gz` and `.tgz` as a read-only catalog/filesystem view |
 
 The plugin is discovered through assembly metadata and implemented capability types only; no
 `plugin.json` descriptor is used. Tests live in `tests/SkyCD.Plugin.FileFormat.Tar.Tests/`.
