@@ -60,7 +60,7 @@ public sealed class WorksPluginIntegrationTests : IDisposable
     {
         var document = WorksFixtures.Works4WithBody(Body, WorksFixtures.FullSummary());
         var results = await CreateManagerWithPreview().ProcessAsync(
-            WorksMetadataPluginTests.Item(document),
+            Item(document),
             _ => Task.FromResult<Stream>(new MemoryStream(document)));
 
         var metadata = results.Single(result => result.Metadata is not null);
@@ -80,7 +80,7 @@ public sealed class WorksPluginIntegrationTests : IDisposable
     {
         var document = WorksFixtures.Works4WithDamagedBodyChain();
         var results = await CreateManagerWithPreview().ProcessAsync(
-            WorksMetadataPluginTests.Item(document),
+            Item(document),
             _ => Task.FromResult<Stream>(new MemoryStream(document)));
 
         var metadata = results.Single(result => result.Metadata is not null);
@@ -101,7 +101,7 @@ public sealed class WorksPluginIntegrationTests : IDisposable
     {
         var document = WorksFixtures.EncryptedWrapper();
         var results = await CreateManagerWithPreview().ProcessAsync(
-            WorksMetadataPluginTests.Item(document),
+            Item(document),
             _ => Task.FromResult<Stream>(new MemoryStream(document)));
 
         Assert.Equal(2, results.Count);
@@ -115,7 +115,7 @@ public sealed class WorksPluginIntegrationTests : IDisposable
     {
         var document = WorksFixtures.Works4WithBody(Body, WorksFixtures.FullSummary());
         var results = await CreateManagerWithPreview(availableRenderer: false).ProcessAsync(
-            WorksMetadataPluginTests.Item(document),
+            Item(document),
             _ => Task.FromResult<Stream>(new MemoryStream(document)));
 
         var preview = results.Single(result => result.Preview is not null);
@@ -133,7 +133,7 @@ public sealed class WorksPluginIntegrationTests : IDisposable
     {
         var document = WorksFixtures.Works4(WorksFixtures.FullSummary(), WorksFixtures.FullDocumentSummary());
         var results = await CreateManager().ProcessAsync(
-            WorksMetadataPluginTests.Item(document),
+            Item(document),
             _ => Task.FromResult<Stream>(new MemoryStream(document)));
 
         var metadata = Assert.Single(results);
@@ -162,7 +162,7 @@ public sealed class WorksPluginIntegrationTests : IDisposable
     {
         var document = WorksFixtures.NotWorks();
         var results = await CreateManager().ProcessAsync(
-            WorksMetadataPluginTests.Item(document),
+            Item(document),
             _ => Task.FromResult<Stream>(new MemoryStream(document)));
 
         var metadata = Assert.Single(results);
@@ -177,7 +177,7 @@ public sealed class WorksPluginIntegrationTests : IDisposable
         var manager = CreateManager(new MediaExecutionLimits(SourceBytes: 16));
 
         var results = await manager.ProcessAsync(
-            WorksMetadataPluginTests.Item(document),
+            Item(document),
             _ => Task.FromResult<Stream>(new MemoryStream(document)));
 
         Assert.All(results, result => Assert.True(result.Failed));
@@ -258,12 +258,11 @@ public sealed class WorksPluginIntegrationTests : IDisposable
     }
 
     [Fact]
-    public void PluginProject_ShipsNoDiscoveryManifest()
+    public void PackagedPlugin_ShipsNoDiscoveryManifest()
     {
-        var projectDirectory = FindPluginProjectDirectory();
+        var projectDirectory = Path.GetDirectoryName(typeof(WorksMetadataPlugin).Assembly.Location)!;
 
         Assert.False(File.Exists(Path.Combine(projectDirectory, "plugin.json")));
-        Assert.Empty(Directory.EnumerateFiles(projectDirectory, "plugin.json", SearchOption.AllDirectories));
     }
 
     private static string FieldText(EntryPreviewSnapshot snapshot, string key) =>
@@ -338,23 +337,6 @@ public sealed class WorksPluginIntegrationTests : IDisposable
         return entry;
     }
 
-    private static string FindPluginProjectDirectory()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            var candidate = Path.Combine(current.FullName, "Plugins", "SkyCD.Plugin.Metadata.Works");
-            if (Directory.Exists(candidate))
-            {
-                return candidate;
-            }
-
-            current = current.Parent;
-        }
-
-        throw new InvalidOperationException("Could not locate the Microsoft Works plugin project directory.");
-    }
-
     private sealed class StubRenderer(bool available) : IWorksThumbnailRenderer
     {
         public bool IsAvailable => available;
@@ -369,4 +351,6 @@ public sealed class WorksPluginIntegrationTests : IDisposable
             return Task.FromResult<byte[]?>(RenderedThumbnail);
         }
     }
+
+    private static MediaItem Item(byte[] document) => new(".wps", "application/vnd.ms-works", document.Length);
 }

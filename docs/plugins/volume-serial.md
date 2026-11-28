@@ -3,7 +3,7 @@
 Implements #642 on the shared medium-level capability contracts
 ([MediaTargetContracts.cs](https://github.com/SkyCD/SkyCD.SDK/blob/main/Capabilities/Media/MediaTargetContracts.cs)).
 
-Assembly: `Plugins/SkyCD.Plugin.Metadata.Volume/` → plugin id `SkyCD.Plugin.VolumeSerial`.
+Assembly: [SkyCD.Plugin.Metadata.Volume](https://github.com/SkyCD/SkyCD.Plugin.Metadata.Volume) → plugin id `SkyCD.Plugin.VolumeSerial`.
 Tests: `tests/SkyCD.Plugin.Metadata.Volume.Tests/`.
 
 ## What it provides

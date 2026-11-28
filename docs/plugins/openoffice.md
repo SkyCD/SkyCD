@@ -3,7 +3,7 @@
 Implements #734 and the embedded thumbnail preview from #946 on the capability contracts from #435
 (`docs/plugins/media-capabilities.md`).
 
-Assembly: `Plugins/SkyCD.Plugin.Metadata.OpenOffice/` → plugin id `SkyCD.Plugin.Metadata.OpenOffice`.
+Assembly: [SkyCD.Plugin.Metadata.OpenOffice](https://github.com/SkyCD/SkyCD.Plugin.Metadata.OpenOffice) → plugin id `SkyCD.Plugin.Metadata.OpenOffice`.
 Tests: `tests/SkyCD.Plugin.Metadata.OpenOffice.Tests/`.
 
 This plugin is deliberately independent of the PDF, RTF and WordPerfect plugins: it claims only OpenDocument

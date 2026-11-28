@@ -26,7 +26,7 @@
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Xml\SkyCD.Plugin.FileFormat.Xml.csproj" />
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Yaml\SkyCD.Plugin.FileFormat.Yaml.csproj" />
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Toml\SkyCD.Plugin.FileFormat.Toml.csproj" />
-        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Playlist\SkyCD.Plugin.FileFormat.Playlist.csproj" />
+        <PackageReference Include="SkyCD.Plugin.FileFormat.Playlist" Version="[0.1.0]" />
         <PackageReference Include="SkyCD.Plugin.FileFormat.Tar" Version="[0.1.0]" />
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Html\SkyCD.Plugin.FileFormat.Html.csproj" />
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Markdown\SkyCD.Plugin.FileFormat.Markdown.csproj" />

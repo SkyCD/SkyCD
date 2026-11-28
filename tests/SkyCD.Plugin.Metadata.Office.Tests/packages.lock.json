@@ -85,6 +85,22 @@
           "OfficeIMO.Core": "3.6.2"
         }
       },
+      "SkyCD.Plugin.Metadata.Office": {
+        "type": "Direct",
+        "requested": "[0.1.0, 0.1.0]",
+        "resolved": "0.1.0",
+        "contentHash": "wdRIP1CjFyhVHjTeRr3ia4JZyMDsGO4wxLFYFzr5SOGaSLVKeeYfEBqJCPyG86EqdQrk/GKX4fVsJfeYnnH08A==",
+        "dependencies": {
+          "OfficeIMO.Access": "3.6.2",
+          "OfficeIMO.Excel": "3.6.2",
+          "OfficeIMO.OneNote": "3.6.2",
+          "OfficeIMO.PowerPoint": "3.6.2",
+          "OfficeIMO.Project": "3.6.2",
+          "OfficeIMO.Visio": "3.6.2",
+          "OfficeIMO.Word": "3.6.2",
+          "SkyCD.SDK": "[3.0.0-alpha.2]"
+        }
+      },
       "SkyCD.SDK": {
         "type": "Direct",
         "requested": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
@@ -996,19 +1012,6 @@
       "skycd.plugin.host": {
         "type": "Project",
         "dependencies": {
-          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
-        }
-      },
-      "skycd.plugin.metadata.office": {
-        "type": "Project",
-        "dependencies": {
-          "OfficeIMO.Access": "[3.6.2, )",
-          "OfficeIMO.Excel": "[3.6.2, )",
-          "OfficeIMO.OneNote": "[3.6.2, )",
-          "OfficeIMO.PowerPoint": "[3.6.2, )",
-          "OfficeIMO.Project": "[3.6.2, )",
-          "OfficeIMO.Visio": "[3.6.2, )",
-          "OfficeIMO.Word": "[3.6.2, )",
           "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
         }
       },

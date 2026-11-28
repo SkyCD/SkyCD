@@ -41,6 +41,15 @@
           "SkyCD.SDK": "[3.0.0-alpha.2]"
         }
       },
+      "SkyCD.Plugin.FileFormat.Playlist": {
+        "type": "Direct",
+        "requested": "[0.1.0, 0.1.0]",
+        "resolved": "0.1.0",
+        "contentHash": "Jh1anubRSfZw9zpOmaj9uokwuK7QD3esxtvwHpxCqlGfqRF8jWWUApkGtOorZsyiEKKO5TKR5qFYxDlO4f9f0g==",
+        "dependencies": {
+          "SkyCD.SDK": "[3.0.0-alpha.2]"
+        }
+      },
       "SkyCD.Plugin.FileFormat.Tar": {
         "type": "Direct",
         "requested": "[0.1.0, 0.1.0]",
@@ -1433,12 +1442,6 @@
         }
       },
       "skycd.plugin.fileformat.plaintext": {
-        "type": "Project",
-        "dependencies": {
-          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
-        }
-      },
-      "skycd.plugin.fileformat.playlist": {
         "type": "Project",
         "dependencies": {
           "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"

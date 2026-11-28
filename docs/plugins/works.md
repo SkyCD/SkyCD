@@ -2,7 +2,7 @@
 
 Implements #740 and #949 on the capability contracts from #435 (`docs/plugins/media-capabilities.md`).
 
-Assembly: `Plugins/SkyCD.Plugin.Metadata.Works/` → plugin id `SkyCD.Plugin.Works`.
+Assembly: [SkyCD.Plugin.Metadata.Works](https://github.com/SkyCD/SkyCD.Plugin.Metadata.Works) → plugin id `SkyCD.Plugin.Works`.
 Tests: `tests/SkyCD.Plugin.Metadata.Works.Tests/`.
 
 The plugin claims only `.wps` and `application/vnd.ms-works`, so a Works word processor document is never
