@@ -9,12 +9,32 @@ namespace SkyCD.Plugin.Runtime.Marketplace.Models;
 /// </summary>
 public sealed record PluginCatalogOptions
 {
-    /// <summary>The default awesome-skycd catalog endpoint.</summary>
+    /// <summary>The default awesome-skycd catalog endpoint, served from GitHub Pages.</summary>
     public static readonly Uri DefaultCatalogEndpoint =
+        new("https://skycd.github.io/awesome-skycd/plugins.json");
+
+    /// <summary>
+    /// The catalog location the app used before GitHub Pages. It is recognized only so a stale copy kept in a
+    /// user repository list is dropped as a duplicate of the built-in catalog instead of being fetched as a
+    /// publisher manifest.
+    /// </summary>
+    public static readonly Uri RetiredCatalogEndpoint =
         new("https://raw.githubusercontent.com/SkyCD/awesome-skycd/main/plugins.json");
 
     /// <summary>Catalog document locations, tried in order; the first one that answers is used.</summary>
     public IReadOnlyList<Uri> CatalogEndpoints { get; init; } = [DefaultCatalogEndpoint];
+
+    /// <summary>Whether the address is a built-in catalog document rather than a publisher manifest.</summary>
+    public static bool IsBuiltInCatalogEndpoint(Uri endpoint)
+    {
+        ArgumentNullException.ThrowIfNull(endpoint);
+        if (!endpoint.IsAbsoluteUri)
+        {
+            return false;
+        }
+
+        return IsSameEndpoint(endpoint, DefaultCatalogEndpoint) || IsSameEndpoint(endpoint, RetiredCatalogEndpoint);
+    }
 
     /// <summary>Running SkyCD host version, compared with each release's host range.</summary>
     public Version HostVersion { get; init; } = new(0, 0, 0);
@@ -73,5 +93,11 @@ public sealed record PluginCatalogOptions
             PlatformID.MacOSX => "osx",
             _ => "linux"
         };
+    }
+
+    private static bool IsSameEndpoint(Uri left, Uri right)
+    {
+        return Uri.Compare(left, right, UriComponents.HttpRequestUrl, UriFormat.Unescaped,
+            StringComparison.OrdinalIgnoreCase) == 0;
     }
 }

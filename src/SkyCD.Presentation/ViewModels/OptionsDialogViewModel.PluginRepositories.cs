@@ -27,7 +27,7 @@ public partial class OptionsDialogViewModel
 
     public string BuiltInCatalogUrl => PluginCatalogOptions.DefaultCatalogEndpoint.AbsoluteUri;
 
-    /// <summary>Builds the staged list from the saved repository URLs; the built-in catalog is not repeatable.</summary>
+    /// <summary>Builds the staged list from the saved repository URLs; a built-in catalog address is not repeatable.</summary>
     public void SetPluginRepositories(IEnumerable<string>? entries)
     {
         PluginRepositories.Clear();
@@ -36,7 +36,9 @@ public partial class OptionsDialogViewModel
         foreach (var entry in (entries ?? []).Where(static entry => !string.IsNullOrWhiteSpace(entry)))
         {
             var url = entry.Trim();
-            if (!seen.Add(url))
+            // A saved copy of the built-in catalog address is a stale entry from before it moved; the
+            // built-in row below already reads it, so persisting it again would only duplicate the fetch.
+            if (!seen.Add(url) || IsBuiltInCatalogUrl(url))
             {
                 continue;
             }
@@ -159,6 +161,13 @@ public partial class OptionsDialogViewModel
                 continue;
             }
 
+            if (PluginCatalogOptions.IsBuiltInCatalogEndpoint(uri))
+            {
+                entry.Error = LocalizationService.Current.Get(UiKeys.PluginRepositoryBuiltInUrl);
+                invalid = true;
+                continue;
+            }
+
             entry.Url = uri.AbsoluteUri;
             entry.Error = string.Empty;
         }
@@ -189,5 +198,10 @@ public partial class OptionsDialogViewModel
 
         uri = parsed;
         return true;
+    }
+
+    private static bool IsBuiltInCatalogUrl(string url)
+    {
+        return Uri.TryCreate(url, UriKind.Absolute, out var uri) && PluginCatalogOptions.IsBuiltInCatalogEndpoint(uri);
     }
 }
