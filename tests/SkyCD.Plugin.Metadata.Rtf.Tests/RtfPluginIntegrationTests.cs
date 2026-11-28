@@ -3,7 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyCD.Formatting.Rtf;
+using SkyCD.Plugin.Metadata.Rtf.Parsing.RichText;
 using SkyCD.SDK.Capabilities.Media;
 using SkyCD.Plugin.Host.Media;
 using SkyCD.Plugin.Runtime.Factories;
@@ -149,12 +149,11 @@ public sealed class RtfPluginIntegrationTests
     }
 
     [Fact]
-    public void PluginProject_ShipsNoDiscoveryManifest()
+    public void PackagedPlugin_ShipsNoDiscoveryManifest()
     {
-        var projectDirectory = FindPluginProjectDirectory();
+        var projectDirectory = Path.GetDirectoryName(typeof(RtfMetadataPlugin).Assembly.Location)!;
 
         Assert.False(File.Exists(Path.Combine(projectDirectory, "plugin.json")));
-        Assert.Empty(Directory.EnumerateFiles(projectDirectory, "plugin.json", SearchOption.AllDirectories));
     }
 
     private static MediaProvider[] Providers(bool rendererAvailable, int slowRendererDelay) =>
@@ -170,23 +169,6 @@ public sealed class RtfPluginIntegrationTests
         bool rendererAvailable = true,
         int slowRendererDelay = 0) =>
         new(Providers(rendererAvailable, slowRendererDelay), limits);
-
-    private static string FindPluginProjectDirectory()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            var candidate = Path.Combine(current.FullName, "Plugins", "SkyCD.Plugin.Metadata.Rtf");
-            if (Directory.Exists(candidate))
-            {
-                return candidate;
-            }
-
-            current = current.Parent;
-        }
-
-        throw new InvalidOperationException("Could not locate the RTF plugin project directory.");
-    }
 
     /// <summary>Stands in for the Skia renderer, optionally slowly, so host timeouts can be exercised.</summary>
     private sealed class StubRenderer : IRtfThumbnailRenderer

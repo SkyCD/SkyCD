@@ -129,12 +129,11 @@ public sealed class MarkdownPluginIntegrationTests
     }
 
     [Fact]
-    public void PluginProject_ShipsNoDiscoveryManifest()
+    public void PackagedPlugin_ShipsNoDiscoveryManifest()
     {
-        var projectDirectory = FindPluginProjectDirectory();
+        var projectDirectory = Path.GetDirectoryName(typeof(MarkdownMetadataPlugin).Assembly.Location)!;
 
         Assert.False(File.Exists(Path.Combine(projectDirectory, "plugin.json")));
-        Assert.Empty(Directory.EnumerateFiles(projectDirectory, "plugin.json", SearchOption.AllDirectories));
     }
 
     private static MediaExtensionManager CreateManager(MediaExecutionLimits? limits = null) =>
@@ -143,20 +142,4 @@ public sealed class MarkdownPluginIntegrationTests
             new MediaProvider(PluginId, "1.0.0", new MarkdownPreviewPlugin())
         ], limits);
 
-    private static string FindPluginProjectDirectory()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            var candidate = Path.Combine(current.FullName, "Plugins", "SkyCD.Plugin.Metadata.Markdown");
-            if (Directory.Exists(candidate))
-            {
-                return candidate;
-            }
-
-            current = current.Parent;
-        }
-
-        throw new InvalidOperationException("Could not locate the Markdown metadata plugin project directory.");
-    }
 }

@@ -2,7 +2,7 @@
 
 Implements #1240 on the capability contracts from #435 (`docs/plugins/media-capabilities.md`).
 
-Assembly: `Plugins/SkyCD.Plugin.Metadata.Html/` → plugin id `SkyCD.Plugin.Html.Metadata`.
+Assembly: [SkyCD.Plugin.Metadata.Html](https://github.com/SkyCD/SkyCD.Plugin.Metadata.Html) → plugin id `SkyCD.Plugin.Html.Metadata`.
 Tests: `tests/SkyCD.Plugin.Metadata.Html.Tests/`.
 
 This plugin is separate from `SkyCD.Plugin.FileFormat.Html`, which is a write-only catalog export

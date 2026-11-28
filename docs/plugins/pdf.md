@@ -2,7 +2,7 @@
 
 Implements #441 (part of #424) on the capability contracts from #435 (`docs/plugins/media-capabilities.md`).
 
-Assembly: `Plugins/SkyCD.Plugin.Metadata.Pdf/` → plugin id `SkyCD.Plugin.Metadata.Pdf`.
+Assembly: [SkyCD.Plugin.Metadata.Pdf](https://github.com/SkyCD/SkyCD.Plugin.Metadata.Pdf) → plugin id `SkyCD.Plugin.Metadata.Pdf`.
 Tests: `tests/SkyCD.Plugin.Metadata.Pdf.Tests/`.
 
 This plugin is deliberately independent of image and video extraction: it claims only `.pdf` /

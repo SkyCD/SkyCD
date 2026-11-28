@@ -2,7 +2,7 @@
 
 Implements #738 and #951 on the capability contracts from #435 (`docs/plugins/media-capabilities.md`).
 
-Assembly: `Plugins/SkyCD.Plugin.Metadata.Markdown/` → plugin id `SkyCD.Plugin.Metadata.Markdown`.
+Assembly: [SkyCD.Plugin.Metadata.Markdown](https://github.com/SkyCD/SkyCD.Plugin.Metadata.Markdown) → plugin id `SkyCD.Plugin.Metadata.Markdown`.
 Tests: `tests/SkyCD.Plugin.Metadata.Markdown.Tests/`.
 
 This plugin is separate from `SkyCD.Plugin.FileFormat.Markdown`, which writes catalog exports and is write-only for
