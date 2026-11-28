@@ -6,7 +6,7 @@ earlier hand-written container readers were removed after the fixtures showed id
 Audio CD identification was consolidated into this assembly so one plugin covers both file-level audio
 tags and mounted optical discs.
 
-Assembly: `Plugins/SkyCD.Plugin.Metadata.Audio/` → plugin id `SkyCD.Plugin.Metadata.Audio`.
+Assembly: [SkyCD.Plugin.Metadata.Audio](https://github.com/SkyCD/SkyCD.Plugin.Metadata.Audio) → plugin id `SkyCD.Plugin.Metadata.Audio`.
 Tests: `tests/SkyCD.Plugin.Metadata.Audio.Tests/`.
 
 ## What it provides
@@ -274,7 +274,7 @@ already manages, and published atomically with the file records:
 
 ## Dependencies
 
-`dotnet list Plugins/SkyCD.Plugin.Metadata.Audio/SkyCD.Plugin.Metadata.Audio.csproj package --include-transitive`:
+`dotnet list src/SkyCD.Plugin.Metadata.Audio/SkyCD.Plugin.Metadata.Audio.csproj package --include-transitive`:
 
 | Package | Version | License | Use |
 |---|---|---|---|

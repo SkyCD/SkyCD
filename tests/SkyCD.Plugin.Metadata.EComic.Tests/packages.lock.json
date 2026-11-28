@@ -18,6 +18,22 @@
           "Microsoft.TestPlatform.TestHost": "18.11.0"
         }
       },
+      "SkyCD.Plugin.Metadata.EComic": {
+        "type": "Direct",
+        "requested": "[0.1.0, 0.1.0]",
+        "resolved": "0.1.0",
+        "contentHash": "RV8XTYoJ3+eD4pX10kqv9jZjWCKL7pW540XufxiKEmr8C7fPADCUYhkUKQdVzIHVWXyviXlJjOTJVsTidDBwPQ==",
+        "dependencies": {
+          "Avalonia": "12.1.6",
+          "Avalonia.Desktop": "12.1.6",
+          "SharpCompress": "0.50.8",
+          "SkiaSharp": "3.119.4",
+          "SkiaSharp.NativeAssets.Linux": "3.119.4",
+          "SkiaSharp.NativeAssets.Win32": "3.119.4",
+          "SkiaSharp.NativeAssets.macOS": "3.119.4",
+          "SkyCD.SDK": "[3.0.0-alpha.2]"
+        }
+      },
       "SkyCD.SDK": {
         "type": "Direct",
         "requested": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
@@ -1054,19 +1070,6 @@
       "skycd.plugin.host": {
         "type": "Project",
         "dependencies": {
-          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
-        }
-      },
-      "skycd.plugin.metadata.ecomic": {
-        "type": "Project",
-        "dependencies": {
-          "Avalonia": "[12.1.6, )",
-          "Avalonia.Desktop": "[12.1.6, )",
-          "SharpCompress": "[0.50.8, )",
-          "SkiaSharp": "[3.119.4, )",
-          "SkiaSharp.NativeAssets.Linux": "[3.119.4, )",
-          "SkiaSharp.NativeAssets.Win32": "[3.119.4, )",
-          "SkiaSharp.NativeAssets.macOS": "[3.119.4, )",
           "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
         }
       },

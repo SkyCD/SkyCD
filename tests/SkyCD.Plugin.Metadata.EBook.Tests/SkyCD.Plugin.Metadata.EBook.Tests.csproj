@@ -17,7 +17,7 @@
         <PackageReference Include="SkyCD.SDK" Version="[$(SkyCdSdkVersion)]"/>
         <ProjectReference Include="..\..\src\SkyCD.Documents\SkyCD.Documents.csproj"/>
         <ProjectReference Include="..\..\src\SkyCD.Presentation\SkyCD.Presentation.csproj"/>
-        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Metadata.EBook\SkyCD.Plugin.Metadata.EBook.csproj"/>
+        <PackageReference Include="SkyCD.Plugin.Metadata.EBook" Version="[0.1.0]" />
         <ProjectReference Include="../SkyCD.TestSupport/SkyCD.TestSupport.csproj"/>
     </ItemGroup>
 </Project>

@@ -174,12 +174,11 @@ public sealed class EComicHostIntegrationTests
     }
 
     [Fact]
-    public void PluginProject_ShipsNoDiscoveryManifest()
+    public void PackagedPlugin_ShipsNoDiscoveryManifest()
     {
-        var projectDirectory = FindPluginProjectDirectory();
+        var projectDirectory = Path.GetDirectoryName(typeof(EComicMetadataPlugin).Assembly.Location)!;
 
         Assert.False(File.Exists(Path.Combine(projectDirectory, "plugin.json")));
-        Assert.Empty(Directory.EnumerateFiles(projectDirectory, "plugin.json", SearchOption.AllDirectories));
     }
 
     private static MediaExtensionManager CreateManager(EComicSettings settings) =>
@@ -206,20 +205,4 @@ public sealed class EComicHostIntegrationTests
         }
     };
 
-    private static string FindPluginProjectDirectory()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            var candidate = Path.Combine(current.FullName, "Plugins", "SkyCD.Plugin.Metadata.EComic");
-            if (Directory.Exists(candidate))
-            {
-                return candidate;
-            }
-
-            current = current.Parent;
-        }
-
-        throw new InvalidOperationException("Could not locate the eComic plugin project directory.");
-    }
 }

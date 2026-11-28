@@ -3,7 +3,7 @@
 Implements #730 on the capability contracts from #435 (`docs/plugins/media-capabilities.md`) and #438
 (`docs/plugins/image.md`).
 
-Assembly: `Plugins/SkyCD.Plugin.Metadata.EBook/` → plugin id `SkyCD.Plugin.Metadata.EBook`.
+Assembly: [SkyCD.Plugin.Metadata.EBook](https://github.com/SkyCD/SkyCD.Plugin.Metadata.EBook) → plugin id `SkyCD.Plugin.Metadata.EBook`.
 Tests: `tests/SkyCD.Plugin.Metadata.EBook.Tests/`.
 
 ## What it provides

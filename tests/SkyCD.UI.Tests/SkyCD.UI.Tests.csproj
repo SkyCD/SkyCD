@@ -23,9 +23,9 @@
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Ai.Provider\SkyCD.Plugin.Ai.Provider.csproj"/>
         <PackageReference Include="SkyCD.Plugin.Sample.Config" Version="[1.0.0]"/>
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Feature.Loans\SkyCD.Plugin.Feature.Loans.csproj"/>
-        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Metadata.Audio\SkyCD.Plugin.Metadata.Audio.csproj"/>
-        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Metadata.EBook\SkyCD.Plugin.Metadata.EBook.csproj"/>
-        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Metadata.EComic\SkyCD.Plugin.Metadata.EComic.csproj"/>
+        <PackageReference Include="SkyCD.Plugin.Metadata.Audio" Version="[0.1.0]" />
+        <PackageReference Include="SkyCD.Plugin.Metadata.EBook" Version="[0.1.0]" />
+        <PackageReference Include="SkyCD.Plugin.Metadata.EComic" Version="[0.1.0]" />
         <PackageReference Include="SkyCD.Plugin.Metadata.Fonts" Version="[0.1.0]" />
         <ProjectReference Include="..\SkyCD.TestSupport\SkyCD.TestSupport.csproj"/>
     </ItemGroup>

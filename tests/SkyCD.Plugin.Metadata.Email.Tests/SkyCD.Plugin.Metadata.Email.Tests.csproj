@@ -14,7 +14,7 @@
     <ItemGroup>
         <ProjectReference Include="..\..\src\SkyCD.Plugin.Host\SkyCD.Plugin.Host.csproj"/>
         <ProjectReference Include="..\..\src\SkyCD.Plugin.Runtime\SkyCD.Plugin.Runtime.csproj"/>
-        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Metadata.Email\SkyCD.Plugin.Metadata.Email.csproj"/>
+        <PackageReference Include="SkyCD.Plugin.Metadata.Email" Version="[0.1.0]" />
         <ProjectReference Include="../SkyCD.TestSupport/SkyCD.TestSupport.csproj"/>
     </ItemGroup>
     <ItemGroup>
