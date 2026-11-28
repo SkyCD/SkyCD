@@ -18,6 +18,18 @@
           "Microsoft.TestPlatform.TestHost": "18.11.0"
         }
       },
+      "SkyCD.Plugin.Metadata.Video": {
+        "type": "Direct",
+        "requested": "[0.1.0, 0.1.0]",
+        "resolved": "0.1.0",
+        "contentHash": "4lsDIFz8TAElmh7HzEzKTk/NR8nVLhPLPoD6Sh3Jc7Ojh8x1A8qoSusFs384DaKJd47UDDha9E9Dmj56J7XPyA==",
+        "dependencies": {
+          "MetadataExtractor": "2.9.3",
+          "OpenCvSharp4": "4.13.0.20261107",
+          "OpenCvSharp4.runtime.win": "4.13.0.20261107",
+          "SkyCD.SDK": "[3.0.0-alpha.2]"
+        }
+      },
       "SkyCD.SDK": {
         "type": "Direct",
         "requested": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
@@ -926,15 +938,6 @@
       "skycd.plugin.host": {
         "type": "Project",
         "dependencies": {
-          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
-        }
-      },
-      "skycd.plugin.metadata.video": {
-        "type": "Project",
-        "dependencies": {
-          "MetadataExtractor": "[2.9.3, )",
-          "OpenCvSharp4": "[4.13.0.20261107, )",
-          "OpenCvSharp4.runtime.win": "[4.13.0.20261107, )",
           "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
         }
       },

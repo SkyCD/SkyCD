@@ -18,6 +18,16 @@
           "Microsoft.TestPlatform.TestHost": "18.11.0"
         }
       },
+      "SkyCD.Plugin.Metadata.Xmp": {
+        "type": "Direct",
+        "requested": "[0.1.0, 0.1.0]",
+        "resolved": "0.1.0",
+        "contentHash": "ktarHgsdBL3S1xSfMHK6bO60iMWly6kTwRRFtqtgTCh6NNclLgGre01Ln53RUEiPRb9iNL54JDBm/w1L1gOm7Q==",
+        "dependencies": {
+          "SkyCD.SDK": "[3.0.0-alpha.2]",
+          "XmpCore": "6.1.10.1"
+        }
+      },
       "SkyCD.SDK": {
         "type": "Direct",
         "requested": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
@@ -828,13 +838,6 @@
         "type": "Project",
         "dependencies": {
           "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
-        }
-      },
-      "skycd.plugin.metadata.xmp": {
-        "type": "Project",
-        "dependencies": {
-          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
-          "XmpCore": "[6.1.10.1, )"
         }
       },
       "skycd.plugin.runtime": {

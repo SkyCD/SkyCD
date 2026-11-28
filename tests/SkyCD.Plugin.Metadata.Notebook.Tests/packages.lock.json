@@ -18,6 +18,16 @@
           "Microsoft.TestPlatform.TestHost": "18.11.0"
         }
       },
+      "SkyCD.Plugin.Metadata.Notebook": {
+        "type": "Direct",
+        "requested": "[0.1.0, 0.1.0]",
+        "resolved": "0.1.0",
+        "contentHash": "jNjJIS+Qvj3+TPAiWu9WO/ubW128ms9lJa3Rx+oAjqROA7sw48hTV4IltIkDMK6nt0U8t0SHXW/Yfdg4/fX2Ow==",
+        "dependencies": {
+          "OfficeIMO.Reader.Notebook": "3.6.2",
+          "SkyCD.SDK": "[3.0.0-alpha.2]"
+        }
+      },
       "SkyCD.SDK": {
         "type": "Direct",
         "requested": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
@@ -835,13 +845,6 @@
       "skycd.plugin.host": {
         "type": "Project",
         "dependencies": {
-          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
-        }
-      },
-      "skycd.plugin.metadata.notebook": {
-        "type": "Project",
-        "dependencies": {
-          "OfficeIMO.Reader.Notebook": "[3.6.2, )",
           "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
         }
       },

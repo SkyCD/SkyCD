@@ -35,7 +35,7 @@ per request, rejects URL credentials at every hop, and enforces the package size
 - Prefer `lib/<tfm>/` content; packages without a `lib/` folder may use `tools/<tfm>/any/`.
 - Every file in the selected folder is extracted; entry names, duplicates, symlinks and path traversal are
   rejected.
-- Limits: 4096 entries, 64 MiB per entry, 256 MiB total uncompressed.
+- Limits: 128 MiB downloaded, 4096 entries, 72 MiB per entry, and 288 MiB total uncompressed. These bounds accommodate the native codecs bundled with the Image and Video plugins.
 - The package must contain exactly one plugin assembly for its plugin id. Identity is read from assembly
   metadata only (`PluginIdAttribute`, `MinHostVersionAttribute`, `MaxHostVersionAttribute`,
   `AssemblyVersion`) with `MetadataReader`; plugin code is never loaded during staging.

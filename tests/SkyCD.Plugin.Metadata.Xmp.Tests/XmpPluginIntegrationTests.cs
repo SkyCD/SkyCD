@@ -78,35 +78,9 @@ public sealed class XmpPluginIntegrationTests
         Assert.DoesNotContain(plugin.Capabilities, capability => capability is IPluginConfigurationCapability);
     }
 
-    [Fact]
-    public void PluginProject_ShipsNoDiscoveryManifest()
-    {
-        var projectDirectory = FindPluginProjectDirectory();
-
-        Assert.False(File.Exists(Path.Combine(projectDirectory, "plugin.json")));
-        Assert.Empty(Directory.EnumerateFiles(projectDirectory, "plugin.json", SearchOption.AllDirectories));
-    }
-
     private static MediaExtensionManager CreateManager() =>
         new([new MediaProvider(PluginId, "1.0.0", new XmpMetadataPlugin())]);
 
     private static Func<CancellationToken, Task<Stream>> Open(byte[] data) =>
         _ => Task.FromResult<Stream>(new MemoryStream(data, writable: false));
-
-    private static string FindPluginProjectDirectory()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            var candidate = Path.Combine(current.FullName, "Plugins", "SkyCD.Plugin.Metadata.Xmp");
-            if (Directory.Exists(candidate))
-            {
-                return candidate;
-            }
-
-            current = current.Parent;
-        }
-
-        throw new InvalidOperationException("Could not locate the XMP plugin project directory.");
-    }
 }

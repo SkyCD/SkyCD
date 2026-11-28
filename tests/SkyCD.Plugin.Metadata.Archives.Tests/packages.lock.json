@@ -18,6 +18,18 @@
           "Microsoft.TestPlatform.TestHost": "18.11.0"
         }
       },
+      "SkyCD.Plugin.Metadata.Archives": {
+        "type": "Direct",
+        "requested": "[0.1.0, 0.1.0]",
+        "resolved": "0.1.0",
+        "contentHash": "S7afJyDIV813q1WKoJGchdNs2OGIaSLicoONgl914H1nmwGdijDW8BwlM1aiUulUOFcA/ECb2ICBuH4W2x+FiQ==",
+        "dependencies": {
+          "Hst.Compression": "1.0.104",
+          "RecursiveAI.OneArchive": "1.2.0",
+          "SharpCompress": "0.50.8",
+          "SkyCD.SDK": "[3.0.0-alpha.2]"
+        }
+      },
       "SkyCD.SDK": {
         "type": "Direct",
         "requested": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
@@ -853,15 +865,6 @@
       "skycd.plugin.host": {
         "type": "Project",
         "dependencies": {
-          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
-        }
-      },
-      "skycd.plugin.metadata.archives": {
-        "type": "Project",
-        "dependencies": {
-          "Hst.Compression": "[1.0.104, )",
-          "RecursiveAI.OneArchive": "[1.2.0, )",
-          "SharpCompress": "[0.50.8, )",
           "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
         }
       },

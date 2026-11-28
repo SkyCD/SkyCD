@@ -18,6 +18,15 @@
           "Microsoft.TestPlatform.TestHost": "18.11.0"
         }
       },
+      "SkyCD.Plugin.Metadata.FileMetadata": {
+        "type": "Direct",
+        "requested": "[0.1.0, 0.1.0]",
+        "resolved": "0.1.0",
+        "contentHash": "jVWspJuU/0Nb1R23YxCyWU4IeQqboZIyGd8sJoSmYnnre94T77RADTvUg57xtMg0gqDXpa172J18lgAFzC0GLA==",
+        "dependencies": {
+          "SkyCD.SDK": "[3.0.0-alpha.2]"
+        }
+      },
       "SkyCD.SDK": {
         "type": "Direct",
         "requested": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
@@ -901,12 +910,6 @@
         }
       },
       "skycd.plugin.host": {
-        "type": "Project",
-        "dependencies": {
-          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
-        }
-      },
-      "skycd.plugin.metadata.filemetadata": {
         "type": "Project",
         "dependencies": {
           "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"

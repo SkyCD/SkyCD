@@ -288,15 +288,6 @@ public sealed class ImagePluginIntegrationTests : IDisposable
         Assert.Equal(11, plugin.Capabilities.Count);
     }
 
-    [Fact]
-    public void PluginProject_ShipsNoDiscoveryManifest()
-    {
-        var projectDirectory = FindPluginProjectDirectory();
-
-        Assert.False(File.Exists(Path.Combine(projectDirectory, "plugin.json")));
-        Assert.Empty(Directory.EnumerateFiles(projectDirectory, "plugin.json", SearchOption.AllDirectories));
-    }
-
     private static long Field(EntryPreviewSnapshot snapshot, string key) =>
         snapshot.Fields.Single(field => field.Key == key).Value is long value
             ? value
@@ -364,22 +355,5 @@ public sealed class ImagePluginIntegrationTests : IDisposable
         repository.Save(root.Id, root);
         repository.Save(entry.Id, entry);
         return entry;
-    }
-
-    private static string FindPluginProjectDirectory()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            var candidate = Path.Combine(current.FullName, "Plugins", "SkyCD.Plugin.Metadata.Image");
-            if (Directory.Exists(candidate))
-            {
-                return candidate;
-            }
-
-            current = current.Parent;
-        }
-
-        throw new InvalidOperationException("Could not locate the image plugin project directory.");
     }
 }

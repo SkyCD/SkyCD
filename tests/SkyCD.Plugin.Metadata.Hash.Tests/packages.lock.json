@@ -18,6 +18,16 @@
           "Microsoft.TestPlatform.TestHost": "18.11.0"
         }
       },
+      "SkyCD.Plugin.Metadata.Hash": {
+        "type": "Direct",
+        "requested": "[0.1.0, 0.1.0]",
+        "resolved": "0.1.0",
+        "contentHash": "3F1hKwGpcOr5B5SM41si3APN+YGofXxBpWpV7RG4DWEc5d2eDNcORJuboatqqGPTrglRbHprdtT2Osx8zxQeCA==",
+        "dependencies": {
+          "BouncyCastle.Cryptography": "2.7.0",
+          "SkyCD.SDK": "[3.0.0-alpha.2]"
+        }
+      },
       "SkyCD.SDK": {
         "type": "Direct",
         "requested": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
@@ -895,13 +905,6 @@
       "skycd.plugin.host": {
         "type": "Project",
         "dependencies": {
-          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
-        }
-      },
-      "skycd.plugin.metadata.hash": {
-        "type": "Project",
-        "dependencies": {
-          "BouncyCastle.Cryptography": "[2.7.0, )",
           "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
         }
       },

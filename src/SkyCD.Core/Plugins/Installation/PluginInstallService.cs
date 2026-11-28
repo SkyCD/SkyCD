@@ -31,7 +31,7 @@ public sealed class PluginInstallService(
     long maxPackageBytes = PluginInstallService.DefaultMaxPackageBytes)
     : IPluginPackageInstaller, IPluginInstallStateSource, IPluginPackageUninstaller
 {
-    public const long DefaultMaxPackageBytes = 64L * 1024 * 1024;
+    public const long DefaultMaxPackageBytes = 128L * 1024 * 1024;
 
     public static readonly TimeSpan DefaultDownloadTimeout = TimeSpan.FromSeconds(60);
 

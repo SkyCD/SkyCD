@@ -18,7 +18,7 @@
         <ProjectReference Include="..\..\src\SkyCD.Couchbase\SkyCD.Couchbase.csproj"/>
         <ProjectReference Include="..\..\src\SkyCD.Documents\SkyCD.Documents.csproj"/>
         <ProjectReference Include="..\..\src\SkyCD.Presentation\SkyCD.Presentation.csproj"/>
-        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.Metadata.VideoProjects\SkyCD.Plugin.Metadata.VideoProjects.csproj"/>
+        <PackageReference Include="SkyCD.Plugin.Metadata.VideoProjects" Version="[0.1.0]" />
         <ProjectReference Include="../SkyCD.TestSupport/SkyCD.TestSupport.csproj"/>
     </ItemGroup>
 </Project>

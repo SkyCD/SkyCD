@@ -274,15 +274,6 @@ public sealed class VideoPluginIntegrationTests : IDisposable
         Assert.Equal(2, plugin.Capabilities.Count);
     }
 
-    [Fact]
-    public void PluginProject_ShipsNoDiscoveryManifest()
-    {
-        var projectDirectory = FindPluginProjectDirectory();
-
-        Assert.False(File.Exists(Path.Combine(projectDirectory, "plugin.json")));
-        Assert.Empty(Directory.EnumerateFiles(projectDirectory, "plugin.json", SearchOption.AllDirectories));
-    }
-
     private static IEnumerable<(byte[] Video, string Extension, string ContentType)> SupportedSources()
     {
         yield return (VideoFixtures.Mp4(), ".mp4", "video/mp4");
@@ -367,23 +358,6 @@ public sealed class VideoPluginIntegrationTests : IDisposable
         repository.Save(root.Id, root);
         repository.Save(entry.Id, entry);
         return entry;
-    }
-
-    private static string FindPluginProjectDirectory()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            var candidate = Path.Combine(current.FullName, "Plugins", "SkyCD.Plugin.Metadata.Video");
-            if (Directory.Exists(candidate))
-            {
-                return candidate;
-            }
-
-            current = current.Parent;
-        }
-
-        throw new InvalidOperationException("Could not locate the video plugin project directory.");
     }
 
     /// <summary>Collects thumbnails synchronously so assertions see them as soon as extraction completes.</summary>
