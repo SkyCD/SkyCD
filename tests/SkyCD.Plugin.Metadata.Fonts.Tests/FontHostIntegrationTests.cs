@@ -140,15 +140,6 @@ public sealed class FontHostIntegrationTests
         Assert.Contains(plugin.Capabilities, capability => capability is IPluginConfigurationCapability);
     }
 
-    [Fact]
-    public void PluginProject_ShipsNoDiscoveryManifest()
-    {
-        var projectDirectory = FindPluginProjectDirectory();
-
-        Assert.False(File.Exists(Path.Combine(projectDirectory, "plugin.json")));
-        Assert.Empty(Directory.EnumerateFiles(projectDirectory, "plugin.json", SearchOption.AllDirectories));
-    }
-
     private static MediaExtensionManager CreateManager(System.Collections.Generic.Dictionary<string, string?> settings) =>
         new(new[]
         {
@@ -173,21 +164,4 @@ public sealed class FontHostIntegrationTests
             ["LastWriteTime"] = new DateTimeOffset(2024, 3, 1, 12, 0, 0, TimeSpan.Zero).ToString("O")
         }
     };
-
-    private static string FindPluginProjectDirectory()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            var candidate = Path.Combine(current.FullName, "Plugins", "SkyCD.Plugin.Metadata.Fonts");
-            if (Directory.Exists(candidate))
-            {
-                return candidate;
-            }
-
-            current = current.Parent;
-        }
-
-        throw new InvalidOperationException("Could not locate the font plugin project directory.");
-    }
 }

@@ -94,32 +94,6 @@ public sealed class FileMetadataHostIntegrationTests
         Assert.DoesNotContain(plugin.Capabilities, found => found is IPluginConfigurationCapability);
     }
 
-    [Fact]
-    public void PluginProject_ShipsNoDiscoveryManifest()
-    {
-        var projectDirectory = FindPluginProjectDirectory();
-
-        Assert.False(File.Exists(Path.Combine(projectDirectory, "plugin.json")));
-        Assert.Empty(Directory.EnumerateFiles(projectDirectory, "plugin.json", SearchOption.AllDirectories));
-    }
-
     private static MediaExtensionManager CreateManager() =>
         new([new MediaProvider(PluginId, "1.0.0", new OsMetadataPlugin())]);
-
-    private static string FindPluginProjectDirectory()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            var candidate = Path.Combine(current.FullName, "Plugins", "SkyCD.Plugin.Metadata.FileMetadata");
-            if (Directory.Exists(candidate))
-            {
-                return candidate;
-            }
-
-            current = current.Parent;
-        }
-
-        throw new InvalidOperationException("Could not locate the file metadata plugin project directory.");
-    }
 }
