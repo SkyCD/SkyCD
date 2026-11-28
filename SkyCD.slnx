@@ -12,8 +12,6 @@
         <Project Path="Plugins/SkyCD.Plugin.Feature.MotionDetector/SkyCD.Plugin.Feature.MotionDetector.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Access/SkyCD.Plugin.FileFormat.Access.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Adc/SkyCD.Plugin.FileFormat.Adc.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.FileFormat.CDCat/SkyCD.Plugin.FileFormat.CDCat.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.FileFormat.CDPlayer/SkyCD.Plugin.FileFormat.CDPlayer.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Csv/SkyCD.Plugin.FileFormat.Csv.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Html/SkyCD.Plugin.FileFormat.Html.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Json/SkyCD.Plugin.FileFormat.Json.csproj"/>
@@ -21,7 +19,6 @@
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Markdown/SkyCD.Plugin.FileFormat.Markdown.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.PlainText/SkyCD.Plugin.FileFormat.PlainText.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Playlist/SkyCD.Plugin.FileFormat.Playlist.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.FileFormat.Tar/SkyCD.Plugin.FileFormat.Tar.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Toml/SkyCD.Plugin.FileFormat.Toml.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Xml/SkyCD.Plugin.FileFormat.Xml.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.XmlExport/SkyCD.Plugin.FileFormat.XmlExport.csproj"/>
