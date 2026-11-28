@@ -194,7 +194,13 @@ foreach ($projectFile in $projectFiles) {
     if ($projectName -like "*.Tests") {
         $subject = $projectName.Substring(0, $projectName.Length - ".Tests".Length)
         if (-not $projectNames.Contains($subject) -and -not (Test-SharedSourceSubject $subject)) {
-            Add-Violation "Test project '$projectName' has no matching project named '$subject'."
+            [xml]$testProject = Get-Content -LiteralPath $projectFile.FullName -Raw
+            $matchingPackage = $testProject.SelectNodes('/Project/ItemGroup/PackageReference') |
+                Where-Object { $_.GetAttribute('Include') -ceq $subject } |
+                Select-Object -First 1
+            if (-not $matchingPackage) {
+                Add-Violation "Test project '$projectName' has no matching project or package reference named '$subject'."
+            }
         }
     }
     elseif ($testProjectAllowList -notcontains $projectName) {
