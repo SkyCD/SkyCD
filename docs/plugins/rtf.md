@@ -2,7 +2,7 @@
 
 Implements #735 on the capability contracts from #435 (`docs/plugins/media-capabilities.md`).
 
-Assembly: `Plugins/SkyCD.Plugin.Metadata.Rtf/` → plugin id `SkyCD.Plugin.Metadata.Rtf`.
+Assembly: [SkyCD.Plugin.Metadata.Rtf](https://github.com/SkyCD/SkyCD.Plugin.Metadata.Rtf) → plugin id `SkyCD.Plugin.Metadata.Rtf`.
 Tests: `tests/SkyCD.Plugin.Metadata.Rtf.Tests/`.
 
 This plugin claims only `.rtf` / `application/rtf` / `text/rtf`, so a document is never also routed

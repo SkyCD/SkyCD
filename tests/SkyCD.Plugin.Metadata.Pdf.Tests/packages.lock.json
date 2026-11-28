@@ -18,6 +18,21 @@
           "Microsoft.TestPlatform.TestHost": "18.11.0"
         }
       },
+      "SkyCD.Plugin.Metadata.Pdf": {
+        "type": "Direct",
+        "requested": "[0.1.0, 0.1.0]",
+        "resolved": "0.1.0",
+        "contentHash": "x6RyNTvN7Evvl3CQSJEeIcVTCdrUBK/K+s5tNkq+6Ok3hPKGAPv2AVAMXC0FV5zfX7J/i2znYrSYGhGJ1rDPPA==",
+        "dependencies": {
+          "Docnet.Core": "2.6.0",
+          "PdfPig": "0.1.16",
+          "SkiaSharp": "3.119.4",
+          "SkiaSharp.NativeAssets.Linux": "3.119.4",
+          "SkiaSharp.NativeAssets.Win32": "3.119.4",
+          "SkiaSharp.NativeAssets.macOS": "3.119.4",
+          "SkyCD.SDK": "[3.0.0-alpha.2]"
+        }
+      },
       "SkyCD.SDK": {
         "type": "Direct",
         "requested": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
@@ -937,18 +952,6 @@
       "skycd.plugin.host": {
         "type": "Project",
         "dependencies": {
-          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
-        }
-      },
-      "skycd.plugin.metadata.pdf": {
-        "type": "Project",
-        "dependencies": {
-          "Docnet.Core": "[2.6.0, )",
-          "PdfPig": "[0.1.16, )",
-          "SkiaSharp": "[3.119.4, )",
-          "SkiaSharp.NativeAssets.Linux": "[3.119.4, )",
-          "SkiaSharp.NativeAssets.Win32": "[3.119.4, )",
-          "SkiaSharp.NativeAssets.macOS": "[3.119.4, )",
           "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
         }
       },

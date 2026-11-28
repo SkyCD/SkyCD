@@ -24,12 +24,7 @@
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Yaml/SkyCD.Plugin.FileFormat.Yaml.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Metadata.AniDb/SkyCD.Plugin.Metadata.AniDb.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Metadata.AnimeNewsNetwork/SkyCD.Plugin.Metadata.AnimeNewsNetwork.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.Metadata.Html/SkyCD.Plugin.Metadata.Html.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Metadata.Imdb/SkyCD.Plugin.Metadata.Imdb.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.Metadata.Markdown/SkyCD.Plugin.Metadata.Markdown.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.Metadata.Pdf/SkyCD.Plugin.Metadata.Pdf.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.Metadata.Rtf/SkyCD.Plugin.Metadata.Rtf.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.Metadata.Text/SkyCD.Plugin.Metadata.Text.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Metadata.TvCom/SkyCD.Plugin.Metadata.TvCom.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Metadata.Wikipedia/SkyCD.Plugin.Metadata.Wikipedia.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Metadata.YamlToml/SkyCD.Plugin.Metadata.YamlToml.csproj"/>

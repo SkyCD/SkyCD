@@ -18,6 +18,21 @@
           "Microsoft.TestPlatform.TestHost": "18.11.0"
         }
       },
+      "SkyCD.Plugin.Metadata.Markdown": {
+        "type": "Direct",
+        "requested": "[0.1.0, 0.1.0]",
+        "resolved": "0.1.0",
+        "contentHash": "XuqdOih/LXIYNfKAGAz6Q3OLOxhn+3BMnOqIeLgfAdrJV0FPAc8d/UF+1ljD8myex9XDGK/wyNBtYX6RSeCD1w==",
+        "dependencies": {
+          "Markdig": "1.6.0",
+          "SkiaSharp": "3.119.4",
+          "SkiaSharp.NativeAssets.Linux": "3.119.4",
+          "SkiaSharp.NativeAssets.Win32": "3.119.4",
+          "SkiaSharp.NativeAssets.macOS": "3.119.4",
+          "SkyCD.SDK": "[3.0.0-alpha.2]",
+          "YamlDotNet": "18.1.0"
+        }
+      },
       "SkyCD.SDK": {
         "type": "Direct",
         "requested": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
@@ -852,18 +867,6 @@
         "type": "Project",
         "dependencies": {
           "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
-        }
-      },
-      "skycd.plugin.metadata.markdown": {
-        "type": "Project",
-        "dependencies": {
-          "Markdig": "[1.6.0, )",
-          "SkiaSharp": "[3.119.4, )",
-          "SkiaSharp.NativeAssets.Linux": "[3.119.4, )",
-          "SkiaSharp.NativeAssets.Win32": "[3.119.4, )",
-          "SkiaSharp.NativeAssets.macOS": "[3.119.4, )",
-          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
-          "YamlDotNet": "[18.1.0, )"
         }
       },
       "skycd.plugin.runtime": {

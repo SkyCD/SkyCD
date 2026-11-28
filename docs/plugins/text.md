@@ -2,7 +2,7 @@
 
 Implements #442 (part of #424) on the capability contracts from #435 (`docs/plugins/media-capabilities.md`).
 
-Assembly: `Plugins/SkyCD.Plugin.Metadata.Text/` → plugin id `SkyCD.Plugin.Metadata.Text`.
+Assembly: [SkyCD.Plugin.Metadata.Text](https://github.com/SkyCD/SkyCD.Plugin.Metadata.Text) → plugin id `SkyCD.Plugin.Metadata.Text`.
 Tests: `tests/SkyCD.Plugin.Metadata.Text.Tests/`.
 
 ## What it provides
