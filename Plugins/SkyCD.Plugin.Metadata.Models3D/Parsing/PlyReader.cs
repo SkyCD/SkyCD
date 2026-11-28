@@ -1,10 +1,10 @@
 using System.Buffers.Binary;
 using System.Numerics;
 using System.Text;
-using SkyCD.Plugin.Metadata.Models.Exceptions;
-using SkyCD.Plugin.Metadata.Models.Models;
+using SkyCD.Plugin.Metadata.Models3D.Exceptions;
+using SkyCD.Plugin.Metadata.Models3D.Models;
 
-namespace SkyCD.Plugin.Metadata.Models.Parsing;
+namespace SkyCD.Plugin.Metadata.Models3D.Parsing;
 
 internal static class PlyReader
 {

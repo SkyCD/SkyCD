@@ -1,9 +1,9 @@
-using SkyCD.Plugin.Metadata.Models.Export;
-using SkyCD.Plugin.Metadata.Models.Models;
-using SkyCD.Plugin.Metadata.Models.Parsing;
+using SkyCD.Plugin.Metadata.Models3D.Export;
+using SkyCD.Plugin.Metadata.Models3D.Models;
+using SkyCD.Plugin.Metadata.Models3D.Parsing;
 using SkyCD.SDK.Capabilities.Media;
 
-namespace SkyCD.Plugin.Metadata.Models;
+namespace SkyCD.Plugin.Metadata.Models3D;
 
 public sealed class ModelPreviewPlugin : IMediaPreviewCapability
 {

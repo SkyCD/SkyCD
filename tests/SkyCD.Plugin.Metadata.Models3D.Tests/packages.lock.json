@@ -845,7 +845,7 @@
           "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
         }
       },
-      "skycd.plugin.metadata.models": {
+      "skycd.plugin.metadata.models3d": {
         "type": "Project",
         "dependencies": {
           "SharpGLTF.Core": "[1.0.7, )",

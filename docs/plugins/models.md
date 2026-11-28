@@ -1,6 +1,6 @@
 # 3D model metadata and thumbnails
 
-The `SkyCD.Plugin.Metadata.Models` assembly is discovered as `SkyCD.Plugin.Models`. It publishes
+The `SkyCD.Plugin.Metadata.Models3D` assembly is discovered as `SkyCD.Plugin.Models`. It publishes
 `skycd.models.metadata` v1 and the index-time `skycd.models.preview` v1 schema at priority 10.
 
 | Files | Metadata and preview support |

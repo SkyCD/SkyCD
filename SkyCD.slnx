@@ -35,7 +35,7 @@
         <Project Path="Plugins/SkyCD.Plugin.Metadata.EComic/SkyCD.Plugin.Metadata.EComic.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Metadata.Email/SkyCD.Plugin.Metadata.Email.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Metadata.Html/SkyCD.Plugin.Metadata.Html.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.Metadata.Models/SkyCD.Plugin.Metadata.Models.csproj"/>
+        <Project Path="Plugins/SkyCD.Plugin.Metadata.Models3D/SkyCD.Plugin.Metadata.Models3D.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Metadata.Imdb/SkyCD.Plugin.Metadata.Imdb.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Metadata.IWork/SkyCD.Plugin.Metadata.IWork.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Metadata.Markdown/SkyCD.Plugin.Metadata.Markdown.csproj"/>
@@ -122,7 +122,7 @@
         <Project Path="tests/SkyCD.Plugin.Metadata.Hash.Tests/SkyCD.Plugin.Metadata.Hash.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Metadata.Html.Tests/SkyCD.Plugin.Metadata.Html.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Metadata.Image.Tests/SkyCD.Plugin.Metadata.Image.Tests.csproj"/>
-        <Project Path="tests/SkyCD.Plugin.Metadata.Models.Tests/SkyCD.Plugin.Metadata.Models.Tests.csproj"/>
+        <Project Path="tests/SkyCD.Plugin.Metadata.Models3D.Tests/SkyCD.Plugin.Metadata.Models3D.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Metadata.Imdb.Tests/SkyCD.Plugin.Metadata.Imdb.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Metadata.IWork.Tests/SkyCD.Plugin.Metadata.IWork.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.Metadata.Markdown.Tests/SkyCD.Plugin.Metadata.Markdown.Tests.csproj"/>

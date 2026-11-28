@@ -5,7 +5,7 @@ using SkyCD.Plugin.Runtime.Factories;
 using SkyCD.SDK.Capabilities.Media;
 using Xunit;
 
-namespace SkyCD.Plugin.Metadata.Models.Tests;
+namespace SkyCD.Plugin.Metadata.Models3D.Tests;
 
 public sealed class ModelPluginTests
 {
@@ -114,7 +114,7 @@ public sealed class ModelPluginTests
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "SkyCD.slnx")))
             directory = directory.Parent;
         Assert.NotNull(directory);
-        var plugin = Path.Combine(directory.FullName, "Plugins", "SkyCD.Plugin.Metadata.Models");
+        var plugin = Path.Combine(directory.FullName, "Plugins", "SkyCD.Plugin.Metadata.Models3D");
         Assert.Empty(Directory.EnumerateFiles(plugin, "plugin.json", SearchOption.AllDirectories));
     }
 

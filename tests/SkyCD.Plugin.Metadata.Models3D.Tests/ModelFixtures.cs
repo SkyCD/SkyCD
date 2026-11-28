@@ -1,7 +1,7 @@
 using System.Buffers.Binary;
 using System.Text;
 
-namespace SkyCD.Plugin.Metadata.Models.Tests;
+namespace SkyCD.Plugin.Metadata.Models3D.Tests;
 
 internal static class ModelFixtures
 {

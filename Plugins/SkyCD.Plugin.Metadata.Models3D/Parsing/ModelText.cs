@@ -1,9 +1,9 @@
 using System.Globalization;
 using System.Numerics;
 using System.Text;
-using SkyCD.Plugin.Metadata.Models.Exceptions;
+using SkyCD.Plugin.Metadata.Models3D.Exceptions;
 
-namespace SkyCD.Plugin.Metadata.Models.Parsing;
+namespace SkyCD.Plugin.Metadata.Models3D.Parsing;
 
 internal static class ModelText
 {

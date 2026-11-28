@@ -1,6 +1,6 @@
 using SkyCD.SDK.Capabilities.Media;
 
-namespace SkyCD.Plugin.Metadata.Models.Models;
+namespace SkyCD.Plugin.Metadata.Models3D.Models;
 
 internal static class ModelSchema
 {
