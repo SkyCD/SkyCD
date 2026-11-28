@@ -128,7 +128,7 @@ are configuration pages too, and `IOptionsPageCapability` no longer exists.
   `PluginConfigurationManager.SaveSettings` additionally refreshes currently loaded consumers.
 
 See the [Sample Configuration source](https://github.com/SkyCD/SkyCD.Plugin.Sample.Config/tree/main/src/SkyCD.Plugin.Sample.Config/Configuration) for the editor, lazy control and acceptance callbacks. The four production
-examples are AudioCd, EBook, EComic and Fonts. Discovery remains assembly/capability based.
+examples are Audio, EBook, EComic and Fonts. Discovery remains assembly/capability based.
 
 ## Testing a standalone plugin
 

@@ -1,3 +1,3 @@
 using SkyCD.SDK.Lifecycle;
 
-[assembly: PluginId("SkyCD.Plugin.Audio")]
+[assembly: PluginId("SkyCD.Plugin.Metadata.Audio")]

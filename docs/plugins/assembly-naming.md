@@ -34,7 +34,7 @@ Feature / domain roles — what the plugin adds to the application when it is no
 | `Volume` | Media metadata that only applies to mounted volumes and optical data discs, implemented through `IMediaTargetMetadataCapability` with a volume-only `Supports`. |
 | `Sample` | Sample plugins. `<Subject>` names the capability it demonstrates (`Sample.Menu`, `Sample.Modal`, `Sample.Config`). |
 
-`<Subject>` is the format, product, brand or feature the plugin handles (`Zip`, `EBook`, `AudioCD`,
+`<Subject>` is the format, product, brand or feature the plugin handles (`Zip`, `EBook`, `Audio`,
 `WinCatalog`, `MotionDetector`, `Tar`). It can be a generation marker plus format (`Legacy.Scd`).
 `<Variant>` distinguishes supplementary assemblies of the same subject (`Xml`, `Csv`, `Native`).
 
@@ -83,7 +83,7 @@ is [`Feature.WebBrowser`](https://github.com/SkyCD/SkyCD.Plugin.Feature.WebBrows
 | `SkyCD.Plugin.WinCatalog.Xml` | `SkyCD.Plugin.FileFormat.WinCatalog` | File format, vendor subject; CSV/XML/native capabilities consolidated in one assembly. |
 | `SkyCD.Plugin.Legacy.Scd` | `SkyCD.Plugin.FileFormat.Legacy.Scd` | File format, legacy generation. |
 | `SkyCD.Plugin.EBook` | `SkyCD.Plugin.Metadata.EBook` | Metadata primary; preview and config secondary. |
-| `SkyCD.Plugin.AudioCd` | `SkyCD.Plugin.Metadata.AudioCD` | Audio CD metadata primary; config secondary. |
+| `SkyCD.Plugin.AudioCd` | `SkyCD.Plugin.Metadata.Audio` | Audio CD identification consolidated into the audio plugin. |
 | `SkyCD.Plugin.Markdown.Metadata` | `SkyCD.Plugin.Metadata.Markdown` | Metadata, kind first instead of aspect suffix. |
 | `SkyCD.Plugin.Tar.Metadata` | `SkyCD.Plugin.Metadata.Archives` | Archive entry listing is metadata for generated entries' subitems. |
 | `SkyCD.Plugin.VolumeSerial` | `SkyCD.Plugin.Metadata.Volume` | Volume metadata. |
