@@ -143,12 +143,11 @@ public sealed class WordPerfectHostIntegrationTests
     }
 
     [Fact]
-    public void PluginProject_ShipsNoDiscoveryManifest()
+    public void PackagedPlugin_ShipsNoDiscoveryManifest()
     {
-        var projectDirectory = FindPluginProjectDirectory();
+        var projectDirectory = Path.GetDirectoryName(typeof(WordPerfectMetadataPlugin).Assembly.Location)!;
 
         Assert.False(File.Exists(Path.Combine(projectDirectory, "plugin.json")));
-        Assert.Empty(Directory.EnumerateFiles(projectDirectory, "plugin.json", SearchOption.AllDirectories));
     }
 
     [Fact]
@@ -311,20 +310,4 @@ public sealed class WordPerfectHostIntegrationTests
         }
     };
 
-    private static string FindPluginProjectDirectory()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            var candidate = Path.Combine(current.FullName, "Plugins", "SkyCD.Plugin.Metadata.WordPerfect");
-            if (Directory.Exists(candidate))
-            {
-                return candidate;
-            }
-
-            current = current.Parent;
-        }
-
-        throw new InvalidOperationException("Could not locate the WordPerfect plugin project directory.");
-    }
 }

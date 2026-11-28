@@ -2,7 +2,7 @@
 
 Implements #737, #948 and #1247 on the capability contracts from #435 (`docs/plugins/media-capabilities.md`).
 
-Assembly: `Plugins/SkyCD.Plugin.Metadata.WordPerfect/` → plugin id `SkyCD.Plugin.WordPerfect`.
+Assembly: [SkyCD.Plugin.Metadata.WordPerfect](https://github.com/SkyCD/SkyCD.Plugin.Metadata.WordPerfect) → plugin id `SkyCD.Plugin.WordPerfect`.
 Tests: `tests/SkyCD.Plugin.Metadata.WordPerfect.Tests/`.
 
 This plugin is deliberately independent of the PDF and text plugins: it claims only `.wpd` / `.wpt` and

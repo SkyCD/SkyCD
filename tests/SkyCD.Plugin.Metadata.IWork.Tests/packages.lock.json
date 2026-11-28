@@ -18,6 +18,16 @@
           "Microsoft.TestPlatform.TestHost": "18.11.0"
         }
       },
+      "SkyCD.Plugin.Metadata.IWork": {
+        "type": "Direct",
+        "requested": "[0.1.0, 0.1.0]",
+        "resolved": "0.1.0",
+        "contentHash": "ia60TYevQd91RnqBcqpB0lKaEhleWjaOjkIoiWqtmIyOqQpqGt8iYSP2BVmU1jO/UbJTlh6izl6bmlyTuHr0ng==",
+        "dependencies": {
+          "OfficeIMO.IWork": "3.6.2",
+          "SkyCD.SDK": "[3.0.0-alpha.2]"
+        }
+      },
       "SkyCD.SDK": {
         "type": "Direct",
         "requested": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
@@ -916,13 +926,6 @@
       "skycd.plugin.host": {
         "type": "Project",
         "dependencies": {
-          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
-        }
-      },
-      "skycd.plugin.metadata.iwork": {
-        "type": "Project",
-        "dependencies": {
-          "OfficeIMO.IWork": "[3.6.2, )",
           "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
         }
       },

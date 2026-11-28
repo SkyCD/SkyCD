@@ -26,7 +26,7 @@ public sealed class VolumeSerialDiscoveryTests
 
         Assert.Equal("SkyCD.Plugin.VolumeSerial", plugin.Id);
         Assert.Equal("Volume Serial Number", plugin.Name);
-        Assert.Equal(new Version(1, 0, 0, 0), plugin.Version);
+        Assert.Equal(typeof(VolumeSerialPlugin).Assembly.GetName().Version, plugin.Version);
         Assert.Contains(plugin.Capabilities, capability => capability is VolumeSerialPlugin);
         Assert.Contains(plugin.Capabilities, capability => capability is IMediaTargetMetadataCapability);
     }
@@ -79,9 +79,8 @@ public sealed class VolumeSerialDiscoveryTests
     [Fact]
     public void DiscoveryUsesAssemblyData_NotPluginJson()
     {
-        var projectDirectory = FindPluginProjectDirectory();
+        var projectDirectory = Path.GetDirectoryName(typeof(VolumeSerialPlugin).Assembly.Location)!;
         Assert.False(File.Exists(Path.Combine(projectDirectory, "plugin.json")));
-        Assert.Empty(Directory.EnumerateFiles(projectDirectory, "plugin.json", SearchOption.AllDirectories));
     }
 
     [Fact]
@@ -102,20 +101,4 @@ public sealed class VolumeSerialDiscoveryTests
         Assert.False(manager.HasProviders);
     }
 
-    private static string FindPluginProjectDirectory()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            var candidate = Path.Combine(current.FullName, "Plugins", "SkyCD.Plugin.Metadata.Volume");
-            if (Directory.Exists(candidate))
-            {
-                return candidate;
-            }
-
-            current = current.Parent;
-        }
-
-        throw new InvalidOperationException("Could not locate the volume serial plugin project directory.");
-    }
 }

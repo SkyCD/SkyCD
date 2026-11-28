@@ -18,6 +18,16 @@
           "Microsoft.TestPlatform.TestHost": "18.11.0"
         }
       },
+      "SkyCD.Plugin.Metadata.OpenOffice": {
+        "type": "Direct",
+        "requested": "[0.1.0, 0.1.0]",
+        "resolved": "0.1.0",
+        "contentHash": "MEpLNCvx2E6BBh3gTmme1ZAQeysjBPal5d71SrGh05mh0wdCJDgBYlttpmCDlekiFtwHzscBWhNxGL8kqgXAkw==",
+        "dependencies": {
+          "OfficeIMO.OpenDocument": "3.6.2",
+          "SkyCD.SDK": "[3.0.0-alpha.2]"
+        }
+      },
       "SkyCD.SDK": {
         "type": "Direct",
         "requested": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
@@ -916,13 +926,6 @@
       "skycd.plugin.host": {
         "type": "Project",
         "dependencies": {
-          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
-        }
-      },
-      "skycd.plugin.metadata.openoffice": {
-        "type": "Project",
-        "dependencies": {
-          "OfficeIMO.OpenDocument": "[3.6.2, )",
           "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
         }
       },

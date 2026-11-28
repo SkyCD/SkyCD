@@ -53,7 +53,7 @@ public sealed class OfficePluginIntegrationTests : IDisposable
     {
         var document = Document();
         var results = await CreateManager().ProcessAsync(
-            OfficeMetadataPluginTests.Item(document),
+            Item(document),
             _ => Task.FromResult<Stream>(new MemoryStream(document)));
 
         var metadata = Assert.Single(results);
@@ -70,7 +70,7 @@ public sealed class OfficePluginIntegrationTests : IDisposable
     {
         var document = OfficeFixtures.DocxWithThumbnail();
         var results = await CreateManager(ProvidersWithPreview()).ProcessAsync(
-            OfficeMetadataPluginTests.Item(document),
+            Item(document),
             _ => Task.FromResult<Stream>(new MemoryStream(document)));
 
         var metadata = Assert.Single(results, result => result.Metadata is not null);
@@ -93,7 +93,7 @@ public sealed class OfficePluginIntegrationTests : IDisposable
             [0x89, (byte)'P', (byte)'N', (byte)'G', 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00]);
 
         var results = await CreateManager(ProvidersWithPreview()).ProcessAsync(
-            OfficeMetadataPluginTests.Item(document),
+            Item(document),
             _ => Task.FromResult<Stream>(new MemoryStream(document)));
 
         var metadata = Assert.Single(results, result => result.Metadata is not null);
@@ -111,7 +111,7 @@ public sealed class OfficePluginIntegrationTests : IDisposable
     {
         var document = OfficeFixtures.EncryptedPackage();
         var results = await CreateManager(ProvidersWithPreview()).ProcessAsync(
-            OfficeMetadataPluginTests.Item(document),
+            Item(document),
             _ => Task.FromResult<Stream>(new MemoryStream(document)));
 
         var metadata = Assert.Single(results, result => result.Metadata is not null);
@@ -142,7 +142,7 @@ public sealed class OfficePluginIntegrationTests : IDisposable
     {
         var document = "This is not an Office document."u8.ToArray();
         var results = await CreateManager().ProcessAsync(
-            OfficeMetadataPluginTests.Item(document),
+            Item(document),
             _ => Task.FromResult<Stream>(new MemoryStream(document)));
 
         var metadata = Assert.Single(results);
@@ -157,7 +157,7 @@ public sealed class OfficePluginIntegrationTests : IDisposable
         var manager = CreateManager(limits: new MediaExecutionLimits(SourceBytes: 16));
 
         var results = await manager.ProcessAsync(
-            OfficeMetadataPluginTests.Item(document),
+            Item(document),
             _ => Task.FromResult<Stream>(new MemoryStream(document)));
 
         Assert.All(results, result => Assert.True(result.Failed));
@@ -276,12 +276,11 @@ public sealed class OfficePluginIntegrationTests : IDisposable
     }
 
     [Fact]
-    public void PluginProject_ShipsNoDiscoveryManifest()
+    public void PackagedPlugin_ShipsNoDiscoveryManifest()
     {
-        var projectDirectory = FindPluginProjectDirectory();
+        var projectDirectory = Path.GetDirectoryName(typeof(OfficeMetadataPlugin).Assembly.Location)!;
 
         Assert.False(File.Exists(Path.Combine(projectDirectory, "plugin.json")));
-        Assert.Empty(Directory.EnumerateFiles(projectDirectory, "plugin.json", SearchOption.AllDirectories));
     }
 
     private static byte[] Document() =>
@@ -356,20 +355,7 @@ public sealed class OfficePluginIntegrationTests : IDisposable
         return entry;
     }
 
-    private static string FindPluginProjectDirectory()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            var candidate = Path.Combine(current.FullName, "Plugins", "SkyCD.Plugin.Metadata.Office");
-            if (Directory.Exists(candidate))
-            {
-                return candidate;
-            }
 
-            current = current.Parent;
-        }
-
-        throw new InvalidOperationException("Could not locate the Microsoft Office plugin project directory.");
-    }
+    private static MediaItem Item(byte[] document) =>
+        new(".docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", document.Length);
 }

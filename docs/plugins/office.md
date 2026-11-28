@@ -4,7 +4,7 @@ Implements #736 and the embedded thumbnail preview from #945 on the capability c
 (`docs/plugins/media-capabilities.md`), and #1241, which made this plugin the single Microsoft Office-family
 metadata provider.
 
-Assembly: `Plugins/SkyCD.Plugin.Metadata.Office/` → plugin id `SkyCD.Plugin.Office`.
+Assembly: [SkyCD.Plugin.Metadata.Office](https://github.com/SkyCD/SkyCD.Plugin.Metadata.Office) → plugin id `SkyCD.Plugin.Office`.
 Tests: `tests/SkyCD.Plugin.Metadata.Office.Tests/`.
 
 The plugin covers Word, Excel, PowerPoint, Visio, OneNote, Access and Project, in their current and legacy
@@ -270,7 +270,7 @@ without limit.
 ## Dependencies and licensing
 
 Direct dependencies, all **OfficeIMO 3.6.2** (MIT), pinned in
-`Plugins/SkyCD.Plugin.Metadata.Office/packages.lock.json` at the same version the HTML metadata and IWork
+[standalone package lock](https://github.com/SkyCD/SkyCD.Plugin.Metadata.Office/blob/main/src/SkyCD.Plugin.Metadata.Office/packages.lock.json) at the same version the HTML metadata and IWork
 plugins use: `OfficeIMO.Word`, `OfficeIMO.Excel`, `OfficeIMO.PowerPoint`, `OfficeIMO.Visio`,
 `OfficeIMO.OneNote`, `OfficeIMO.Access`, `OfficeIMO.Project`. The transitive closure adds `OfficeIMO.Core`
 3.6.2 (MIT), `DocumentFormat.OpenXml` and `DocumentFormat.OpenXml.Framework` 3.5.1 (MIT) and

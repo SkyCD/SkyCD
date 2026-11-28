@@ -16,7 +16,7 @@
         <ProjectReference Include="..\..\src\SkyCD.Plugin.Runtime\SkyCD.Plugin.Runtime.csproj"/>
         <PackageReference Include="SkyCD.SDK" Version="[$(SkyCdSdkVersion)]"/>
         <ProjectReference Include="..\..\src\SkyCD.Couchbase\SkyCD.Couchbase.csproj"/>
-        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Playlist\SkyCD.Plugin.FileFormat.Playlist.csproj"/>
+        <PackageReference Include="SkyCD.Plugin.FileFormat.Playlist" Version="[0.1.0]" />
     </ItemGroup>
     <ItemGroup>
         <None Update="Fixtures\M3u\catalog-playlist.m3u8">
