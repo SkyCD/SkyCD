@@ -18,6 +18,16 @@
           "Microsoft.TestPlatform.TestHost": "18.11.0"
         }
       },
+      "SkyCD.Plugin.Metadata.Email": {
+        "type": "Direct",
+        "requested": "[0.1.0, 0.1.0]",
+        "resolved": "0.1.0",
+        "contentHash": "vhZX7vTQoRIDnQuAD72C6F9mqwOvSh68++vkYaO1Ce/MtnqU+gzyjVZpoTs4Zez+Cn/jhoCvj63aVHEox9pOPg==",
+        "dependencies": {
+          "OfficeIMO.Email": "3.6.2",
+          "SkyCD.SDK": "[3.0.0-alpha.2]"
+        }
+      },
       "xunit": {
         "type": "Direct",
         "requested": "[2.9.3, )",
@@ -843,13 +853,6 @@
       "skycd.plugin.host": {
         "type": "Project",
         "dependencies": {
-          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
-        }
-      },
-      "skycd.plugin.metadata.email": {
-        "type": "Project",
-        "dependencies": {
-          "OfficeIMO.Email": "[3.6.2, )",
           "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
         }
       },

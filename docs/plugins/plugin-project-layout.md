@@ -47,7 +47,7 @@ window, because that is the role whose contents it drives.
 ## Examples
 
 ```
-Plugins/SkyCD.Plugin.Metadata.EBook/
+src/SkyCD.Plugin.Metadata.EBook/  # standalone repository
   EBookCoverPlugin.cs
   EBookMetadataPlugin.cs
   Configuration/EBookConfigurationPlugin.cs

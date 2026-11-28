@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using SkiaSharp;
 using SkyCD.Documents;
 using SkyCD.Documents.Collections;
 using SkyCD.Documents.Enum;
@@ -185,7 +186,7 @@ public sealed class AudioCdMetadataServiceTests
             [new MediaMetadataField("Album", MediaMetadataType.Text)]);
         var trackSchema = new MediaMetadataSchema("skycd.audio-cd.track", 1,
             [new MediaMetadataField("Title", MediaMetadataType.Text)]);
-        var cover = new MediaPreviewArtifact("image/png", AudioCdFixtures.CoverPng(20));
+        var cover = new MediaPreviewArtifact("image/png", CreateCoverPng());
 
         return new MediaTargetProviderCapture("SkyCD.Plugin.Metadata.Audio", "1.0.0", "audio-cd",
             new MediaTargetCapture(
@@ -199,6 +200,17 @@ public sealed class AudioCdMetadataServiceTests
                         [new MediaMetadataValue("Title", MediaMetadataType.Text, Text: "Second")], cover)
                 ],
                 cover));
+    }
+
+    private static byte[] CreateCoverPng()
+    {
+        using var bitmap = new SKBitmap(20, 20, SKColorType.Rgba8888, SKAlphaType.Premul);
+        using var canvas = new SKCanvas(bitmap);
+        canvas.Clear(SKColors.SteelBlue);
+        canvas.Flush();
+        using var image = SKImage.FromBitmap(bitmap);
+        using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+        return data.ToArray();
     }
 
     private sealed class StubProvider : IMediaTargetMetadataProvider

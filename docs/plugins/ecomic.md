@@ -3,7 +3,7 @@
 Implements #729 on the capability contracts from #435 (`docs/plugins/media-capabilities.md`) and #438
 (`docs/plugins/image.md`).
 
-Assembly: `Plugins/SkyCD.Plugin.Metadata.EComic/` → plugin id `SkyCD.Plugin.Metadata.EComic`.
+Assembly: [SkyCD.Plugin.Metadata.EComic](https://github.com/SkyCD/SkyCD.Plugin.Metadata.EComic) → plugin id `SkyCD.Plugin.Metadata.EComic`.
 Tests: `tests/SkyCD.Plugin.Metadata.EComic.Tests/`.
 
 ## What it provides
