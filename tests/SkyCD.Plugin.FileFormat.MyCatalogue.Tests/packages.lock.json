@@ -18,6 +18,16 @@
           "Microsoft.TestPlatform.TestHost": "18.11.0"
         }
       },
+      "SkyCD.Plugin.FileFormat.MyCatalogue": {
+        "type": "Direct",
+        "requested": "[0.1.0, 0.1.0]",
+        "resolved": "0.1.0",
+        "contentHash": "ccI70nTSzrtJTson7govbw8sTK0eIv/0O1WPtnlP7m00bxg+/x6ZEqLtVG24MUBhEJly8NlWFMNWdNvI5Pnlag==",
+        "dependencies": {
+          "JustyBase.UCanAccess.File": "1.1.0",
+          "SkyCD.SDK": "[3.0.0-alpha.2]"
+        }
+      },
       "xunit": {
         "type": "Direct",
         "requested": "[2.9.3, )",
@@ -1259,13 +1269,6 @@
         }
       },
       "skycd.plugin.fileformat.access": {
-        "type": "Project",
-        "dependencies": {
-          "JustyBase.UCanAccess.File": "[1.1.0, )",
-          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
-        }
-      },
-      "skycd.plugin.fileformat.mycatalogue": {
         "type": "Project",
         "dependencies": {
           "JustyBase.UCanAccess.File": "[1.1.0, )",

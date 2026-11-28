@@ -29,6 +29,18 @@
           "Microsoft.TestPlatform.TestHost": "18.11.0"
         }
       },
+      "SkyCD.Plugin.FileFormat.CDCollect": {
+        "type": "Direct",
+        "requested": "[0.1.0, 0.1.0]",
+        "resolved": "0.1.0",
+        "contentHash": "BbNVpua1Q4IZ41JBB0nqEvmK9/Pjb0mHcs2sTVQjSKOcwMDMAEXha/4K525waOrE3ovA6MZ8c5/DAxhWtwlgFA==",
+        "dependencies": {
+          "Microsoft.Data.Sqlite": "11.0.0",
+          "SQLitePCLRaw.lib.e_sqlite3": "2.1.14",
+          "SkyCD.Native.Sqlite2": "0.1.0-ci.11",
+          "SkyCD.SDK": "[3.0.0-alpha.2]"
+        }
+      },
       "SkyCD.SDK": {
         "type": "Direct",
         "requested": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
@@ -1317,15 +1329,6 @@
           "CommunityToolkit.Mvvm": "[8.4.2, )",
           "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
           "SkyCD.UI": "[1.0.0, )"
-        }
-      },
-      "skycd.plugin.fileformat.cdcollect": {
-        "type": "Project",
-        "dependencies": {
-          "Microsoft.Data.Sqlite": "[11.0.0, )",
-          "SQLitePCLRaw.lib.e_sqlite3": "[2.1.14, )",
-          "SkyCD.Native.Sqlite2": "[0.1.0-ci.11, )",
-          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
         }
       },
       "skycd.plugin.host": {

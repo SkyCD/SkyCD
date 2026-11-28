@@ -15,7 +15,7 @@
         <ProjectReference Include="..\..\src\SkyCD.Couchbase\SkyCD.Couchbase.csproj"/>
         <ProjectReference Include="..\..\src\SkyCD.Documents\SkyCD.Documents.csproj"/>
         <ProjectReference Include="..\..\src\SkyCD.App\SkyCD.App.csproj"/>
-        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.AbeMeda\SkyCD.Plugin.FileFormat.AbeMeda.csproj"/>
+        <PackageReference Include="SkyCD.Plugin.FileFormat.AbeMeda" Version="[0.1.0]" />
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Csv\SkyCD.Plugin.FileFormat.Csv.csproj"/>
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Xml\SkyCD.Plugin.FileFormat.Xml.csproj"/>
         <ProjectReference Include="../SkyCD.TestSupport/SkyCD.TestSupport.csproj"/>

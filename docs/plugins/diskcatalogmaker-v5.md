@@ -275,7 +275,7 @@ control characters and are stable across imports.
 ## Fixtures and tests
 
 Committed fixtures live in
-[`tests/SkyCD.Plugin.FileFormat.DiskCatalogMaker.Tests/Fixtures/DiskCatalogMakerV5`](../../tests/SkyCD.Plugin.FileFormat.DiskCatalogMaker.Tests/Fixtures/DiskCatalogMakerV5/README.md)
+[DiskCatalogMaker v5 fixture provenance](https://github.com/SkyCD/SkyCD.Plugin.FileFormat.DiskCatalogMaker/blob/main/tests/SkyCD.Plugin.FileFormat.DiskCatalogMaker.Tests/Fixtures/DiskCatalogMakerV5/README.md)
 and are synthetic. They cover an empty catalog, nested Unicode names, zero-byte
 and 5 TB files, type/creator codes, comments/labels/POSIX modes, aliases,
 unknown tables, packages with and without thumbnails, multiple volumes, and

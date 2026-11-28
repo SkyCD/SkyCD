@@ -18,7 +18,7 @@
         <ProjectReference Include="..\..\src\SkyCD.Couchbase\SkyCD.Couchbase.csproj"/>
         <ProjectReference Include="..\..\src\SkyCD.Documents\SkyCD.Documents.csproj"/>
         <ProjectReference Include="..\..\src\SkyCD.App\SkyCD.App.csproj"/>
-        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Vvv\SkyCD.Plugin.FileFormat.Vvv.csproj"/>
+        <PackageReference Include="SkyCD.Plugin.FileFormat.Vvv" Version="[0.1.0]" />
         <ProjectReference Include="../SkyCD.TestSupport/SkyCD.TestSupport.csproj"/>
     </ItemGroup>
     <ItemGroup>

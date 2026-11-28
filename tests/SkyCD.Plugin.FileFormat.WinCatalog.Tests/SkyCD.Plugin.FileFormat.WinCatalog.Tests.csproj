@@ -25,7 +25,7 @@
         <ProjectReference Include="..\..\src\SkyCD.App\SkyCD.App.csproj"/>
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Csv\SkyCD.Plugin.FileFormat.Csv.csproj"/>
         <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.Xml\SkyCD.Plugin.FileFormat.Xml.csproj"/>
-        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.WinCatalog\SkyCD.Plugin.FileFormat.WinCatalog.csproj"/>
+        <PackageReference Include="SkyCD.Plugin.FileFormat.WinCatalog" Version="[0.1.0]" />
         <ProjectReference Include="../SkyCD.TestSupport/SkyCD.TestSupport.csproj"/>
     </ItemGroup>
     <ItemGroup>

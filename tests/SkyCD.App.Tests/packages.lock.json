@@ -30,6 +30,30 @@
           "Microsoft.TestPlatform.TestHost": "18.11.0"
         }
       },
+      "SkyCD.Plugin.FileFormat.Katalog": {
+        "type": "Direct",
+        "requested": "[0.1.0, 0.1.0]",
+        "resolved": "0.1.0",
+        "contentHash": "xL8pYy+kEOw9hHYRx8oBmu3CUGnEs75/vAZM0pSWCoT0N2zTCUCcKBNa4r9ICLgc8bCB5UcHT9sbhY69K0tKww==",
+        "dependencies": {
+          "Microsoft.Data.Sqlite": "11.0.0",
+          "SQLitePCLRaw.lib.e_sqlite3": "2.1.14",
+          "SkyCD.SDK": "[3.0.0-alpha.2]"
+        }
+      },
+      "SkyCD.Plugin.FileFormat.WinCatalog": {
+        "type": "Direct",
+        "requested": "[0.1.0, 0.1.0]",
+        "resolved": "0.1.0",
+        "contentHash": "HHCydt23aqYXnhGiIm4baODmJz9OSJaWwcUjrnfa2R0SG2B2H0GvzczU3kUtFxIsS3Nd0xWjwGrlqwhaBWk9Og==",
+        "dependencies": {
+          "CsvHelper": "34.0.0",
+          "Microsoft.Data.Sqlite": "11.0.0",
+          "SQLitePCLRaw.lib.e_sqlite3": "2.1.14",
+          "SkyCD.SDK": "[3.0.0-alpha.2]",
+          "UTF.Unknown": "2.8.0"
+        }
+      },
       "xunit": {
         "type": "Direct",
         "requested": "[2.9.3, )",
@@ -1387,14 +1411,6 @@
           "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
         }
       },
-      "skycd.plugin.fileformat.katalog": {
-        "type": "Project",
-        "dependencies": {
-          "Microsoft.Data.Sqlite": "[11.0.0, )",
-          "SQLitePCLRaw.lib.e_sqlite3": "[2.1.14, )",
-          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
-        }
-      },
       "skycd.plugin.fileformat.legacyskycd": {
         "type": "Project",
         "dependencies": {
@@ -1430,16 +1446,6 @@
         "dependencies": {
           "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
           "Tomlyn": "[2.11.1, )"
-        }
-      },
-      "skycd.plugin.fileformat.wincatalog": {
-        "type": "Project",
-        "dependencies": {
-          "Microsoft.Data.Sqlite": "[11.0.0, )",
-          "SQLitePCLRaw.lib.e_sqlite3": "[2.1.14, )",
-          "SkyCD.Plugin.FileFormat.Csv": "[1.0.0, )",
-          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
-          "UTF.Unknown": "[2.8.0, )"
         }
       },
       "skycd.plugin.fileformat.xml": {

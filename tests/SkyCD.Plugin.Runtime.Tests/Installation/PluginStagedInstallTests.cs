@@ -57,6 +57,29 @@ public sealed class PluginStagedInstallTests : IDisposable
     }
 
     [Fact]
+    public async Task Install_SelectsPackageNamedAssemblyWhenDependencyAppearsFirst()
+    {
+        using var buffer = new MemoryStream();
+        using (var archive = new ZipArchive(buffer, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            PluginPackageFixtures.WriteEntry(archive, $"{PackageId}.nuspec",
+                $"<package><metadata><id>{PackageId}</id><version>1.0.0</version></metadata></package>");
+            PluginPackageFixtures.WriteEntry(archive, "lib/net10.0/Dependency.dll",
+                File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "SkyCD.SDK.dll")));
+            PluginPackageFixtures.WriteEntry(archive, $"lib/net10.0/{PackageId}.dll",
+                File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, SliceAssemblyFile)));
+        }
+
+        var feed = new FakeNuGetFeed();
+        feed.AddPackage(PackageId, "1.0.0", buffer.ToArray());
+        var installer = CreateInstaller(feed);
+
+        var result = await installer.StageInstallAsync(Request("1.0.0"));
+
+        Assert.True(result.IsSuccess, result.Message);
+    }
+
+    [Fact]
     public async Task FreshInstall_StagesOutsideDiscovery_AndActivatesOnlyOnRestart()
     {
         var feed = new FakeNuGetFeed();

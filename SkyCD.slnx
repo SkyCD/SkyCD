@@ -1,4 +1,4 @@
-﻿<Solution>
+<Solution>
     <Folder Name="/Plugins/">
         <Project Path="Plugins/SkyCD.Plugin.Accounts.Core/SkyCD.Plugin.Accounts.Core.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Accounts.JetBrains/SkyCD.Plugin.Accounts.JetBrains.csproj"/>
@@ -10,38 +10,19 @@
         <Project Path="Plugins/SkyCD.Plugin.Feature.Locations/SkyCD.Plugin.Feature.Locations.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Feature.Split/SkyCD.Plugin.Feature.Split.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.Feature.MotionDetector/SkyCD.Plugin.Feature.MotionDetector.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.FileFormat.AbeMeda/SkyCD.Plugin.FileFormat.AbeMeda.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Access/SkyCD.Plugin.FileFormat.Access.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Adc/SkyCD.Plugin.FileFormat.Adc.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.FileFormat.Basenji/SkyCD.Plugin.FileFormat.Basenji.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.FileFormat.BrokenX/SkyCD.Plugin.FileFormat.BrokenX.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.CDCat/SkyCD.Plugin.FileFormat.CDCat.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.FileFormat.CDCatalogExpert/SkyCD.Plugin.FileFormat.CDCatalogExpert.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.FileFormat.CDCollect/SkyCD.Plugin.FileFormat.CDCollect.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.CDPlayer/SkyCD.Plugin.FileFormat.CDPlayer.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.FileFormat.Cathy/SkyCD.Plugin.FileFormat.Cathy.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Csv/SkyCD.Plugin.FileFormat.Csv.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.FileFormat.DiskBase/SkyCD.Plugin.FileFormat.DiskBase.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.FileFormat.DiskCatalogMaker/SkyCD.Plugin.FileFormat.DiskCatalogMaker.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.FileFormat.DiskExplorer/SkyCD.Plugin.FileFormat.DiskExplorer.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.FileFormat.EasyDiskCatalog/SkyCD.Plugin.FileFormat.EasyDiskCatalog.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.FileFormat.GCstar/SkyCD.Plugin.FileFormat.GCstar.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Html/SkyCD.Plugin.FileFormat.Html.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Json/SkyCD.Plugin.FileFormat.Json.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.FileFormat.Katalog/SkyCD.Plugin.FileFormat.Katalog.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.LegacySkyCD/SkyCD.Plugin.FileFormat.LegacySkyCD.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.FileFormat.Librer/SkyCD.Plugin.FileFormat.Librer.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Markdown/SkyCD.Plugin.FileFormat.Markdown.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.FileFormat.MyCatalogue/SkyCD.Plugin.FileFormat.MyCatalogue.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.PlainText/SkyCD.Plugin.FileFormat.PlainText.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Playlist/SkyCD.Plugin.FileFormat.Playlist.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.FileFormat.SmartCDCatalogPro/SkyCD.Plugin.FileFormat.SmartCDCatalogPro.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Tar/SkyCD.Plugin.FileFormat.Tar.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.FileFormat.Tellico/SkyCD.Plugin.FileFormat.Tellico.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Toml/SkyCD.Plugin.FileFormat.Toml.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.FileFormat.Vvv/SkyCD.Plugin.FileFormat.Vvv.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.FileFormat.WhereIsIt/SkyCD.Plugin.FileFormat.WhereIsIt.csproj"/>
-        <Project Path="Plugins/SkyCD.Plugin.FileFormat.WinCatalog/SkyCD.Plugin.FileFormat.WinCatalog.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Xml/SkyCD.Plugin.FileFormat.Xml.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.XmlExport/SkyCD.Plugin.FileFormat.XmlExport.csproj"/>
         <Project Path="Plugins/SkyCD.Plugin.FileFormat.Yaml/SkyCD.Plugin.FileFormat.Yaml.csproj"/>
@@ -115,7 +96,6 @@
         <Project Path="tests/SkyCD.Plugin.FileFormat.Basenji.Tests/SkyCD.Plugin.FileFormat.Basenji.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.BrokenX.Tests/SkyCD.Plugin.FileFormat.BrokenX.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.CDCat.Tests/SkyCD.Plugin.FileFormat.CDCat.Tests.csproj"/>
-        <Project Path="tests/SkyCD.Plugin.FileFormat.CDCatalogExpert.Tests/SkyCD.Plugin.FileFormat.CDCatalogExpert.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.CDCollect.Tests/SkyCD.Plugin.FileFormat.CDCollect.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.CDPlayer.Tests/SkyCD.Plugin.FileFormat.CDPlayer.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.Cathy.Tests/SkyCD.Plugin.FileFormat.Cathy.Tests.csproj"/>
@@ -123,8 +103,6 @@
         <Project Path="tests/SkyCD.Plugin.FileFormat.DiskBase.Tests/SkyCD.Plugin.FileFormat.DiskBase.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.DiskCatalogMaker.Tests/SkyCD.Plugin.FileFormat.DiskCatalogMaker.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.DiskExplorer.Tests/SkyCD.Plugin.FileFormat.DiskExplorer.Tests.csproj"/>
-        <Project Path="tests/SkyCD.Plugin.FileFormat.EasyDiskCatalog.Tests/SkyCD.Plugin.FileFormat.EasyDiskCatalog.Tests.csproj"/>
-        <Project Path="tests/SkyCD.Plugin.FileFormat.GCstar.Tests/SkyCD.Plugin.FileFormat.GCstar.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.Html.Tests/SkyCD.Plugin.FileFormat.Html.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.Json.Tests/SkyCD.Plugin.FileFormat.Json.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.Katalog.Tests/SkyCD.Plugin.FileFormat.Katalog.Tests.csproj"/>
@@ -136,10 +114,8 @@
         <Project Path="tests/SkyCD.Plugin.FileFormat.Playlist.Tests/SkyCD.Plugin.FileFormat.Playlist.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.SmartCDCatalogPro.Tests/SkyCD.Plugin.FileFormat.SmartCDCatalogPro.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.Tar.Tests/SkyCD.Plugin.FileFormat.Tar.Tests.csproj"/>
-        <Project Path="tests/SkyCD.Plugin.FileFormat.Tellico.Tests/SkyCD.Plugin.FileFormat.Tellico.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.Toml.Tests/SkyCD.Plugin.FileFormat.Toml.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.Vvv.Tests/SkyCD.Plugin.FileFormat.Vvv.Tests.csproj"/>
-        <Project Path="tests/SkyCD.Plugin.FileFormat.WhereIsIt.Tests/SkyCD.Plugin.FileFormat.WhereIsIt.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.WinCatalog.Tests/SkyCD.Plugin.FileFormat.WinCatalog.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.Xml.Tests/SkyCD.Plugin.FileFormat.Xml.Tests.csproj"/>
         <Project Path="tests/SkyCD.Plugin.FileFormat.XmlExport.Tests/SkyCD.Plugin.FileFormat.XmlExport.Tests.csproj"/>

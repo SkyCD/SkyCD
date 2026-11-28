@@ -29,6 +29,17 @@
           "Microsoft.TestPlatform.TestHost": "18.11.0"
         }
       },
+      "SkyCD.Plugin.FileFormat.Librer": {
+        "type": "Direct",
+        "requested": "[0.1.0, 0.1.0]",
+        "resolved": "0.1.0",
+        "contentHash": "b2b14tb8x4gz6FogFq8jXo6aobpjFQ350Qu+MswvNYAYdGCjSo5iFGuUR+WjTmv//WhkpW/oZL9SDA42sZIR7A==",
+        "dependencies": {
+          "MessagePack": "3.1.12",
+          "SkyCD.SDK": "[3.0.0-alpha.2]",
+          "ZstdSharp.Port": "0.8.8"
+        }
+      },
       "SkyCD.SDK": {
         "type": "Direct",
         "requested": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
@@ -1284,14 +1295,6 @@
           "CommunityToolkit.Mvvm": "[8.4.2, )",
           "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
           "SkyCD.UI": "[1.0.0, )"
-        }
-      },
-      "skycd.plugin.fileformat.librer": {
-        "type": "Project",
-        "dependencies": {
-          "MessagePack": "[3.1.12, )",
-          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
-          "ZstdSharp.Port": "[0.8.8, )"
         }
       },
       "skycd.plugin.host": {

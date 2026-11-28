@@ -10,7 +10,7 @@
         <ProjectReference Include="..\..\src\SkyCD.Plugin.Runtime\SkyCD.Plugin.Runtime.csproj"/>
         <PackageReference Include="SkyCD.SDK" Version="[$(SkyCdSdkVersion)]"/>
         <ProjectReference Include="..\..\src\SkyCD.Couchbase\SkyCD.Couchbase.csproj"/>
-        <ProjectReference Include="..\..\Plugins\SkyCD.Plugin.FileFormat.DiskExplorer\SkyCD.Plugin.FileFormat.DiskExplorer.csproj"/>
+        <PackageReference Include="SkyCD.Plugin.FileFormat.DiskExplorer" Version="[0.1.0]" />
         <ProjectReference Include="../SkyCD.TestSupport/SkyCD.TestSupport.csproj"/>
     </ItemGroup>
     <ItemGroup>
