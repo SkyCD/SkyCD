@@ -1,10 +1,10 @@
 using System.Numerics;
 using System.Text.Json;
 using SharpGLTF.Schema2;
-using SkyCD.Plugin.Metadata.Models.Exceptions;
-using SkyCD.Plugin.Metadata.Models.Models;
+using SkyCD.Plugin.Metadata.Models3D.Exceptions;
+using SkyCD.Plugin.Metadata.Models3D.Models;
 
-namespace SkyCD.Plugin.Metadata.Models.Parsing;
+namespace SkyCD.Plugin.Metadata.Models3D.Parsing;
 
 internal static class GltfReader
 {

@@ -1,4 +1,4 @@
-namespace SkyCD.Plugin.Metadata.Models.Exceptions;
+namespace SkyCD.Plugin.Metadata.Models3D.Exceptions;
 
 internal sealed class ModelReadException(string code) : Exception($"Invalid model data ({code}).")
 {

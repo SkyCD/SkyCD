@@ -1,9 +1,9 @@
 using System.Numerics;
-using SkyCD.Plugin.Metadata.Models.Models;
+using SkyCD.Plugin.Metadata.Models3D.Models;
 using SkyCD.SDK.Capabilities.Media;
 using SkiaSharp;
 
-namespace SkyCD.Plugin.Metadata.Models.Export;
+namespace SkyCD.Plugin.Metadata.Models3D.Export;
 
 internal static class ModelThumbnail
 {

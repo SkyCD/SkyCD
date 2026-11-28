@@ -1,8 +1,8 @@
 using System.Numerics;
-using SkyCD.Plugin.Metadata.Models.Exceptions;
+using SkyCD.Plugin.Metadata.Models3D.Exceptions;
 using SkyCD.SDK.Capabilities.Media;
 
-namespace SkyCD.Plugin.Metadata.Models.Models;
+namespace SkyCD.Plugin.Metadata.Models3D.Models;
 
 internal sealed class ModelScan(string format, bool truncated, CancellationToken cancellation)
 {
