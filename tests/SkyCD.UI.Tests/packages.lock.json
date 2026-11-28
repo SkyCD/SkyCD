@@ -1166,6 +1166,11 @@
           "System.Text.Encodings.Web": "11.0.0"
         }
       },
+      "TagLibSharp": {
+        "type": "Transitive",
+        "resolved": "2.3.0",
+        "contentHash": "Qo4z6ZjnIfbR3Us1Za5M2vQ97OWZPmODvVmepxZ8XW0UIVLGdO2T63/N3b23kCcyiwuIe0TQvMEQG8wUCCD1mA=="
+      },
       "Tmds.DBus.Generator": {
         "type": "Transitive",
         "resolved": "0.92.0",
@@ -1394,7 +1399,7 @@
           "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
         }
       },
-      "skycd.plugin.metadata.audiocd": {
+      "skycd.plugin.metadata.audio": {
         "type": "Project",
         "dependencies": {
           "Avalonia": "[12.1.6, )",
@@ -1403,7 +1408,8 @@
           "SkiaSharp.NativeAssets.Linux": "[3.119.4, )",
           "SkiaSharp.NativeAssets.Win32": "[3.119.4, )",
           "SkiaSharp.NativeAssets.macOS": "[3.119.4, )",
-          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
+          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
+          "TagLibSharp": "[2.3.0, )"
         }
       },
       "skycd.plugin.metadata.ebook": {

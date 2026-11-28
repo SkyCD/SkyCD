@@ -225,7 +225,7 @@ budget exhaustion and cancellation still propagate, so a cancelled scan stops in
 | DiscUtils.Iso9660 | 0.16.13 | MIT | Read the ISO 9660 volume a type 1 AppImage appends to its runtime |
 
 SkiaSharp and DiscUtils.Iso9660 are MIT dependencies that already pass the Trivy license gate in
-`docs/legal/dependency-policy.md` and are used by the Image, EBook, AudioCD and DiskImages plugins, so no
+`docs/legal/dependency-policy.md` and are used by the Image, EBook, Audio and DiskImages plugins, so no
 policy change is needed.
 
 The PE/COFF header and section-table facts are read with

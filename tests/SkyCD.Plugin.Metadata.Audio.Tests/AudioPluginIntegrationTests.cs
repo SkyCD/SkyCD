@@ -27,7 +27,7 @@ namespace SkyCD.Plugin.Metadata.Audio.Tests;
 /// </summary>
 public sealed class AudioPluginIntegrationTests : IDisposable
 {
-    private const string PluginId = "SkyCD.Plugin.Audio";
+    private const string PluginId = "SkyCD.Plugin.Metadata.Audio";
     private const string MediaRootId = "media-root";
     private const string TrackEntryId = "file-track-1";
 
@@ -182,15 +182,19 @@ public sealed class AudioPluginIntegrationTests : IDisposable
     }
 
     [Fact]
-    public void AssemblyDiscovery_FindsBothCapabilities_FromMetadataOnly()
+    public void AssemblyDiscovery_FindsEveryCapability_FromMetadataOnly()
     {
         var plugin = new DiscoveredPluginFactory().BuildFromAssembly(typeof(AudioMetadataPlugin).Assembly);
 
         Assert.Equal(PluginId, plugin.Id);
-        Assert.Equal("Audio Tags and Cover Art", plugin.Name);
+        Assert.Equal("Audio Tags, Cover Art and Audio CDs", plugin.Name);
         Assert.Contains(plugin.Capabilities, capability => capability is IMediaMetadataCapability);
         Assert.Contains(plugin.Capabilities, capability => capability is IMediaPreviewCapability);
-        Assert.Equal(2, plugin.Capabilities.Count);
+        Assert.Contains(plugin.Capabilities, capability => capability is IMediaTargetMetadataCapability);
+        Assert.Contains(plugin.Capabilities,
+            capability => capability is SkyCD.SDK.Capabilities.Configuration.IPluginConfigurationCapability);
+        Assert.Equal(4, plugin.Capabilities.Count);
+        Assert.Equal("mp3", plugin.PrimaryExtension);
     }
 
     [Fact]
