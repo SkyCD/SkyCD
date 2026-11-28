@@ -36,6 +36,25 @@
           "Microsoft.TestPlatform.TestHost": "18.11.0"
         }
       },
+      "SkyCD.Plugin.Metadata.DiskImages": {
+        "type": "Direct",
+        "requested": "[0.1.0, 0.1.0]",
+        "resolved": "0.1.0",
+        "contentHash": "GXI6odER62jUwts0QXn921JnONnyr9tQwC6fQL1AcBSY4KOidzlOh2NDky6bIlHSHAa0cu40BKDD4vC4w4Ffow==",
+        "dependencies": {
+          "DiscUtils.Dmg": "0.16.13",
+          "DiscUtils.Ext": "0.16.13",
+          "DiscUtils.Fat": "0.16.13",
+          "DiscUtils.HfsPlus": "0.16.13",
+          "DiscUtils.Iso9660": "0.16.13",
+          "DiscUtils.Ntfs": "0.16.13",
+          "DiscUtils.Udf": "0.16.13",
+          "DiscUtils.Vhd": "0.16.13",
+          "DiscUtils.Vhdx": "0.16.13",
+          "DiscUtils.Vmdk": "0.16.13",
+          "SkyCD.SDK": "[3.0.0-alpha.2]"
+        }
+      },
       "SkyCD.SDK": {
         "type": "Direct",
         "requested": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
@@ -924,22 +943,6 @@
       "skycd.plugin.host": {
         "type": "Project",
         "dependencies": {
-          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
-        }
-      },
-      "skycd.plugin.metadata.diskimages": {
-        "type": "Project",
-        "dependencies": {
-          "DiscUtils.Dmg": "[0.16.13, )",
-          "DiscUtils.Ext": "[0.16.13, )",
-          "DiscUtils.Fat": "[0.16.13, )",
-          "DiscUtils.HfsPlus": "[0.16.13, )",
-          "DiscUtils.Iso9660": "[0.16.13, )",
-          "DiscUtils.Ntfs": "[0.16.13, )",
-          "DiscUtils.Udf": "[0.16.13, )",
-          "DiscUtils.Vhd": "[0.16.13, )",
-          "DiscUtils.Vhdx": "[0.16.13, )",
-          "DiscUtils.Vmdk": "[0.16.13, )",
           "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
         }
       },

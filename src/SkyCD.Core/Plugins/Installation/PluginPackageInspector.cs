@@ -25,9 +25,9 @@ internal sealed class PluginPackageInspector
 {
     public const int MaxEntries = 4096;
 
-    public const long MaxEntryBytes = 64L * 1024 * 1024;
+    public const long MaxEntryBytes = 72L * 1024 * 1024;
 
-    public const long MaxTotalUncompressedBytes = 256L * 1024 * 1024;
+    public const long MaxTotalUncompressedBytes = 288L * 1024 * 1024;
 
     private static readonly string[] ExcludedPrefixes = ["_rels/", "package/", "build/", "buildTransitive/"];
 
