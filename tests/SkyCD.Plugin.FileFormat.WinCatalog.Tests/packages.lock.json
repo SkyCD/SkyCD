@@ -29,6 +29,19 @@
           "Microsoft.TestPlatform.TestHost": "18.11.0"
         }
       },
+      "SkyCD.Plugin.FileFormat.WinCatalog": {
+        "type": "Direct",
+        "requested": "[0.1.0, 0.1.0]",
+        "resolved": "0.1.0",
+        "contentHash": "HHCydt23aqYXnhGiIm4baODmJz9OSJaWwcUjrnfa2R0SG2B2H0GvzczU3kUtFxIsS3Nd0xWjwGrlqwhaBWk9Og==",
+        "dependencies": {
+          "CsvHelper": "34.0.0",
+          "Microsoft.Data.Sqlite": "11.0.0",
+          "SQLitePCLRaw.lib.e_sqlite3": "2.1.14",
+          "SkyCD.SDK": "[3.0.0-alpha.2]",
+          "UTF.Unknown": "2.8.0"
+        }
+      },
       "SkyCD.SDK": {
         "type": "Direct",
         "requested": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
@@ -1329,16 +1342,6 @@
         "dependencies": {
           "CsvHelper": "[34.0.0, )",
           "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
-        }
-      },
-      "skycd.plugin.fileformat.wincatalog": {
-        "type": "Project",
-        "dependencies": {
-          "Microsoft.Data.Sqlite": "[11.0.0, )",
-          "SQLitePCLRaw.lib.e_sqlite3": "[2.1.14, )",
-          "SkyCD.Plugin.FileFormat.Csv": "[1.0.0, )",
-          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
-          "UTF.Unknown": "[2.8.0, )"
         }
       },
       "skycd.plugin.fileformat.xml": {

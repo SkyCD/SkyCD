@@ -18,6 +18,17 @@
           "Microsoft.TestPlatform.TestHost": "18.11.0"
         }
       },
+      "SkyCD.Plugin.FileFormat.AbeMeda": {
+        "type": "Direct",
+        "requested": "[0.1.0, 0.1.0]",
+        "resolved": "0.1.0",
+        "contentHash": "L10sZXL9FcqGQqkn5SUYFroKmTNyGPDuXifNEkxnHveDdmkutxwnlBsW1dx7hEwG121W4sc6qV7zIB0ec3dSDg==",
+        "dependencies": {
+          "CsvHelper": "34.0.0",
+          "SkyCD.SDK": "[3.0.0-alpha.2]",
+          "UTF.Unknown": "2.8.0"
+        }
+      },
       "SkyCD.SDK": {
         "type": "Direct",
         "requested": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
@@ -1262,14 +1273,6 @@
           "CommunityToolkit.Mvvm": "[8.4.2, )",
           "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
           "SkyCD.UI": "[1.0.0, )"
-        }
-      },
-      "skycd.plugin.fileformat.abemeda": {
-        "type": "Project",
-        "dependencies": {
-          "SkyCD.Plugin.FileFormat.Csv": "[1.0.0, )",
-          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
-          "UTF.Unknown": "[2.8.0, )"
         }
       },
       "skycd.plugin.fileformat.csv": {

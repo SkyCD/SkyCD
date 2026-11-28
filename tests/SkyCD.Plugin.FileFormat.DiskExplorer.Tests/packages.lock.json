@@ -18,6 +18,17 @@
           "Microsoft.TestPlatform.TestHost": "18.11.0"
         }
       },
+      "SkyCD.Plugin.FileFormat.DiskExplorer": {
+        "type": "Direct",
+        "requested": "[0.1.0, 0.1.0]",
+        "resolved": "0.1.0",
+        "contentHash": "ZChjD7r3YAqnvpxzkH+fikM0p6CxbSOpeisIbJbRb3X9ZcZ6Xm2+ZMF/gM7MvGteN7YIH1T11MCHCfM0KWc+cg==",
+        "dependencies": {
+          "AngleSharp": "1.10.4",
+          "CsvHelper": "34.0.0",
+          "SkyCD.SDK": "[3.0.0-alpha.2]"
+        }
+      },
       "SkyCD.SDK": {
         "type": "Direct",
         "requested": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
@@ -827,14 +838,6 @@
           "Microsoft.Extensions.Logging.Console": "[11.0.0, )",
           "Microsoft.Extensions.Logging.Debug": "[11.0.0, )",
           "Microsoft.Extensions.Logging.EventLog": "[11.0.0, )"
-        }
-      },
-      "skycd.plugin.fileformat.diskexplorer": {
-        "type": "Project",
-        "dependencies": {
-          "AngleSharp": "[1.10.4, )",
-          "CsvHelper": "[34.0.0, )",
-          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
         }
       },
       "skycd.plugin.host": {

@@ -47,7 +47,7 @@ profile.
 
 UTF-8 with/without BOM, UTF-16 LE/BE with/without BOM and Windows-1252 are tested. The genuine
 export is UTF-8 without BOM; its exporter encoding setting was not recorded. See the
-[fixture provenance](../../tests/SkyCD.Plugin.FileFormat.WinCatalog.Tests/Fixtures/WinCatalogCsv/README.md).
+[fixture provenance](https://github.com/SkyCD/SkyCD.Plugin.FileFormat.WinCatalog/blob/main/tests/SkyCD.Plugin.FileFormat.WinCatalog.Tests/Fixtures/WinCatalogCsv/README.md).
 
 ### Columns and partial reports
 

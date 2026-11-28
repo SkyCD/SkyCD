@@ -12,7 +12,7 @@ tested app version is claimed. The fixtures are synthetic data modeled on the
 CDFinder/NeoFinder import guide (which consumes DiskCatalogMaker output as Tab
 Delimited Text), and a published field report of an export header
 (`Name`, `Size`, `Type`, `Creator`, `Date Modified`). See the
-[fixture provenance](../../tests/SkyCD.Plugin.FileFormat.DiskCatalogMaker.Tests/Fixtures/DiskCatalogMaker/README.md).
+[fixture provenance](https://github.com/SkyCD/SkyCD.Plugin.FileFormat.DiskCatalogMaker/blob/main/tests/SkyCD.Plugin.FileFormat.DiskCatalogMaker.Tests/Fixtures/DiskCatalogMaker/README.md).
 
 ## Exporting from DiskCatalogMaker
 

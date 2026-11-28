@@ -188,7 +188,7 @@ internal sealed class PluginPackageInspector
 
         // The plugin entry assembly is declared in the optional <files> section (a sibling of <metadata>) as a
         // 'lib/<tfm>/<file>' source with an empty target, so it keeps its package-relative path. Older packages
-        // without the section fall back to the first lib/<tfm>/ assembly file.
+        // without the section prefer the package-named DLL, then fall back to the first assembly.
         var entryAssembly = ReadDeclaredEntryAssembly(document) ?? entries
             .Select(static entry => PackageEntryPath.TryNormalizeSafe(entry.FullName, out var path,
                 PackageEntryPath.PackageRules) ? path : null)
@@ -198,6 +198,7 @@ internal sealed class PluginPackageInspector
                 path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) &&
                 path.Count(static character => character == '/') >= 2)
             .Select(static path => path[(path.LastIndexOf('/') + 1)..])
+            .OrderByDescending(fileName => fileName.Equals(packageId + ".dll", StringComparison.OrdinalIgnoreCase))
             .FirstOrDefault();
 
         if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(version))

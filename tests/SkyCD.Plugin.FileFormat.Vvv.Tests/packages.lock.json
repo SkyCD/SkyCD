@@ -18,6 +18,17 @@
           "Microsoft.TestPlatform.TestHost": "18.11.0"
         }
       },
+      "SkyCD.Plugin.FileFormat.Vvv": {
+        "type": "Direct",
+        "requested": "[0.1.0, 0.1.0]",
+        "resolved": "0.1.0",
+        "contentHash": "vM2ZLNJ6Aogclp753SJKZC1sG8L0LkRIluAbYG46xfymUDnGUo+WfFb1LP8na0JMTb2a9SWZseUE1chcUKrtPg==",
+        "dependencies": {
+          "CsvHelper": "34.0.0",
+          "FirebirdSql.Data.FirebirdClient": "10.3.4",
+          "SkyCD.SDK": "[3.0.0-alpha.2]"
+        }
+      },
       "SkyCD.SDK": {
         "type": "Direct",
         "requested": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
@@ -1262,21 +1273,6 @@
           "CommunityToolkit.Mvvm": "[8.4.2, )",
           "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]",
           "SkyCD.UI": "[1.0.0, )"
-        }
-      },
-      "skycd.plugin.fileformat.csv": {
-        "type": "Project",
-        "dependencies": {
-          "CsvHelper": "[34.0.0, )",
-          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
-        }
-      },
-      "skycd.plugin.fileformat.vvv": {
-        "type": "Project",
-        "dependencies": {
-          "FirebirdSql.Data.FirebirdClient": "[10.3.4, )",
-          "SkyCD.Plugin.FileFormat.Csv": "[1.0.0, )",
-          "SkyCD.SDK": "[3.0.0-alpha.2, 3.0.0-alpha.2]"
         }
       },
       "skycd.plugin.host": {

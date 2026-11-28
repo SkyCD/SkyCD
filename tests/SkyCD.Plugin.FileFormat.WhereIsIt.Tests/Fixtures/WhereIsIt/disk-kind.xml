@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<REPORT Title="Disks">
-  <ITEM ItemType="Disk">
-    <NAME>Backup</NAME>
-    <SIZE>6000000</SIZE>
-    <DISK_NAME>Backup</DISK_NAME>
-  </ITEM>
-</REPORT>
