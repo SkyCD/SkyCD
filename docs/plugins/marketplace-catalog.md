@@ -11,7 +11,10 @@ is committed to the directory.
 
 ## Catalog document
 Default endpoint:
-`https://raw.githubusercontent.com/SkyCD/awesome-skycd/main/plugins.json`
+`https://skycd.github.io/awesome-skycd/plugins.json`
+
+The directory renders this document to GitHub Pages whenever its source changes; it is not committed to the
+repository, so the endpoint is republished rather than versioned.
 
 The payload is a JSON array of unique, absolute HTTPS URLs. Each URL points directly to one publisher
 manifest. An empty array is valid and means "no published sources".
@@ -40,6 +43,10 @@ appended after the catalog sources on every resolution:
 - Each repository resolves independently: an unreachable URL is reported offline and a rejected or malformed
   manifest does not affect the other sources.
 - Adding or removing a repository resets the last known good results, so the next read reflects the new list.
+- A saved entry that points at a built-in catalog address — the current default or the raw-host location the
+  catalog used before GitHub Pages — is dropped when the list loads, and entering one is rejected inline on
+  the page. Such an address is a catalog document, not a publisher manifest, and the built-in row already
+  reads it. No other user entry is removed.
 
 ## Publisher manifest (schema version 1)
 
@@ -154,7 +161,7 @@ state; an ordinary refresh never does.
 ## Configuration
 | Option | Default | Purpose |
 | --- | --- | --- |
-| `CatalogEndpoints` | awesome-skycd `plugins.json` | Catalog documents, tried in order. |
+| `CatalogEndpoints` | awesome-skycd GitHub Pages `plugins.json` | Catalog documents, tried in order. |
 | `PluginRepositorySourceStore` | none | User repository manifests from Plugins → Settings, merged after the catalog sources. |
 | `HostVersion` / `RuntimeIdentifier` | host assembly version / current process RID | Compatibility inputs. |
 | `IncludePrerelease` | `false` | Allow automatic prerelease selection. |

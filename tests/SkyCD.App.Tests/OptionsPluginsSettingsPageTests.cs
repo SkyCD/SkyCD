@@ -7,6 +7,7 @@ using SkyCD.Plugin.Runtime.Installation;
 using SkyCD.Plugin.Runtime.Marketplace.Models;
 using SkyCD.Presentation.Marketplace;
 using SkyCD.Presentation.ViewModels;
+using SkyCD.UI.Localization;
 using Xunit;
 
 namespace SkyCD.App.Tests;
@@ -155,6 +156,39 @@ public sealed class OptionsPluginsSettingsPageTests
         Assert.False(repository.HasError);
         Assert.Equal("https://repo.example/plugins.json", repository.Url);
         Assert.Equal(["https://repo.example/plugins.json"], vm.GetPluginRepositories());
+    }
+
+    [Fact]
+    public void SetPluginRepositories_DropsSavedBuiltInCatalogAddresses()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+
+        vm.SetPluginRepositories([
+            PluginCatalogOptions.RetiredCatalogEndpoint.AbsoluteUri,
+            PluginCatalogOptions.DefaultCatalogEndpoint.AbsoluteUri,
+            "https://repo.example/plugins.json"
+        ]);
+
+        Assert.Equal(2, vm.PluginRepositories.Count);
+        Assert.Equal("https://repo.example/plugins.json", vm.PluginRepositories[1].Url);
+        Assert.Equal(["https://repo.example/plugins.json"], vm.GetPluginRepositories());
+    }
+
+    [Fact]
+    public void Confirm_BuiltInCatalogAddressAsRepository_BlocksWithItsOwnInlineError()
+    {
+        var vm = new OptionsDialogViewModel(["English"]);
+        vm.SetPluginRepositories(null);
+        vm.AddPluginRepositoryCommand.Execute(null);
+        vm.PluginRepositories[1].Url = PluginCatalogOptions.RetiredCatalogEndpoint.AbsoluteUri;
+
+        vm.ConfirmCommand.Execute(null);
+
+        Assert.False(vm.DialogAccepted);
+        var repository = vm.PluginRepositories[1];
+        Assert.True(repository.HasError);
+        Assert.NotEqual(LocalizationService.Current.Get(UiKeys.PluginRepositoryInvalidUrl), repository.Error);
+        Assert.Equal("plugins-settings", vm.SelectedSettingCategory?.Id);
     }
 
     [Fact]

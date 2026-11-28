@@ -213,6 +213,7 @@ public static class UiKeys
     public const string AddPluginRepositoryTooltip = "core.ui.AddPluginRepositoryTooltip";
     public const string RemovePluginRepositoryTooltip = "core.ui.RemovePluginRepositoryTooltip";
     public const string PluginRepositoryInvalidUrl = "core.ui.PluginRepositoryInvalidUrl";
+    public const string PluginRepositoryBuiltInUrl = "core.ui.PluginRepositoryBuiltInUrl";
     public const string PluginRepositoryStateOk = "core.ui.PluginRepositoryStateOk";
     public const string PluginRepositoryStateOffline = "core.ui.PluginRepositoryStateOffline";
     public const string PluginRepositoryStateRejected = "core.ui.PluginRepositoryStateRejected";
